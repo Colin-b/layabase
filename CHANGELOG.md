@@ -6,7 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 1.0.0 (next) ##
+## Version 1.1.0 (2017-09-27) ##
+
+### Enhancements ###
+
+- Dependencies are now set to flask-restplus 0.10.1 and marshmallow_sqlalchemy 0.13.1.
+
+## Version 1.0.0 (2017-09-27) ##
 
 ### Release notes ###
 
