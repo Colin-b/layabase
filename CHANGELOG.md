@@ -6,6 +6,16 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.4.0 (2017-09-27) ##
+
+### Release notes ###
+
+- A setter is now provide to set model on controllers and should be used to benefit from enhanced performances.
+
+### Enhancements ###
+
+- Controllers now provide a full default behavior for GET.
+
 ## Version 1.3.0 (2017-09-27) ##
 
 ### Enhancements ###

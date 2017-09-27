@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
-from pycommon_database.flask_restplus_models import all_schema_fields, model_description
+from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +89,12 @@ class CRUDController:
     Class providing methods to interact with a CRUDModel.
     """
     _model = None
+    all_attributes = None
+
+    @classmethod
+    def model(cls, value):
+        cls._model = value
+        cls.all_attributes = all_model_fields(cls._model)
 
     def get(self, request_arguments):
         return self._model.get_all(**request_arguments)
@@ -121,9 +127,15 @@ def _retrieve_model_dictionary(sql_alchemy_class):
 
 class ModelDescriptionController:
     _model = None
+    _model_dictionary = None
+
+    @classmethod
+    def model(cls, value):
+        cls._model = value
+        cls._model_dictionary = _retrieve_model_dictionary(cls._model)
 
     def get(self):
-        return _retrieve_model_dictionary(self._model)
+        return self._model_dictionary
 
     @classmethod
     def response_for_get(cls, api):
