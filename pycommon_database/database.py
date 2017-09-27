@@ -5,6 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
+from pycommon_database.flask_restplus_models import all_schema_fields
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,6 +82,29 @@ class CRUDModel:
             class Meta:
                 model = cls
         return Schema()
+
+
+class CRUDController:
+    """
+    Class providing methods to interact with a CRUDModel.
+    """
+    _model = None
+
+    def get(self, request_arguments):
+        return self._model.get_all(**request_arguments)
+
+    @classmethod
+    def response_for_get(cls, api):
+        return all_schema_fields(cls._model, api)
+
+    def post(self, new_sample_dictionary):
+        self._model.add(new_sample_dictionary)
+
+    def put(self, updated_sample_dictionary):
+        self._model.add(updated_sample_dictionary)
+
+    def delete(self, request_arguments):
+        self._model.remove(**request_arguments)
 
 
 def load_from(database_connection_url: str, create_models_func, create_if_needed=True):
