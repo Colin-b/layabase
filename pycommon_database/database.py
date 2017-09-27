@@ -1,11 +1,11 @@
 import logging
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
-from pycommon_database.flask_restplus_models import all_schema_fields
+from pycommon_database.flask_restplus_models import all_schema_fields, model_description
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,29 @@ class CRUDController:
 
     def delete(self, request_arguments):
         self._model.remove(**request_arguments)
+
+
+def _retrieve_model_dictionary(sql_alchemy_class):
+    description = {}
+
+    mapper = inspect(sql_alchemy_class)
+    for column in mapper.attrs:
+        description[column.key] = column.columns[0].name
+
+    description['schema'] = sql_alchemy_class.table_args__['schema']
+    description['table'] = sql_alchemy_class.__tablename__
+    return description
+
+
+class ModelDescriptionController:
+    _model = None
+
+    def get(self):
+        return _retrieve_model_dictionary(self._model)
+
+    @classmethod
+    def response_for_get(cls, api):
+        return model_description(cls._model, api)
 
 
 def load_from(database_connection_url: str, create_models_func, create_if_needed=True):

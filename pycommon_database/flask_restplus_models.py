@@ -39,3 +39,18 @@ def all_schema_fields(sql_alchemy_class, api):
         for field in sql_alchemy_class.schema().fields.values()
     }
     return api.model(sql_alchemy_class.__name__, exported_fields)
+
+
+def model_description(sql_alchemy_class, api):
+    """
+    Flask RestPlus Model describing a SQL Alchemy model.
+    """
+    exported_fields = {
+        'table': fields.String(required=True, example='table'),
+        'schema': fields.String(required=True, example='schema')
+    }
+    exported_fields.update({
+        field.name: fields.String(example='column')
+        for field in sql_alchemy_class.schema().fields.values()
+    })
+    return api.model(''.join([sql_alchemy_class.__name__, 'Description']), exported_fields)

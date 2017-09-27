@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.3.0 (2017-09-27) ##
+
+### Enhancements ###
+
+- Provide a ModelDescriptionController class to return a description of a CRUDModel.
+
 ## Version 1.2.0 (2017-09-27) ##
 
 ### Enhancements ###
