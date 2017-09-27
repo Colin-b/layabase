@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.4.1 (2017-09-27) ##
+
+### Bug fixes ###
+
+- Python type was not properly extracted from SQL Alchemy field.
+
 ## Version 1.4.0 (2017-09-27) ##
 
 ### Release notes ###

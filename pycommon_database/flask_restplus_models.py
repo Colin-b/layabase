@@ -62,22 +62,28 @@ def get_python_type(sql_alchemy_field):
 
     :raises Exception if field type is not managed yet.
     """
-    if isinstance(sql_alchemy_field, sqlalchemy.String):
+    if len(sql_alchemy_field.columns) != 1:
+        raise Exception('Python field type cannot be guessed for {0} field. Only one column should be provided: {1}.'.
+                        format(sql_alchemy_field, sql_alchemy_field.columns))
+
+    column_type = sql_alchemy_field.columns[0].type
+
+    if isinstance(column_type, sqlalchemy.String):
         return str
-    if isinstance(sql_alchemy_field, sqlalchemy.Integer):
+    if isinstance(column_type, sqlalchemy.Integer):
         return int
-    if isinstance(sql_alchemy_field, sqlalchemy.Boolean):
+    if isinstance(column_type, sqlalchemy.Boolean):
         return bool
-    if isinstance(sql_alchemy_field, sqlalchemy.Date):
+    if isinstance(column_type, sqlalchemy.Date):
         return datetime.date
-    if isinstance(sql_alchemy_field, sqlalchemy.DateTime):
+    if isinstance(column_type, sqlalchemy.DateTime):
         return datetime.datetime
-    if isinstance(sql_alchemy_field, sqlalchemy.Time):
+    if isinstance(column_type, sqlalchemy.Time):
         return datetime.time
-    if isinstance(sql_alchemy_field, sqlalchemy.Float):
+    if isinstance(column_type, sqlalchemy.Float):
         return float
 
-    raise Exception('Python field type cannot be guessed for {0} field.'.format(sql_alchemy_field))
+    raise Exception('Python field type cannot be guessed for {0} field ({1}).'.format(sql_alchemy_field, column_type))
 
 
 def all_schema_fields(sql_alchemy_class, api):
