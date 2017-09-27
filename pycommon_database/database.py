@@ -114,14 +114,17 @@ class CRUDController:
 
 
 def _retrieve_model_dictionary(sql_alchemy_class):
-    description = {}
+    description = {
+        'table': sql_alchemy_class.__tablename__,
+    }
+
+    if hasattr(sql_alchemy_class, 'table_args__'):
+        description['schema'] = sql_alchemy_class.table_args__.get('schema')
 
     mapper = inspect(sql_alchemy_class)
     for column in mapper.attrs:
         description[column.key] = column.columns[0].name
 
-    description['schema'] = sql_alchemy_class.table_args__['schema']
-    description['table'] = sql_alchemy_class.__tablename__
     return description
 
 

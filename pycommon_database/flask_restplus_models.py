@@ -103,12 +103,16 @@ def model_description(sql_alchemy_class, api):
     """
     exported_fields = {
         'table': fields.String(required=True, example='table'),
-        'schema': fields.String(required=True, example='schema')
     }
+
+    if hasattr(sql_alchemy_class, 'table_args__'):
+        exported_fields['schema'] = fields.String(required=True, example='schema')
+
     exported_fields.update({
         field.name: fields.String(example='column')
         for field in sql_alchemy_class.schema().fields.values()
     })
+
     return api.model(''.join([sql_alchemy_class.__name__, 'Description']), exported_fields)
 
 

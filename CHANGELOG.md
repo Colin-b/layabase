@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.4.2 (2017-09-27) ##
+
+### Bug fixes ###
+
+- Avoid failure in case there is no schema in table_args__.
+
 ## Version 1.4.1 (2017-09-27) ##
 
 ### Bug fixes ###
