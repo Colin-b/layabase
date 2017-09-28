@@ -60,9 +60,11 @@ def add_failed_validation_handler(api):
 
 
 def _model_could_not_be_found_model(api):
-    exception_details = fields.String(description='Description of the error.',
-                                      required=True,
-                                      example='Corresponding model could not be found.')
+    exception_details = {
+        'message': fields.String(description='Description of the error.',
+                                 required=True,
+                                 example='Corresponding model could not be found.'),
+    }
     return api.model('ModelCouldNotBeFound', exception_details)
 
 
@@ -79,6 +81,6 @@ def add_model_could_not_be_found_handler(api):
     def handle_exception(model_could_not_be_found):
         """This is the default model could not be found handling."""
         logger.exception('Corresponding model could not be found.')
-        return 'Corresponding model could not be found.', 404
+        return {'message': 'Corresponding model could not be found.'}, 404
 
     return 404, 'Corresponding model could not be found.', exception_model

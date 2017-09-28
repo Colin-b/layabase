@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.6.1 (2017-09-28) ##
+
+### Bug fixes ###
+
+- ModelCouldNotBeFound error is now properly forwarded to client.
+
 ## Version 1.6.0 (2017-09-28) ##
 
 ### Enhancements ###
