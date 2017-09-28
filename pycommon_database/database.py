@@ -6,6 +6,7 @@ from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
 from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields
+from pycommon_database.flask_restplus_errors import ValidationFailed
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,11 @@ class CRUDModel:
     def add(cls, model_as_dict: dict):
         """
         Add a model formatted as a dictionary.
+        :raises ValidationFailed in case Marshmallow validation fail.
         """
-        model = cls.schema().load(model_as_dict, session=cls._session).data
+        model, errors = cls.schema().load(model_as_dict, session=cls._session)
+        if errors:
+            raise ValidationFailed(errors)
         try:
             cls._session.add(model)
             cls._session.commit()

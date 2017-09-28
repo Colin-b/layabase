@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.5.0 (2017-09-28) ##
+
+### Enhancements ###
+
+- Validation errors are now properly handled.
+
 ## Version 1.4.2 (2017-09-27) ##
 
 ### Bug fixes ###
