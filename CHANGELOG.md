@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.6.0 (2017-09-28) ##
+
+### Enhancements ###
+
+- CRUDModel now provide an update method.
+- CRUDController now handle PUT and POST differently.
+
 ## Version 1.5.1 (2017-09-28) ##
 
 ### Bug fixes ###

@@ -6,7 +6,7 @@ from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
 from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields
-from pycommon_database.flask_restplus_errors import ValidationFailed
+from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,24 @@ class CRUDModel:
             raise
 
     @classmethod
+    def update(cls, model_as_dict: dict):
+        """
+        Update a model formatted as a dictionary.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        """
+        previous_model = cls.schema().get_instance(model_as_dict)
+        if not previous_model:
+            raise ModelCouldNotBeFound(model_as_dict)
+        for key, value in model_as_dict.items():
+            setattr(previous_model, key, value)
+        try:
+            cls._session.merge(previous_model)
+            cls._session.commit()
+        except Exception as e:
+            cls._session.rollback()
+            raise
+
+    @classmethod
     def remove(cls, **kwargs):
         """
         Remove the model(s) matching those criterion.
@@ -85,7 +103,7 @@ class CRUDModel:
         class Schema(ModelSchema):
             class Meta:
                 model = cls
-        return Schema()
+        return Schema(session=cls._session)
 
 
 class CRUDController:
@@ -111,7 +129,7 @@ class CRUDController:
         self._model.add(new_sample_dictionary)
 
     def put(self, updated_sample_dictionary):
-        self._model.add(updated_sample_dictionary)
+        self._model.update(updated_sample_dictionary)
 
     def delete(self, request_arguments):
         self._model.remove(**request_arguments)
