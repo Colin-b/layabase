@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.5.1 (2017-09-28) ##
+
+### Bug fixes ###
+
+- Validation errors are now logged with more details on server side and properly propagated to clients.
+
 ## Version 1.5.0 (2017-09-28) ##
 
 ### Enhancements ###

@@ -51,7 +51,7 @@ class CRUDModel:
         """
         model, errors = cls.schema().load(model_as_dict, session=cls._session)
         if errors:
-            raise ValidationFailed(errors)
+            raise ValidationFailed(model_as_dict, errors)
         try:
             cls._session.add(model)
             cls._session.commit()
