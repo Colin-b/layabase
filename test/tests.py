@@ -18,6 +18,15 @@ logger = logging.getLogger(__name__)
 
 class DatabaseTest(unittest.TestCase):
 
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+        self.maxDiff = None
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
     def test_none_connection_string_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             database.load_from(None, None)
@@ -632,6 +641,14 @@ class ModelDescriptionControllerTest(unittest.TestCase):
 
 class FlaskRestPlusModelsTest(unittest.TestCase):
 
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
     def test_rest_plus_type_for_string_field_is_string(self):
         field = marshmallow_fields.String()
         self.assertEqual(flask_rest_plus_fields.String, flask_restplus_models.get_rest_plus_type(field))
@@ -739,6 +756,14 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
         logger.info('Save model class...')
         cls._model = TestModel
         return [TestModel]
+
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
 
     def test_python_type_for_sqlalchemy_string_field_is_string(self):
         field = sqlalchemy.inspect(self._model).attrs['string_column']
