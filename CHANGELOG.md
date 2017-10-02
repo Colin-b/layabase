@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.9.0 (2017-10-02) ##
+
+### Enhancements ###
+
+- Add a user friendly error message in case python type cannot be guessed due to a parameter not containing columns.
+- Add more test cases.
+
 ## Version 1.8.0 (2017-10-02) ##
 
 ### Enhancements ###

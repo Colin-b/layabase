@@ -204,16 +204,16 @@ def load_from(database_connection_url: str, create_models_func, create_if_needed
     if not create_models_func:
         raise NoRelatedModels()
     logger.info(f'Connecting to {database_connection_url}...')
-    logger.info(f'Creating engine...')
+    logger.debug(f'Creating engine...')
     engine = create_engine(database_connection_url)
-    logger.info(f'Creating base...')
+    logger.debug(f'Creating base...')
     base = declarative_base(bind=engine)
-    logger.info(f'Creating models...')
+    logger.debug(f'Creating models...')
     model_classes = create_models_func(base)
     if create_if_needed:
-        logger.info(f'Creating tables...')
+        logger.debug(f'Creating tables...')
         base.metadata.create_all(bind=engine)
-    logger.info(f'Creating session...')
+    logger.debug(f'Creating session...')
     session = sessionmaker(bind=engine)()
     logger.info(f'Connected to {database_connection_url}.')
     for model_class in model_classes:

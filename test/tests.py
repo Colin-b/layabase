@@ -2,6 +2,9 @@ import unittest
 import sqlalchemy
 import logging
 import sys
+import datetime
+from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
+from flask_restplus import fields as flask_rest_plus_fields
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -625,6 +628,150 @@ class ModelDescriptionControllerTest(unittest.TestCase):
         self.assertEqual(
             ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
             ModelDescriptionControllerTest._controller.response_for_get(TestAPI))
+
+
+class FlaskRestPlusModelsTest(unittest.TestCase):
+
+    def test_rest_plus_type_for_string_field_is_string(self):
+        field = marshmallow_fields.String()
+        self.assertEqual(flask_rest_plus_fields.String, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_int_field_is_integer(self):
+        field = marshmallow_fields.Integer()
+        self.assertEqual(flask_rest_plus_fields.Integer, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_bool_field_is_boolean(self):
+        field = marshmallow_fields.Boolean()
+        self.assertEqual(flask_rest_plus_fields.Boolean, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_date_field_is_date(self):
+        field = marshmallow_fields.Date()
+        self.assertEqual(flask_rest_plus_fields.Date, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_datetime_field_is_datetime(self):
+        field = marshmallow_fields.DateTime()
+        self.assertEqual(flask_rest_plus_fields.DateTime, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_decimal_field_is_decimal(self):
+        field = marshmallow_fields.Decimal()
+        self.assertEqual(flask_rest_plus_fields.Decimal, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_float_field_is_float(self):
+        field = marshmallow_fields.Float()
+        self.assertEqual(flask_rest_plus_fields.Float, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_number_field_is_decimal(self):
+        field = marshmallow_fields.Number()
+        self.assertEqual(flask_rest_plus_fields.Decimal, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_time_field_is_datetime(self):
+        field = marshmallow_fields.Time()
+        self.assertEqual(flask_rest_plus_fields.DateTime, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_none_field_cannot_be_guessed(self):
+        with self.assertRaises(Exception) as cm:
+            flask_restplus_models.get_rest_plus_type(None)
+        self.assertEqual('Flask RestPlus field type cannot be guessed for None field.', cm.exception.args[0])
+
+    def test_rest_plus_example_for_string_field(self):
+        field = marshmallow_fields.String()
+        self.assertEqual('sample_value', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_int_field_is_integer(self):
+        field = marshmallow_fields.Integer()
+        self.assertEqual('0', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_bool_field_is_true(self):
+        field = marshmallow_fields.Boolean()
+        self.assertEqual('true', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_date_field_is_YYYY_MM_DD(self):
+        field = marshmallow_fields.Date()
+        self.assertEqual('2017-09-24', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_datetime_field_is_YYYY_MM_DDTHH_MM_SS(self):
+        field = marshmallow_fields.DateTime()
+        self.assertEqual('2017-09-24T15:36:09', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_decimal_field_is_decimal(self):
+        field = marshmallow_fields.Decimal()
+        self.assertEqual('0.0', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_float_field_is_float(self):
+        field = marshmallow_fields.Float()
+        self.assertEqual('0.0', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_number_field_is_decimal(self):
+        field = marshmallow_fields.Number()
+        self.assertEqual('0.0', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_time_field_is_HH_MM_SS(self):
+        field = marshmallow_fields.Time()
+        self.assertEqual('15:36:09', flask_restplus_models.get_example(field))
+
+    def test_rest_plus_example_for_none_field_is_sample_value(self):
+        self.assertEqual('sample_value', flask_restplus_models.get_example(None))
+
+
+class SQlAlchemyColumnsTest(unittest.TestCase):
+
+    _model = None
+
+    @classmethod
+    def setUpClass(cls):
+        database.load_from('sqlite:///:memory:', cls._create_models)
+
+    @classmethod
+    def _create_models(cls, base):
+        logger.info('Declare model class...')
+
+        class TestModel(database.CRUDModel, base):
+            __tablename__ = 'sample_table_name'
+
+            string_column = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            integer_column = sqlalchemy.Column(sqlalchemy.Integer)
+            boolean_column = sqlalchemy.Column(sqlalchemy.Boolean)
+            date_column = sqlalchemy.Column(sqlalchemy.Date)
+            datetime_column = sqlalchemy.Column(sqlalchemy.DateTime)
+            time_column = sqlalchemy.Column(sqlalchemy.Time)
+            float_column = sqlalchemy.Column(sqlalchemy.Float)
+
+        logger.info('Save model class...')
+        cls._model = TestModel
+        return [TestModel]
+
+    def test_python_type_for_sqlalchemy_string_field_is_string(self):
+        field = sqlalchemy.inspect(self._model).attrs['string_column']
+        self.assertEqual(str, flask_restplus_models.get_python_type(field))
+
+    def test_python_type_for_sqlalchemy_integer_field_is_integer(self):
+        field = sqlalchemy.inspect(self._model).attrs['integer_column']
+        self.assertEqual(int, flask_restplus_models.get_python_type(field))
+
+    def test_python_type_for_sqlalchemy_boolean_field_is_boolean(self):
+        field = sqlalchemy.inspect(self._model).attrs['boolean_column']
+        self.assertEqual(bool, flask_restplus_models.get_python_type(field))
+
+    def test_python_type_for_sqlalchemy_date_field_is_date(self):
+        field = sqlalchemy.inspect(self._model).attrs['date_column']
+        self.assertEqual(datetime.date, flask_restplus_models.get_python_type(field))
+
+    def test_python_type_for_sqlalchemy_datetime_field_is_datetime(self):
+        field = sqlalchemy.inspect(self._model).attrs['datetime_column']
+        self.assertEqual(datetime.datetime, flask_restplus_models.get_python_type(field))
+
+    def test_python_type_for_sqlalchemy_time_field_is_time(self):
+        field = sqlalchemy.inspect(self._model).attrs['time_column']
+        self.assertEqual(datetime.time, flask_restplus_models.get_python_type(field))
+
+    def test_python_type_for_sqlalchemy_float_field_is_float(self):
+        field = sqlalchemy.inspect(self._model).attrs['float_column']
+        self.assertEqual(float, flask_restplus_models.get_python_type(field))
+
+    def test_python_type_for_sqlalchemy_none_field_cannot_be_guessed(self):
+        with self.assertRaises(Exception) as cm:
+            flask_restplus_models.get_python_type(None)
+        self.assertEqual('Python field type cannot be guessed for None.', cm.exception.args[0])
 
 
 if __name__ == '__main__':

@@ -62,9 +62,12 @@ def get_python_type(sql_alchemy_field):
 
     :raises Exception if field type is not managed yet.
     """
+    if not hasattr(sql_alchemy_field, 'columns'):
+        raise Exception(f'Python field type cannot be guessed for {sql_alchemy_field}.')
+
     if len(sql_alchemy_field.columns) != 1:
-        raise Exception('Python field type cannot be guessed for {0} field. Only one column should be provided: {1}.'.
-                        format(sql_alchemy_field, sql_alchemy_field.columns))
+        raise Exception(f'Python field type cannot be guessed for {sql_alchemy_field} field. '
+                        f'Only one column should be provided instead of: {sql_alchemy_field.columns}.')
 
     column_type = sql_alchemy_field.columns[0].type
 
@@ -83,7 +86,7 @@ def get_python_type(sql_alchemy_field):
     if isinstance(column_type, sqlalchemy.Float):
         return float
 
-    raise Exception('Python field type cannot be guessed for {0} field ({1}).'.format(sql_alchemy_field, column_type))
+    raise Exception(f'Python field type cannot be guessed for {sql_alchemy_field} field ({column_type}).')
 
 
 def all_schema_fields(sql_alchemy_class, api):
