@@ -146,7 +146,7 @@ class CRUDController:
         self._model.update(updated_sample_dictionary)
 
     def delete(self, request_arguments):
-        self._model.remove(**request_arguments)
+        return self._model.remove(**request_arguments)
 
 
 def _retrieve_model_dictionary(sql_alchemy_class):

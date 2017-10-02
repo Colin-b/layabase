@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.8.0 (2017-10-02) ##
+
+### Enhancements ###
+
+- controller delete method now return the number of removed rows (instead of None)
+
 ## Version 1.7.0 (2017-10-02) ##
 
 ### Enhancements ###
