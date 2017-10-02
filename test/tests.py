@@ -57,7 +57,7 @@ class DatabaseTest(unittest.TestCase):
 
     def test_sybase_url(self):
         self.assertEqual('sybase+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2',
-                         database.sybase_url('TEST=VALUE;TEST2=VALUE2'))
+                         database._clean_database_url('sybase+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
 
 
 class CRUDModelTest(unittest.TestCase):

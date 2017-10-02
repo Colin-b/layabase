@@ -191,6 +191,13 @@ class NoRelatedModels(Exception):
         Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
+def _clean_database_url(database_connection_url: str):
+    connection_details = database_connection_url.split(':///?odbc_connect=', maxsplit=1)
+    if len(connection_details) == 2:
+        return f'{connection_details[0]}:///?odbc_connect={urllib.parse.quote_plus(connection_details[1])}'
+    return database_connection_url
+
+
 def load_from(database_connection_url: str, create_models_func, create_if_needed=True):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
@@ -203,6 +210,7 @@ def load_from(database_connection_url: str, create_models_func, create_if_needed
         raise NoDatabaseProvided()
     if not create_models_func:
         raise NoRelatedModels()
+    database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f'Connecting to {database_connection_url}...')
     logger.debug(f'Creating engine...')
     engine = create_engine(database_connection_url)
@@ -230,7 +238,3 @@ def reset(base):
         base.metadata.drop_all(bind=base.metadata.bind)
         base.metadata.create_all(bind=base.metadata.bind)
         logger.info(f'All data related to {base.metadata.bind.url} reset.')
-
-
-def sybase_url(connection_parameters: str):
-    return f'sybase+pyodbc:///?odbc_connect={urllib.parse.quote_plus(connection_parameters)}'

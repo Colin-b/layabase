@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 2.0.0 (2017-10-02) ##
+
+### Release notes ###
+
+- sybase_url function do not exists anymore now that load_from can guess how to encode provided URL.
+
 ## Version 1.9.0 (2017-10-02) ##
 
 ### Enhancements ###
