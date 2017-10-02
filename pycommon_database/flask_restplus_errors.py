@@ -10,6 +10,16 @@ class ValidationFailed(Exception):
         self.errors = marshmallow_errors
 
 
+class ModelNotProvided(ValidationFailed):
+    def __init__(self):
+        ValidationFailed.__init__(self, {}, {'': ['No data provided.']})
+
+
+class MoreThanOneResult(ValidationFailed):
+    def __init__(self, received_data):
+        ValidationFailed.__init__(self, received_data, {'': ['More than one result: Consider another filtering.']})
+
+
 class ModelCouldNotBeFound(Exception):
     def __init__(self, requested_data):
         self.requested_data = requested_data

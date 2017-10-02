@@ -1,12 +1,12 @@
 import logging
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
 from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields
-from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
+from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound, ModelNotProvided, MoreThanOneResult
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,11 @@ class CRUDModel:
         for key, value in kwargs.items():
             if value is not None:
                 query = query.filter(getattr(cls, key) == value)
-        model = query.one_or_none()
+        try:
+            model = query.one_or_none()
+        except exc.MultipleResultsFound:
+            cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
+            raise MoreThanOneResult(kwargs)
         return cls.schema().dump(model).data
 
     @classmethod
@@ -49,6 +53,8 @@ class CRUDModel:
         Add a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
         """
+        if not model_as_dict:
+            raise ModelNotProvided()
         model, errors = cls.schema().load(model_as_dict, session=cls._session)
         if errors:
             raise ValidationFailed(model_as_dict, errors)
@@ -65,11 +71,17 @@ class CRUDModel:
         Update a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
         """
+        if not model_as_dict:
+            raise ModelNotProvided()
         previous_model = cls.schema().get_instance(model_as_dict)
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)
         for key, value in model_as_dict.items():
             setattr(previous_model, key, value)
+        new_model_as_dict = inspect(previous_model).dict
+        errors = cls.schema().validate(new_model_as_dict, session=cls._session)
+        if errors:
+            raise ValidationFailed(model_as_dict, errors)
         try:
             cls._session.merge(previous_model)
             cls._session.commit()
@@ -81,14 +93,16 @@ class CRUDModel:
     def remove(cls, **kwargs):
         """
         Remove the model(s) matching those criterion.
+        :returns Number of removed rows.
         """
         try:
             query = cls._session.query(cls)
             for key, value in kwargs.items():
                 if value is not None:
                     query = query.filter(getattr(cls, key) == value)
-            query.delete()
+            nb_removed = query.delete()
             cls._session.commit()
+            return nb_removed
         except Exception:
             cls._session.rollback()
             raise
@@ -167,20 +181,39 @@ class ModelDescriptionController:
         return model_description(cls._model, api)
 
 
+class NoDatabaseProvided(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'A database connection URL must be provided.')
+
+
+class NoRelatedModels(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'A method allowing to create related models must be provided.')
+
+
 def load_from(database_connection_url: str, create_models_func, create_if_needed=True):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
-    :param database_connection_url: URL formatted as a standard database connection string.
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel).
+    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
+    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel) (Mandatory).
     :param create_if_needed: Try to create tables if not found.
     """
+    if not database_connection_url:
+        raise NoDatabaseProvided()
+    if not create_models_func:
+        raise NoRelatedModels()
     logger.info(f'Connecting to {database_connection_url}...')
+    logger.info(f'Creating engine...')
     engine = create_engine(database_connection_url)
+    logger.info(f'Creating base...')
     base = declarative_base(bind=engine)
+    logger.info(f'Creating models...')
     model_classes = create_models_func(base)
     if create_if_needed:
+        logger.info(f'Creating tables...')
         base.metadata.create_all(bind=engine)
+    logger.info(f'Creating session...')
     session = sessionmaker(bind=engine)()
     logger.info(f'Connected to {database_connection_url}.')
     for model_class in model_classes:
@@ -193,9 +226,10 @@ def reset(base):
     If the database was already created, then drop all tables and recreate them all.
     """
     if base:
-        logger.info(f'Reset all data related to {base.metadata.bind.url}.')
-        base.metadata.drop_all()
-        base.metadata.create_all()
+        logger.info(f'Resetting all data related to {base.metadata.bind.url}...')
+        base.metadata.drop_all(bind=base.metadata.bind)
+        base.metadata.create_all(bind=base.metadata.bind)
+        logger.info(f'All data related to {base.metadata.bind.url} reset.')
 
 
 def sybase_url(connection_parameters: str):

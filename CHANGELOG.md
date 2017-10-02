@@ -6,6 +6,22 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 1.7.0 (2017-10-02) ##
+
+### Enhancements ###
+
+- remove now returns the number of removed rows (was None previously)
+- load_from now display more logs on what was done (to investigate issues related to DB loading)
+- load_from now return user friendly errors when provided data is invalid
+- reset now log when finished and force binding once again
+- Introduce test cases
+
+### Bug fixes ###
+
+- Properly handle a get request that should return more than one result.
+- Properly reject add / update with empty data
+- Validate content type on a update
+
 ## Version 1.6.1 (2017-09-28) ##
 
 ### Bug fixes ###
