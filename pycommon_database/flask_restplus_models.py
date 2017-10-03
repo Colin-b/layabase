@@ -21,13 +21,15 @@ def get_rest_plus_type(marshmallow_field):
     if isinstance(marshmallow_field, marshmallow_fields.DateTime):
         return fields.DateTime
     if isinstance(marshmallow_field, marshmallow_fields.Decimal):
-        return fields.Decimal
+        return fields.Fixed
     if isinstance(marshmallow_field, marshmallow_fields.Float):
         return fields.Float
     if isinstance(marshmallow_field, marshmallow_fields.Number):
         return fields.Decimal
     if isinstance(marshmallow_field, marshmallow_fields.Time):
         return fields.DateTime
+    if isinstance(marshmallow_field, marshmallow_fields.Field):
+        return fields.String
 
     raise Exception('Flask RestPlus field type cannot be guessed for {0} field.'.format(marshmallow_field))
 
@@ -52,6 +54,8 @@ def get_example(marshmallow_field):
         return '0.0'
     if isinstance(marshmallow_field, marshmallow_fields.Time):
         return '15:36:09'
+    if isinstance(marshmallow_field, marshmallow_fields.List):
+        return 'xxxx'
 
     return 'sample_value'
 
@@ -84,6 +88,10 @@ def get_python_type(sql_alchemy_field):
     if isinstance(column_type, sqlalchemy.Time):
         return datetime.time
     if isinstance(column_type, sqlalchemy.Float):
+        return float
+    if isinstance(column_type, sqlalchemy.Enum):
+        return list
+    if isinstance(column_type, sqlalchemy.Numeric):
         return float
 
     raise Exception(f'Python field type cannot be guessed for {sql_alchemy_field} field ({column_type}).')

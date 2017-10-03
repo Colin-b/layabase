@@ -669,9 +669,9 @@ class FlaskRestPlusModelsTest(unittest.TestCase):
         field = marshmallow_fields.DateTime()
         self.assertEqual(flask_rest_plus_fields.DateTime, flask_restplus_models.get_rest_plus_type(field))
 
-    def test_rest_plus_type_for_decimal_field_is_decimal(self):
+    def test_rest_plus_type_for_decimal_field_is_fixed(self):
         field = marshmallow_fields.Decimal()
-        self.assertEqual(flask_rest_plus_fields.Decimal, flask_restplus_models.get_rest_plus_type(field))
+        self.assertEqual(flask_rest_plus_fields.Fixed, flask_restplus_models.get_rest_plus_type(field))
 
     def test_rest_plus_type_for_float_field_is_float(self):
         field = marshmallow_fields.Float()
@@ -684,6 +684,10 @@ class FlaskRestPlusModelsTest(unittest.TestCase):
     def test_rest_plus_type_for_time_field_is_datetime(self):
         field = marshmallow_fields.Time()
         self.assertEqual(flask_rest_plus_fields.DateTime, flask_restplus_models.get_rest_plus_type(field))
+
+    def test_rest_plus_type_for_field_field_is_string(self):
+        field = marshmallow_fields.Field()
+        self.assertEqual(flask_rest_plus_fields.String, flask_restplus_models.get_rest_plus_type(field))
 
     def test_rest_plus_type_for_none_field_cannot_be_guessed(self):
         with self.assertRaises(Exception) as cm:
