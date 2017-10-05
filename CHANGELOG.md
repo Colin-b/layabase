@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 2.1.0 (2017-10-05) ##
+
+### Enhancements ###
+
+- CRUDController model method now provide the ability to also handle audit.
+
 ## Version 2.0.0 (2017-10-02) ##
 
 ### Release notes ###

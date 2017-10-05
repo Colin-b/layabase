@@ -7,6 +7,7 @@ import urllib.parse
 
 from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound, ModelNotProvided, MoreThanOneResult
+from pycommon_database.audit import create_from as create_audit_model
 
 logger = logging.getLogger(__name__)
 
@@ -125,12 +126,20 @@ class CRUDController:
     Class providing methods to interact with a CRUDModel.
     """
     _model = None
+    _audit_model = None
     all_attributes = None
 
     @classmethod
-    def model(cls, value):
+    def model(cls, value, audit=False):
+        """
+        Initialize related model (should extends CRUDModel).
+
+        :param value: CRUDModel
+        :param audit: True to add an extra model representing the audit table. No audit by default.
+        """
         cls._model = value
         cls.all_attributes = all_model_fields(cls._model)
+        cls._audit_model = create_audit_model(cls._model) if audit else None
 
     def get(self, request_arguments):
         return self._model.get_all(**request_arguments)
@@ -140,13 +149,28 @@ class CRUDController:
         return all_schema_fields(cls._model, api)
 
     def post(self, new_sample_dictionary):
+        if self._audit_model:
+            self._audit_model._session = self._model._session
+            self._audit_model.audit_add(new_sample_dictionary)
         self._model.add(new_sample_dictionary)
 
     def put(self, updated_sample_dictionary):
+        if self._audit_model:
+            self._audit_model._session = self._model._session
+            self._audit_model.audit_update(updated_sample_dictionary)
         self._model.update(updated_sample_dictionary)
 
     def delete(self, request_arguments):
+        if self._audit_model:
+            self._audit_model._session = self._model._session
+            self._audit_model.audit_remove(**request_arguments)
         return self._model.remove(**request_arguments)
+
+    def get_audit(self, request_arguments):
+        if not self._audit_model:
+            return []
+        self._audit_model._session = self._model._session
+        return self._audit_model.get_all(**request_arguments)
 
 
 def _retrieve_model_dictionary(sql_alchemy_class):
