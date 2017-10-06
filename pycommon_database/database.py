@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
-from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields
+from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields, all_schema_fields_as_json
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound, ModelNotProvided, MoreThanOneResult
 from pycommon_database.audit import create_from as create_audit_model
 
@@ -128,6 +128,7 @@ class CRUDController:
     _model = None
     _audit_model = None
     all_attributes = None
+    all_attributes_as_json = None
 
     @classmethod
     def model(cls, value, audit=False):
@@ -143,6 +144,10 @@ class CRUDController:
 
     def get(self, request_arguments):
         return self._model.get_all(**request_arguments)
+
+    @classmethod
+    def namespace(cls, namespace):
+        cls.all_attributes_as_json = all_schema_fields_as_json(cls._model, namespace)
 
     @classmethod
     def response_for_get(cls, api):

@@ -60,6 +60,20 @@ def get_example(marshmallow_field):
     return 'sample_value'
 
 
+def _is_json_string(marshmallow_field):
+    """
+    Return True if the field should be sent as a string within JSON.
+    """
+    if isinstance(marshmallow_field, marshmallow_fields.Integer) or \
+        isinstance(marshmallow_field, marshmallow_fields.Boolean) or \
+        isinstance(marshmallow_field, marshmallow_fields.Decimal) or \
+        isinstance(marshmallow_field, marshmallow_fields.Float) or \
+        isinstance(marshmallow_field, marshmallow_fields.Number):
+        return False
+
+    return True
+
+
 def get_python_type(sql_alchemy_field):
     """
     Return the Python type corresponding to this SQL Alchemy field.
@@ -102,10 +116,37 @@ def all_schema_fields(sql_alchemy_class, api):
     Flask RestPlus Model describing a SQL Alchemy class using schema fields.
     """
     exported_fields = {
-        field.name: get_rest_plus_type(field)(required=field.required, example='sample_value')
+        field.name: get_rest_plus_type(field)(required=field.required, example=str(get_example(field)))
         for field in sql_alchemy_class.schema().fields.values()
     }
     return api.model(sql_alchemy_class.__name__, exported_fields)
+
+
+def all_schema_fields_as_json(sql_alchemy_class, api):
+    """
+    Flask RestPlus Model describing a SQL Alchemy class using schema fields (as JSON).
+    """
+    fields_model = all_schema_fields(sql_alchemy_class, api)
+    sample_as_dict = reqparse.RequestParser()
+    sample_as_dict.add_argument(
+        sql_alchemy_class.__name__,
+        type=fields_model,
+        required=True,
+        location='json',
+        default=_sample_json(sql_alchemy_class)
+    )
+    return sample_as_dict
+
+
+def _sample_json(sql_alchemy_class):
+    all_fields = list(sql_alchemy_class.schema().fields.values())
+    # Sort to ensure that examples are always in the same order
+    all_fields.sort(key=lambda field: field.name)
+    fields_as_json = ',\n'.join([
+        f'"{field.name}": "{get_example(field)}"' if _is_json_string(field) else f'"{field.name}": {get_example(field)}'
+        for field in all_fields
+    ])
+    return '{\n'+fields_as_json+'\n}'
 
 
 def model_description(sql_alchemy_class, api):

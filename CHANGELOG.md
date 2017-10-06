@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 2.2.0 (2017-10-06) ##
+
+### Enhancements ###
+
+- Sample value for fields are now depending on the field type.
+- Introduce a namespace method to CRUDController to initialize everything related to namespace (such as a JSON model)
+
 ## Version 2.1.0 (2017-10-05) ##
 
 ### Enhancements ###
