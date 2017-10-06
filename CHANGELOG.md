@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 3.0.0 (2017-10-06) ##
+
+### Release notes ###
+
+- database.load_from renamed into database.load
+
 ## Version 2.2.0 (2017-10-06) ##
 
 ### Enhancements ###

@@ -29,17 +29,17 @@ class DatabaseTest(unittest.TestCase):
 
     def test_none_connection_string_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            database.load_from(None, None)
+            database.load(None, None)
         self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
 
     def test_empty_connection_string_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            database.load_from('', None)
+            database.load('', None)
         self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
 
     def test_no_create_models_function_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            database.load_from('sqlite:///:memory:', None)
+            database.load('sqlite:///:memory:', None)
         self.assertEqual('A method allowing to create related models must be provided.', cm.exception.args[0])
 
     def test_models_are_added_to_metadata(self):
@@ -51,7 +51,7 @@ class DatabaseTest(unittest.TestCase):
 
             return [TestModel]
 
-        db = database.load_from('sqlite:///:memory:', create_models)
+        db = database.load('sqlite:///:memory:', create_models)
         self.assertEqual('sqlite:///:memory:', str(db.metadata.bind.engine.url))
         self.assertEqual(['sample_table_name'], [table for table in db.metadata.tables.keys()])
 
@@ -67,7 +67,7 @@ class CRUDModelTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._db = database.load_from('sqlite:///:memory:', cls._create_models)
+        cls._db = database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
     def tearDownClass(cls):
@@ -334,7 +334,7 @@ class CRUDControllerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._db = database.load_from('sqlite:///:memory:', cls._create_models)
+        cls._db = database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
     def tearDownClass(cls):
@@ -611,7 +611,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._db = database.load_from('sqlite:///:memory:', cls._create_models)
+        cls._db = database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
     def tearDownClass(cls):
@@ -1155,7 +1155,7 @@ class ModelDescriptionControllerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._db = database.load_from('sqlite:///:memory:', cls._create_models)
+        cls._db = database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
     def tearDownClass(cls):
@@ -1307,7 +1307,7 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        database.load_from('sqlite:///:memory:', cls._create_models)
+        database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
     def _create_models(cls, base):

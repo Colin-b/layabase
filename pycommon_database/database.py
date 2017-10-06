@@ -227,7 +227,7 @@ def _clean_database_url(database_connection_url: str):
     return database_connection_url
 
 
-def load_from(database_connection_url: str, create_models_func, create_if_needed=True):
+def load(database_connection_url: str, create_models_func, create_if_needed=True):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
