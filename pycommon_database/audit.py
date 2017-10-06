@@ -15,7 +15,7 @@ class AuditModel:
 
     audit_user = Column(String, primary_key=True)
     audit_date_utc = Column(DateTime, primary_key=True)
-    audit_action = Column(Enum('I', 'U', 'D'))
+    audit_action = Column(Enum('I', 'U', 'D', name='action_type'))
 
     @classmethod
     def audit_add(cls, model_as_dict: dict):

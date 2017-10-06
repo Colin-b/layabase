@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 3.0.1 (2017-10-06) ##
+
+### Release notes ###
+
+- Fix Enum field not properly defined
+
 ## Version 3.0.0 (2017-10-06) ##
 
 ### Release notes ###
