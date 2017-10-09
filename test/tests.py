@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseTest(unittest.TestCase):
-
     def setUp(self):
         logger.info(f'-------------------------------')
         logger.info(f'Start of {self._testMethodName}')
@@ -61,7 +60,6 @@ class DatabaseTest(unittest.TestCase):
 
 
 class CRUDModelTest(unittest.TestCase):
-
     _db = None
     _model = None
 
@@ -325,7 +323,6 @@ class CRUDModelTest(unittest.TestCase):
 
 
 class CRUDControllerTest(unittest.TestCase):
-
     class TestController(database.CRUDController):
         pass
 
@@ -589,7 +586,8 @@ class CRUDControllerTest(unittest.TestCase):
                     'json'
                 ),
             },
-            {arg.name: (arg.type, arg.default, arg.location) for arg in CRUDControllerTest._controller.all_attributes_as_json.args})
+            {arg.name: (arg.type, arg.default, arg.location) for arg in
+             CRUDControllerTest._controller.all_attributes_as_json.args})
 
     def test_response_for_get(self):
         class TestAPI:
@@ -598,13 +596,82 @@ class CRUDControllerTest(unittest.TestCase):
                 test_fields = [name for name in fields.keys()]
                 test_fields.sort()
                 return name, test_fields
+
         self.assertEqual(
             ('TestModel', ['key', 'mandatory', 'optional']),
             CRUDControllerTest._controller.response_for_get(TestAPI))
 
+    def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
+        CRUDControllerTest._controller.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        CRUDControllerTest._controller.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        CRUDControllerTest._controller.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+            ],
+            CRUDControllerTest._controller.get({'limit': 2}))
+
+    def test_get_with_offset_1_is_retrieving_subset_of_n_minus_1_first_elements(self):
+        CRUDControllerTest._controller.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        CRUDControllerTest._controller.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        CRUDControllerTest._controller.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+                {'key': 'my_key3', 'mandatory': 3, 'optional': 'my_value3'},
+            ],
+            CRUDControllerTest._controller.get({'offset': 1}))
+
+    def test_get_with_limit_1_and_offset_1_is_retrieving_middle_element(self):
+        CRUDControllerTest._controller.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        CRUDControllerTest._controller.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        CRUDControllerTest._controller.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+
+            ],
+            CRUDControllerTest._controller.get({'offset': 1, 'limit': 1}))
+
 
 class CRUDControllerAuditTest(unittest.TestCase):
-
     class TestController(database.CRUDController):
         pass
 
@@ -1143,6 +1210,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 test_fields = [name for name in fields.keys()]
                 test_fields.sort()
                 return name, test_fields
+
         self.assertEqual(
             ('TestModel', ['key', 'mandatory', 'optional']),
             CRUDControllerAuditTest._controller.response_for_get(TestAPI))
@@ -1150,7 +1218,6 @@ class CRUDControllerAuditTest(unittest.TestCase):
 
 
 class ModelDescriptionControllerTest(unittest.TestCase):
-
     class TestController(database.ModelDescriptionController):
         pass
 
@@ -1205,13 +1272,13 @@ class ModelDescriptionControllerTest(unittest.TestCase):
                 test_fields = [name for name in fields.keys()]
                 test_fields.sort()
                 return name, test_fields
+
         self.assertEqual(
             ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
             ModelDescriptionControllerTest._controller.response_for_get(TestAPI))
 
 
 class FlaskRestPlusModelsTest(unittest.TestCase):
-
     def setUp(self):
         logger.info(f'-------------------------------')
         logger.info(f'Start of {self._testMethodName}')
@@ -1306,7 +1373,6 @@ class FlaskRestPlusModelsTest(unittest.TestCase):
 
 
 class SQlAlchemyColumnsTest(unittest.TestCase):
-
     _model = None
 
     @classmethod
