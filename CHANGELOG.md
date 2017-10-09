@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 3.2.0 (2017-10-09) ##
+
+### Enhancements ###
+
+- Add Limit and Offset filter for pagination purpose in the GUI
+
 ## Version 3.0.1 (2017-10-06) ##
 
 ### Release notes ###
