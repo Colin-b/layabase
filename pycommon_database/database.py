@@ -27,7 +27,11 @@ class CRUDModel:
         """
         query = cls._session.query(cls)
         for key, value in kwargs.items():
-            if value is not None:
+            if key == 'limit':
+                query = query.limit(value)
+            elif key == 'offset':
+                query = query.offset(value)
+            elif value is not None:
                 query = query.filter(getattr(cls, key) == value)
         all_models = query.all()
         return cls.schema().dump(all_models, many=True).data
@@ -140,6 +144,8 @@ class CRUDController:
         """
         cls._model = value
         cls.all_attributes = all_model_fields(cls._model)
+        cls.all_attributes.add_argument('limit', type=int)
+        cls.all_attributes.add_argument('offset', type=int)
         cls._audit_model = create_audit_model(cls._model) if audit else None
 
     def get(self, request_arguments):

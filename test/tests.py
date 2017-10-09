@@ -563,6 +563,8 @@ class CRUDControllerTest(unittest.TestCase):
                 'key': str,
                 'mandatory': int,
                 'optional': str,
+                'limit': int,
+                'offset': int
             },
             {arg.name: arg.type for arg in CRUDControllerTest._controller.all_attributes.args})
 
@@ -1128,6 +1130,8 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 'key': str,
                 'mandatory': str,
                 'optional': str,
+                'limit': int,
+                'offset': int
             },
             {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.all_attributes.args})
         self._check_audit([])
