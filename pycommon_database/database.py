@@ -57,6 +57,7 @@ class CRUDModel:
         """
         Add a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
+        :returns The inserted model formatted as a dictionary.
         """
         if not model_as_dict:
             raise ModelNotProvided()
@@ -65,7 +66,8 @@ class CRUDModel:
             raise ValidationFailed(model_as_dict, errors)
         try:
             cls._session.add(model)
-            cls._session.commit()
+            ret = cls._session.commit()
+            return _model_field_values(model)
         except Exception:
             cls._session.rollback()
             raise
@@ -75,21 +77,25 @@ class CRUDModel:
         """
         Update a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
+        :returns A tuple containing previous model formatted as a dictionary (first item)
+        and new model formatted as a dictionary (second item).
         """
         if not model_as_dict:
             raise ModelNotProvided()
         previous_model = cls.schema().get_instance(model_as_dict)
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)
+        previous_model_as_dict = _model_field_values(previous_model)
         for key, value in model_as_dict.items():
             setattr(previous_model, key, value)
-        new_model_as_dict = inspect(previous_model).dict
-        errors = cls.schema().validate(new_model_as_dict, session=cls._session)
+        new_model_as_dict = _model_field_values(previous_model)
+        errors = cls.schema().validate(inspect(previous_model).dict, session=cls._session)
         if errors:
             raise ValidationFailed(model_as_dict, errors)
         try:
             cls._session.merge(previous_model)
             cls._session.commit()
+            return previous_model_as_dict, new_model_as_dict
         except Exception as e:
             cls._session.rollback()
             raise
@@ -149,6 +155,9 @@ class CRUDController:
         cls._audit_model = create_audit_model(cls._model) if audit else None
 
     def get(self, request_arguments):
+        """
+        Return all models formatted as a list of dictionaries.
+        """
         return self._model.get_all(**request_arguments)
 
     @classmethod
@@ -160,18 +169,33 @@ class CRUDController:
         return all_schema_fields(cls._model, api)
 
     def post(self, new_sample_dictionary):
+        """
+        Add a model formatted as a dictionary.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns The inserted model formatted as a dictionary.
+        """
         if self._audit_model:
             self._audit_model._session = self._model._session
             self._audit_model.audit_add(new_sample_dictionary)
-        self._model.add(new_sample_dictionary)
+        return self._model.add(new_sample_dictionary)
 
     def put(self, updated_sample_dictionary):
+        """
+        Update a model formatted as a dictionary.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns A tuple containing previous model formatted as a dictionary (first item)
+        and new model formatted as a dictionary (second item).
+        """
         if self._audit_model:
             self._audit_model._session = self._model._session
             self._audit_model.audit_update(updated_sample_dictionary)
-        self._model.update(updated_sample_dictionary)
+        return self._model.update(updated_sample_dictionary)
 
     def delete(self, request_arguments):
+        """
+        Remove the model(s) matching those criterion.
+        :returns Number of removed rows.
+        """
         if self._audit_model:
             self._audit_model._session = self._model._session
             self._audit_model.audit_remove(**request_arguments)
@@ -197,6 +221,11 @@ def _retrieve_model_dictionary(sql_alchemy_class):
         description[column.key] = column.columns[0].name
 
     return description
+
+
+def _model_field_values(model_instance):
+    """Return model fields values (with the proper type) as a dictionary."""
+    return model_instance.schema().dump(model_instance).data
 
 
 class ModelDescriptionController:

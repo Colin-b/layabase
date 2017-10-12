@@ -79,7 +79,7 @@ class CRUDModelTest(unittest.TestCase):
             __tablename__ = 'sample_table_name'
 
             key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
             optional = sqlalchemy.Column(sqlalchemy.String)
 
         logger.info('Save model class...')
@@ -139,64 +139,73 @@ class CRUDModelTest(unittest.TestCase):
     def test_add_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             CRUDModelTest._model.add({
-                'mandatory': 'my_value',
+                'mandatory': 1,
             })
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
-        self.assertEqual({'mandatory': 'my_value'}, cm.exception.received_data)
+        self.assertEqual({'mandatory': 1}, cm.exception.received_data)
 
     def test_add_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             CRUDModelTest._model.add({
                 'key': 256,
-                'mandatory': 'value1',
+                'mandatory': 1,
             })
         self.assertEqual({'key': ['Not a valid string.']}, cm.exception.errors)
-        self.assertEqual({'key': 256, 'mandatory': 'value1'}, cm.exception.received_data)
+        self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
 
     def test_update_with_wrong_type_is_invalid(self):
         CRUDModelTest._model.add({
             'key': 'value1',
-            'mandatory': 'value1',
+            'mandatory': 1,
         })
         with self.assertRaises(Exception) as cm:
             CRUDModelTest._model.update({
                 'key': 'value1',
-                'mandatory': 1,
+                'mandatory': 'invalid_value',
             })
-        self.assertEqual({'mandatory': ['Not a valid string.']}, cm.exception.errors)
-        self.assertEqual({'key': 'value1', 'mandatory': 1}, cm.exception.received_data)
+        self.assertEqual({'mandatory': ['Not a valid integer.']}, cm.exception.errors)
+        self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
 
     def test_add_without_optional_is_valid(self):
-        self.assertIsNone(CRUDModelTest._model.add({
-            'key': 'my_key',
-            'mandatory': 'my_value',
-        }))
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': None},
+            CRUDModelTest._model.add({
+                'key': 'my_key',
+                'mandatory': 1,
+            })
+        )
 
     def test_add_with_optional_is_valid(self):
-        self.assertIsNone(CRUDModelTest._model.add({
-            'key': 'my_key',
-            'mandatory': 'my_value',
-            'optional': 'my_value',
-        }))
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            CRUDModelTest._model.add({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+            })
+        )
 
     def test_add_with_unknown_field_is_valid(self):
-        self.assertIsNone(CRUDModelTest._model.add({
-            'key': 'my_key',
-            'mandatory': 'my_value',
-            'optional': 'my_value',
-            # This field do not exists in schema
-            'unknown': 'my_value',
-        }))
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            CRUDModelTest._model.add({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+                # This field do not exists in schema
+                'unknown': 'my_value',
+            })
+        )
 
     def test_get_without_filter_is_retrieving_the_only_item(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         self.assertEqual(
             {
-                'mandatory': 'my_value1',
+                'mandatory': 1,
                 'optional': 'my_value1',
                 'key': 'my_key1'
             },
@@ -205,12 +214,12 @@ class CRUDModelTest(unittest.TestCase):
     def test_get_without_filter_is_failing_if_more_than_one_item_exists(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDModelTest._model.add({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         with self.assertRaises(Exception) as cm:
@@ -221,69 +230,75 @@ class CRUDModelTest(unittest.TestCase):
     def test_get_all_without_filter_is_retrieving_everything(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDModelTest._model.add({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(
             [
-                {'key': 'my_key1', 'mandatory': 'my_value1', 'optional': 'my_value1'},
-                {'key': 'my_key2', 'mandatory': 'my_value2', 'optional': 'my_value2'}
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
             ],
             CRUDModelTest._model.get_all())
 
     def test_get_all_with_filter_is_retrieving_subset(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDModelTest._model.add({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(
             [
-                {'key': 'my_key1', 'mandatory': 'my_value1', 'optional': 'my_value1'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
             ],
             CRUDModelTest._model.get_all(optional='my_value1'))
 
     def test_get_with_filter_is_retrieving_the_proper_row(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDModelTest._model.add({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
-        self.assertEqual({'key': 'my_key1', 'mandatory': 'my_value1', 'optional': 'my_value1'},
+        self.assertEqual({'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
                          CRUDModelTest._model.get(optional='my_value1'))
 
     def test_update_is_updating(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
-        CRUDModelTest._model.update({
-            'key': 'my_key1',
-            'optional': 'my_value',
-        })
-        self.assertEqual({'key': 'my_key1', 'mandatory': 'my_value1', 'optional': 'my_value'},
-                         CRUDModelTest._model.get(mandatory='my_value1'))
+        self.assertEqual(
+            (
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'},
+            ),
+            CRUDModelTest._model.update({
+                'key': 'my_key1',
+                'optional': 'my_value',
+            })
+        )
+        self.assertEqual({'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'},
+                         CRUDModelTest._model.get(mandatory=1))
 
     def test_update_is_updating_and_previous_value_cannot_be_used_to_filter(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDModelTest._model.update({
@@ -295,27 +310,27 @@ class CRUDModelTest(unittest.TestCase):
     def test_remove_with_filter_is_removing_the_proper_row(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDModelTest._model.add({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(1, CRUDModelTest._model.remove(key='my_key1'))
-        self.assertEqual([{'key': 'my_key2', 'mandatory': 'my_value2', 'optional': 'my_value2'}],
+        self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
                          CRUDModelTest._model.get_all())
 
     def test_remove_without_filter_is_removing_everything(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDModelTest._model.add({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(2, CRUDModelTest._model.remove())
@@ -430,26 +445,35 @@ class CRUDControllerTest(unittest.TestCase):
         self.assertEqual({'key': 'value1', 'mandatory': 'invalid value'}, cm.exception.received_data)
 
     def test_post_without_optional_is_valid(self):
-        self.assertIsNone(CRUDControllerTest._controller.post({
-            'key': 'my_key',
-            'mandatory': 1,
-        }))
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': None},
+            CRUDControllerTest._controller.post({
+                'key': 'my_key',
+                'mandatory': 1,
+            })
+        )
 
     def test_post_with_optional_is_valid(self):
-        self.assertIsNone(CRUDControllerTest._controller.post({
-            'key': 'my_key',
-            'mandatory': 1,
-            'optional': 'my_value',
-        }))
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            CRUDControllerTest._controller.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+            })
+        )
 
     def test_post_with_unknown_field_is_valid(self):
-        self.assertIsNone(CRUDControllerTest._controller.post({
-            'key': 'my_key',
-            'mandatory': 1,
-            'optional': 'my_value',
-            # This field do not exists in schema
-            'unknown': 'my_value',
-        }))
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            CRUDControllerTest._controller.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+                # This field do not exists in schema
+                'unknown': 'my_value',
+            })
+        )
 
     def test_get_without_filter_is_retrieving_the_only_item(self):
         CRUDControllerTest._controller.post({
@@ -506,10 +530,16 @@ class CRUDControllerTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        CRUDControllerTest._controller.put({
-            'key': 'my_key1',
-            'optional': 'my_value',
-        })
+        self.assertEqual(
+            (
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'},
+            ),
+            CRUDControllerTest._controller.put({
+                'key': 'my_key1',
+                'optional': 'my_value',
+            })
+        )
         self.assertEqual([{'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'}],
                          CRUDControllerTest._controller.get({'mandatory': 1}))
 
@@ -694,7 +724,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             __tablename__ = 'sample_table_name'
 
             key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
             optional = sqlalchemy.Column(sqlalchemy.String)
 
         logger.info('Save model class...')
@@ -758,34 +788,34 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_post_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerAuditTest._controller.post({
-                'mandatory': 'my_value',
+                'mandatory': 1,
             })
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
-        self.assertEqual({'mandatory': 'my_value'}, cm.exception.received_data)
+        self.assertEqual({'mandatory': 1}, cm.exception.received_data)
         self._check_audit([])
 
     def test_post_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerAuditTest._controller.post({
                 'key': 256,
-                'mandatory': 'value1',
+                'mandatory': 1,
             })
         self.assertEqual({'key': ['Not a valid string.']}, cm.exception.errors)
-        self.assertEqual({'key': 256, 'mandatory': 'value1'}, cm.exception.received_data)
+        self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
         self._check_audit([])
 
     def test_put_with_wrong_type_is_invalid(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'value1',
-            'mandatory': 'value1',
+            'mandatory': 1,
         })
         with self.assertRaises(Exception) as cm:
             CRUDControllerAuditTest._controller.put({
                 'key': 'value1',
-                'mandatory': 1,
+                'mandatory': 'invalid_value',
             })
-        self.assertEqual({'mandatory': ['Not a valid string.']}, cm.exception.errors)
-        self.assertEqual({'key': 'value1', 'mandatory': 1}, cm.exception.received_data)
+        self.assertEqual({'mandatory': ['Not a valid integer.']}, cm.exception.errors)
+        self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
         self._check_audit(
             [
                 {
@@ -793,17 +823,20 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'value1',
-                    'mandatory': 'value1',
+                    'mandatory': 1,
                     'optional': None,
                 },
             ]
         )
 
     def test_post_without_optional_is_valid(self):
-        self.assertIsNone(CRUDControllerAuditTest._controller.post({
-            'key': 'my_key',
-            'mandatory': 'my_value',
-        }))
+        self.assertEqual(
+            {'optional': None, 'mandatory': 1, 'key': 'my_key'},
+            CRUDControllerAuditTest._controller.post({
+                'key': 'my_key',
+                'mandatory': 1,
+            })
+        )
         self._check_audit(
             [
                 {
@@ -811,7 +844,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': None,
                 },
             ]
@@ -827,11 +860,14 @@ class CRUDControllerAuditTest(unittest.TestCase):
             self.assertRegex(f'{audit}', f'{expected_audit}')
 
     def test_post_with_optional_is_valid(self):
-        self.assertIsNone(CRUDControllerAuditTest._controller.post({
-            'key': 'my_key',
-            'mandatory': 'my_value',
-            'optional': 'my_value',
-        }))
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            CRUDControllerAuditTest._controller.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+            })
+        )
         self._check_audit(
             [
                 {
@@ -839,20 +875,23 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key',
-                    'mandatory': 'my_value',
+                    'mandatory': 1,
                     'optional': 'my_value',
                 }
             ]
         )
 
     def test_post_with_unknown_field_is_valid(self):
-        self.assertIsNone(CRUDControllerAuditTest._controller.post({
-            'key': 'my_key',
-            'mandatory': 'my_value',
-            'optional': 'my_value',
-            # This field do not exists in schema
-            'unknown': 'my_value',
-        }))
+        self.assertEqual(
+            {'optional': 'my_value', 'mandatory': 1, 'key': 'my_key'},
+            CRUDControllerAuditTest._controller.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+                # This field do not exists in schema
+                'unknown': 'my_value',
+            })
+        )
         self._check_audit(
             [
                 {
@@ -860,7 +899,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key',
-                    'mandatory': 'my_value',
+                    'mandatory': 1,
                     'optional': 'my_value',
                 },
             ]
@@ -869,12 +908,12 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_get_without_filter_is_retrieving_the_only_item(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         self.assertEqual(
             [{
-                'mandatory': 'my_value1',
+                'mandatory': 1,
                 'optional': 'my_value1',
                 'key': 'my_key1'
             }],
@@ -886,7 +925,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
             ]
@@ -895,18 +934,18 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_get_without_filter_is_retrieving_everything(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(
             [
-                {'key': 'my_key1', 'mandatory': 'my_value1', 'optional': 'my_value1'},
-                {'key': 'my_key2', 'mandatory': 'my_value2', 'optional': 'my_value2'}
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
             ],
             CRUDControllerAuditTest._controller.get({}))
         self._check_audit(
@@ -916,7 +955,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -924,7 +963,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value2',
                 },
             ]
@@ -933,17 +972,17 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_get_with_filter_is_retrieving_subset(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(
             [
-                {'key': 'my_key1', 'mandatory': 'my_value1', 'optional': 'my_value1'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
             ],
             CRUDControllerAuditTest._controller.get({'optional': 'my_value1'}))
         self._check_audit(
@@ -953,7 +992,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -961,7 +1000,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value2',
                 },
             ]
@@ -970,15 +1009,21 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_put_is_updating(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
-        CRUDControllerAuditTest._controller.put({
-            'key': 'my_key1',
-            'optional': 'my_value',
-        })
-        self.assertEqual([{'key': 'my_key1', 'mandatory': 'my_value1', 'optional': 'my_value'}],
-                         CRUDControllerAuditTest._controller.get({'mandatory': 'my_value1'}))
+        self.assertEqual(
+            (
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'},
+            ),
+            CRUDControllerAuditTest._controller.put({
+                'key': 'my_key1',
+                'optional': 'my_value',
+            })
+        )
+        self.assertEqual([{'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'}],
+                         CRUDControllerAuditTest._controller.get({'mandatory': 1}))
         self._check_audit(
             [
                 {
@@ -986,7 +1031,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -994,7 +1039,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value',
                 },
             ]
@@ -1003,7 +1048,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDControllerAuditTest._controller.put({
@@ -1018,7 +1063,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -1026,7 +1071,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value',
                 },
             ]
@@ -1035,16 +1080,16 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_delete_with_filter_is_removing_the_proper_row(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(1, CRUDControllerAuditTest._controller.delete({'key': 'my_key1'}))
-        self.assertEqual([{'key': 'my_key2', 'mandatory': 'my_value2', 'optional': 'my_value2'}],
+        self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
                          CRUDControllerAuditTest._controller.get({}))
         self._check_audit(
             [
@@ -1053,7 +1098,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -1061,7 +1106,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value2',
                 },
                 {
@@ -1069,7 +1114,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
             ]
@@ -1078,12 +1123,12 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_audit_filter_on_model_is_returning_only_selected_data(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDControllerAuditTest._controller.put({
             'key': 'my_key1',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
         })
         CRUDControllerAuditTest._controller.delete({'key': 'my_key1'})
         self._check_audit(
@@ -1093,7 +1138,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -1101,7 +1146,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value1',
                 },
                 {
@@ -1109,7 +1154,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value1',
                 },
             ],
@@ -1119,12 +1164,12 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_audit_filter_on_audit_model_is_returning_only_selected_data(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDControllerAuditTest._controller.put({
             'key': 'my_key1',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
         })
         CRUDControllerAuditTest._controller.delete({'key': 'my_key1'})
         self._check_audit(
@@ -1134,7 +1179,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value1',
                 },
             ],
@@ -1144,12 +1189,12 @@ class CRUDControllerAuditTest(unittest.TestCase):
     def test_delete_without_filter_is_removing_everything(self):
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key1',
-            'mandatory': 'my_value1',
+            'mandatory': 1,
             'optional': 'my_value1',
         })
         CRUDControllerAuditTest._controller.post({
             'key': 'my_key2',
-            'mandatory': 'my_value2',
+            'mandatory': 2,
             'optional': 'my_value2',
         })
         self.assertEqual(2, CRUDControllerAuditTest._controller.delete({}))
@@ -1161,7 +1206,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -1169,7 +1214,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value2',
                 },
                 {
@@ -1177,7 +1222,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
-                    'mandatory': 'my_value1',
+                    'mandatory': 1,
                     'optional': 'my_value1',
                 },
                 {
@@ -1185,7 +1230,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                     'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
-                    'mandatory': 'my_value2',
+                    'mandatory': 2,
                     'optional': 'my_value2',
                 },
             ]
@@ -1195,7 +1240,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual(
             {
                 'key': str,
-                'mandatory': str,
+                'mandatory': int,
                 'optional': str,
                 'limit': int,
                 'offset': int

@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 3.3.0 (2017-10-12) ##
+
+### Enhancements ###
+
+- add and update CRUDModel methods now return inserted and updated models.
+- post and put CRUDController methods now return inserted and updated models.
+
 ## Version 3.2.0 (2017-10-09) ##
 
 ### Enhancements ###
