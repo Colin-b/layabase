@@ -6,12 +6,18 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 4.0.0 (2017-10-12) ##
+
+### Release notes ###
+
+- create_if_needed parameter removed from the database.load function.
+
 ## Version 3.3.0 (2017-10-12) ##
 
 ### Enhancements ###
 
-- add and update CRUDModel methods now return inserted and updated models.
-- post and put CRUDController methods now return inserted and updated models.
+- database.CRUDModel.add and database.CRUDModel.update methods now return inserted and updated models.
+- database.CRUDController.post and database.CRUDController.put methods now return inserted and updated models.
 
 ## Version 3.2.0 (2017-10-09) ##
 

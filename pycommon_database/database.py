@@ -262,13 +262,16 @@ def _clean_database_url(database_connection_url: str):
     return database_connection_url
 
 
-def load(database_connection_url: str, create_models_func, create_if_needed=True):
+def _can_retrieve_metadata(database_connection_url: str):
+    return not database_connection_url.startswith('sybase')
+
+
+def load(database_connection_url: str, create_models_func):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel) (Mandatory).
-    :param create_if_needed: Try to create tables if not found.
     """
     if not database_connection_url:
         raise NoDatabaseProvided()
@@ -282,7 +285,7 @@ def load(database_connection_url: str, create_models_func, create_if_needed=True
     base = declarative_base(bind=engine)
     logger.debug(f'Creating models...')
     model_classes = create_models_func(base)
-    if create_if_needed:
+    if _can_retrieve_metadata(database_connection_url):
         logger.debug(f'Creating tables...')
         base.metadata.create_all(bind=engine)
     logger.debug(f'Creating session...')
