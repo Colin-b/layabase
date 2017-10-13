@@ -229,7 +229,7 @@ class CRUDController:
         cls.json_put_parser = json_parser_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         cls.get_response_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         if cls._audit_model:
-            cls.get_audit_response_model = model_with_fields(namespace, cls._audit_model.__name__, cls._audit_marshmallow_fields)
+            cls.get_audit_response_model = model_with_fields(namespace, 'Audit' + cls._model.__name__, cls._audit_marshmallow_fields)
         else:
             cls.get_audit_response_model = None
 

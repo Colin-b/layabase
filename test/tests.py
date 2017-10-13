@@ -371,7 +371,8 @@ class CRUDControllerTest(unittest.TestCase):
             __tablename__ = 'auto_increment_table_name'
 
             key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-            enum_field = sqlalchemy.Column(sqlalchemy.Enum('Value1', 'Value2'), nullable=False, doc='Test Documentation')
+            enum_field = sqlalchemy.Column(sqlalchemy.Enum('Value1', 'Value2'), nullable=False,
+                                           doc='Test Documentation')
             optional_with_default = sqlalchemy.Column(sqlalchemy.String, default='Test value')
 
         logger.info('Save model class...')
@@ -1362,6 +1363,21 @@ class CRUDControllerAuditTest(unittest.TestCase):
             {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.query_get_parser.args})
         self._check_audit([])
 
+    def test_query_get_audit_parser(self):
+        self.assertEqual(
+            {
+                'audit_action': str,
+                'audit_date_utc': datetime.datetime,
+                'audit_user': str,
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+                'limit': int,
+                'offset': int,
+            },
+            {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.query_get_audit_parser.args})
+        self._check_audit([])
+
     def test_query_delete_parser(self):
         self.assertEqual(
             {
@@ -1384,6 +1400,29 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual(
             ('TestModel', ['key', 'mandatory', 'optional']),
             CRUDControllerAuditTest._controller.get_response_model)
+        self._check_audit([])
+
+    def test_get_audit_response_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                return name, test_fields
+
+        CRUDControllerAuditTest._controller.namespace(TestAPI)
+        self.assertEqual(
+            (
+                'AuditTestModel', [
+                    'audit_action',
+                    'audit_date_utc',
+                    'audit_user',
+                    'key',
+                    'mandatory',
+                    'optional'
+                ],
+            ),
+            CRUDControllerAuditTest._controller.get_audit_response_model)
         self._check_audit([])
 
 
