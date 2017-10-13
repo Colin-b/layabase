@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 5.1.0 (2017-10-13) ##
+
+### Release notes ###
+
+- Introduce audit parser and marshaller.
+
 ## Version 5.0.0 (2017-10-13) ##
 
 ### Release notes ###

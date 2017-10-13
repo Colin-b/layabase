@@ -183,15 +183,18 @@ class CRUDController:
     _model = None
     _marshmallow_fields = None
     _audit_model = None
+    _audit_marshmallow_fields = None
 
     # CRUD request parsers
     query_get_parser = None
     json_post_parser = None
     json_put_parser = None
     query_delete_parser = None
+    query_get_audit_parser = None
 
     # CRUD response marshallers
     get_response_model = None
+    get_audit_response_model = None
 
     @classmethod
     def model(cls, value, audit=False):
@@ -208,7 +211,16 @@ class CRUDController:
         cls.query_get_parser.add_argument('limit', type=int)
         cls.query_get_parser.add_argument('offset', type=int)
         cls.query_delete_parser = query_parser_with_fields(cls._marshmallow_fields)
-        cls._audit_model = create_audit_model(cls._model) if audit else None
+        if audit:
+            cls._audit_model = create_audit_model(cls._model)
+            cls._audit_marshmallow_fields = cls._audit_model.schema().fields.values()
+            cls.query_get_audit_parser = query_parser_with_fields(cls._audit_marshmallow_fields)
+            cls.query_get_audit_parser.add_argument('limit', type=int)
+            cls.query_get_audit_parser.add_argument('offset', type=int)
+        else:
+            cls._audit_model = None
+            cls._audit_marshmallow_fields = None
+            cls.query_get_audit_parser = None
 
     @classmethod
     def namespace(cls, namespace):
@@ -216,6 +228,10 @@ class CRUDController:
         cls.json_post_parser = json_parser_with_fields(namespace, cls._model.__name__, post_marshmallow_fields)
         cls.json_put_parser = json_parser_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         cls.get_response_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
+        if cls._audit_model:
+            cls.get_audit_response_model = model_with_fields(namespace, cls._audit_model.__name__, cls._audit_marshmallow_fields)
+        else:
+            cls.get_audit_response_model = None
 
     def get(self, request_arguments):
         """
