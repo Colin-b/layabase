@@ -2,10 +2,15 @@ import logging
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
-from marshmallow_sqlalchemy import ModelSchema
+from marshmallow_sqlalchemy import ModelSchema, field_for
 import urllib.parse
 
-from pycommon_database.flask_restplus_models import all_schema_fields, model_description, all_model_fields, all_schema_fields_as_json
+from pycommon_database.flask_restplus_models import (
+    model_with_fields,
+    model_describing_sql_alchemy_mapping,
+    query_parser_with_fields,
+    json_parser_with_fields
+)
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound, ModelNotProvided, MoreThanOneResult
 from pycommon_database.audit import create_from as create_audit_model
 
@@ -128,7 +133,47 @@ class CRUDModel:
         class Schema(ModelSchema):
             class Meta:
                 model = cls
-        return Schema(session=cls._session)
+
+        schema = Schema(session=cls._session)
+        mapper = inspect(cls)
+        for attr in mapper.attrs:
+            schema_field = schema.fields.get(attr.key, None)
+            if schema_field:
+                cls.enrich_schema_field(schema_field, attr)
+
+        return schema
+
+    @classmethod
+    def post_schema(cls):
+        """
+        Create a new Marshmallow SQL Alchemy schema instance.
+
+        :return: The newly created schema instance.
+        """
+        class PostSchema(ModelSchema):
+            class Meta:
+                model = cls
+
+        post_schema = PostSchema(session=cls._session)
+        mapper = inspect(cls)
+        for attr in mapper.attrs:
+            schema_field = post_schema.fields.get(attr.key, None)
+            if schema_field:
+                cls.enrich_schema_field(schema_field, attr)
+                cls.enrich_post_schema_field(schema_field, attr)
+
+        return post_schema
+
+    @classmethod
+    def enrich_schema_field(cls, marshmallow_field, sql_alchemy_field):
+        defaults = [column.default for column in sql_alchemy_field.columns]
+        if defaults:
+            marshmallow_field.metadata['sqlalchemy_default'] = defaults[0]
+
+    @classmethod
+    def enrich_post_schema_field(cls, marshmallow_field, sql_alchemy_field):
+        auto_increments = [column.autoincrement for column in sql_alchemy_field.columns]
+        marshmallow_field.dump_only = True in auto_increments
 
 
 class CRUDController:
@@ -136,9 +181,17 @@ class CRUDController:
     Class providing methods to interact with a CRUDModel.
     """
     _model = None
+    _marshmallow_fields = None
     _audit_model = None
-    all_attributes = None
-    all_attributes_as_json = None
+
+    # CRUD request parsers
+    query_get_parser = None
+    json_post_parser = None
+    json_put_parser = None
+    query_delete_parser = None
+
+    # CRUD response marshallers
+    get_response_model = None
 
     @classmethod
     def model(cls, value, audit=False):
@@ -149,24 +202,26 @@ class CRUDController:
         :param audit: True to add an extra model representing the audit table. No audit by default.
         """
         cls._model = value
-        cls.all_attributes = all_model_fields(cls._model)
-        cls.all_attributes.add_argument('limit', type=int)
-        cls.all_attributes.add_argument('offset', type=int)
+        cls._marshmallow_fields = cls._model.schema().fields.values()
+
+        cls.query_get_parser = query_parser_with_fields(cls._marshmallow_fields)
+        cls.query_get_parser.add_argument('limit', type=int)
+        cls.query_get_parser.add_argument('offset', type=int)
+        cls.query_delete_parser = query_parser_with_fields(cls._marshmallow_fields)
         cls._audit_model = create_audit_model(cls._model) if audit else None
+
+    @classmethod
+    def namespace(cls, namespace):
+        post_marshmallow_fields = [field for field in cls._model.post_schema().fields.values() if not field.dump_only]
+        cls.json_post_parser = json_parser_with_fields(namespace, cls._model.__name__, post_marshmallow_fields)
+        cls.json_put_parser = json_parser_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
+        cls.get_response_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
 
     def get(self, request_arguments):
         """
         Return all models formatted as a list of dictionaries.
         """
         return self._model.get_all(**request_arguments)
-
-    @classmethod
-    def namespace(cls, namespace):
-        cls.all_attributes_as_json = all_schema_fields_as_json(cls._model, namespace)
-
-    @classmethod
-    def response_for_get(cls, api):
-        return all_schema_fields(cls._model, api)
 
     def post(self, new_sample_dictionary):
         """
@@ -202,6 +257,9 @@ class CRUDController:
         return self._model.remove(**request_arguments)
 
     def get_audit(self, request_arguments):
+        """
+        Return all audit models formatted as a list of dictionaries.
+        """
         if not self._audit_model:
             return []
         self._audit_model._session = self._model._session
@@ -232,17 +290,19 @@ class ModelDescriptionController:
     _model = None
     _model_dictionary = None
 
+    get_response_model = None
+
     @classmethod
     def model(cls, value):
         cls._model = value
         cls._model_dictionary = _retrieve_model_dictionary(cls._model)
 
+    @classmethod
+    def namespace(cls, namespace):
+        cls.get_response_model = model_describing_sql_alchemy_mapping(namespace, cls._model)
+
     def get(self):
         return self._model_dictionary
-
-    @classmethod
-    def response_for_get(cls, api):
-        return model_description(cls._model, api)
 
 
 class NoDatabaseProvided(Exception):

@@ -341,8 +341,12 @@ class CRUDControllerTest(unittest.TestCase):
     class TestController(database.CRUDController):
         pass
 
+    class TestAutoIncrementController(database.CRUDController):
+        pass
+
     _db = None
     _controller = TestController()
+    _controller_auto_increment = TestAutoIncrementController()
 
     @classmethod
     def setUpClass(cls):
@@ -363,9 +367,17 @@ class CRUDControllerTest(unittest.TestCase):
             mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
             optional = sqlalchemy.Column(sqlalchemy.String)
 
+        class TestAutoIncrementModel(database.CRUDModel, base):
+            __tablename__ = 'auto_increment_table_name'
+
+            key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+            enum_field = sqlalchemy.Column(sqlalchemy.Enum('Value1', 'Value2'), nullable=False, doc='Test Documentation')
+            optional_with_default = sqlalchemy.Column(sqlalchemy.String, default='Test value')
+
         logger.info('Save model class...')
         cls._controller.model(TestModel)
-        return [TestModel]
+        cls._controller_auto_increment.model(TestAutoIncrementModel)
+        return [TestModel, TestAutoIncrementModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -584,18 +596,27 @@ class CRUDControllerTest(unittest.TestCase):
         self.assertEqual(2, CRUDControllerTest._controller.delete({}))
         self.assertEqual([], CRUDControllerTest._controller.get({}))
 
-    def test_all_attributes(self):
+    def test_query_get_parser(self):
         self.assertEqual(
             {
                 'key': str,
                 'mandatory': int,
                 'optional': str,
                 'limit': int,
-                'offset': int
+                'offset': int,
             },
-            {arg.name: arg.type for arg in CRUDControllerTest._controller.all_attributes.args})
+            {arg.name: arg.type for arg in CRUDControllerTest._controller.query_get_parser.args})
 
-    def test_all_attributes_as_json(self):
+    def test_query_delete_parser(self):
+        self.assertEqual(
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+            },
+            {arg.name: arg.type for arg in CRUDControllerTest._controller.query_delete_parser.args})
+
+    def test_json_post_parser(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -617,9 +638,80 @@ class CRUDControllerTest(unittest.TestCase):
                 ),
             },
             {arg.name: (arg.type, arg.default, arg.location) for arg in
-             CRUDControllerTest._controller.all_attributes_as_json.args})
+             CRUDControllerTest._controller.json_post_parser.args})
 
-    def test_response_for_get(self):
+    def test_json_post_parser_with_auto_increment_and_enum(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                return name, test_fields
+
+        CRUDControllerTest._controller_auto_increment.namespace(TestAPI)
+        self.assertEqual(
+            {
+                'TestAutoIncrementModel': (
+                    ('TestAutoIncrementModel', ['enum_field', 'optional_with_default']),
+                    """{
+"enum_field": "Value1",
+"optional_with_default": "Test value"
+}""",
+                    'json'
+                ),
+            },
+            {arg.name: (arg.type, arg.default, arg.location) for arg in
+             CRUDControllerTest._controller_auto_increment.json_post_parser.args})
+
+    def test_json_put_parser(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                return name, test_fields
+
+        CRUDControllerTest._controller.namespace(TestAPI)
+        self.assertEqual(
+            {
+                'TestModel': (
+                    ('TestModel', ['key', 'mandatory', 'optional']),
+                    """{
+"key": "sample_value",
+"mandatory": 0,
+"optional": "sample_value"
+}""",
+                    'json'
+                ),
+            },
+            {arg.name: (arg.type, arg.default, arg.location) for arg in
+             CRUDControllerTest._controller.json_put_parser.args})
+
+    def test_json_put_parser_with_auto_increment_and_enum(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                return name, test_fields
+
+        CRUDControllerTest._controller_auto_increment.namespace(TestAPI)
+        self.assertEqual(
+            {
+                'TestAutoIncrementModel': (
+                    ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default']),
+                    """{
+"enum_field": "Value1",
+"key": 0,
+"optional_with_default": "Test value"
+}""",
+                    'json'
+                ),
+            },
+            {arg.name: (arg.type, arg.default, arg.location) for arg in
+             CRUDControllerTest._controller_auto_increment.json_put_parser.args})
+
+    def test_get_response_model(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -627,9 +719,31 @@ class CRUDControllerTest(unittest.TestCase):
                 test_fields.sort()
                 return name, test_fields
 
+        CRUDControllerTest._controller.namespace(TestAPI)
         self.assertEqual(
             ('TestModel', ['key', 'mandatory', 'optional']),
-            CRUDControllerTest._controller.response_for_get(TestAPI))
+            CRUDControllerTest._controller.get_response_model)
+
+    def test_get_response_model_with_enum(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                test_descriptions = [field.description for field in fields.values() if field.description]
+                test_descriptions.sort()
+                test_enums = [field.enum for field in fields.values() if hasattr(field, 'enum') and field.enum]
+                return name, test_fields, test_descriptions, test_enums
+
+        CRUDControllerTest._controller_auto_increment.namespace(TestAPI)
+        self.assertEqual(
+            (
+                'TestAutoIncrementModel',
+                ['enum_field', 'key', 'optional_with_default'],
+                ['Test Documentation'],
+                [['Value1', 'Value2']]
+            ),
+            CRUDControllerTest._controller_auto_increment.get_response_model)
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
         CRUDControllerTest._controller.post({
@@ -1236,19 +1350,29 @@ class CRUDControllerAuditTest(unittest.TestCase):
             ]
         )
 
-    def test_all_attributes(self):
+    def test_query_get_parser(self):
         self.assertEqual(
             {
                 'key': str,
                 'mandatory': int,
                 'optional': str,
                 'limit': int,
-                'offset': int
+                'offset': int,
             },
-            {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.all_attributes.args})
+            {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.query_get_parser.args})
         self._check_audit([])
 
-    def test_response_for_get(self):
+    def test_query_delete_parser(self):
+        self.assertEqual(
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+            },
+            {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.query_delete_parser.args})
+        self._check_audit([])
+
+    def test_get_response_model(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -1256,9 +1380,10 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 test_fields.sort()
                 return name, test_fields
 
+        CRUDControllerAuditTest._controller.namespace(TestAPI)
         self.assertEqual(
             ('TestModel', ['key', 'mandatory', 'optional']),
-            CRUDControllerAuditTest._controller.response_for_get(TestAPI))
+            CRUDControllerAuditTest._controller.get_response_model)
         self._check_audit([])
 
 
@@ -1310,7 +1435,7 @@ class ModelDescriptionControllerTest(unittest.TestCase):
             },
             ModelDescriptionControllerTest._controller.get())
 
-    def test_response_for_get(self):
+    def test_get_response_model(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -1318,9 +1443,10 @@ class ModelDescriptionControllerTest(unittest.TestCase):
                 test_fields.sort()
                 return name, test_fields
 
+        ModelDescriptionControllerTest._controller.namespace(TestAPI)
         self.assertEqual(
             ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
-            ModelDescriptionControllerTest._controller.response_for_get(TestAPI))
+            ModelDescriptionControllerTest._controller.get_response_model)
 
 
 class FlaskRestPlusModelsTest(unittest.TestCase):
@@ -1452,37 +1578,37 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
         logger.info(f'-------------------------------')
 
     def test_python_type_for_sqlalchemy_string_field_is_string(self):
-        field = sqlalchemy.inspect(self._model).attrs['string_column']
+        field = self._model.schema().fields['string_column']
         self.assertEqual(str, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_integer_field_is_integer(self):
-        field = sqlalchemy.inspect(self._model).attrs['integer_column']
+        field = self._model.schema().fields['integer_column']
         self.assertEqual(int, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_boolean_field_is_boolean(self):
-        field = sqlalchemy.inspect(self._model).attrs['boolean_column']
+        field = self._model.schema().fields['boolean_column']
         self.assertEqual(bool, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_date_field_is_date(self):
-        field = sqlalchemy.inspect(self._model).attrs['date_column']
+        field = self._model.schema().fields['date_column']
         self.assertEqual(datetime.date, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_datetime_field_is_datetime(self):
-        field = sqlalchemy.inspect(self._model).attrs['datetime_column']
+        field = self._model.schema().fields['datetime_column']
         self.assertEqual(datetime.datetime, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_time_field_is_time(self):
-        field = sqlalchemy.inspect(self._model).attrs['time_column']
+        field = self._model.schema().fields['time_column']
         self.assertEqual(datetime.time, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_float_field_is_float(self):
-        field = sqlalchemy.inspect(self._model).attrs['float_column']
+        field = self._model.schema().fields['float_column']
         self.assertEqual(float, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_none_field_cannot_be_guessed(self):
         with self.assertRaises(Exception) as cm:
             flask_restplus_models.get_python_type(None)
-        self.assertEqual('Python field type cannot be guessed for None.', cm.exception.args[0])
+        self.assertEqual('Python field type cannot be guessed for None field.', cm.exception.args[0])
 
 
 if __name__ == '__main__':

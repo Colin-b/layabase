@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 5.0.0 (2017-10-13) ##
+
+### Release notes ###
+
+- Renamed a lot of methods and attributes and change the behavior of CRUD*. Have a look at the python template for the update procedure.
+
 ## Version 4.0.0 (2017-10-12) ##
 
 ### Release notes ###
