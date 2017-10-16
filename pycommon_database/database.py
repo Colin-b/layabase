@@ -11,7 +11,7 @@ from pycommon_database.flask_restplus_models import (
     query_parser_with_fields,
     json_parser_with_fields
 )
-from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound, ModelNotProvided, MoreThanOneResult
+from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 from pycommon_database.audit import create_from as create_audit_model
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class CRUDModel:
             model = query.one_or_none()
         except exc.MultipleResultsFound:
             cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
-            raise MoreThanOneResult(kwargs)
+            raise ValidationFailed(kwargs, message='More than one result: Consider another filtering.')
         return cls.schema().dump(model).data
 
     @classmethod
@@ -65,10 +65,10 @@ class CRUDModel:
         :returns The inserted model formatted as a dictionary.
         """
         if not model_as_dict:
-            raise ModelNotProvided()
+            raise ValidationFailed({}, message='No data provided.')
         model, errors = cls.schema().load(model_as_dict, session=cls._session)
         if errors:
-            raise ValidationFailed(model_as_dict, errors)
+            raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
         try:
             cls._session.add(model)
             ret = cls._session.commit()
@@ -86,14 +86,14 @@ class CRUDModel:
         and new model formatted as a dictionary (second item).
         """
         if not model_as_dict:
-            raise ModelNotProvided()
+            raise ValidationFailed({}, message='No data provided.')
         previous_model = cls.schema().get_instance(model_as_dict)
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)
         previous_model_as_dict = _model_field_values(previous_model)
         new_model, errors = cls.schema().load(model_as_dict, instance=previous_model, partial=True, session=cls._session)
         if errors:
-            raise ValidationFailed(model_as_dict, errors)
+            raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
         new_model_as_dict = _model_field_values(new_model)
         try:
             cls._session.add(new_model)

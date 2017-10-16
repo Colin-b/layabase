@@ -5,19 +5,9 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationFailed(Exception):
-    def __init__(self, received_data, marshmallow_errors):
+    def __init__(self, received_data, marshmallow_errors=None, message=''):
         self.received_data = received_data
-        self.errors = marshmallow_errors
-
-
-class ModelNotProvided(ValidationFailed):
-    def __init__(self):
-        ValidationFailed.__init__(self, {}, {'': ['No data provided.']})
-
-
-class MoreThanOneResult(ValidationFailed):
-    def __init__(self, received_data):
-        ValidationFailed.__init__(self, received_data, {'': ['More than one result: Consider another filtering.']})
+        self.errors = marshmallow_errors if marshmallow_errors else {'': [message]}
 
 
 class ModelCouldNotBeFound(Exception):

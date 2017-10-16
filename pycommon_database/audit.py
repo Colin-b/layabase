@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import Column, DateTime, Enum, String, inspect
 import datetime
 
-from pycommon_database.flask_restplus_errors import ModelCouldNotBeFound, ModelNotProvided
+from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +20,14 @@ class AuditModel:
     @classmethod
     def audit_add(cls, model_as_dict: dict):
         if not model_as_dict:
-            raise ModelNotProvided()
+            raise ValidationFailed({}, message='No data provided.')
 
         cls._audit_action(action='I', model_as_dict=dict(model_as_dict))
 
     @classmethod
     def audit_update(cls, model_as_dict: dict):
         if not model_as_dict:
-            raise ModelNotProvided()
+            raise ValidationFailed({}, message='No data provided.')
         previous_model = cls._model.schema().get_instance(model_as_dict)
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)

@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 5.1.2 (2017-10-16) ##
+
+### Bug fixes ###
+
+- If no data is provided on insert or update requests, then an error 4** will be sent to the client instead of a 500.
+- If multiple results could be found for a get single request, then an error 4** will be sent to the client instead of a 500.
+
 ## Version 5.1.1 (2017-10-16) ##
 
 ### Bug fixes ###
