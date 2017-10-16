@@ -344,9 +344,13 @@ class CRUDControllerTest(unittest.TestCase):
     class TestAutoIncrementController(database.CRUDController):
         pass
 
+    class TestDateController(database.CRUDController):
+        pass
+
     _db = None
     _controller = TestController()
     _controller_auto_increment = TestAutoIncrementController()
+    _date_controller = TestDateController()
 
     @classmethod
     def setUpClass(cls):
@@ -375,10 +379,18 @@ class CRUDControllerTest(unittest.TestCase):
                                            doc='Test Documentation')
             optional_with_default = sqlalchemy.Column(sqlalchemy.String, default='Test value')
 
+        class TestDateModel(database.CRUDModel, base):
+            __tablename__ = 'date_table_name'
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            date_str = sqlalchemy.Column(sqlalchemy.Date)
+            datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
+
         logger.info('Save model class...')
         cls._controller.model(TestModel)
         cls._controller_auto_increment.model(TestAutoIncrementModel)
-        return [TestModel, TestAutoIncrementModel]
+        cls._date_controller.model(TestDateModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -555,6 +567,28 @@ class CRUDControllerTest(unittest.TestCase):
         )
         self.assertEqual([{'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'}],
                          CRUDControllerTest._controller.get({'mandatory': 1}))
+
+    def test_put_is_updating_date(self):
+        CRUDControllerTest._date_controller.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59.123456',
+        })
+        self.assertEqual(
+            (
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59.123456+00:00', 'key': 'my_key1'},
+                {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00+00:00', 'key': 'my_key1'},
+            ),
+            CRUDControllerTest._date_controller.put({
+                'key': 'my_key1',
+                'date_str': '2018-06-01',
+                'datetime_str': '1989-12-31T01:00:00',
+            })
+        )
+        self.assertEqual([
+            {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00+00:00', 'key': 'my_key1'}
+        ],
+            CRUDControllerTest._date_controller.get({'date_str': '2018-06-01'}))
 
     def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(self):
         CRUDControllerTest._controller.post({

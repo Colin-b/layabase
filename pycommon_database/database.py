@@ -91,14 +91,12 @@ class CRUDModel:
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)
         previous_model_as_dict = _model_field_values(previous_model)
-        for key, value in model_as_dict.items():
-            setattr(previous_model, key, value)
-        new_model_as_dict = _model_field_values(previous_model)
-        errors = cls.schema().validate(inspect(previous_model).dict, session=cls._session)
+        new_model, errors = cls.schema().load(model_as_dict, instance=previous_model, partial=True, session=cls._session)
         if errors:
             raise ValidationFailed(model_as_dict, errors)
+        new_model_as_dict = _model_field_values(new_model)
         try:
-            cls._session.merge(previous_model)
+            cls._session.add(new_model)
             cls._session.commit()
             return previous_model_as_dict, new_model_as_dict
         except Exception as e:

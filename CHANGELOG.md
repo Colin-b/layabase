@@ -6,9 +6,15 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 5.1.1 (2017-10-16) ##
+
+### Bug fixes ###
+
+- Date and DateTime fields were not deserialized on update, preventing update on those fields.
+
 ## Version 5.1.0 (2017-10-13) ##
 
-### Release notes ###
+### Enhancements ###
 
 - Introduce audit parser and marshaller.
 
