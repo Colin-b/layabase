@@ -207,14 +207,16 @@ class CRUDController:
 
         cls.query_get_parser = query_parser_with_fields(cls._marshmallow_fields)
         cls.query_get_parser.add_argument('limit', type=int)
-        cls.query_get_parser.add_argument('offset', type=int)
+        if _supports_offset(cls._model.metadata.bind.url.drivername):
+            cls.query_get_parser.add_argument('offset', type=int)
         cls.query_delete_parser = query_parser_with_fields(cls._marshmallow_fields)
         if audit:
             cls._audit_model = create_audit_model(cls._model)
             cls._audit_marshmallow_fields = cls._audit_model.schema().fields.values()
             cls.query_get_audit_parser = query_parser_with_fields(cls._audit_marshmallow_fields)
             cls.query_get_audit_parser.add_argument('limit', type=int)
-            cls.query_get_audit_parser.add_argument('offset', type=int)
+            if _supports_offset(cls._model.metadata.bind.url.drivername):
+                cls.query_get_audit_parser.add_argument('offset', type=int)
         else:
             cls._audit_model = None
             cls._audit_marshmallow_fields = None
@@ -338,6 +340,10 @@ def _clean_database_url(database_connection_url: str):
 
 def _can_retrieve_metadata(database_connection_url: str):
     return not database_connection_url.startswith('sybase')
+
+
+def _supports_offset(driver_name: str):
+    return not driver_name.startswith('sybase')
 
 
 def load(database_connection_url: str, create_models_func):

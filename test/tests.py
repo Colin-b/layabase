@@ -58,6 +58,12 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual('sybase+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2',
                          database._clean_database_url('sybase+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
 
+    def test_sybase_does_not_support_offset(self):
+        self.assertFalse(database._supports_offset('sybase+pyodbc'))
+
+    def test_sql_lite_support_offset(self):
+        self.assertTrue(database._supports_offset('sqlite'))
+
 
 class CRUDModelTest(unittest.TestCase):
     _db = None
