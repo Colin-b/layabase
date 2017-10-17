@@ -372,7 +372,7 @@ def load(database_connection_url: str, create_models_func):
         # Remove all views from table list before creating them
         base.metadata.all_tables = {
             table_name: table_or_view
-            for table_name, table_or_view in all_tables_and_views
+            for table_name, table_or_view in all_tables_and_views.items()
             if table_name not in all_view_names
         }
         logger.debug(f'Creating tables...')
