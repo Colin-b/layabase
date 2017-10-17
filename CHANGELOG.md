@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 6.0.1 (2017-10-17) ##
+
+### Bug fixes ###
+
+- Views were still created on database.load.
+
 ## Version 6.0.0 (2017-10-17) ##
 
 ### Release notes ###
