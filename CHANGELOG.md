@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 7.0.1 (2017-10-17) ##
+
+### Bug fixes ###
+
+- Use a different model name for POST if model differs from PUT.
+
 ## Version 7.0.0 (2017-10-17) ##
 
 ### Bug fixes ###

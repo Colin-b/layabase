@@ -231,7 +231,9 @@ class CRUDController:
     @classmethod
     def namespace(cls, namespace):
         post_marshmallow_fields = [field for field in cls._model.post_schema().fields.values() if not field.dump_only]
-        cls.json_post_model = model_with_fields(namespace, cls._model.__name__, post_marshmallow_fields)
+        update_model_is_insert_model = len(post_marshmallow_fields) == len(cls._marshmallow_fields)
+        insert_model_name_suffix = '' if update_model_is_insert_model else '_Insert'
+        cls.json_post_model = model_with_fields(namespace, cls._model.__name__ + insert_model_name_suffix, post_marshmallow_fields)
         cls.json_put_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         cls.get_response_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         if cls._audit_model:
