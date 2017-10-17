@@ -193,6 +193,10 @@ class CRUDController:
     # CRUD response marshallers
     get_response_model = None
     get_audit_response_model = None
+    get_model_description_response_model = None
+
+    # The response that is always sent for the Model Description
+    _model_description_dictionary = None
 
     @classmethod
     def model(cls, value, audit=False):
@@ -221,6 +225,7 @@ class CRUDController:
             cls._audit_model = None
             cls._audit_marshmallow_fields = None
             cls.query_get_audit_parser = None
+        cls._model_description_dictionary = _retrieve_model_description_dictionary(cls._model)
 
     @classmethod
     def namespace(cls, namespace):
@@ -232,6 +237,7 @@ class CRUDController:
             cls.get_audit_response_model = model_with_fields(namespace, 'Audit' + cls._model.__name__, cls._audit_marshmallow_fields)
         else:
             cls.get_audit_response_model = None
+        cls.get_model_description_response_model = model_describing_sql_alchemy_mapping(namespace, cls._model)
 
     def get(self, request_arguments):
         """
@@ -281,8 +287,11 @@ class CRUDController:
         self._audit_model._session = self._model._session
         return self._audit_model.get_all(**request_arguments)
 
+    def get_model_description(self):
+        return self._model_description_dictionary
 
-def _retrieve_model_dictionary(sql_alchemy_class):
+
+def _retrieve_model_description_dictionary(sql_alchemy_class):
     description = {
         'table': sql_alchemy_class.__tablename__,
     }
@@ -300,25 +309,6 @@ def _retrieve_model_dictionary(sql_alchemy_class):
 def _model_field_values(model_instance):
     """Return model fields values (with the proper type) as a dictionary."""
     return model_instance.schema().dump(model_instance).data
-
-
-class ModelDescriptionController:
-    _model = None
-    _model_dictionary = None
-
-    get_response_model = None
-
-    @classmethod
-    def model(cls, value):
-        cls._model = value
-        cls._model_dictionary = _retrieve_model_dictionary(cls._model)
-
-    @classmethod
-    def namespace(cls, namespace):
-        cls.get_response_model = model_describing_sql_alchemy_mapping(namespace, cls._model)
-
-    def get(self):
-        return self._model_dictionary
 
 
 class NoDatabaseProvided(Exception):

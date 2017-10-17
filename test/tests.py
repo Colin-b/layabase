@@ -855,6 +855,29 @@ class CRUDControllerTest(unittest.TestCase):
             ],
             CRUDControllerTest._controller.get({'offset': 1, 'limit': 1}))
 
+    def test_get_model_description_returns_description(self):
+        self.assertEqual(
+            {
+                'key': 'key',
+                'mandatory': 'mandatory',
+                'optional': 'optional',
+                'table': 'sample_table_name'
+            },
+            CRUDControllerTest._controller.get_model_description())
+
+    def test_get_model_description_response_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                return name, test_fields
+
+        CRUDControllerTest._controller.namespace(TestAPI)
+        self.assertEqual(
+            ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
+            CRUDControllerTest._controller.get_model_description_response_model)
+
 
 class CRUDControllerAuditTest(unittest.TestCase):
     class TestController(database.CRUDController):
@@ -1464,68 +1487,6 @@ class CRUDControllerAuditTest(unittest.TestCase):
             ),
             CRUDControllerAuditTest._controller.get_audit_response_model)
         self._check_audit([])
-
-
-class ModelDescriptionControllerTest(unittest.TestCase):
-    class TestController(database.ModelDescriptionController):
-        pass
-
-    _db = None
-    _controller = TestController()
-
-    @classmethod
-    def setUpClass(cls):
-        cls._db = database.load('sqlite:///:memory:', cls._create_models)
-
-    @classmethod
-    def tearDownClass(cls):
-        database.reset(cls._db)
-
-    @classmethod
-    def _create_models(cls, base):
-        logger.info('Declare model class...')
-
-        class TestModel(database.CRUDModel, base):
-            __tablename__ = 'sample_table_name'
-
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-            optional = sqlalchemy.Column(sqlalchemy.String)
-
-        logger.info('Save model class...')
-        cls._controller.model(TestModel)
-        return [TestModel]
-
-    def setUp(self):
-        logger.info(f'-------------------------------')
-        logger.info(f'Start of {self._testMethodName}')
-
-    def tearDown(self):
-        logger.info(f'End of {self._testMethodName}')
-        logger.info(f'-------------------------------')
-
-    def test_get_returns_description(self):
-        self.assertEqual(
-            {
-                'key': 'key',
-                'mandatory': 'mandatory',
-                'optional': 'optional',
-                'table': 'sample_table_name'
-            },
-            ModelDescriptionControllerTest._controller.get())
-
-    def test_get_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        ModelDescriptionControllerTest._controller.namespace(TestAPI)
-        self.assertEqual(
-            ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
-            ModelDescriptionControllerTest._controller.get_response_model)
 
 
 class FlaskRestPlusModelsTest(unittest.TestCase):

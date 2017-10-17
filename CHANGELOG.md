@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 6.0.0 (2017-10-17) ##
+
+### Release notes ###
+
+- ModelDescriptionController class does not exists anymore, CRUDController now provides the model_description functionality.
+
 ## Version 5.1.4 (2017-10-17) ##
 
 ### Bug fixes ###
