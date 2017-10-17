@@ -2,14 +2,13 @@ import logging
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
-from marshmallow_sqlalchemy import ModelSchema, field_for
+from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
     model_describing_sql_alchemy_mapping,
     query_parser_with_fields,
-    json_parser_with_fields
 )
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 from pycommon_database.audit import create_from as create_audit_model
@@ -185,10 +184,12 @@ class CRUDController:
 
     # CRUD request parsers
     query_get_parser = None
-    json_post_parser = None
-    json_put_parser = None
     query_delete_parser = None
     query_get_audit_parser = None
+
+    # CRUD model definition (instead of request parsers)
+    json_post_model = None
+    json_put_model = None
 
     # CRUD response marshallers
     get_response_model = None
@@ -230,8 +231,8 @@ class CRUDController:
     @classmethod
     def namespace(cls, namespace):
         post_marshmallow_fields = [field for field in cls._model.post_schema().fields.values() if not field.dump_only]
-        cls.json_post_parser = json_parser_with_fields(namespace, cls._model.__name__, post_marshmallow_fields)
-        cls.json_put_parser = json_parser_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
+        cls.json_post_model = model_with_fields(namespace, cls._model.__name__, post_marshmallow_fields)
+        cls.json_put_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         cls.get_response_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         if cls._audit_model:
             cls.get_audit_response_model = model_with_fields(namespace, 'Audit' + cls._model.__name__, cls._audit_marshmallow_fields)

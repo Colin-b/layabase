@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 7.0.0 (2017-10-17) ##
+
+### Bug fixes ###
+
+- Do not provide useless JSON request parser. Provide expected models for POST and PUT instead.
+
 ## Version 6.0.1 (2017-10-17) ##
 
 ### Bug fixes ###

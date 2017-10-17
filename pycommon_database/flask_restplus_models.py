@@ -165,30 +165,3 @@ def query_parser_with_fields(marshmallow_fields_list):
             type=get_python_type(field),
         )
     return query_parser
-
-
-def json_parser_with_fields(api, name: str, marshmallow_fields_list):
-    """
-    Flask RestPlus Model describing a SQL Alchemy class using schema fields (as JSON).
-    """
-    fields_model = model_with_fields(api, name, marshmallow_fields_list)
-    json_parser = reqparse.RequestParser()
-    json_parser.add_argument(
-        name,
-        type=fields_model,
-        required=True,
-        location='json',
-        default=_sample_json(marshmallow_fields_list),
-    )
-    return json_parser
-
-
-def _sample_json(marshmallow_fields_list):
-    all_fields = list(marshmallow_fields_list)
-    # Sort to ensure that examples are always in the same order
-    all_fields.sort(key=lambda field: field.name)
-    fields_as_json = ',\n'.join([
-        f'"{field.name}": "{get_example(field)}"' if _is_json_string(field) else f'"{field.name}": {get_example(field)}'
-        for field in all_fields
-    ])
-    return '{\n'+fields_as_json+'\n}'

@@ -657,7 +657,7 @@ class CRUDControllerTest(unittest.TestCase):
             },
             {arg.name: arg.type for arg in CRUDControllerTest._controller.query_delete_parser.args})
 
-    def test_json_post_parser(self):
+    def test_json_post_model(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -667,21 +667,11 @@ class CRUDControllerTest(unittest.TestCase):
 
         CRUDControllerTest._controller.namespace(TestAPI)
         self.assertEqual(
-            {
-                'TestModel': (
-                    ('TestModel', ['key', 'mandatory', 'optional']),
-                    """{
-"key": "sample_value",
-"mandatory": 0,
-"optional": "sample_value"
-}""",
-                    'json'
-                ),
-            },
-            {arg.name: (arg.type, arg.default, arg.location) for arg in
-             CRUDControllerTest._controller.json_post_parser.args})
+            ('TestModel', ['key', 'mandatory', 'optional']),
+            CRUDControllerTest._controller.json_post_model
+        )
 
-    def test_json_post_parser_with_auto_increment_and_enum(self):
+    def test_json_post_model_with_auto_increment_and_enum(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -691,20 +681,11 @@ class CRUDControllerTest(unittest.TestCase):
 
         CRUDControllerTest._controller_auto_increment.namespace(TestAPI)
         self.assertEqual(
-            {
-                'TestAutoIncrementModel': (
-                    ('TestAutoIncrementModel', ['enum_field', 'optional_with_default']),
-                    """{
-"enum_field": "Value1",
-"optional_with_default": "Test value"
-}""",
-                    'json'
-                ),
-            },
-            {arg.name: (arg.type, arg.default, arg.location) for arg in
-             CRUDControllerTest._controller_auto_increment.json_post_parser.args})
+            ('TestAutoIncrementModel', ['enum_field', 'optional_with_default']),
+            CRUDControllerTest._controller_auto_increment.json_post_model
+        )
 
-    def test_json_put_parser(self):
+    def test_json_put_model(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -714,21 +695,11 @@ class CRUDControllerTest(unittest.TestCase):
 
         CRUDControllerTest._controller.namespace(TestAPI)
         self.assertEqual(
-            {
-                'TestModel': (
-                    ('TestModel', ['key', 'mandatory', 'optional']),
-                    """{
-"key": "sample_value",
-"mandatory": 0,
-"optional": "sample_value"
-}""",
-                    'json'
-                ),
-            },
-            {arg.name: (arg.type, arg.default, arg.location) for arg in
-             CRUDControllerTest._controller.json_put_parser.args})
+            ('TestModel', ['key', 'mandatory', 'optional']),
+            CRUDControllerTest._controller.json_put_model
+        )
 
-    def test_json_put_parser_with_auto_increment_and_enum(self):
+    def test_json_put_model_with_auto_increment_and_enum(self):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
@@ -738,19 +709,9 @@ class CRUDControllerTest(unittest.TestCase):
 
         CRUDControllerTest._controller_auto_increment.namespace(TestAPI)
         self.assertEqual(
-            {
-                'TestAutoIncrementModel': (
-                    ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default']),
-                    """{
-"enum_field": "Value1",
-"key": 0,
-"optional_with_default": "Test value"
-}""",
-                    'json'
-                ),
-            },
-            {arg.name: (arg.type, arg.default, arg.location) for arg in
-             CRUDControllerTest._controller_auto_increment.json_put_parser.args})
+            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default']),
+            CRUDControllerTest._controller_auto_increment.json_put_model
+        )
 
     def test_get_response_model(self):
         class TestAPI:
