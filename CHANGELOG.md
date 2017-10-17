@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 5.1.4 (2017-10-17) ##
+
+### Bug fixes ###
+
+- Views are not considered as tables anymore.
+
 ## Version 5.1.3 (2017-10-17) ##
 
 ### Bug fixes ###

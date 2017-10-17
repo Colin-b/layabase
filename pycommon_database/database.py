@@ -366,8 +366,18 @@ def load(database_connection_url: str, create_models_func):
     logger.debug(f'Creating models...')
     model_classes = create_models_func(base)
     if _can_retrieve_metadata(database_connection_url):
+        with engine.connect() as conn:
+            all_view_names = engine.dialect.get_view_names(conn, base.metadata.schema)
+        all_tables_and_views = base.metadata.tables
+        # Remove all views from table list before creating them
+        base.metadata.all_tables = {
+            table_name: table_or_view
+            for table_name, table_or_view in all_tables_and_views
+            if table_name not in all_view_names
+        }
         logger.debug(f'Creating tables...')
         base.metadata.create_all(bind=engine)
+        base.metadata.tables = all_tables_and_views
     logger.debug(f'Creating session...')
     session = sessionmaker(bind=engine)()
     logger.info(f'Connected to {database_connection_url}.')
