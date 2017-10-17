@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 5.1.3 (2017-10-17) ##
+
+### Bug fixes ###
+
+- Offset will not be provided anymore for Sybase models.
+
 ## Version 5.1.2 (2017-10-16) ##
 
 ### Bug fixes ###
