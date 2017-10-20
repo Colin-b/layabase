@@ -4,7 +4,7 @@ import logging
 import sys
 import datetime
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
-from flask_restplus import fields as flask_rest_plus_fields
+from flask_restplus import fields as flask_rest_plus_fields, inputs
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -596,6 +596,66 @@ class CRUDControllerTest(unittest.TestCase):
         ],
             CRUDControllerTest._date_controller.get({'date_str': '2018-06-01'}))
 
+    def test_get_date_is_handled_for_valid_date(self):
+        CRUDControllerTest._date_controller.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59.123456',
+        })
+        d = datetime.datetime.strptime('2017-05-15', '%Y-%m-%d').date()
+        self.assertEqual(
+            [
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59.123456+00:00', 'key': 'my_key1'},
+            ],
+            CRUDControllerTest._date_controller.get({
+                'date_str': d,
+            })
+        )
+
+    def test_get_date_is_handled_for_unused_date(self):
+        CRUDControllerTest._date_controller.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59.123456',
+        })
+        d = datetime.datetime.strptime('2016-09-23', '%Y-%m-%d').date()
+        self.assertEqual(
+            [],
+            CRUDControllerTest._date_controller.get({
+                'date_str': d,
+            })
+        )
+
+    def test_get_date_is_handled_for_valid_datetime(self):
+        CRUDControllerTest._date_controller.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59.123456',
+        })
+        dt = datetime.datetime.strptime('2016-09-23T23:59:59.123456', '%Y-%m-%dT%H:%M:%S.%f')
+        self.assertEqual(
+            [
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59.123456+00:00', 'key': 'my_key1'},
+            ],
+            CRUDControllerTest._date_controller.get({
+                'datetime_str': dt,
+            })
+        )
+
+    def test_get_date_is_handled_for_unused_datetime(self):
+        CRUDControllerTest._date_controller.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59.123456',
+        })
+        dt = datetime.datetime.strptime('2016-09-24T23:59:59.123456', '%Y-%m-%dT%H:%M:%S.%f')
+        self.assertEqual(
+            [],
+            CRUDControllerTest._date_controller.get({
+                'datetime_str': dt,
+            })
+        )
+
     def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(self):
         CRUDControllerTest._controller.post({
             'key': 'my_key1',
@@ -643,8 +703,8 @@ class CRUDControllerTest(unittest.TestCase):
                 'key': str,
                 'mandatory': int,
                 'optional': str,
-                'limit': int,
-                'offset': int,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
             },
             {arg.name: arg.type for arg in CRUDControllerTest._controller.query_get_parser.args})
 
@@ -663,11 +723,12 @@ class CRUDControllerTest(unittest.TestCase):
             def model(cls, name, fields):
                 test_fields = [name for name, field in fields.items()]
                 test_fields.sort()
-                return name, test_fields
+                test_defaults = [field.default for field in fields.values() if hasattr(field, 'default') and field.default]
+                return name, test_fields, test_defaults
 
         CRUDControllerTest._controller.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional']),
+            ('TestModel', ['key', 'mandatory', 'optional'], []),
             CRUDControllerTest._controller.json_post_model
         )
 
@@ -677,11 +738,12 @@ class CRUDControllerTest(unittest.TestCase):
             def model(cls, name, fields):
                 test_fields = [name for name, field in fields.items()]
                 test_fields.sort()
-                return name, test_fields
+                test_defaults = [field.default.arg for field in fields.values() if hasattr(field, 'default') and field.default]
+                return name, test_fields, test_defaults
 
         CRUDControllerTest._controller_auto_increment.namespace(TestAPI)
         self.assertEqual(
-            ('TestAutoIncrementModel_Insert', ['enum_field', 'optional_with_default']),
+            ('TestAutoIncrementModel_Insert', ['enum_field', 'optional_with_default'], ['Test value']),
             CRUDControllerTest._controller_auto_increment.json_post_model
         )
 
@@ -1381,8 +1443,8 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 'key': str,
                 'mandatory': int,
                 'optional': str,
-                'limit': int,
-                'offset': int,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
             },
             {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.query_get_parser.args})
         self._check_audit([])
@@ -1391,13 +1453,13 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual(
             {
                 'audit_action': str,
-                'audit_date_utc': datetime.datetime,
+                'audit_date_utc': inputs.datetime_from_iso8601,
                 'audit_user': str,
                 'key': str,
                 'mandatory': int,
                 'optional': str,
-                'limit': int,
-                'offset': int,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
             },
             {arg.name: arg.type for arg in CRUDControllerAuditTest._controller.query_get_audit_parser.args})
         self._check_audit([])
@@ -1563,7 +1625,6 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
             boolean_column = sqlalchemy.Column(sqlalchemy.Boolean)
             date_column = sqlalchemy.Column(sqlalchemy.Date)
             datetime_column = sqlalchemy.Column(sqlalchemy.DateTime)
-            time_column = sqlalchemy.Column(sqlalchemy.Time)
             float_column = sqlalchemy.Column(sqlalchemy.Float)
 
         logger.info('Save model class...')
@@ -1588,19 +1649,15 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
 
     def test_python_type_for_sqlalchemy_boolean_field_is_boolean(self):
         field = self._model.schema().fields['boolean_column']
-        self.assertEqual(bool, flask_restplus_models.get_python_type(field))
+        self.assertEqual(inputs.boolean, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_date_field_is_date(self):
         field = self._model.schema().fields['date_column']
-        self.assertEqual(datetime.date, flask_restplus_models.get_python_type(field))
+        self.assertEqual(inputs.date_from_iso8601, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_datetime_field_is_datetime(self):
         field = self._model.schema().fields['datetime_column']
-        self.assertEqual(datetime.datetime, flask_restplus_models.get_python_type(field))
-
-    def test_python_type_for_sqlalchemy_time_field_is_time(self):
-        field = self._model.schema().fields['time_column']
-        self.assertEqual(datetime.time, flask_restplus_models.get_python_type(field))
+        self.assertEqual(inputs.datetime_from_iso8601, flask_restplus_models.get_python_type(field))
 
     def test_python_type_for_sqlalchemy_float_field_is_float(self):
         field = self._model.schema().fields['float_column']

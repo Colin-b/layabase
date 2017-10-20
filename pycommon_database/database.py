@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
+from flask_restplus import inputs
 
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
@@ -211,17 +212,17 @@ class CRUDController:
         cls._marshmallow_fields = cls._model.schema().fields.values()
 
         cls.query_get_parser = query_parser_with_fields(cls._marshmallow_fields)
-        cls.query_get_parser.add_argument('limit', type=int)
+        cls.query_get_parser.add_argument('limit', type=inputs.positive)
         if _supports_offset(cls._model.metadata.bind.url.drivername):
-            cls.query_get_parser.add_argument('offset', type=int)
+            cls.query_get_parser.add_argument('offset', type=inputs.natural)
         cls.query_delete_parser = query_parser_with_fields(cls._marshmallow_fields)
         if audit:
             cls._audit_model = create_audit_model(cls._model)
             cls._audit_marshmallow_fields = cls._audit_model.schema().fields.values()
             cls.query_get_audit_parser = query_parser_with_fields(cls._audit_marshmallow_fields)
-            cls.query_get_audit_parser.add_argument('limit', type=int)
+            cls.query_get_audit_parser.add_argument('limit', type=inputs.positive)
             if _supports_offset(cls._model.metadata.bind.url.drivername):
-                cls.query_get_audit_parser.add_argument('offset', type=int)
+                cls.query_get_audit_parser.add_argument('offset', type=inputs.natural)
         else:
             cls._audit_model = None
             cls._audit_marshmallow_fields = None

@@ -1,5 +1,5 @@
 import datetime
-from flask_restplus import fields, reqparse
+from flask_restplus import fields, reqparse, inputs
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from marshmallow import validate
 
@@ -102,13 +102,11 @@ def get_python_type(marshmallow_field):
     if isinstance(marshmallow_field, marshmallow_fields.Number):
         return float
     if isinstance(marshmallow_field, marshmallow_fields.Boolean):
-        return bool
+        return inputs.boolean
     if isinstance(marshmallow_field, marshmallow_fields.Date):
-        return datetime.date
+        return inputs.date_from_iso8601
     if isinstance(marshmallow_field, marshmallow_fields.DateTime):
-        return datetime.datetime
-    if isinstance(marshmallow_field, marshmallow_fields.Time):
-        return datetime.time
+        return inputs.datetime_from_iso8601
     if isinstance(marshmallow_field, marshmallow_fields.List):
         return list
     # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
@@ -128,6 +126,7 @@ def model_with_fields(api, name: str, marshmallow_fields_list):
             example=str(get_example(field)),
             description=field.metadata.get('description', None),
             enum=get_choices(field),
+            default=_get_default_value(field),
         )
         for field in marshmallow_fields_list
     }

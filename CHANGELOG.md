@@ -6,6 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 7.0.2 (2017-10-20) ##
+
+### Bug fixes ###
+
+- Handle date and datetime following ISO8601 in CRUD parsers.
+- Remove support for time in CRUD parsers as there is no concrete example of use for now.
+- Provide default value for a field in Swagger.
+
 ## Version 7.0.1 (2017-10-17) ##
 
 ### Bug fixes ###
