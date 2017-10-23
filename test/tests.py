@@ -738,7 +738,7 @@ class CRUDControllerTest(unittest.TestCase):
             def model(cls, name, fields):
                 test_fields = [name for name, field in fields.items()]
                 test_fields.sort()
-                test_defaults = [field.default.arg for field in fields.values() if hasattr(field, 'default') and field.default]
+                test_defaults = [field.default for field in fields.values() if hasattr(field, 'default') and field.default]
                 return name, test_fields, test_defaults
 
         CRUDControllerTest._controller_auto_increment.namespace(TestAPI)

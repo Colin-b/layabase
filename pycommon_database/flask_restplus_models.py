@@ -38,7 +38,7 @@ def get_rest_plus_type(marshmallow_field):
 def get_example(marshmallow_field):
     default_value = _get_default_value(marshmallow_field)
     if default_value:
-        return str(default_value.arg)
+        return str(default_value)
 
     choices = get_choices(marshmallow_field)
     return str(choices[0]) if choices else get_default_example(marshmallow_field)

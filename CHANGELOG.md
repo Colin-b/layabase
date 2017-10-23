@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 7.0.3 (2017-10-23) ##
+
+### Bug fixes ###
+
+- Default value provided for Swagger fields is now properly typed.
+
 ## Version 7.0.2 (2017-10-20) ##
 
 ### Bug fixes ###

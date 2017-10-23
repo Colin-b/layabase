@@ -164,7 +164,7 @@ class CRUDModel:
 
     @classmethod
     def enrich_schema_field(cls, marshmallow_field, sql_alchemy_field):
-        defaults = [column.default for column in sql_alchemy_field.columns]
+        defaults = [column.default.arg for column in sql_alchemy_field.columns if column.default]
         if defaults:
             marshmallow_field.metadata['sqlalchemy_default'] = defaults[0]
 
