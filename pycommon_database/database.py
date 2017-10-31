@@ -255,10 +255,11 @@ class CRUDController:
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted model formatted as a dictionary.
         """
+        new_sample_model = self._model.add(new_sample_dictionary)
         if self._audit_model:
             self._audit_model._session = self._model._session
-            self._audit_model.audit_add(new_sample_dictionary)
-        return self._model.add(new_sample_dictionary)
+            self._audit_model.audit_add(new_sample_model)
+        return new_sample_model
 
     def put(self, updated_sample_dictionary):
         """
@@ -267,10 +268,11 @@ class CRUDController:
         :returns A tuple containing previous model formatted as a dictionary (first item)
         and new model formatted as a dictionary (second item).
         """
+        updated_sample_model = self._model.update(updated_sample_dictionary)
         if self._audit_model:
             self._audit_model._session = self._model._session
-            self._audit_model.audit_update(updated_sample_dictionary)
-        return self._model.update(updated_sample_dictionary)
+            self._audit_model.audit_update(updated_sample_model[1])
+        return updated_sample_model
 
     def delete(self, request_arguments):
         """
