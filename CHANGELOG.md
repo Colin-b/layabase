@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 7.1.0 (2017-11-01) ##
+
+### Enhancements ###
+
+- Audit now manage key with auto-incremented value and field with default value.
+- Audit raises error in case of missing data.
+
 ## Version 7.0.3 (2017-10-23) ##
 
 ### Bug fixes ###
