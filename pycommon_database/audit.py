@@ -53,8 +53,7 @@ class AuditModel:
         model_as_dict['audit_action'] = action
         model, errors = cls.schema().load(model_as_dict, session=cls._session)
         if errors:
-            logger.warning('Audit validation failed, ignore audit action to let the real action underneath fail.')
-            return
+            raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
         try:
             cls._session.add(model)
             cls._session.commit()
