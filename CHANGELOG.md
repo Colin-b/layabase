@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 7.2.0 (2017-11-03) ##
+
+### Enhancements ###
+
+- Sybase Column name with uppercase letters need to be quoted with []
+
 ## Version 7.1.0 (2017-11-01) ##
 
 ### Enhancements ###
