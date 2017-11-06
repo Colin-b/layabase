@@ -370,13 +370,18 @@ def _supports_offset(driver_name: str):
     return not driver_name.startswith('sybase')
 
 
-def load(database_connection_url: str, create_models_func, database_type=None):
+def _prepare_engine(engine):
+    if engine.url.drivername.startswith('sybase'):
+        engine.dialect.identifier_preparer.initial_quote = '['
+        engine.dialect.identifier_preparer.final_quote = ']'
+
+
+def load(database_connection_url: str, create_models_func):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel) (Mandatory).
-    :param database_type: Name of DBMS. used to apply configuration specific to DBMS.
     """
     if not database_connection_url:
         raise NoDatabaseProvided()
@@ -386,9 +391,7 @@ def load(database_connection_url: str, create_models_func, database_type=None):
     logger.info(f'Connecting to {database_connection_url}...')
     logger.debug(f'Creating engine...')
     engine = create_engine(database_connection_url)
-    if database_type == 'sybase':
-        engine.dialect.identifier_preparer.initial_quote = '['
-        engine.dialect.identifier_preparer.final_quote = ']'
+    _prepare_engine(engine)
     logger.debug(f'Creating base...')
     base = declarative_base(bind=engine)
     logger.debug(f'Creating models...')

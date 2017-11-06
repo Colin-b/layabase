@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 8.0.0 (2017-11-06) ##
+
+### Release notes ###
+
+- Remove the extra parameter that was introduced in 7.2.0 to handle SyBase need for quoting characters. 
+
 ## Version 7.2.1 (2017-11-06) ##
 
 ### Bug fixes ###
