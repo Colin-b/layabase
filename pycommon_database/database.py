@@ -38,8 +38,13 @@ class CRUDModel:
                 query = query.offset(value)
             elif value is not None:
                 query = query.filter(getattr(cls, key) == value)
-        all_models = query.all()
-        return cls.schema().dump(all_models, many=True).data
+        try:
+            all_models = query.all()
+            return cls.schema().dump(all_models, many=True).data
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+
 
     @classmethod
     def get(cls, **kwargs):
@@ -55,6 +60,9 @@ class CRUDModel:
         except exc.MultipleResultsFound:
             cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
             raise ValidationFailed(kwargs, message='More than one result: Consider another filtering.')
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
         return cls.schema().dump(model).data
 
     @classmethod
@@ -66,13 +74,21 @@ class CRUDModel:
         """
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
-        model, errors = cls.schema().load(model_as_dict, session=cls._session)
+        try:
+            model, errors = cls.schema().load(model_as_dict, session=cls._session)
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
         if errors:
             raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
         try:
             cls._session.add(model)
             ret = cls._session.commit()
             return _model_field_values(model)
+        except exc.sa_exc.DBAPIError:
+            cls._session.rollback()
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
         except Exception:
             cls._session.rollback()
             raise
@@ -87,7 +103,11 @@ class CRUDModel:
         """
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
-        previous_model = cls.schema().get_instance(model_as_dict)
+        try:
+            previous_model = cls.schema().get_instance(model_as_dict)
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)
         previous_model_as_dict = _model_field_values(previous_model)
@@ -99,7 +119,11 @@ class CRUDModel:
             cls._session.add(new_model)
             cls._session.commit()
             return previous_model_as_dict, new_model_as_dict
-        except Exception as e:
+        except exc.sa_exc.DBAPIError:
+            cls._session.rollback()
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        except Exception:
             cls._session.rollback()
             raise
 
@@ -117,6 +141,10 @@ class CRUDModel:
             nb_removed = query.delete()
             cls._session.commit()
             return nb_removed
+        except exc.sa_exc.DBAPIError:
+            cls._session.rollback()
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
         except Exception:
             cls._session.rollback()
             raise

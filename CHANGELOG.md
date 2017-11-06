@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 7.2.1 (2017-11-06) ##
+
+### Bug fixes ###
+
+- Provide a proper exception in case database could not be reached once model is created.
+
 ## Version 7.2.0 (2017-11-03) ##
 
 ### Enhancements ###
