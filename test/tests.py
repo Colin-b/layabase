@@ -207,7 +207,8 @@ class CRUDModelTest(unittest.TestCase):
                 }
             ])
         self.assertEqual({0: {'mandatory': ['Missing data for required field.']}}, cm.exception.errors)
-        self.assertEqual([{'key': 'my_key'}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}], cm.exception.received_data)
+        self.assertEqual([{'key': 'my_key'}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}],
+                         cm.exception.received_data)
         self.assertEqual({}, CRUDModelTest._model.get())
 
     def test_add_all_without_key_is_invalid(self):
@@ -222,7 +223,8 @@ class CRUDModelTest(unittest.TestCase):
                 }]
             )
         self.assertEqual({0: {'key': ['Missing data for required field.']}}, cm.exception.errors)
-        self.assertEqual([{'mandatory': 1}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}], cm.exception.received_data)
+        self.assertEqual([{'mandatory': 1}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}],
+                         cm.exception.received_data)
         self.assertEqual({}, CRUDModelTest._model.get())
 
     def test_add_all_with_wrong_type_is_invalid(self):
@@ -238,7 +240,8 @@ class CRUDModelTest(unittest.TestCase):
                 }]
             )
         self.assertEqual({0: {'key': ['Not a valid string.']}}, cm.exception.errors)
-        self.assertEqual([{'key': 256, 'mandatory': 1}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}], cm.exception.received_data)
+        self.assertEqual([{'key': 256, 'mandatory': 1}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}],
+                         cm.exception.received_data)
         self.assertEqual({}, CRUDModelTest._model.get())
 
     def test_add_without_optional_is_valid(self):
@@ -766,7 +769,6 @@ class CRUDControllerTest(unittest.TestCase):
             }],
             self.thread_get_result)
 
-
     def test_get_without_filter_is_retrieving_everything_with_multiple_posts(self):
         CRUDControllerTest.TestController.post({
             'key': 'my_key1',
@@ -1188,6 +1190,106 @@ class CRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
             CRUDControllerTest.TestController.get_model_description_response_model)
+
+
+class CRUDControllerFailuresTest(unittest.TestCase):
+    class TestController(database.CRUDController):
+        pass
+
+    _db = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls._db = database.load('sqlite:///:memory:', cls._create_models)
+
+    @classmethod
+    def tearDownClass(cls):
+        database.reset(cls._db)
+
+    @classmethod
+    def _create_models(cls, base):
+        logger.info('Declare model class...')
+
+        class TestModel(database.CRUDModel, base):
+            __tablename__ = 'sample_table_name'
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+            optional = sqlalchemy.Column(sqlalchemy.String)
+
+        logger.info('Save model class...')
+        return [TestModel]
+
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+        database.reset(CRUDControllerTest._db)
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_namespace_method_without_setting_model(self):
+        class TestNamespace:
+            pass
+
+        with self.assertRaises(Exception) as cm:
+            CRUDControllerTest.TestController.namespace(TestNamespace)
+        self.assertEqual(
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
+            cm.exception.args[0])
+
+    def test_get_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDControllerTest.TestController.get({})
+        self.assertEqual(
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
+            cm.exception.args[0])
+
+    def test_post_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDControllerTest.TestController.get({})
+        self.assertEqual(
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
+            cm.exception.args[0])
+
+    def test_post_many_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDControllerTest.TestController.post_many([])
+        self.assertEqual(
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
+            cm.exception.args[0])
+
+    def test_put_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDControllerTest.TestController.put({})
+        self.assertEqual(
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
+            cm.exception.args[0])
+
+    def test_delete_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDControllerTest.TestController.delete({})
+        self.assertEqual(
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
+            cm.exception.args[0])
+
+    def test_audit_method_without_setting_model(self):
+        self.assertEqual([], CRUDControllerTest.TestController.get_audit({}))
+
+    def test_model_description_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDControllerTest.TestController.get_model_description()
+        self.assertEqual(
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
+            cm.exception.args[0])
 
 
 class CRUDControllerAuditTest(unittest.TestCase):

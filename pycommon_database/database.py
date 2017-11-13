@@ -231,6 +231,12 @@ class CRUDModel:
         marshmallow_field.dump_only = True in auto_increments
 
 
+class ControllerModelNotSet(Exception):
+    def __init__(self, controller_class):
+        Exception.__init__(self,
+                           f'Model was not attached to {controller_class.__name__}. Call {controller_class.model}.')
+
+
 class CRUDController:
     """
     Class providing methods to interact with a CRUDModel.
@@ -258,11 +264,11 @@ class CRUDController:
     _model_description_dictionary = None
 
     @classmethod
-    def model(cls, value, audit=False):
+    def model(cls, value, audit: bool=False):
         """
         Initialize related model (should extends CRUDModel).
 
-        :param value: CRUDModel
+        :param value: CRUDModel and SQLAlchemy model.
         :param audit: True to add an extra model representing the audit table. No audit by default.
         """
         cls._model = value
@@ -288,6 +294,14 @@ class CRUDController:
 
     @classmethod
     def namespace(cls, namespace):
+        """
+        Create Flask RestPlus models that can be used to marshall results (and document service).
+        This method should always be called AFTER cls.model()
+
+        :param namespace: Flask RestPlus API.
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
         post_marshmallow_fields = [field for field in cls._model.post_schema().fields.values() if not field.dump_only]
         update_model_is_insert_model = len(post_marshmallow_fields) == len(cls._marshmallow_fields)
         insert_model_name_suffix = '' if update_model_is_insert_model else '_Insert'
@@ -301,10 +315,12 @@ class CRUDController:
         cls.get_model_description_response_model = model_describing_sql_alchemy_mapping(namespace, cls._model)
 
     @classmethod
-    def get(cls, request_arguments):
+    def get(cls, request_arguments: dict):
         """
         Return all models formatted as a list of dictionaries.
         """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
         return cls._model.get_all(**request_arguments)
 
     @classmethod
@@ -314,6 +330,8 @@ class CRUDController:
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted model formatted as a dictionary.
         """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
         new_sample_model = cls._model.add(new_sample_dictionary)
         if cls._audit_model:
             cls._audit_model._session = cls._model._session
@@ -327,6 +345,8 @@ class CRUDController:
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted models formatted as a list of dictionaries.
         """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
         new_sample_models = cls._model.add_all(new_sample_dictionaries_list)
         if cls._audit_model:
             cls._audit_model._session = cls._model._session
@@ -342,6 +362,8 @@ class CRUDController:
         :returns A tuple containing previous model formatted as a dictionary (first item)
         and new model formatted as a dictionary (second item).
         """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
         updated_sample_model = cls._model.update(updated_sample_dictionary)
         if cls._audit_model:
             cls._audit_model._session = cls._model._session
@@ -349,18 +371,20 @@ class CRUDController:
         return updated_sample_model
 
     @classmethod
-    def delete(cls, request_arguments):
+    def delete(cls, request_arguments: dict):
         """
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.
         """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
         if cls._audit_model:
             cls._audit_model._session = cls._model._session
             cls._audit_model.audit_remove(**request_arguments)
         return cls._model.remove(**request_arguments)
 
     @classmethod
-    def get_audit(cls, request_arguments):
+    def get_audit(cls, request_arguments: dict):
         """
         Return all audit models formatted as a list of dictionaries.
         """
@@ -371,6 +395,8 @@ class CRUDController:
 
     @classmethod
     def get_model_description(cls):
+        if not cls._model_description_dictionary:
+            raise ControllerModelNotSet(cls)
         return cls._model_description_dictionary
 
 
@@ -389,7 +415,7 @@ def _retrieve_model_description_dictionary(sql_alchemy_class):
     return description
 
 
-def _model_field_values(model_instance: CRUDModel):
+def _model_field_values(model_instance):
     """Return model fields values (with the proper type) as a dictionary."""
     return model_instance.schema().dump(model_instance).data
 
@@ -441,7 +467,7 @@ def _get_view_names(engine, schema) -> list:
         return engine.dialect.get_view_names(conn, schema)
 
 
-def load(database_connection_url: str, create_models_func):
+def load(database_connection_url: str, create_models_func: callable):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
