@@ -66,21 +66,21 @@ class CRUDModel:
         return cls.schema().dump(model).data
 
     @classmethod
-    def add_all(cls, model_as_list_of_dict: list):
+    def add_all(cls, models_as_list_of_dict: list):
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted model formatted as a list of dictionaries.
         """
-        if not model_as_list_of_dict:
+        if not models_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')
         try:
-            models, errors = cls.schema().load(model_as_list_of_dict, many=True, session=cls._session)
+            models, errors = cls.schema().load(models_as_list_of_dict, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
         if errors:
-            raise ValidationFailed(model_as_list_of_dict, marshmallow_errors=errors)
+            raise ValidationFailed(models_as_list_of_dict, marshmallow_errors=errors)
         try:
             cls._session.add_all(models)
             ret = cls._session.commit()
@@ -305,7 +305,7 @@ class CRUDController:
         """
         return self._model.get_all(**request_arguments)
 
-    def post(self, new_sample_dictionary):
+    def post(self, new_sample_dictionary: dict):
         """
         Add a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
@@ -317,7 +317,20 @@ class CRUDController:
             self._audit_model.audit_add(new_sample_model)
         return new_sample_model
 
-    def put(self, updated_sample_dictionary):
+    def post_list(self, new_sample_dictionaries_list: list):
+        """
+        Add models formatted as a list of dictionaries.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns The inserted models formatted as a list of dictionaries.
+        """
+        new_sample_models = self._model.add_all(new_sample_dictionaries_list)
+        if self._audit_model:
+            self._audit_model._session = self._model._session
+            for new_sample_model in new_sample_models:
+                self._audit_model.audit_add(new_sample_model)
+        return new_sample_models
+
+    def put(self, updated_sample_dictionary: dict):
         """
         Update a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.

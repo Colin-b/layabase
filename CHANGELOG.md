@@ -11,7 +11,8 @@ List all changes in various categories:
 
 ## Version 8.1.0 (2017-11-13) ##
 
-- CRUDModel.add_all method has been added
+- CRUDModel.add_all method has been added.
+- CRUDController.post_list method has been added.
 
 ## Version 8.0.0 (2017-11-06) ##
 
