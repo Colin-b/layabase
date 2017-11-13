@@ -542,7 +542,7 @@ class CRUDControllerTest(unittest.TestCase):
 
     def test_post_list_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerTest.TestController.post_list(None)
+            CRUDControllerTest.TestController.post_many(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
@@ -552,9 +552,9 @@ class CRUDControllerTest(unittest.TestCase):
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
-    def test_post_list_with_empty_list_is_invalid(self):
+    def test_post_many_with_empty_list_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerTest.TestController.post_list([])
+            CRUDControllerTest.TestController.post_many([])
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
@@ -581,9 +581,9 @@ class CRUDControllerTest(unittest.TestCase):
         self.assertEqual({'mandatory': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({'key': 'my_key'}, cm.exception.received_data)
 
-    def test_post_list_without_mandatory_field_is_invalid(self):
+    def test_post_many_without_mandatory_field_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerTest.TestController.post_list([{
+            CRUDControllerTest.TestController.post_many([{
                 'key': 'my_key',
             }])
         self.assertEqual({0: {'mandatory': ['Missing data for required field.']}}, cm.exception.errors)
@@ -597,9 +597,9 @@ class CRUDControllerTest(unittest.TestCase):
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({'mandatory': 1}, cm.exception.received_data)
 
-    def test_post_list_without_key_is_invalid(self):
+    def test_post_many_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerTest.TestController.post_list([{
+            CRUDControllerTest.TestController.post_many([{
                 'mandatory': 1,
             }])
         self.assertEqual({0: {'key': ['Missing data for required field.']}}, cm.exception.errors)
@@ -614,9 +614,9 @@ class CRUDControllerTest(unittest.TestCase):
         self.assertEqual({'key': ['Not a valid string.']}, cm.exception.errors)
         self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
 
-    def test_post_list_with_wrong_type_is_invalid(self):
+    def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerTest.TestController.post_list([{
+            CRUDControllerTest.TestController.post_many([{
                 'key': 256,
                 'mandatory': 1,
             }])
@@ -645,13 +645,13 @@ class CRUDControllerTest(unittest.TestCase):
             })
         )
 
-    def test_post_list_without_optional_is_valid(self):
+    def test_post_many_without_optional_is_valid(self):
         self.assertEqual(
             [
                 {'mandatory': 1, 'key': 'my_key', 'optional': None},
                 {'mandatory': 2, 'key': 'my_key2', 'optional': None},
             ],
-            CRUDControllerTest.TestController.post_list([
+            CRUDControllerTest.TestController.post_many([
                 {
                     'key': 'my_key',
                     'mandatory': 1,
@@ -673,13 +673,13 @@ class CRUDControllerTest(unittest.TestCase):
             })
         )
 
-    def test_post_list_with_optional_is_valid(self):
+    def test_post_many_with_optional_is_valid(self):
         self.assertListEqual(
             [
                 {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
                 {'mandatory': 2, 'key': 'my_key2', 'optional': 'my_value2'},
             ],
-            CRUDControllerTest.TestController.post_list([
+            CRUDControllerTest.TestController.post_many([
                 {
                     'key': 'my_key',
                     'mandatory': 1,
@@ -705,13 +705,13 @@ class CRUDControllerTest(unittest.TestCase):
             })
         )
 
-    def test_post_list_with_unknown_field_is_valid(self):
+    def test_post_many_with_unknown_field_is_valid(self):
         self.assertListEqual(
             [
                 {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
                 {'mandatory': 2, 'key': 'my_key2', 'optional': 'my_value2'},
             ],
-            CRUDControllerTest.TestController.post_list([
+            CRUDControllerTest.TestController.post_many([
                 {
                     'key': 'my_key',
                     'mandatory': 1,
@@ -786,7 +786,7 @@ class CRUDControllerTest(unittest.TestCase):
             CRUDControllerTest.TestController.get({}))
 
     def test_get_without_filter_is_retrieving_everything(self):
-        CRUDControllerTest.TestController.post_list([
+        CRUDControllerTest.TestController.post_many([
             {
                 'key': 'my_key1',
                 'mandatory': 1,
@@ -823,7 +823,7 @@ class CRUDControllerTest(unittest.TestCase):
             CRUDControllerTest.TestController.get({'optional': 'my_value1'}))
 
     def test_get_with_filter_is_retrieving_subset(self):
-        CRUDControllerTest.TestController.post_list([
+        CRUDControllerTest.TestController.post_many([
             {
                 'key': 'my_key1',
                 'mandatory': 1,
@@ -1239,9 +1239,9 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual({}, cm.exception.received_data)
         self._check_audit([])
 
-    def test_post_list_with_nothing_is_invalid(self):
+    def test_post_many_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerAuditTest.TestController.post_list(None)
+            CRUDControllerAuditTest.TestController.post_many(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
         self._check_audit([])
@@ -1253,9 +1253,9 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual({}, cm.exception.received_data)
         self._check_audit([])
 
-    def test_post_list_with_empty_list_is_invalid(self):
+    def test_post_many_with_empty_list_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerAuditTest.TestController.post_list([])
+            CRUDControllerAuditTest.TestController.post_many([])
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
         self._check_audit([])
@@ -1287,9 +1287,9 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual({'key': 'my_key'}, cm.exception.received_data)
         self._check_audit([])
 
-    def test_post_list_without_mandatory_field_is_invalid(self):
+    def test_post_many_without_mandatory_field_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerAuditTest.TestController.post_list([{
+            CRUDControllerAuditTest.TestController.post_many([{
                 'key': 'my_key',
             }])
         self.assertEqual({0: {'mandatory': ['Missing data for required field.']}}, cm.exception.errors)
@@ -1305,9 +1305,9 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual({'mandatory': 1}, cm.exception.received_data)
         self._check_audit([])
 
-    def test_post_list_without_key_is_invalid(self):
+    def test_post_many_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerAuditTest.TestController.post_list([{
+            CRUDControllerAuditTest.TestController.post_many([{
                 'mandatory': 1,
             }])
         self.assertEqual({0: {'key': ['Missing data for required field.']}}, cm.exception.errors)
@@ -1324,9 +1324,9 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
         self._check_audit([])
 
-    def test_post_list_with_wrong_type_is_invalid(self):
+    def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDControllerAuditTest.TestController.post_list([{
+            CRUDControllerAuditTest.TestController.post_many([{
                 'key': 256,
                 'mandatory': 1,
             }])
@@ -1380,10 +1380,10 @@ class CRUDControllerAuditTest(unittest.TestCase):
             ]
         )
 
-    def test_post_list_without_optional_is_valid(self):
+    def test_post_many_without_optional_is_valid(self):
         self.assertListEqual(
             [{'optional': None, 'mandatory': 1, 'key': 'my_key'}],
-            CRUDControllerAuditTest.TestController.post_list([{
+            CRUDControllerAuditTest.TestController.post_many([{
                 'key': 'my_key',
                 'mandatory': 1,
             }])
@@ -1432,10 +1432,10 @@ class CRUDControllerAuditTest(unittest.TestCase):
             ]
         )
 
-    def test_post_list_with_optional_is_valid(self):
+    def test_post_many_with_optional_is_valid(self):
         self.assertListEqual(
             [{'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'}],
-            CRUDControllerAuditTest.TestController.post_list([{
+            CRUDControllerAuditTest.TestController.post_many([{
                 'key': 'my_key',
                 'mandatory': 1,
                 'optional': 'my_value',
@@ -1478,10 +1478,10 @@ class CRUDControllerAuditTest(unittest.TestCase):
             ]
         )
 
-    def test_post_list_with_unknown_field_is_valid(self):
+    def test_post_many_with_unknown_field_is_valid(self):
         self.assertListEqual(
             [{'optional': 'my_value', 'mandatory': 1, 'key': 'my_key'}],
-            CRUDControllerAuditTest.TestController.post_list([{
+            CRUDControllerAuditTest.TestController.post_many([{
                 'key': 'my_key',
                 'mandatory': 1,
                 'optional': 'my_value',
@@ -1567,7 +1567,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
         )
 
     def test_get_without_filter_is_retrieving_everything(self):
-        CRUDControllerAuditTest.TestController.post_list([
+        CRUDControllerAuditTest.TestController.post_many([
             {
                 'key': 'my_key1',
                 'mandatory': 1,

@@ -14,6 +14,7 @@ List all changes in various categories:
 ### Enhancements ###
 
 - All CRUDController methods are now class methods to avoid useless instantiation of a controller class at runtime.
+- CRUDController.post_list method renamed into post_many.
 
 ### Bug fixes ###
 

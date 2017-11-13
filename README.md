@@ -85,7 +85,7 @@ filtered_models_as_dict_list = MyController.get(value='value1')
 ### Inserting data ###
 
 ```python
-inserted_models_as_dict_list = MyController.post_list([
+inserted_models_as_dict_list = MyController.post_many([
     {'key': 'key1', 'value': 'value1'},
     {'key': 'key2', 'value': 'value2'},
 ])

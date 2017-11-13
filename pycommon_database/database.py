@@ -321,7 +321,7 @@ class CRUDController:
         return new_sample_model
 
     @classmethod
-    def post_list(cls, new_sample_dictionaries_list: list):
+    def post_many(cls, new_sample_dictionaries_list: list):
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
