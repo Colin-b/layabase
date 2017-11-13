@@ -456,7 +456,7 @@ def load(database_connection_url: str, create_models_func):
     logger.info(f'Connecting to {database_connection_url}...')
     logger.debug(f'Creating engine...')
     if _in_memory(database_connection_url):
-        engine = create_engine(database_connection_url, poolclass=StaticPool, connect_args = {'check_same_thread': False})
+        engine = create_engine(database_connection_url, poolclass=StaticPool, connect_args={'check_same_thread': False})
     else:
         engine = create_engine(database_connection_url)
     _prepare_engine(engine)
