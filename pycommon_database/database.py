@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 from flask_restplus import inputs
+from typing import Union
 
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
@@ -66,25 +67,33 @@ class CRUDModel:
         return cls.schema().dump(model).data
 
     @classmethod
-    def add(cls, model_as_dict: dict):
+    def add(cls, model_or_models: Union[list, dict]):
         """
-        Add a model formatted as a dictionary.
+        Add model(s) formatted as a dictionary/list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
-        :returns The inserted model formatted as a dictionary.
+        :returns The inserted model formatted as a dictionary/list of dictionaries.
         """
-        if not model_as_dict:
+        if not model_or_models:
             raise ValidationFailed({}, message='No data provided.')
         try:
-            model, errors = cls.schema().load(model_as_dict, session=cls._session)
+            out_model_or_models, errors = cls.schema().load(model_or_models, many=isinstance(model_or_models, list), session=cls._session)
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
         if errors:
-            raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
+            raise ValidationFailed(model_or_models, marshmallow_errors=errors)
         try:
-            cls._session.add(model)
+            if isinstance(model_or_models, list):
+                add_func = cls._session.add_all
+                return_func = _models_field_values
+            else:
+                add_func = cls._session.add
+                return_func = _model_field_values
+
+            add_func(out_model_or_models)
             ret = cls._session.commit()
-            return _model_field_values(model)
+            return return_func(out_model_or_models)
+
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
             logger.exception('Database could not be reached.')
@@ -148,6 +157,8 @@ class CRUDModel:
         except Exception:
             cls._session.rollback()
             raise
+
+
 
     @classmethod
     def schema(cls):
@@ -340,9 +351,16 @@ def _retrieve_model_description_dictionary(sql_alchemy_class):
     return description
 
 
-def _model_field_values(model_instance):
+def _model_field_values(model_instance: dict):
     """Return model fields values (with the proper type) as a dictionary."""
     return model_instance.schema().dump(model_instance).data
+
+
+def _models_field_values(model_instances: list):
+        """Return models fields values (with the proper type) as a list of dictionaries."""
+        if not model_instances:
+            return []
+        return model_instances[0].schema().dump(model_instances, many=True).data
 
 
 class NoDatabaseProvided(Exception):
