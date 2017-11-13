@@ -284,17 +284,17 @@ class CRUDModelTest(unittest.TestCase):
         self.assertEqual({'': ['More than one result: Consider another filtering.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
-    def test_get_all_without_filter_is_retrieving_everything(self):
-        CRUDModelTest._model.add_all([{
+    def test_get_all_without_filter_is_retrieving_everything_after_multiple_posts(self):
+        CRUDModelTest._model.add({
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
-        },
-            {
+        })
+        CRUDModelTest._model.add({
                 'key': 'my_key2',
                 'mandatory': 2,
                 'optional': 'my_value2',
-            }])
+        })
         self.assertEqual(
             [
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
@@ -302,32 +302,89 @@ class CRUDModelTest(unittest.TestCase):
             ],
             CRUDModelTest._model.get_all())
 
-    def test_get_all_with_filter_is_retrieving_subset(self):
-        CRUDModelTest._model.add_all([{
+    def test_get_all_without_filter_is_retrieving_everything(self):
+        CRUDModelTest._model.add_all([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+                'optional': 'my_value2',
+            }
+        ])
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
+            ],
+            CRUDModelTest._model.get_all())
+
+    def test_get_all_with_filter_is_retrieving_subset_after_multiple_posts(self):
+        CRUDModelTest._model.add({
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
-        }, {
+        })
+        CRUDModelTest._model.add({
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
-        }])
+        })
         self.assertEqual(
             [
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
             ],
             CRUDModelTest._model.get_all(optional='my_value1'))
 
-    def test_get_with_filter_is_retrieving_the_proper_row(self):
-        CRUDModelTest._model.add_all([{
+    def test_get_all_with_filter_is_retrieving_subset(self):
+        CRUDModelTest._model.add_all([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+                'optional': 'my_value2',
+            }
+        ])
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+            ],
+            CRUDModelTest._model.get_all(optional='my_value1'))
+
+    def test_get_with_filter_is_retrieving_the_proper_row_after_multiple_posts(self):
+        CRUDModelTest._model.add({
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
-        }, {
+        })
+        CRUDModelTest._model.add({
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
-        }])
+        })
+        self.assertEqual({'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                         CRUDModelTest._model.get(optional='my_value1'))
+
+    def test_get_with_filter_is_retrieving_the_proper_row(self):
+        CRUDModelTest._model.add_all([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+                'optional': 'my_value2',
+            }
+        ])
         self.assertEqual({'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
                          CRUDModelTest._model.get(optional='my_value1'))
 

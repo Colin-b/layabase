@@ -177,8 +177,6 @@ class CRUDModel:
             cls._session.rollback()
             raise
 
-
-
     @classmethod
     def schema(cls):
         """
