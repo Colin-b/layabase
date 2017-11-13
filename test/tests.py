@@ -111,6 +111,7 @@ class CRUDModelTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             CRUDModelTest._model.add(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
 
     def test_add_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -163,9 +164,22 @@ class CRUDModelTest(unittest.TestCase):
         self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
         self.assertEqual({}, CRUDModelTest._model.get())
 
+    def test_update_with_wrong_type_is_invalid(self):
+        CRUDModelTest._model.add({
+            'key': 'value1',
+            'mandatory': 1,
+        })
+        with self.assertRaises(Exception) as cm:
+            CRUDModelTest._model.update({
+                'key': 'value1',
+                'mandatory': 'invalid_value',
+            })
+        self.assertEqual({'mandatory': ['Not a valid integer.']}, cm.exception.errors)
+        self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
+
     def test_add_all_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDModelTest._model.add(None)
+            CRUDModelTest._model.add_all(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
 
     def test_add_all_with_empty_dict_is_invalid(self):
@@ -291,9 +305,9 @@ class CRUDModelTest(unittest.TestCase):
             'optional': 'my_value1',
         })
         CRUDModelTest._model.add({
-                'key': 'my_key2',
-                'mandatory': 2,
-                'optional': 'my_value2',
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
         })
         self.assertEqual(
             [
