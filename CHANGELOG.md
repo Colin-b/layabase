@@ -9,6 +9,12 @@ List all changes in various categories:
 
 ### Release notes ###
 
+## Version 8.3.0 (2017-11-13) ##
+
+### Enhancements ###
+
+- Better error message in case CRUDController.model was not called.
+
 ## Version 8.2.0 (2017-11-13) ##
 
 ### Enhancements ###
