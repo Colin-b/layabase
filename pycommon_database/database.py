@@ -299,71 +299,78 @@ class CRUDController:
             cls.get_audit_response_model = None
         cls.get_model_description_response_model = model_describing_sql_alchemy_mapping(namespace, cls._model)
 
-    def get(self, request_arguments):
+    @classmethod
+    def get(cls, request_arguments):
         """
         Return all models formatted as a list of dictionaries.
         """
-        return self._model.get_all(**request_arguments)
+        return cls._model.get_all(**request_arguments)
 
-    def post(self, new_sample_dictionary: dict):
+    @classmethod
+    def post(cls, new_sample_dictionary: dict):
         """
         Add a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted model formatted as a dictionary.
         """
-        new_sample_model = self._model.add(new_sample_dictionary)
-        if self._audit_model:
-            self._audit_model._session = self._model._session
-            self._audit_model.audit_add(new_sample_model)
+        new_sample_model = cls._model.add(new_sample_dictionary)
+        if cls._audit_model:
+            cls._audit_model._session = cls._model._session
+            cls._audit_model.audit_add(new_sample_model)
         return new_sample_model
 
-    def post_list(self, new_sample_dictionaries_list: list):
+    @classmethod
+    def post_list(cls, new_sample_dictionaries_list: list):
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted models formatted as a list of dictionaries.
         """
-        new_sample_models = self._model.add_all(new_sample_dictionaries_list)
-        if self._audit_model:
-            self._audit_model._session = self._model._session
+        new_sample_models = cls._model.add_all(new_sample_dictionaries_list)
+        if cls._audit_model:
+            cls._audit_model._session = cls._model._session
             for new_sample_model in new_sample_models:
-                self._audit_model.audit_add(new_sample_model)
+                cls._audit_model.audit_add(new_sample_model)
         return new_sample_models
 
-    def put(self, updated_sample_dictionary: dict):
+    @classmethod
+    def put(cls, updated_sample_dictionary: dict):
         """
         Update a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns A tuple containing previous model formatted as a dictionary (first item)
         and new model formatted as a dictionary (second item).
         """
-        updated_sample_model = self._model.update(updated_sample_dictionary)
-        if self._audit_model:
-            self._audit_model._session = self._model._session
-            self._audit_model.audit_update(updated_sample_model[1])
+        updated_sample_model = cls._model.update(updated_sample_dictionary)
+        if cls._audit_model:
+            cls._audit_model._session = cls._model._session
+            cls._audit_model.audit_update(updated_sample_model[1])
         return updated_sample_model
 
-    def delete(self, request_arguments):
+    @classmethod
+    def delete(cls, request_arguments):
         """
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.
         """
-        if self._audit_model:
-            self._audit_model._session = self._model._session
-            self._audit_model.audit_remove(**request_arguments)
-        return self._model.remove(**request_arguments)
+        if cls._audit_model:
+            cls._audit_model._session = cls._model._session
+            cls._audit_model.audit_remove(**request_arguments)
+        return cls._model.remove(**request_arguments)
 
-    def get_audit(self, request_arguments):
+    @classmethod
+    def get_audit(cls, request_arguments):
         """
         Return all audit models formatted as a list of dictionaries.
         """
-        if not self._audit_model:
+        if not cls._audit_model:
             return []
-        self._audit_model._session = self._model._session
-        return self._audit_model.get_all(**request_arguments)
+        cls._audit_model._session = cls._model._session
+        return cls._audit_model.get_all(**request_arguments)
 
-    def get_model_description(self):
-        return self._model_description_dictionary
+    @classmethod
+    def get_model_description(cls):
+        return cls._model_description_dictionary
 
 
 def _retrieve_model_description_dictionary(sql_alchemy_class):
@@ -381,7 +388,7 @@ def _retrieve_model_description_dictionary(sql_alchemy_class):
     return description
 
 
-def _model_field_values(model_instance: dict):
+def _model_field_values(model_instance: CRUDModel):
     """Return model fields values (with the proper type) as a dictionary."""
     return model_instance.schema().dump(model_instance).data
 

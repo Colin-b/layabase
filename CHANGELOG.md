@@ -9,6 +9,12 @@ List all changes in various categories:
 
 ### Release notes ###
 
+## Version 8.2.0 (2017-11-13) ##
+
+- All CRUDController methods are now class methods to avoid useless instantiation of a controller class at runtime.
+
+### Release notes ###
+
 ## Version 8.1.0 (2017-11-13) ##
 
 - CRUDModel.add_all method has been added.
