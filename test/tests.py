@@ -124,7 +124,6 @@ class CRUDModelTest(unittest.TestCase):
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
-
     def test_update_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             CRUDModelTest._model.update({})
@@ -179,7 +178,6 @@ class CRUDModelTest(unittest.TestCase):
         self.assertEqual({'key': 'value1', 'mandatory': 1, 'optional': None}, CRUDModelTest._model.get())
 
     def test_add_without_optional_is_valid(self):
-
         self.assertEqual(
             {'mandatory': 1, 'key': 'my_key', 'optional': None},
             CRUDModelTest._model.add({
@@ -212,8 +210,6 @@ class CRUDModelTest(unittest.TestCase):
             })
         )
         self.assertEqual({'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}, CRUDModelTest._model.get())
-
-
 
     def test_get_without_filter_is_retrieving_the_only_item(self):
         CRUDModelTest._model.add({
@@ -250,12 +246,12 @@ class CRUDModelTest(unittest.TestCase):
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
-            },
+        },
             {
-            'key': 'my_key2',
-            'mandatory': 2,
-            'optional': 'my_value2',
-        }])
+                'key': 'my_key2',
+                'mandatory': 2,
+                'optional': 'my_value2',
+            }])
         self.assertEqual(
             [
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
@@ -268,7 +264,7 @@ class CRUDModelTest(unittest.TestCase):
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
-        },{
+        }, {
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
@@ -284,7 +280,7 @@ class CRUDModelTest(unittest.TestCase):
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
-        },{
+        }, {
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
@@ -733,7 +729,8 @@ class CRUDControllerTest(unittest.TestCase):
             def model(cls, name, fields):
                 test_fields = [name for name, field in fields.items()]
                 test_fields.sort()
-                test_defaults = [field.default for field in fields.values() if hasattr(field, 'default') and field.default]
+                test_defaults = [field.default for field in fields.values() if
+                                 hasattr(field, 'default') and field.default]
                 return name, test_fields, test_defaults
 
         CRUDControllerTest._controller.namespace(TestAPI)
@@ -748,7 +745,8 @@ class CRUDControllerTest(unittest.TestCase):
             def model(cls, name, fields):
                 test_fields = [name for name, field in fields.items()]
                 test_fields.sort()
-                test_defaults = [field.default for field in fields.values() if hasattr(field, 'default') and field.default]
+                test_defaults = [field.default for field in fields.values() if
+                                 hasattr(field, 'default') and field.default]
                 return name, test_fields, test_defaults
 
         CRUDControllerTest._controller_auto_increment.namespace(TestAPI)
