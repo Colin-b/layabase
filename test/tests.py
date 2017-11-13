@@ -163,19 +163,62 @@ class CRUDModelTest(unittest.TestCase):
         self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
         self.assertEqual({}, CRUDModelTest._model.get())
 
-    def test_update_with_wrong_type_is_invalid(self):
-        CRUDModelTest._model.add({
-            'key': 'value1',
-            'mandatory': 1,
-        })
+    def test_add_all_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            CRUDModelTest._model.update({
-                'key': 'value1',
-                'mandatory': 'invalid_value',
-            })
-        self.assertEqual({'mandatory': ['Not a valid integer.']}, cm.exception.errors)
-        self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
-        self.assertEqual({'key': 'value1', 'mandatory': 1, 'optional': None}, CRUDModelTest._model.get())
+            CRUDModelTest._model.add(None)
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+
+    def test_add_all_with_empty_dict_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDModelTest._model.add_all({})
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_add_all_without_mandatory_field_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDModelTest._model.add_all([{
+                'key': 'my_key',
+            },
+                {
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                }
+            ])
+        self.assertEqual({0: {'mandatory': ['Missing data for required field.']}}, cm.exception.errors)
+        self.assertEqual([{'key': 'my_key'}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}], cm.exception.received_data)
+        self.assertEqual({}, CRUDModelTest._model.get())
+
+    def test_add_all_without_key_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDModelTest._model.add_all([{
+                'mandatory': 1,
+            },
+                {
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                }]
+            )
+        self.assertEqual({0: {'key': ['Missing data for required field.']}}, cm.exception.errors)
+        self.assertEqual([{'mandatory': 1}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}], cm.exception.received_data)
+        self.assertEqual({}, CRUDModelTest._model.get())
+
+    def test_add_all_with_wrong_type_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            CRUDModelTest._model.add_all([{
+                'key': 256,
+                'mandatory': 1,
+            },
+                {
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                }]
+            )
+        self.assertEqual({0: {'key': ['Not a valid string.']}}, cm.exception.errors)
+        self.assertEqual([{'key': 256, 'mandatory': 1}, {'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}], cm.exception.received_data)
+        self.assertEqual({}, CRUDModelTest._model.get())
 
     def test_add_without_optional_is_valid(self):
         self.assertEqual(
@@ -242,7 +285,7 @@ class CRUDModelTest(unittest.TestCase):
         self.assertEqual({}, cm.exception.received_data)
 
     def test_get_all_without_filter_is_retrieving_everything(self):
-        CRUDModelTest._model.add([{
+        CRUDModelTest._model.add_all([{
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
@@ -260,7 +303,7 @@ class CRUDModelTest(unittest.TestCase):
             CRUDModelTest._model.get_all())
 
     def test_get_all_with_filter_is_retrieving_subset(self):
-        CRUDModelTest._model.add([{
+        CRUDModelTest._model.add_all([{
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',
@@ -276,7 +319,7 @@ class CRUDModelTest(unittest.TestCase):
             CRUDModelTest._model.get_all(optional='my_value1'))
 
     def test_get_with_filter_is_retrieving_the_proper_row(self):
-        CRUDModelTest._model.add([{
+        CRUDModelTest._model.add_all([{
             'key': 'my_key1',
             'mandatory': 1,
             'optional': 'my_value1',

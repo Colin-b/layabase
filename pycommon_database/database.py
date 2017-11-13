@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
 from flask_restplus import inputs
-from typing import Union
 
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
@@ -67,33 +66,53 @@ class CRUDModel:
         return cls.schema().dump(model).data
 
     @classmethod
-    def add(cls, model_or_models: Union[list, dict]):
+    def add_all(cls, model_as_list_of_dict: list):
         """
-        Add model(s) formatted as a dictionary/list of dictionaries.
+        Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
-        :returns The inserted model formatted as a dictionary/list of dictionaries.
+        :returns The inserted model formatted as a list of dictionaries.
         """
-        if not model_or_models:
+        if not model_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')
         try:
-            out_model_or_models, errors = cls.schema().load(model_or_models, many=isinstance(model_or_models, list), session=cls._session)
+            models, errors = cls.schema().load(model_as_list_of_dict, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
         if errors:
-            raise ValidationFailed(model_or_models, marshmallow_errors=errors)
+            raise ValidationFailed(model_as_list_of_dict, marshmallow_errors=errors)
         try:
-            if isinstance(model_or_models, list):
-                add_func = cls._session.add_all
-                return_func = _models_field_values
-            else:
-                add_func = cls._session.add
-                return_func = _model_field_values
-
-            add_func(out_model_or_models)
+            cls._session.add_all(models)
             ret = cls._session.commit()
-            return return_func(out_model_or_models)
+            return _models_field_values(models)
+        except exc.sa_exc.DBAPIError:
+            cls._session.rollback()
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        except Exception:
+            cls._session.rollback()
+            raise
 
+    @classmethod
+    def add(cls, model_as_dict: dict):
+        """
+        Add a model formatted as a dictionary.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns The inserted model formatted as a dictionary.
+        """
+        if not model_as_dict:
+            raise ValidationFailed({}, message='No data provided.')
+        try:
+            model, errors = cls.schema().load(model_as_dict, session=cls._session)
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        if errors:
+            raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
+        try:
+            cls._session.add(model)
+            ret = cls._session.commit()
+            return _model_field_values(model)
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
             logger.exception('Database could not be reached.')
