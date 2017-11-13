@@ -1,5 +1,6 @@
 import logging
 from sqlalchemy import create_engine, inspect
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
@@ -425,10 +426,19 @@ def _supports_offset(driver_name: str):
     return not driver_name.startswith('sybase')
 
 
+def _in_memory(database_connection_url: str):
+    return ':memory:' in database_connection_url
+
+
 def _prepare_engine(engine):
     if engine.url.drivername.startswith('sybase'):
         engine.dialect.identifier_preparer.initial_quote = '['
         engine.dialect.identifier_preparer.final_quote = ']'
+
+
+def _get_view_names(engine, schema) -> list:
+    with engine.connect() as conn:
+        return engine.dialect.get_view_names(conn, schema)
 
 
 def load(database_connection_url: str, create_models_func):
@@ -445,15 +455,17 @@ def load(database_connection_url: str, create_models_func):
     database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f'Connecting to {database_connection_url}...')
     logger.debug(f'Creating engine...')
-    engine = create_engine(database_connection_url)
+    if _in_memory(database_connection_url):
+        engine = create_engine(database_connection_url, poolclass=StaticPool, connect_args = {'check_same_thread': False})
+    else:
+        engine = create_engine(database_connection_url)
     _prepare_engine(engine)
     logger.debug(f'Creating base...')
     base = declarative_base(bind=engine)
     logger.debug(f'Creating models...')
     model_classes = create_models_func(base)
     if _can_retrieve_metadata(database_connection_url):
-        with engine.connect() as conn:
-            all_view_names = engine.dialect.get_view_names(conn, base.metadata.schema)
+        all_view_names = _get_view_names(engine, base.metadata.schema)
         all_tables_and_views = base.metadata.tables
         # Remove all views from table list before creating them
         base.metadata.tables = {

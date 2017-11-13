@@ -11,16 +11,26 @@ List all changes in various categories:
 
 ## Version 8.2.0 (2017-11-13) ##
 
+### Enhancements ###
+
 - All CRUDController methods are now class methods to avoid useless instantiation of a controller class at runtime.
+
+### Bug fixes ###
+
+- Allow to use in memory database from multiple threads (if supported by the underlying database).
 
 ### Release notes ###
 
 ## Version 8.1.0 (2017-11-13) ##
 
+### Enhancements ###
+
 - CRUDModel.add_all method has been added.
 - CRUDController.post_list method has been added.
 
 ## Version 8.0.0 (2017-11-06) ##
+
+### Release notes ###
 
 - Remove the extra parameter that was introduced in 7.2.0 to handle SyBase need for quoting characters.
 

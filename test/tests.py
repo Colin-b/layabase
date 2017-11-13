@@ -5,6 +5,7 @@ import sys
 import datetime
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from flask_restplus import fields as flask_rest_plus_fields, inputs
+from threading import Thread
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -63,6 +64,12 @@ class DatabaseTest(unittest.TestCase):
 
     def test_sql_lite_support_offset(self):
         self.assertTrue(database._supports_offset('sqlite'))
+
+    def test_in_memory_database_is_considered_as_in_memory(self):
+        self.assertTrue(database._in_memory('sqlite:///:memory:'))
+
+    def test_real_database_is_not_considered_as_in_memory(self):
+        self.assertFalse(database._in_memory('sybase+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2'))
 
 
 class CRUDModelTest(unittest.TestCase):
@@ -735,6 +742,30 @@ class CRUDControllerTest(unittest.TestCase):
                 'key': 'my_key1'
             }],
             CRUDControllerTest.TestController.get({}))
+
+    def test_get_from_another_thread_than_post(self):
+        def save_get_result():
+            self.thread_get_result = CRUDControllerTest.TestController.get({})
+
+        CRUDControllerTest.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+
+        self.thread_get_result = None
+        get_thread = Thread(name='GetInOtherThread', target=save_get_result)
+        get_thread.start()
+        get_thread.join()
+
+        self.assertEqual(
+            [{
+                'mandatory': 1,
+                'optional': 'my_value1',
+                'key': 'my_key1'
+            }],
+            self.thread_get_result)
+
 
     def test_get_without_filter_is_retrieving_everything_with_multiple_posts(self):
         CRUDControllerTest.TestController.post({
