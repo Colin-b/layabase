@@ -1235,50 +1235,50 @@ class CRUDControllerFailuresTest(unittest.TestCase):
 
         with self.assertRaises(Exception) as cm:
             CRUDControllerTest.TestController.namespace(TestNamespace)
-        self.assertEqual(
+        self.assertRegex(
+            cm.exception.args[0],
             "Model was not attached to TestController. "
-            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
-            cm.exception.args[0])
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerTest.TestController'>>.")
 
     def test_get_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerTest.TestController.get({})
-        self.assertEqual(
+        self.assertRegex(
+            cm.exception.args[0],
             "Model was not attached to TestController. "
-            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
-            cm.exception.args[0])
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerTest.TestController'>>.")
 
     def test_post_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerTest.TestController.get({})
-        self.assertEqual(
+        self.assertRegex(
+            cm.exception.args[0],
             "Model was not attached to TestController. "
-            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
-            cm.exception.args[0])
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerTest.TestController'>>.")
 
     def test_post_many_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerTest.TestController.post_many([])
-        self.assertEqual(
+        self.assertRegex(
+            cm.exception.args[0],
             "Model was not attached to TestController. "
-            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
-            cm.exception.args[0])
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerTest.TestController'>>.")
 
     def test_put_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerTest.TestController.put({})
-        self.assertEqual(
+        self.assertRegex(
+            cm.exception.args[0],
             "Model was not attached to TestController. "
-            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
-            cm.exception.args[0])
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerTest.TestController'>>.")
 
     def test_delete_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerTest.TestController.delete({})
-        self.assertEqual(
+        self.assertRegex(
+            cm.exception.args[0],
             "Model was not attached to TestController. "
-            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
-            cm.exception.args[0])
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerTest.TestController'>>.")
 
     def test_audit_method_without_setting_model(self):
         self.assertEqual([], CRUDControllerTest.TestController.get_audit({}))
@@ -1286,10 +1286,10 @@ class CRUDControllerFailuresTest(unittest.TestCase):
     def test_model_description_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerTest.TestController.get_model_description()
-        self.assertEqual(
+        self.assertRegex(
+            cm.exception.args[0],
             "Model was not attached to TestController. "
-            "Call <bound method CRUDController.model of <class 'tests.CRUDControllerTest.TestController'>>.",
-            cm.exception.args[0])
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerTest.TestController'>>.")
 
 
 class CRUDControllerAuditTest(unittest.TestCase):
