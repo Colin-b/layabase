@@ -32,6 +32,8 @@ class CRUDModel:
         Return all models formatted as a list of dictionaries.
         """
         query = cls._session.query(cls)
+        if 'order_by' in kwargs:
+            query = query.order_by(*kwargs.pop('order_by'))
         for key, value in kwargs.items():
             if key == 'limit':
                 query = query.limit(value)

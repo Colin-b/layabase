@@ -382,6 +382,30 @@ class CRUDModelTest(unittest.TestCase):
             ],
             CRUDModelTest._model.get_all(optional='my_value1'))
 
+    def test_get_all_order_by(self):
+        CRUDModelTest._model.add_all([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 1,
+                'optional': 'my_value2',
+            },
+            {'key': 'my_key3', 'mandatory': -1, 'optional': 'my_value3'},
+
+        ])
+        self.assertEqual(
+            [
+                {'key': 'my_key3', 'mandatory': -1, 'optional': 'my_value3'},
+                {'key': 'my_key2', 'mandatory': 1, 'optional': 'my_value2'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'}
+            ],
+            CRUDModelTest._model.get_all(order_by=[sqlalchemy.asc(CRUDModelTest._model.mandatory),
+                                                   sqlalchemy.desc(CRUDModelTest._model.key)]))
+
     def test_get_with_filter_is_retrieving_the_proper_row_after_multiple_posts(self):
         CRUDModelTest._model.add({
             'key': 'my_key1',
