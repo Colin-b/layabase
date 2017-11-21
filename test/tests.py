@@ -62,6 +62,19 @@ class DatabaseTest(unittest.TestCase):
     def test_sybase_does_not_support_offset(self):
         self.assertFalse(database._supports_offset('sybase+pyodbc'))
 
+    def test_sybase_does_not_support_retrieving_metadata(self):
+        self.assertFalse(database._can_retrieve_metadata('sybase+pyodbc'))
+
+    def test_mssql_url(self):
+        self.assertEqual('mssql+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2',
+                         database._clean_database_url('mssql+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
+
+    def test_mssql_does_not_support_offset(self):
+        self.assertFalse(database._supports_offset('mssql+pyodbc'))
+
+    def test_mssql_does_not_support_retrieving_metadata(self):
+        self.assertFalse(database._can_retrieve_metadata('mssql+pyodbc'))
+
     def test_sql_lite_support_offset(self):
         self.assertTrue(database._supports_offset('sqlite'))
 
