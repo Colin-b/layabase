@@ -245,6 +245,7 @@ class CRUDController:
     """
     _model = None
     _marshmallow_fields = None
+    _required_get_fieldnames = None
     _audit_model = None
     _audit_marshmallow_fields = None
 
@@ -276,7 +277,7 @@ class CRUDController:
         cls._model = value
         cls._marshmallow_fields = cls._model.schema().fields.values()
 
-        cls.query_get_parser = query_parser_with_fields(cls._marshmallow_fields)
+        cls.query_get_parser = query_parser_with_fields(cls._marshmallow_fields, required_field_list=cls._required_get_fields)
         cls.query_get_parser.add_argument('limit', type=inputs.positive)
         if _supports_offset(cls._model.metadata.bind.url.drivername):
             cls.query_get_parser.add_argument('offset', type=inputs.natural)

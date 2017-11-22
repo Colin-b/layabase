@@ -1,6 +1,6 @@
 import unittest
-import sqlalchemy
 import logging
+import sqlalchemy
 import sys
 import datetime
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
@@ -11,6 +11,7 @@ logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)],
     level=logging.DEBUG)
+logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
 
 from pycommon_database import database, flask_restplus_errors, flask_restplus_models
 
@@ -95,9 +96,16 @@ class CRUDModelTest(unittest.TestCase):
             mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
             optional = sqlalchemy.Column(sqlalchemy.String)
 
+        class TestModelAutoIncr(database.CRUDModel, base):
+            __tablename__ = 'autoincre_table_name'
+
+            key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+            mandatory = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+
         logger.info('Save model class...')
         cls._model = TestModel
-        return [TestModel]
+        cls._model_autoincr = TestModelAutoIncr
+        return [TestModel, TestModelAutoIncr]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -125,6 +133,10 @@ class CRUDModelTest(unittest.TestCase):
             CRUDModelTest._model.add({})
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
+
+    def test_add_auto_incr_with_empty_dict_is_valid(self):
+        CRUDModelTest._model_autoincr.add({'mandatory':'youpie'})
+        self.assertEqual({'key': 1, 'mandatory':'youpie'}, CRUDModelTest._model.get())
 
     def test_update_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
