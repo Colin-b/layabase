@@ -221,9 +221,15 @@ class CRUDModel:
 
     @classmethod
     def enrich_schema_field(cls, marshmallow_field, sql_alchemy_field):
+        # Default value
         defaults = [column.default.arg for column in sql_alchemy_field.columns if column.default]
         if defaults:
             marshmallow_field.metadata['sqlalchemy_default'] = defaults[0]
+
+        # Auto incremented field
+        autoincrement = [column.autoincrement for column in sql_alchemy_field.columns if column.autoincrement]
+        if autoincrement and isinstance(autoincrement[0], bool):
+            marshmallow_field.metadata['sqlalchemy_autoincrement'] = autoincrement[0]
 
     @classmethod
     def enrich_post_schema_field(cls, marshmallow_field, sql_alchemy_field):
@@ -302,10 +308,7 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        post_marshmallow_fields = [field for field in cls._model.post_schema().fields.values() if not field.dump_only]
-        update_model_is_insert_model = len(post_marshmallow_fields) == len(cls._marshmallow_fields)
-        insert_model_name_suffix = '' if update_model_is_insert_model else '_Insert'
-        cls.json_post_model = model_with_fields(namespace, cls._model.__name__ + insert_model_name_suffix, post_marshmallow_fields)
+        cls.json_post_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         cls.json_put_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         cls.get_response_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         if cls._audit_model:
@@ -332,6 +335,9 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
+        model_properties = getattr(cls.json_post_model._schema, 'properties', None) if cls.json_post_model else None
+        new_sample_dictionary = _ignore_read_only_fields(model_properties,
+                                                         new_sample_dictionary)
         new_sample_model = cls._model.add(new_sample_dictionary)
         if cls._audit_model:
             cls._audit_model._session = cls._model._session
@@ -347,6 +353,8 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
+            new_sample_dictionaries_list = _ignore_read_only_fields(cls.json_post_model._schema['properties'],
+                                                                    new_sample_dictionaries_list)
         new_sample_models = cls._model.add_all(new_sample_dictionaries_list)
         if cls._audit_model:
             cls._audit_model._session = cls._model._session
@@ -398,6 +406,14 @@ class CRUDController:
         if not cls._model_description_dictionary:
             raise ControllerModelNotSet(cls)
         return cls._model_description_dictionary
+
+
+def _ignore_read_only_fields(model_properties, input_dictionnaries):
+    read_only_fields = [item[0] for item in model_properties.items() if item[1].get('readOnly', None)]
+    if isinstance(input_dictionnaries, list):
+        return [{k: v for k, v in d.items() if k not in read_only_fields} for d in input_dictionnaries]
+    else:
+        return {k: v for k, v in input_dictionnaries.items() if k not in read_only_fields}
 
 
 def _retrieve_model_description_dictionary(sql_alchemy_class):

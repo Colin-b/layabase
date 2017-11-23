@@ -55,6 +55,10 @@ def _get_default_value(marshmallow_field):
     return marshmallow_field.metadata.get('sqlalchemy_default', None) if marshmallow_field else None
 
 
+def _is_read_only_value(marshmallow_field):
+    return marshmallow_field.metadata.get('sqlalchemy_autoincrement', None) if marshmallow_field else None
+
+
 def get_default_example(marshmallow_field):
     """
     Return an Example value corresponding to this SQL Alchemy Marshmallow field.
@@ -127,6 +131,7 @@ def model_with_fields(api, name: str, marshmallow_fields_list):
             description=field.metadata.get('description', None),
             enum=get_choices(field),
             default=_get_default_value(field),
+            readonly=_is_read_only_value(field)
         )
         for field in marshmallow_fields_list
     }

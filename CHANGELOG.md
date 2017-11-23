@@ -9,6 +9,13 @@ List all changes in various categories:
 
 ### Release notes ###
 
+## Version 9.0.0 (2017-11-23) ##
+
+### Enhancements ###
+
+- Stop adding custom model for post.
+- If field is explicitly set as autoincrement in the model, it will be tagged as a read only field in the service.
+
 ## Version 8.3.0 (2017-11-13) ##
 
 ### Enhancements ###
