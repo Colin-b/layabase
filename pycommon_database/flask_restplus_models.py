@@ -156,11 +156,16 @@ def model_describing_sql_alchemy_mapping(api, sql_alchemy_class):
     return api.model(''.join([sql_alchemy_class.__name__, 'Description']), exported_fields)
 
 
-def query_parser_with_fields(marshmallow_fields_list):
+def query_parser_with_fields(marshmallow_fields_list, required_fieldname_list=None):
     query_parser = reqparse.RequestParser()
+    if required_fieldname_list:
+        unknown_fields = set(required_fieldname_list).difference([f.name for f in marshmallow_fields_list])
+        if unknown_fields:
+            raise Exception(f'Required field(s) is(are) not contained in the marshmallow field list {unknown_fields}')
     for field in marshmallow_fields_list:
         query_parser.add_argument(
             field.name,
+            required=required_fieldname_list and field.name in required_fieldname_list,
             type=get_python_type(field),
         )
     return query_parser
