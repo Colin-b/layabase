@@ -336,7 +336,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if hasattr(cls.json_post_model, '_schema'):
-            new_sample_dictionary = _ignore_read_only_fields(cls.json_post_model._schema,
+            new_sample_dictionary = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None),
                                                              new_sample_dictionary)
         new_sample_model = cls._model.add(new_sample_dictionary)
         if cls._audit_model:
@@ -353,7 +353,8 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-            new_sample_dictionaries_list = _ignore_read_only_fields(cls.json_post_model._schema['properties'],
+        if hasattr(cls.json_post_model, '_schema'):
+            new_sample_dictionaries_list = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None),
                                                                     new_sample_dictionaries_list)
         new_sample_models = cls._model.add_all(new_sample_dictionaries_list)
         if cls._audit_model:

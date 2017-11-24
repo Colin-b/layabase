@@ -732,6 +732,26 @@ class CRUDControllerTest(unittest.TestCase):
             ])
         )
 
+    def test_post_with_specified_incremented_field_is_ignored_and_valid(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                test_defaults = [field.default for field in fields.values() if
+                                 hasattr(field, 'default') and field.default]
+                return name, test_fields, test_defaults
+
+        CRUDControllerTest.TestAutoIncrementController.namespace(TestAPI)
+        CRUDControllerTest.TestAutoIncrementController.post({
+                    'key': 'my_key',
+                    'mandatory': 1,
+                })
+
+
+#    def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
+
+
     def test_get_without_filter_is_retrieving_the_only_item(self):
         CRUDControllerTest.TestController.post({
             'key': 'my_key1',
