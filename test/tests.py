@@ -1,6 +1,6 @@
 import unittest
-import sqlalchemy
 import logging
+import sqlalchemy
 import sys
 import datetime
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
@@ -11,6 +11,7 @@ logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)],
     level=logging.DEBUG)
+logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
 
 from pycommon_database import database, flask_restplus_errors, flask_restplus_models
 
@@ -62,6 +63,19 @@ class DatabaseTest(unittest.TestCase):
     def test_sybase_does_not_support_offset(self):
         self.assertFalse(database._supports_offset('sybase+pyodbc'))
 
+    def test_sybase_does_not_support_retrieving_metadata(self):
+        self.assertFalse(database._can_retrieve_metadata('sybase+pyodbc'))
+
+    def test_mssql_url(self):
+        self.assertEqual('mssql+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2',
+                         database._clean_database_url('mssql+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
+
+    def test_mssql_does_not_support_offset(self):
+        self.assertFalse(database._supports_offset('mssql+pyodbc'))
+
+    def test_mssql_does_not_support_retrieving_metadata(self):
+        self.assertFalse(database._can_retrieve_metadata('mssql+pyodbc'))
+
     def test_sql_lite_support_offset(self):
         self.assertTrue(database._supports_offset('sqlite'))
 
@@ -95,9 +109,16 @@ class CRUDModelTest(unittest.TestCase):
             mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
             optional = sqlalchemy.Column(sqlalchemy.String)
 
+        class TestModelAutoIncr(database.CRUDModel, base):
+            __tablename__ = 'autoincre_table_name'
+
+            key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+            mandatory = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+
         logger.info('Save model class...')
         cls._model = TestModel
-        return [TestModel]
+        cls._model_autoincr = TestModelAutoIncr
+        return [TestModel, TestModelAutoIncr]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -381,6 +402,30 @@ class CRUDModelTest(unittest.TestCase):
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
             ],
             CRUDModelTest._model.get_all(optional='my_value1'))
+
+    def test_get_all_order_by(self):
+        CRUDModelTest._model.add_all([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 1,
+                'optional': 'my_value2',
+            },
+            {'key': 'my_key3', 'mandatory': -1, 'optional': 'my_value3'},
+
+        ])
+        self.assertEqual(
+            [
+                {'key': 'my_key3', 'mandatory': -1, 'optional': 'my_value3'},
+                {'key': 'my_key2', 'mandatory': 1, 'optional': 'my_value2'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'}
+            ],
+            CRUDModelTest._model.get_all(order_by=[sqlalchemy.asc(CRUDModelTest._model.mandatory),
+                                                   sqlalchemy.desc(CRUDModelTest._model.key)]))
 
     def test_get_with_filter_is_retrieving_the_proper_row_after_multiple_posts(self):
         CRUDModelTest._model.add({

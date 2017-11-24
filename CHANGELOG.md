@@ -16,6 +16,13 @@ List all changes in various categories:
 - Stop adding custom model for post.
 - If field is explicitly set as autoincrement in the model, it will be tagged as a read only field in the service.
 
+## Version 8.4.1 (2017-11-21) ##
+
+### Enhancements ###
+
+- Add SQL Server to exception for retrieving metadata.
+- Add SQL Server to exception for usage of limit/offset.
+
 ## Version 8.3.0 (2017-11-13) ##
 
 ### Enhancements ###

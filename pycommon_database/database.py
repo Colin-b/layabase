@@ -32,6 +32,8 @@ class CRUDModel:
         Return all models formatted as a list of dictionaries.
         """
         query = cls._session.query(cls)
+        if 'order_by' in kwargs:
+            query = query.order_by(*kwargs.pop('order_by'))
         for key, value in kwargs.items():
             if key == 'limit':
                 query = query.limit(value)
@@ -462,11 +464,14 @@ def _clean_database_url(database_connection_url: str):
 
 
 def _can_retrieve_metadata(database_connection_url: str):
-    return not database_connection_url.startswith('sybase')
+    return not (database_connection_url.startswith('sybase') or
+                database_connection_url.startswith('mssql'))
+
 
 
 def _supports_offset(driver_name: str):
-    return not driver_name.startswith('sybase')
+    return not (driver_name.startswith('sybase') or
+                driver_name.startswith('mssql'))
 
 
 def _in_memory(database_connection_url: str):
