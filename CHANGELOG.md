@@ -9,7 +9,7 @@ List all changes in various categories:
 
 ### Release notes ###
 
-## Version 8.3.1 (2017-11-21) ##
+## Version 8.4.1 (2017-11-21) ##
 
 ### Enhancements ###
 

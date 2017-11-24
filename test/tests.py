@@ -147,10 +147,6 @@ class CRUDModelTest(unittest.TestCase):
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
-    def test_add_auto_incr_with_empty_dict_is_valid(self):
-        CRUDModelTest._model_autoincr.add({'mandatory':'youpie'})
-        self.assertEqual({'key': 1, 'mandatory':'youpie'}, CRUDModelTest._model.get())
-
     def test_update_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             CRUDModelTest._model.update(None)
