@@ -781,21 +781,60 @@ class CRUDControllerTest(unittest.TestCase):
         class TestAPI:
             @classmethod
             def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                test_defaults = [field.default for field in fields.values() if
-                                 hasattr(field, 'default') and field.default]
-                return name, test_fields, test_defaults
+                from collections import OrderedDict
+                test_fields = [name for name, model in fields.items()]
+                property_list = []
+                for field_name in test_fields:
+                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
+                        property_list.append(tuple((field_name, {'readOnly': True})))
+                    else:
+                        property_list.append(tuple((field_name, {})))
+
+                model = lambda: None
+                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
+                return model
 
         CRUDControllerTest.TestAutoIncrementController.namespace(TestAPI)
-        CRUDControllerTest.TestAutoIncrementController.post({
-                    'key': 'my_key',
-                    'mandatory': 1,
-                })
+        self.assertEqual(
+            {'optional_with_default': 'Test value', 'key': 1, 'enum_field': 'Value1'},
+            CRUDControllerTest.TestAutoIncrementController.post({
+                'key': 'my_key',
+                'enum_field': 'Value1',
+            })
+        )
 
+    def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                from collections import OrderedDict
+                test_fields = [name for name, model in fields.items()]
+                property_list = []
+                for field_name in test_fields:
+                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
+                        property_list.append(tuple((field_name, {'readOnly': True})))
+                    else:
+                        property_list.append(tuple((field_name, {})))
 
-#    def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
+                model = lambda: None
+                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
+                return model
 
+        CRUDControllerTest.TestAutoIncrementController.namespace(TestAPI)
+
+        self.assertListEqual(
+            [
+                {'optional_with_default': 'Test value', 'enum_field': 'Value1', 'key': 1},
+                {'optional_with_default': 'Test value', 'enum_field': 'Value2', 'key': 2},
+            ],
+            CRUDControllerTest.TestAutoIncrementController.post_many([{
+                'key': 'my_key',
+                'enum_field': 'Value1',
+            }, {
+                'key': 'my_key',
+                'enum_field': 'Value2',
+            }])
+        )
 
     def test_get_without_filter_is_retrieving_the_only_item(self):
         CRUDControllerTest.TestController.post({

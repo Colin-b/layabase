@@ -48,7 +48,6 @@ class CRUDModel:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
 
-
     @classmethod
     def get(cls, **kwargs):
         """
@@ -142,7 +141,8 @@ class CRUDModel:
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)
         previous_model_as_dict = _model_field_values(previous_model)
-        new_model, errors = cls.schema().load(model_as_dict, instance=previous_model, partial=True, session=cls._session)
+        new_model, errors = cls.schema().load(model_as_dict, instance=previous_model, partial=True,
+                                              session=cls._session)
         if errors:
             raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
         new_model_as_dict = _model_field_values(new_model)
@@ -187,6 +187,7 @@ class CRUDModel:
 
         :return: The newly created schema instance.
         """
+
         class Schema(ModelSchema):
             class Meta:
                 model = cls
@@ -207,6 +208,7 @@ class CRUDModel:
 
         :return: The newly created schema instance.
         """
+
         class PostSchema(ModelSchema):
             class Meta:
                 model = cls
@@ -272,7 +274,7 @@ class CRUDController:
     _model_description_dictionary = None
 
     @classmethod
-    def model(cls, value, audit: bool=False):
+    def model(cls, value, audit: bool = False):
         """
         Initialize related model (should extends CRUDModel).
 
@@ -314,7 +316,8 @@ class CRUDController:
         cls.json_put_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         cls.get_response_model = model_with_fields(namespace, cls._model.__name__, cls._marshmallow_fields)
         if cls._audit_model:
-            cls.get_audit_response_model = model_with_fields(namespace, 'Audit' + cls._model.__name__, cls._audit_marshmallow_fields)
+            cls.get_audit_response_model = model_with_fields(namespace, 'Audit' + cls._model.__name__,
+                                                             cls._audit_marshmallow_fields)
         else:
             cls.get_audit_response_model = None
         cls.get_model_description_response_model = model_describing_sql_alchemy_mapping(namespace, cls._model)
@@ -440,10 +443,10 @@ def _model_field_values(model_instance):
 
 
 def _models_field_values(model_instances: list):
-        """Return models fields values (with the proper type) as a list of dictionaries."""
-        if not model_instances:
-            return []
-        return model_instances[0].schema().dump(model_instances, many=True).data
+    """Return models fields values (with the proper type) as a list of dictionaries."""
+    if not model_instances:
+        return []
+    return model_instances[0].schema().dump(model_instances, many=True).data
 
 
 class NoDatabaseProvided(Exception):
@@ -466,7 +469,6 @@ def _clean_database_url(database_connection_url: str):
 def _can_retrieve_metadata(database_connection_url: str):
     return not (database_connection_url.startswith('sybase') or
                 database_connection_url.startswith('mssql'))
-
 
 
 def _supports_offset(driver_name: str):
