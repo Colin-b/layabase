@@ -1033,7 +1033,7 @@ class CRUDControllerTest(unittest.TestCase):
 
         CRUDControllerTest.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
-            ('TestAutoIncrementModel_Insert', ['enum_field', 'optional_with_default'], ['Test value']),
+            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default'], ['Test value']),
             CRUDControllerTest.TestAutoIncrementController.json_post_model
         )
 

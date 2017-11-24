@@ -335,9 +335,9 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        model_properties = getattr(cls.json_post_model._schema, 'properties', None) if cls.json_post_model else None
-        new_sample_dictionary = _ignore_read_only_fields(model_properties,
-                                                         new_sample_dictionary)
+        if hasattr(cls.json_post_model, '_schema'):
+            new_sample_dictionary = _ignore_read_only_fields(cls.json_post_model._schema,
+                                                             new_sample_dictionary)
         new_sample_model = cls._model.add(new_sample_dictionary)
         if cls._audit_model:
             cls._audit_model._session = cls._model._session
