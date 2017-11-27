@@ -9,6 +9,12 @@ List all changes in various categories:
 
 ### Release notes ###
 
+## Version 9.1.0 (2017-11-27) ##
+
+### Enhancements ###
+
+- Manage schema with SQLite.
+
 ## Version 9.0.0 (2017-11-23) ##
 
 ### Enhancements ###
