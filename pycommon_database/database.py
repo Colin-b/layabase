@@ -534,7 +534,7 @@ def load(database_connection_url: str, create_models_func: callable):
                 raise MultiSchemaNotSupported()
             else:
                 schema = next(iter(getattr(base.metadata, '_schemas', ['main'])))
-                engine.execute("ATTACH DATABASE ':memory:' AS %s;" % schema)
+                engine.execute(f"ATTACH DATABASE ':memory:' AS {schema};")
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
     logger.debug(f'Creating session...')
