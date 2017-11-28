@@ -529,12 +529,11 @@ def load(database_connection_url: str, create_models_func: callable):
             if table_name not in all_view_names
         }
         logger.debug(f'Creating tables...')
-        if _in_memory(database_connection_url) and getattr(base.metadata, '_schemas', None):
+        if _in_memory(database_connection_url) and hasattr(base.metadata, '_schemas'):
             if len(base.metadata._schemas) > 1:
                 raise MultiSchemaNotSupported()
-            else:
-                schema = next(iter(getattr(base.metadata, '_schemas', ['main'])))
-                engine.execute(f"ATTACH DATABASE ':memory:' AS {schema};")
+            elif len(base.metadata._schemas) == 1:
+                engine.execute(f"ATTACH DATABASE ':memory:' AS {next(iter(getattr(base.metadata._schemas)))};")
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
     logger.debug(f'Creating session...')
