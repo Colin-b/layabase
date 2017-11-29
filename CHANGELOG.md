@@ -7,7 +7,11 @@ List all changes in various categories:
 * Known issues
 
 
-### Release notes ###
+## Version 9.1.0 (2017-11-29) ##
+
+### Enhancements ###
+
+- SQLAlchemy model field declaration order is now kept.
 
 ## Version 9.0.0 (2017-11-23) ##
 
