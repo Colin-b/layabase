@@ -1438,6 +1438,76 @@ class CRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual([], CRUDControllerAuditTest.TestController.get({}))
         self._check_audit([])
 
+    def test_get_parser_fields_order(self):
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+                'limit',
+                'offset',
+            ],
+            [arg.name for arg in CRUDControllerAuditTest.TestController.query_get_parser.args]
+        )
+
+    def test_delete_parser_fields_order(self):
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            [arg.name for arg in CRUDControllerAuditTest.TestController.query_delete_parser.args]
+        )
+
+    def test_post_model_fields_order(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                return list(fields.keys())
+
+        CRUDControllerAuditTest.TestController.namespace(TestAPI)
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            CRUDControllerAuditTest.TestController.json_post_model
+        )
+
+    def test_put_model_fields_order(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                return list(fields.keys())
+
+        CRUDControllerAuditTest.TestController.namespace(TestAPI)
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            CRUDControllerAuditTest.TestController.json_put_model
+        )
+
+    def test_get_response_model_fields_order(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                return list(fields.keys())
+
+        CRUDControllerAuditTest.TestController.namespace(TestAPI)
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            CRUDControllerAuditTest.TestController.get_response_model
+        )
+
     def test_post_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             CRUDControllerAuditTest.TestController.post(None)
@@ -2280,6 +2350,20 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
     def tearDown(self):
         logger.info(f'End of {self._testMethodName}')
         logger.info(f'-------------------------------')
+
+    def test_field_declaration_order_is_kept_in_schema(self):
+        fields = self._model.schema().fields
+        self.assertEqual(
+            [
+                'string_column',
+                'integer_column',
+                'boolean_column',
+                'date_column',
+                'datetime_column',
+                'float_column',
+            ],
+            [field_name for field_name in fields]
+        )
 
     def test_python_type_for_sqlalchemy_string_field_is_string(self):
         field = self._model.schema().fields['string_column']

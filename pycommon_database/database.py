@@ -191,6 +191,7 @@ class CRUDModel:
         class Schema(ModelSchema):
             class Meta:
                 model = cls
+                ordered = True
 
         schema = Schema(session=cls._session)
         mapper = inspect(cls)
@@ -212,6 +213,7 @@ class CRUDModel:
         class PostSchema(ModelSchema):
             class Meta:
                 model = cls
+                ordered = True
 
         post_schema = PostSchema(session=cls._session)
         mapper = inspect(cls)
