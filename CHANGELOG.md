@@ -6,18 +6,17 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 9.2.0 (2017-11-30) ##
+
+### Enhancements ###
+
+- Manage schema with SQLite.
 
 ## Version 9.1.0 (2017-11-29) ##
 
 ### Enhancements ###
 
 - SQLAlchemy model field declaration order is now kept.
-
-## Version 9.1.0 (2017-11-27) ##
-
-### Enhancements ###
-
-- Manage schema with SQLite.
 
 ## Version 9.0.0 (2017-11-23) ##
 
