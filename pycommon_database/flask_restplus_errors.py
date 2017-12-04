@@ -50,6 +50,10 @@ def add_failed_validation_handler(api):
         logger.exception('Validation failed.')
         error_list = []
         for field, messages in failed_validation.errors.items():
+            if isinstance(messages, dict):
+                key, value = next(iter(messages.items()))
+                field = f'{key} on item number: {field}.'
+                messages = value
             error_list.append({
                 'field_name': field,
                 'messages': messages,
