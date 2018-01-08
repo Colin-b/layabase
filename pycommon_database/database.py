@@ -461,6 +461,11 @@ class NoRelatedModels(Exception):
         Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
+class MultiSchemaNotSupported(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'SQLite does not manage multi-schemas..')
+
+
 def _clean_database_url(database_connection_url: str):
     connection_details = database_connection_url.split(':///?odbc_connect=', maxsplit=1)
     if len(connection_details) == 2:
@@ -527,6 +532,11 @@ def load(database_connection_url: str, create_models_func: callable, pool_recycl
             if table_name not in all_view_names
         }
         logger.debug(f'Creating tables...')
+        if _in_memory(database_connection_url) and hasattr(base.metadata, '_schemas'):
+            if len(base.metadata._schemas) > 1:
+                raise MultiSchemaNotSupported()
+            elif len(base.metadata._schemas) == 1:
+                engine.execute(f"ATTACH DATABASE ':memory:' AS {next(iter(base.metadata._schemas))};")
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
     logger.debug(f'Creating session...')

@@ -6,6 +6,17 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 9.2.1 (2017-12-04) ##
+
+### Bug fixes ###
+
+- Fix marshaling of validation model failure for post_many.
+
+## Version 9.2.0 (2017-11-30) ##
+
+### Enhancements ###
+
+- Manage schema with SQLite.
 
 ## Version 9.2.0 (2018-01-08) ##
 
