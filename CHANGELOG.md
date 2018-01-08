@@ -6,6 +6,17 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 9.3.0 (2018-01-08) ##
+
+### Enhancements ###
+
+- Database connection pool is now recycled after 1 minute by default (instead of never).
+- Introduce pool_recycle parameter for database.load method allowing to specify this parameter.
+
+### Bug fixes ###
+
+- Increment marshmallow_sqlalchemy to 0.13.2
+
 ## Version 9.2.1 (2017-12-04) ##
 
 ### Bug fixes ###
@@ -17,17 +28,6 @@ List all changes in various categories:
 ### Enhancements ###
 
 - Manage schema with SQLite.
-
-## Version 9.2.0 (2018-01-08) ##
-
-### Enhancements ###
-
-- Database connection pool is now recycled after 1 minute by default (instead of never).
-- Introduce pool_recycle parameter for database.load method allowing to specify this parameter.
-
-### Bug fixes ###
-
-- Increment marshmallow_sqlalchemy to 0.13.2
 
 ## Version 9.1.0 (2017-11-29) ##
 
