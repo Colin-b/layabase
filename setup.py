@@ -11,7 +11,7 @@ setup(
         # Used to manage fields
         'flask-restplus==0.10.1',
         # Used to Manage Database
-        'marshmallow_sqlalchemy==0.13.1',
+        'marshmallow_sqlalchemy==0.13.2',
     ],
     extras_require={
         'testing': [

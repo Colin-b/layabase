@@ -14,6 +14,10 @@ List all changes in various categories:
 - Database connection pool is now recycled after 1 minute by default (instead of never).
 - Introduce pool_recycle parameter for database.load method allowing to specify this parameter.
 
+### Bug fixes ###
+
+- Increment marshmallow_sqlalchemy to 0.13.2
+
 ## Version 9.1.0 (2017-11-29) ##
 
 ### Enhancements ###
