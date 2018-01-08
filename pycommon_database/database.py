@@ -493,12 +493,13 @@ def _get_view_names(engine, schema) -> list:
         return engine.dialect.get_view_names(conn, schema)
 
 
-def load(database_connection_url: str, create_models_func: callable):
+def load(database_connection_url: str, create_models_func: callable, pool_recycle=60):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel) (Mandatory).
+    :param pool_recycle: Number of seconds to wait before recycling a connection pool.
     """
     if not database_connection_url:
         raise NoDatabaseProvided()
@@ -510,7 +511,7 @@ def load(database_connection_url: str, create_models_func: callable):
     if _in_memory(database_connection_url):
         engine = create_engine(database_connection_url, poolclass=StaticPool, connect_args={'check_same_thread': False})
     else:
-        engine = create_engine(database_connection_url)
+        engine = create_engine(database_connection_url, pool_recycle=pool_recycle)
     _prepare_engine(engine)
     logger.debug(f'Creating base...')
     base = declarative_base(bind=engine)

@@ -7,6 +7,13 @@ List all changes in various categories:
 * Known issues
 
 
+## Version 9.2.0 (2018-01-08) ##
+
+### Enhancements ###
+
+- Database connection pool is now recycled after 1 minute by default (instead of never).
+- Introduce pool_recycle parameter for database.load method allowing to specify this parameter.
+
 ## Version 9.1.0 (2017-11-29) ##
 
 ### Enhancements ###
