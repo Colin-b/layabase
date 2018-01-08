@@ -16,6 +16,7 @@ List all changes in various categories:
 ### Bug fixes ###
 
 - Increment marshmallow_sqlalchemy to 0.13.2
+- Database connection is now closed on DBAPI error (mostly disconnection).
 
 ## Version 9.2.1 (2017-12-04) ##
 

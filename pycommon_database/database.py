@@ -45,8 +45,16 @@ class CRUDModel:
             all_models = query.all()
             return cls.schema().dump(all_models, many=True).data
         except exc.sa_exc.DBAPIError:
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            cls._handle_connection_failure()
+
+    @classmethod
+    def _handle_connection_failure(cls):
+        """
+        :raises Exception: Explaining that the database could not be reached.
+        """
+        logger.exception('Database could not be reached.')
+        cls._session.close()  # Force connection close to properly re-establish it on next request
+        raise Exception('Database could not be reached.')
 
     @classmethod
     def get(cls, **kwargs):
@@ -59,13 +67,12 @@ class CRUDModel:
                 query = query.filter(getattr(cls, key) == value)
         try:
             model = query.one_or_none()
+            return cls.schema().dump(model).data
         except exc.MultipleResultsFound:
             cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
             raise ValidationFailed(kwargs, message='More than one result: Consider another filtering.')
         except exc.sa_exc.DBAPIError:
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
-        return cls.schema().dump(model).data
+            cls._handle_connection_failure()
 
     @classmethod
     def add_all(cls, models_as_list_of_dict: list):
@@ -79,8 +86,7 @@ class CRUDModel:
         try:
             models, errors = cls.schema().load(models_as_list_of_dict, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            cls._handle_connection_failure()
         if errors:
             raise ValidationFailed(models_as_list_of_dict, marshmallow_errors=errors)
         try:
@@ -89,8 +95,7 @@ class CRUDModel:
             return _models_field_values(models)
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            cls._handle_connection_failure()
         except Exception:
             cls._session.rollback()
             raise
@@ -117,8 +122,7 @@ class CRUDModel:
             return _model_field_values(model)
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            cls._handle_connection_failure()
         except Exception:
             cls._session.rollback()
             raise
@@ -136,8 +140,7 @@ class CRUDModel:
         try:
             previous_model = cls.schema().get_instance(model_as_dict)
         except exc.sa_exc.DBAPIError:
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            cls._handle_connection_failure()
         if not previous_model:
             raise ModelCouldNotBeFound(model_as_dict)
         previous_model_as_dict = _model_field_values(previous_model)
@@ -152,8 +155,7 @@ class CRUDModel:
             return previous_model_as_dict, new_model_as_dict
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            cls._handle_connection_failure()
         except Exception:
             cls._session.rollback()
             raise
@@ -174,8 +176,7 @@ class CRUDModel:
             return nb_removed
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            cls._handle_connection_failure()
         except Exception:
             cls._session.rollback()
             raise
