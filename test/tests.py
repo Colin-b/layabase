@@ -6,6 +6,7 @@ import datetime
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from flask_restplus import fields as flask_rest_plus_fields, inputs
 from threading import Thread
+import time
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -970,11 +971,11 @@ class CRUDControllerTest(unittest.TestCase):
         CRUDControllerTest.TestDateController.post({
             'key': 'my_key1',
             'date_str': '2017-05-15',
-            'datetime_str': '2016-09-23T23:59:59.123456',
+            'datetime_str': '2016-09-23T23:59:59',
         })
         self.assertEqual(
             (
-                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59.123456+00:00', 'key': 'my_key1'},
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
                 {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00+00:00', 'key': 'my_key1'},
             ),
             CRUDControllerTest.TestDateController.put({
@@ -992,12 +993,12 @@ class CRUDControllerTest(unittest.TestCase):
         CRUDControllerTest.TestDateController.post({
             'key': 'my_key1',
             'date_str': '2017-05-15',
-            'datetime_str': '2016-09-23T23:59:59.123456',
+            'datetime_str': '2016-09-23T23:59:59',
         })
         d = datetime.datetime.strptime('2017-05-15', '%Y-%m-%d').date()
         self.assertEqual(
             [
-                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59.123456+00:00', 'key': 'my_key1'},
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
             ],
             CRUDControllerTest.TestDateController.get({
                 'date_str': d,
@@ -1008,7 +1009,7 @@ class CRUDControllerTest(unittest.TestCase):
         CRUDControllerTest.TestDateController.post({
             'key': 'my_key1',
             'date_str': '2017-05-15',
-            'datetime_str': '2016-09-23T23:59:59.123456',
+            'datetime_str': '2016-09-23T23:59:59',
         })
         d = datetime.datetime.strptime('2016-09-23', '%Y-%m-%d').date()
         self.assertEqual(
@@ -1022,12 +1023,12 @@ class CRUDControllerTest(unittest.TestCase):
         CRUDControllerTest.TestDateController.post({
             'key': 'my_key1',
             'date_str': '2017-05-15',
-            'datetime_str': '2016-09-23T23:59:59.123456',
+            'datetime_str': '2016-09-23T23:59:59',
         })
-        dt = datetime.datetime.strptime('2016-09-23T23:59:59.123456', '%Y-%m-%dT%H:%M:%S.%f')
+        dt = datetime.datetime.strptime('2016-09-23T23:59:59', '%Y-%m-%dT%H:%M:%S')
         self.assertEqual(
             [
-                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59.123456+00:00', 'key': 'my_key1'},
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
             ],
             CRUDControllerTest.TestDateController.get({
                 'datetime_str': dt,
@@ -1038,9 +1039,9 @@ class CRUDControllerTest(unittest.TestCase):
         CRUDControllerTest.TestDateController.post({
             'key': 'my_key1',
             'date_str': '2017-05-15',
-            'datetime_str': '2016-09-23T23:59:59.123456',
+            'datetime_str': '2016-09-23T23:59:59',
         })
-        dt = datetime.datetime.strptime('2016-09-24T23:59:59.123456', '%Y-%m-%dT%H:%M:%S.%f')
+        dt = datetime.datetime.strptime('2016-09-24T23:59:59', '%Y-%m-%dT%H:%M:%S')
         self.assertEqual(
             [],
             CRUDControllerTest.TestDateController.get({
@@ -1626,7 +1627,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'value1',
                     'mandatory': 1,
@@ -1647,7 +1648,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1668,7 +1669,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1699,7 +1700,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1721,7 +1722,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1745,7 +1746,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1769,7 +1770,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1795,7 +1796,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1825,7 +1826,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1833,7 +1834,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -1865,7 +1866,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1873,7 +1874,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -1902,7 +1903,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1910,7 +1911,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -1941,7 +1942,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1949,7 +1950,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1973,7 +1974,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1981,7 +1982,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2008,7 +2009,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2016,7 +2017,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2024,7 +2025,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2048,7 +2049,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2056,7 +2057,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2064,7 +2065,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2084,12 +2085,13 @@ class CRUDControllerAuditTest(unittest.TestCase):
             'key': 'my_key1',
             'mandatory': 2,
         })
+        time.sleep(1)
         CRUDControllerAuditTest.TestController.delete({'key': 'my_key1'})
         self._check_audit(
             [
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2116,7 +2118,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2124,7 +2126,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2132,7 +2134,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2140,7 +2142,7 @@ class CRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d.\d\d\d\d\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,

@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 9.3.1 (2018-01-18) ##
+
+### Bug fixes ###
+
+- Use correct datetime iso format in sync with latest version of marshmallow_sqlalchemy (yyyy-mm-ddThh:mm:ss+00:00)
+- Fix the unitests that were failing because of this
+
 ## Version 9.3.0 (2018-01-08) ##
 
 ### Enhancements ###

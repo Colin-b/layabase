@@ -15,6 +15,7 @@ setup(
     ],
     extras_require={
         'testing': [
-        ],
+        'nose'],
+
     },
 )

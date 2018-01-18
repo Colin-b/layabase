@@ -49,7 +49,7 @@ class AuditModel:
     @classmethod
     def _audit_action(cls, action, model_as_dict):
         model_as_dict['audit_user'] = ''
-        model_as_dict['audit_date_utc'] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
+        model_as_dict['audit_date_utc'] = datetime.datetime.utcnow().isoformat()
         model_as_dict['audit_action'] = action
         model, errors = cls.schema().load(model_as_dict, session=cls._session)
         if errors:
