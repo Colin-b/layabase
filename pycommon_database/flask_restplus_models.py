@@ -1,4 +1,5 @@
 import datetime
+import enum
 from flask_restplus import fields, reqparse, inputs
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from marshmallow import validate
@@ -174,3 +175,98 @@ def query_parser_with_fields(marshmallow_fields_list, required_fieldname_list=No
             type=get_python_type(field),
         )
     return query_parser
+
+
+def mongo_get_rest_plus_type(field):
+    """
+    Return the Flask RestPlus field type (as a class) corresponding to this Mongo field.
+
+    :raises Exception if field type is not managed yet.
+    """
+    if field.type_ == str:
+        return fields.String
+    if field.type_ == int:
+        return fields.Integer
+    if field.type_ == float:
+        return fields.Float
+    if field.type_ == bool:
+        return fields.Boolean
+    if field.type_ == datetime.date:
+        return fields.Date
+    if field.type_ == datetime.datetime:
+        return fields.DateTime
+    if isinstance(field.type_,enum.EnumMeta):
+        return fields.String
+
+    raise Exception(f'Flask RestPlus field type cannot be guessed for {field.name} field.')
+
+def _mongo_get_example(field):
+    default_value = _mongo_get_default_value(field)
+    if default_value:
+        return str(default_value)
+
+    choices = _mongo_get_choices(field)
+    return str(choices[0]) if choices else _mongo_get_default_example(field)
+
+def _mongo_get_default_value(field):
+    return field.default if field else None
+
+def _mongo_get_default_example(field):
+    """
+    Return an Example value corresponding to this Mongodb field.
+    """
+    field_flask = mongo_get_rest_plus_type(field)
+    if field_flask == fields.Integer:
+        return '0'
+    if field_flask == fields.Float:
+        return '0.0'
+    if field_flask == fields.Boolean:
+        return 'true'
+    if field_flask == fields.Date:
+        return '2017-09-24'
+    if field_flask == fields.DateTime:
+        return '2017-09-24T15:36:09'
+    if field_flask == fields.List:
+        return 'xxxx'
+    return 'sample_value'
+
+def _mongo_get_choices(field):
+    if isinstance(field.type_, enum.EnumMeta):
+        return list(field.type_.__members__.keys())
+    return None
+
+def _mongo_is_read_only_value(field):
+    return field.autoincrement if field else None
+
+def mongo_model_with_fields(api, name: str, fields_list):
+    """
+    Flask RestPlus Model describing a MONGODB class using schema fields.
+    """
+    exported_fields = {
+        field.name: mongo_get_rest_plus_type(field)(
+            required=field.required,
+            example=str(_mongo_get_example(field)),
+            description=field.doc,
+            enum=_mongo_get_choices(field),
+            default=_mongo_get_default_value(field),
+            readonly=_mongo_is_read_only_value(field)
+        )
+        for field in fields_list
+    }
+    return api.model(name, exported_fields)
+
+def mongo_query_parser_with_fields(fields_list, required_fieldname_list=None):
+    query_parser = reqparse.RequestParser()
+    if required_fieldname_list:
+        unknown_fields = set(required_fieldname_list).difference([f.name for f in fields_list])
+        if unknown_fields:
+            raise Exception(f'Required field(s) is(are) not contained in the field list {unknown_fields}')
+    for field in fields_list:
+        query_parser.add_argument(
+            field.name,
+            required=required_fieldname_list and field.name in required_fieldname_list,
+            type=field.type_
+        )
+    return query_parser
+
+

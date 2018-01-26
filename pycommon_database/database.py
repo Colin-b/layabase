@@ -5,17 +5,47 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
-from flask_restplus import inputs
+from flask_restplus import inputs, fields
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+from mongomock import MongoClient as MongoMockClient
+import os.path
+import inspect
 
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
     model_describing_sql_alchemy_mapping,
     query_parser_with_fields,
+    mongo_model_with_fields,
+    mongo_query_parser_with_fields
 )
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 from pycommon_database.audit import create_from as create_audit_model
 
 logger = logging.getLogger(__name__)
+
+class MongoColumn:
+    def __init__(self, *args, **kwargs):
+        self.name = kwargs.pop('name', None)
+        self.type_ = kwargs.pop('type', None)
+        self.key = kwargs.pop('key', self.name)
+        self.primary_key = kwargs.pop('primary_key', False)
+        self.nullable = kwargs.pop('nullable', not self.primary_key)
+        self.default = kwargs.pop('default', None)
+        self.required = kwargs.pop('required', False)
+
+        # these default to None because .index and .unique is *not*
+        # an informational flag about Column - there can still be an
+        # Index or UniqueConstraint referring to this Column.
+        self.index = kwargs.pop('index', None)
+        self.unique = kwargs.pop('unique', None)
+
+        self.doc = kwargs.pop('doc', None)
+        self.onupdate = kwargs.pop('onupdate', None)
+        self.autoincrement = kwargs.pop('autoincrement', False)
+        self.constraints = set()
+        self.foreign_keys = set()
+        self.comment = kwargs.pop('comment', None)
 
 
 class CRUDModel:
@@ -243,6 +273,152 @@ class CRUDModel:
         auto_increments = [column.autoincrement for column in sql_alchemy_field.columns]
         marshmallow_field.dump_only = True in auto_increments
 
+def _mongo_get_pimary_keys_list(mongo_class):
+    mongo_fields = inspect.getmembers(mongo_class)
+    return list(field[0] for field in mongo_fields if type(field[1]) == MongoColumn and field[1].primary_key)
+
+def get_mongo_field_values(mongo_class):
+    return list(field[1] for field in inspect.getmembers(mongo_class) if type(field[1]) == MongoColumn)
+
+def _model_describing_mongo_mapping(api, mongo_class):
+    """
+    Flask RestPlus Model describing a MONGODB model.
+    """
+    exported_fields = {
+        'collection': fields.String(required=True, example='collection', description='Collection name'),
+    }
+
+    exported_fields.update({
+        field.name: fields.String(
+            required=field.required,
+            example='column',
+            description=field.doc,
+        )
+        for field in get_mongo_field_values(mongo_class)
+    })
+
+    return api.model(''.join([mongo_class.__collection__.name, 'Description']), exported_fields)
+
+class MongoCRUDModel(CRUDModel):
+    
+    __collection__ = None
+    
+    @classmethod
+    def get_all(cls, **kwargs):
+        """
+        Return all models formatted as a list of dictionaries.
+        """
+        query = {}
+        for key, value in kwargs.items():
+            if value is not None:
+                if key == '_id':
+                    query[key] = ObjectId(value)
+                else:
+                    query[key] = value
+        try:
+            all_docs = cls.__collection__.find(query)
+            json_results = []
+            for result in all_docs:
+                json_results.append(result)
+            return json_results
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+
+    @classmethod
+    def add_all(cls, models_as_list_of_dict: list):
+        """
+        Add models formatted as a list of dictionaries.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns The inserted model formatted as a list of dictionaries.
+        """
+        if not models_as_list_of_dict:
+            raise ValidationFailed({}, message='No data provided.')
+        try:
+            """ if _id present in a document, convert it to ObjectId """
+            if isinstance(models_as_list_of_dict, (list, tuple)):
+                for model_dict in models_as_list_of_dict:
+                    if '_id' in model_dict.keys():
+                        model_dict['_id'] = ObjectId(model_dict['_id'])
+            else:
+                if '_id' in models_as_list_of_dict.keys():
+                    models_as_list_of_dict['_id'] = ObjectId(models_as_list_of_dict['_id'])
+
+            object_ids = cls.__collection__.insert(models_as_list_of_dict)
+            return object_ids
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        except Exception:
+            raise
+
+    @classmethod
+    def update(cls, model_as_dict: dict):
+        """
+        Update a model formatted as a dictionary.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns A tuple containing previous model formatted as a dictionary (first item)
+        and new model formatted as a dictionary (second item).
+        """
+        if not model_as_dict:
+            raise ValidationFailed({}, message='No data provided.')
+        try:
+            """ if _id present in a document, convert it to ObjectId """
+            if '_id' in model_as_dict.keys():
+                model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
+            primary_key_fields = _mongo_get_pimary_keys_list(cls)
+            model_as_dict_keys = {k: v for k, v in model_as_dict.items() if k in primary_key_fields}
+            for primary_key in primary_key_fields:
+                if primary_key not in model_as_dict_keys.keys():
+                    logger.exception(f'{primary_key} should be specified when updating a document')
+                    raise Exception(f'{primary_key} should be specified when updating a document')
+            model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in primary_key_fields}
+            if model_as_dict_updates is None:
+                logger.exception('no field outside primary keys specified when updating the document')
+                raise Exception('no field outside primary keys specified when updating the document')
+
+            previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        if not previous_model_as_dict:
+            raise ModelCouldNotBeFound(model_as_dict)
+
+        try:
+            raw_result = cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates}).raw_result
+            new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+            return previous_model_as_dict, new_model_as_dict
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        except Exception:
+            raise
+
+    @classmethod
+    def remove(cls, **kwargs):
+        """
+        Remove the model(s) matching those criterion.
+        :returns Number of removed rows.
+        """
+        query = {}
+        for key, value in kwargs.items():
+            if value is not None:
+                if key == '_id':
+                    query[key] = ObjectId(value)
+                else:
+                    query[key] = value
+        try:
+            if query == {}:
+                logger.exception('No delete criterias provided: criterias should be provided when calling delete')
+                raise Exception('No delete criterias provided: criterias should be provided when calling delete')
+            nb_removed = cls.__collection__.delete_many(query).deleted_count
+            return nb_removed
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        except Exception:
+            raise
+
 
 class ControllerModelNotSet(Exception):
     def __init__(self, controller_class):
@@ -417,6 +593,39 @@ class CRUDController:
         return cls._model_description_dictionary
 
 
+class MongoCRUDController(CRUDController):
+    @classmethod
+    def model(cls, value, audit: bool = False):
+        """
+        Initialize related model (should extends CRUDModel).
+
+        :param value: MongoCRUDModel
+        :param audit: True to add an extra model representing the audit table. No audit by default.
+        """
+        cls._model = value
+        cls._marshmallow_fields = get_mongo_field_values(cls._model)
+
+        cls.query_get_parser = mongo_query_parser_with_fields(cls._marshmallow_fields)
+        cls.query_delete_parser = mongo_query_parser_with_fields(cls._marshmallow_fields)
+        cls._audit_model = None
+        cls._audit_marshmallow_fields = None
+        cls.query_get_audit_parser = None
+        cls._model_description_dictionary = _retrieve_mongo_model_description_dictionary(cls._model)
+
+    @classmethod
+    def namespace(cls, namespace):
+        """
+        Create Flask RestPlus models that can be used to marshall results (and document service).
+        This method should always be called AFTER cls.model()
+
+        :param namespace: Flask RestPlus API.
+        """
+        cls.json_post_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
+        cls.json_put_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
+        cls.get_response_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
+        cls.get_audit_response_model = None
+        cls.get_model_description_response_model = _model_describing_mongo_mapping(namespace, cls._model)
+
 def _ignore_read_only_fields(model_properties, input_dictionnaries):
     read_only_fields = [item[0] for item in model_properties.items() if item[1].get('readOnly', None)]
     if isinstance(input_dictionnaries, list):
@@ -437,6 +646,16 @@ def _retrieve_model_description_dictionary(sql_alchemy_class):
     for column in mapper.attrs:
         description[column.key] = column.columns[0].name
 
+    return description
+
+
+def _retrieve_mongo_model_description_dictionary(mongo_class):
+    description = {
+        'collection': mongo_class.__collection__.full_name,
+    }
+    mapper = list(column for column in inspect.getmembers(mongo_class) if type(column[1]) == MongoColumn)
+    for column in mapper:
+        description[column[1].key] = column[1].name
     return description
 
 
@@ -485,7 +704,12 @@ def _supports_offset(driver_name: str):
 
 
 def _in_memory(database_connection_url: str):
-    return ':memory:' in database_connection_url
+    return (':memory:' in database_connection_url or
+            database_connection_url.startswith('mongomock'))
+
+def _use_mongodb(database_connection_url: str):
+    return (database_connection_url.startswith('mongodb') or
+            database_connection_url.startswith('mongomock'))
 
 
 def _prepare_engine(engine):
@@ -513,38 +737,48 @@ def load(database_connection_url: str, create_models_func: callable, pool_recycl
         raise NoRelatedModels()
     database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f'Connecting to {database_connection_url}...')
-    logger.debug(f'Creating engine...')
-    if _in_memory(database_connection_url):
-        engine = create_engine(database_connection_url, poolclass=StaticPool, connect_args={'check_same_thread': False})
+    if not _use_mongodb(database_connection_url):
+        logger.debug(f'Creating engine...')
+        if _in_memory(database_connection_url):
+            engine = create_engine(database_connection_url, poolclass=StaticPool, connect_args={'check_same_thread': False})
+        else:
+            engine = create_engine(database_connection_url, pool_recycle=pool_recycle)
+        _prepare_engine(engine)
+        logger.debug(f'Creating base...')
+        base = declarative_base(bind=engine)
+        logger.debug(f'Creating models...')
+        model_classes = create_models_func(base)
+        if _can_retrieve_metadata(database_connection_url):
+            all_view_names = _get_view_names(engine, base.metadata.schema)
+            all_tables_and_views = base.metadata.tables
+            # Remove all views from table list before creating them
+            base.metadata.tables = {
+                table_name: table_or_view
+                for table_name, table_or_view in all_tables_and_views.items()
+                if table_name not in all_view_names
+            }
+            logger.debug(f'Creating tables...')
+            if _in_memory(database_connection_url) and hasattr(base.metadata, '_schemas'):
+                if len(base.metadata._schemas) > 1:
+                    raise MultiSchemaNotSupported()
+                elif len(base.metadata._schemas) == 1:
+                    engine.execute(f"ATTACH DATABASE ':memory:' AS {next(iter(base.metadata._schemas))};")
+            base.metadata.create_all(bind=engine)
+            base.metadata.tables = all_tables_and_views
+        logger.debug(f'Creating session...')
+        session = sessionmaker(bind=engine)()
+        logger.info(f'Connected to {database_connection_url}.')
+        for model_class in model_classes:
+            model_class._session = session
     else:
-        engine = create_engine(database_connection_url, pool_recycle=pool_recycle)
-    _prepare_engine(engine)
-    logger.debug(f'Creating base...')
-    base = declarative_base(bind=engine)
-    logger.debug(f'Creating models...')
-    model_classes = create_models_func(base)
-    if _can_retrieve_metadata(database_connection_url):
-        all_view_names = _get_view_names(engine, base.metadata.schema)
-        all_tables_and_views = base.metadata.tables
-        # Remove all views from table list before creating them
-        base.metadata.tables = {
-            table_name: table_or_view
-            for table_name, table_or_view in all_tables_and_views.items()
-            if table_name not in all_view_names
-        }
-        logger.debug(f'Creating tables...')
-        if _in_memory(database_connection_url) and hasattr(base.metadata, '_schemas'):
-            if len(base.metadata._schemas) > 1:
-                raise MultiSchemaNotSupported()
-            elif len(base.metadata._schemas) == 1:
-                engine.execute(f"ATTACH DATABASE ':memory:' AS {next(iter(base.metadata._schemas))};")
-        base.metadata.create_all(bind=engine)
-        base.metadata.tables = all_tables_and_views
-    logger.debug(f'Creating session...')
-    session = sessionmaker(bind=engine)()
-    logger.info(f'Connected to {database_connection_url}.')
-    for model_class in model_classes:
-        model_class._session = session
+        dbname = os.path.basename(database_connection_url)
+        if _in_memory(database_connection_url):
+            base = MongoMockClient()
+        else:
+            base = MongoClient(database_connection_url)[dbname]
+        logger.debug(f'Creating models...')
+        model_classes = create_models_func(base)
+
     return base
 
 

@@ -12,6 +12,9 @@ setup(
         'flask-restplus==0.10.1',
         # Used to Manage Database
         'marshmallow_sqlalchemy==0.13.2',
+        # Used to Manage MongoDatabase
+        'pymongo',
+        'mongomock'
     ],
     extras_require={
         'testing': [
