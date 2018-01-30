@@ -17,7 +17,8 @@ from pycommon_database.flask_restplus_models import (
     model_describing_sql_alchemy_mapping,
     query_parser_with_fields,
     mongo_model_with_fields,
-    mongo_query_parser_with_fields
+    mongo_query_parser_with_fields,
+    mongo_get_choices
 )
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 from pycommon_database.audit import create_from as create_audit_model
@@ -42,7 +43,7 @@ class MongoColumn:
 
         self.doc = kwargs.pop('doc', None)
         self.onupdate = kwargs.pop('onupdate', None)
-        self.autoincrement = kwargs.pop('autoincrement', False)
+        self.autoincrement = kwargs.pop('autoincrement', None)
         self.constraints = set()
         self.foreign_keys = set()
         self.comment = kwargs.pop('comment', None)
@@ -280,6 +281,58 @@ def _mongo_get_pimary_keys_list(mongo_class):
 def get_mongo_field_values(mongo_class):
     return list(field[1] for field in inspect.getmembers(mongo_class) if type(field[1]) == MongoColumn)
 
+def get_mongo_enum_field_values(mongo_class):
+    enum_fields = {}
+    for field in inspect.getmembers(mongo_class):
+        if type(field[1]) == MongoColumn:
+            enum_values = mongo_get_choices(field[1])
+            if enum_values:
+                enum_fields[field[1].name] = enum_values
+    return enum_fields
+
+def get_mongo_autoincrement_field_values(mongo_class):
+    return list(field[1] for field in inspect.getmembers(mongo_class) if type(field[1]) == MongoColumn and field[1].autoincrement)
+
+def get_mongo_non_nullable_fields(mongo_class):
+    return list(field[1].name for field in inspect.getmembers(mongo_class)
+                if type(field[1]) == MongoColumn and not field[1].nullable and not field[1].autoincrement)
+
+def mongo_validate_fields(mongo_class, models_as_list_of_dict, check_nullable=True):
+    try:
+        non_nullable_fields = (get_mongo_non_nullable_fields(mongo_class) if check_nullable else [])
+        enum_fields = get_mongo_enum_field_values(mongo_class)
+        if not isinstance(models_as_list_of_dict, (list, tuple)):
+            models_as_list_of_dict = [models_as_list_of_dict]
+        for model_dict in models_as_list_of_dict:
+            """ make sure all non nullable fields have been provided """
+            for non_nullable_field in non_nullable_fields:
+                if non_nullable_field not in model_dict.keys():
+                    logger.exception(f'All non nullable fields {non_nullable_fields} have to be provided when posting.')
+                    raise Exception(f'All non nullable fields {non_nullable_fields} have to be provided when posting.')
+            """ make sure all enum fields have the correct value available in choices when provided """
+            for field in model_dict.keys():
+                if field in enum_fields and model_dict[field] not in enum_fields[field]:
+                    logger.exception(f'Field {field} was given value {model_dict[field]}, not part of allowed list of values {enum_fields[field]}')
+                    raise Exception(f'Field {field} was given value {model_dict[field]}, not part of allowed list of values {enum_fields[field]}')
+    except Exception:
+        raise
+
+def mongo_auto_increment(mongo_class, field):
+    if field.autoincrement == 'inc' and mongo_class.__counters__:
+        #auto_increment_value = mongo_class.__collection__.aggregate([{'$group':{'_id':'$item', 'value':{'$max':'$%s'%field.name}}}])
+        counter_key = {'_id': mongo_class.__collection__.name}
+        counter_element = mongo_class.__counters__.find_one(counter_key)
+        if not counter_element:
+            """ counter not created yet, create it with default value 1 """
+            mongo_class.__counters__.insert({'_id': mongo_class.__collection__.name , field.name: 1})
+            counter_element = mongo_class.__counters__.find_one(counter_key)
+        elif field.name not in counter_element.keys():
+            mongo_class.__counters__.update(counter_key, {'$set': {field.name: 1}})
+        else:
+            mongo_class.__counters__.update(counter_key, {'$inc': {field.name: 1}})
+        return mongo_class.__counters__.find_one(counter_key)[field.name]
+    return 1
+
 def _model_describing_mongo_mapping(api, mongo_class):
     """
     Flask RestPlus Model describing a MONGODB model.
@@ -302,7 +355,8 @@ def _model_describing_mongo_mapping(api, mongo_class):
 class MongoCRUDModel(CRUDModel):
     
     __collection__ = None
-    
+    __counters__ = None
+
     @classmethod
     def get_all(cls, **kwargs):
         """
@@ -335,14 +389,18 @@ class MongoCRUDModel(CRUDModel):
         if not models_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')
         try:
-            """ if _id present in a document, convert it to ObjectId """
-            if isinstance(models_as_list_of_dict, (list, tuple)):
-                for model_dict in models_as_list_of_dict:
-                    if '_id' in model_dict.keys():
-                        model_dict['_id'] = ObjectId(model_dict['_id'])
-            else:
-                if '_id' in models_as_list_of_dict.keys():
-                    models_as_list_of_dict['_id'] = ObjectId(models_as_list_of_dict['_id'])
+            """ validate fields provided """
+            mongo_validate_fields(cls, models_as_list_of_dict)
+            if not isinstance(models_as_list_of_dict, (list, tuple)):
+                models_as_list_of_dict = [models_as_list_of_dict]
+            for model_dict in models_as_list_of_dict:
+                """ if _id present in a document, convert it to ObjectId """
+                if '_id' in model_dict.keys():
+                    model_dict['_id'] = ObjectId(model_dict['_id'])
+                """ handle auto-incrementation of fields whene needed """
+                auto_inc_fields = get_mongo_autoincrement_field_values(cls)
+                for auto_inc_field in auto_inc_fields:
+                    model_dict[auto_inc_field.name] = mongo_auto_increment(cls, auto_inc_field)
 
             object_ids = cls.__collection__.insert(models_as_list_of_dict)
             return object_ids
@@ -363,6 +421,8 @@ class MongoCRUDModel(CRUDModel):
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
         try:
+            """ validate fields provided """
+            mongo_validate_fields(cls, model_as_dict, check_nullable=False)
             """ if _id present in a document, convert it to ObjectId """
             if '_id' in model_as_dict.keys():
                 model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
@@ -791,3 +851,38 @@ def reset(base):
         base.metadata.drop_all(bind=base.metadata.bind)
         base.metadata.create_all(bind=base.metadata.bind)
         logger.info(f'All data related to {base.metadata.bind.url} reset.')
+
+def load_and_reset(database_connection_url: str, create_models_func: callable, pool_recycle=60):
+    """
+    If the database was already created, then drop all tables and recreate them all.
+    """
+    if not database_connection_url:
+        raise NoDatabaseProvided()
+    if not create_models_func:
+        raise NoRelatedModels()
+    database_connection_url = _clean_database_url(database_connection_url)
+    if _use_mongodb(database_connection_url):
+        logger.info(f'Connecting to {database_connection_url}...')
+        dbname = os.path.basename(database_connection_url)
+        if _in_memory(database_connection_url):
+            base = MongoMockClient()
+        else:
+            base = MongoClient(database_connection_url)[dbname]
+        logger.debug(f'Creating models...')
+        model_classes = create_models_func(base)
+        if model_classes:
+            for model_class in model_classes:
+                logger.info(f'Resetting all data related to collection "{model_class.__collection__.name}"...')
+                nb_removed = model_class.__collection__.delete_many({}).deleted_count
+                logger.info(f'{nb_removed} records deleted')
+                logger.info(f'Resetting counter "{model_class.__collection__.name}" located in collection "counters"')
+                nb_removed = base['counters'].delete_many({'_id': model_class.__collection__.name}).deleted_count
+                logger.info(f'{nb_removed} records deleted')
+                """
+                logger.info(f'Resetting counter "{model_class.__collection__.name}" located in collection "counters"')
+                nb_inserted = base['counters'].insert({'_id': model_class.__collection__.name, 'sequence_value': 0})
+                logger.info(f'{nb_inserted} records inserted')
+                #base['counters'].findAndModify({'query': {'_id': model_class.__collection__.name}, 'update': {'$inc': {'sequence_value': 1}}, 'new': 'true'})
+                base['counters'].update({'_id': model_class.__collection__.name}, {'$inc': {'sequence_value': 1}})
+"""
+            logger.info(f'All data related to {base.metadata.bind.url} reset.')

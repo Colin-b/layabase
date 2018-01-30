@@ -205,7 +205,7 @@ def _mongo_get_example(field):
     if default_value:
         return str(default_value)
 
-    choices = _mongo_get_choices(field)
+    choices = mongo_get_choices(field)
     return str(choices[0]) if choices else _mongo_get_default_example(field)
 
 def _mongo_get_default_value(field):
@@ -230,13 +230,13 @@ def _mongo_get_default_example(field):
         return 'xxxx'
     return 'sample_value'
 
-def _mongo_get_choices(field):
+def mongo_get_choices(field):
     if isinstance(field.type_, enum.EnumMeta):
         return list(field.type_.__members__.keys())
     return None
 
 def _mongo_is_read_only_value(field):
-    return field.autoincrement if field else None
+    return (field.autoincrement is not None) if field else None
 
 def mongo_model_with_fields(api, name: str, fields_list):
     """
@@ -247,7 +247,7 @@ def mongo_model_with_fields(api, name: str, fields_list):
             required=field.required,
             example=str(_mongo_get_example(field)),
             description=field.doc,
-            enum=_mongo_get_choices(field),
+            enum=mongo_get_choices(field),
             default=_mongo_get_default_value(field),
             readonly=_mongo_is_read_only_value(field)
         )
