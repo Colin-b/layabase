@@ -10,44 +10,29 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from mongomock import MongoClient as MongoMockClient
 import os.path
-import inspect
 
+from pycommon_database.mongo import (
+    MongoColumn,
+    mongo_inspect,
+    mongo_get_primary_keys_values,
+    mongo_build_query,
+    get_mongo_field_values,
+    get_mongo_enum_field_values,
+    get_mongo_autoincrement_field_values,
+    mongo_validate_fields
+)
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
     model_describing_sql_alchemy_mapping,
     query_parser_with_fields,
+    model_describing_mongo_mapping,
     mongo_model_with_fields,
-    mongo_query_parser_with_fields,
-    mongo_get_choices
+    mongo_query_parser_with_fields
 )
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
-from pycommon_database.audit import create_from as create_audit_model
+from pycommon_database.audit import create_from as create_audit_model, mongo_create_from as mongo_create_audit_model
 
 logger = logging.getLogger(__name__)
-
-class MongoColumn:
-    def __init__(self, *args, **kwargs):
-        self.name = kwargs.pop('name', None)
-        self.type_ = kwargs.pop('type', None)
-        self.key = kwargs.pop('key', self.name)
-        self.primary_key = kwargs.pop('primary_key', False)
-        self.nullable = kwargs.pop('nullable', not self.primary_key)
-        self.default = kwargs.pop('default', None)
-        self.required = kwargs.pop('required', False)
-
-        # these default to None because .index and .unique is *not*
-        # an informational flag about Column - there can still be an
-        # Index or UniqueConstraint referring to this Column.
-        self.index = kwargs.pop('index', None)
-        self.unique = kwargs.pop('unique', None)
-
-        self.doc = kwargs.pop('doc', None)
-        self.onupdate = kwargs.pop('onupdate', None)
-        self.autoincrement = kwargs.pop('autoincrement', None)
-        self.constraints = set()
-        self.foreign_keys = set()
-        self.comment = kwargs.pop('comment', None)
-
 
 class CRUDModel:
     """
@@ -274,52 +259,9 @@ class CRUDModel:
         auto_increments = [column.autoincrement for column in sql_alchemy_field.columns]
         marshmallow_field.dump_only = True in auto_increments
 
-def _mongo_get_pimary_keys_list(mongo_class):
-    mongo_fields = inspect.getmembers(mongo_class)
-    return list(field[0] for field in mongo_fields if type(field[1]) == MongoColumn and field[1].primary_key)
 
-def get_mongo_field_values(mongo_class):
-    return list(field[1] for field in inspect.getmembers(mongo_class) if type(field[1]) == MongoColumn)
-
-def get_mongo_enum_field_values(mongo_class):
-    enum_fields = {}
-    for field in inspect.getmembers(mongo_class):
-        if type(field[1]) == MongoColumn:
-            enum_values = mongo_get_choices(field[1])
-            if enum_values:
-                enum_fields[field[1].name] = enum_values
-    return enum_fields
-
-def get_mongo_autoincrement_field_values(mongo_class):
-    return list(field[1] for field in inspect.getmembers(mongo_class) if type(field[1]) == MongoColumn and field[1].autoincrement)
-
-def get_mongo_non_nullable_fields(mongo_class):
-    return list(field[1].name for field in inspect.getmembers(mongo_class)
-                if type(field[1]) == MongoColumn and not field[1].nullable and not field[1].autoincrement)
-
-def mongo_validate_fields(mongo_class, models_as_list_of_dict, check_nullable=True):
-    try:
-        non_nullable_fields = (get_mongo_non_nullable_fields(mongo_class) if check_nullable else [])
-        enum_fields = get_mongo_enum_field_values(mongo_class)
-        if not isinstance(models_as_list_of_dict, (list, tuple)):
-            models_as_list_of_dict = [models_as_list_of_dict]
-        for model_dict in models_as_list_of_dict:
-            """ make sure all non nullable fields have been provided """
-            for non_nullable_field in non_nullable_fields:
-                if non_nullable_field not in model_dict.keys():
-                    logger.exception(f'All non nullable fields {non_nullable_fields} have to be provided when posting.')
-                    raise Exception(f'All non nullable fields {non_nullable_fields} have to be provided when posting.')
-            """ make sure all enum fields have the correct value available in choices when provided """
-            for field in model_dict.keys():
-                if field in enum_fields and model_dict[field] not in enum_fields[field]:
-                    logger.exception(f'Field {field} was given value {model_dict[field]}, not part of allowed list of values {enum_fields[field]}')
-                    raise Exception(f'Field {field} was given value {model_dict[field]}, not part of allowed list of values {enum_fields[field]}')
-    except Exception:
-        raise
-
-def mongo_auto_increment(mongo_class, field):
+def _mongo_auto_increment(mongo_class, field):
     if field.autoincrement == 'inc' and mongo_class.__counters__:
-        #auto_increment_value = mongo_class.__collection__.aggregate([{'$group':{'_id':'$item', 'value':{'$max':'$%s'%field.name}}}])
         counter_key = {'_id': mongo_class.__collection__.name}
         counter_element = mongo_class.__counters__.find_one(counter_key)
         if not counter_element:
@@ -333,27 +275,8 @@ def mongo_auto_increment(mongo_class, field):
         return mongo_class.__counters__.find_one(counter_key)[field.name]
     return 1
 
-def _model_describing_mongo_mapping(api, mongo_class):
-    """
-    Flask RestPlus Model describing a MONGODB model.
-    """
-    exported_fields = {
-        'collection': fields.String(required=True, example='collection', description='Collection name'),
-    }
-
-    exported_fields.update({
-        field.name: fields.String(
-            required=field.required,
-            example='column',
-            description=field.doc,
-        )
-        for field in get_mongo_field_values(mongo_class)
-    })
-
-    return api.model(''.join([mongo_class.__collection__.name, 'Description']), exported_fields)
-
 class MongoCRUDModel(CRUDModel):
-    
+    __db__ = None
     __collection__ = None
     __counters__ = None
 
@@ -362,14 +285,8 @@ class MongoCRUDModel(CRUDModel):
         """
         Return all models formatted as a list of dictionaries.
         """
-        query = {}
-        for key, value in kwargs.items():
-            if value is not None:
-                if key == '_id':
-                    query[key] = ObjectId(value)
-                else:
-                    query[key] = value
         try:
+            query = mongo_build_query(**kwargs)
             all_docs = cls.__collection__.find(query)
             json_results = []
             for result in all_docs:
@@ -400,10 +317,10 @@ class MongoCRUDModel(CRUDModel):
                 """ handle auto-incrementation of fields whene needed """
                 auto_inc_fields = get_mongo_autoincrement_field_values(cls)
                 for auto_inc_field in auto_inc_fields:
-                    model_dict[auto_inc_field.name] = mongo_auto_increment(cls, auto_inc_field)
+                    model_dict[auto_inc_field.name] = _mongo_auto_increment(cls, auto_inc_field)
 
             object_ids = cls.__collection__.insert(models_as_list_of_dict)
-            return object_ids
+            return models_as_list_of_dict
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
@@ -426,17 +343,7 @@ class MongoCRUDModel(CRUDModel):
             """ if _id present in a document, convert it to ObjectId """
             if '_id' in model_as_dict.keys():
                 model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
-            primary_key_fields = _mongo_get_pimary_keys_list(cls)
-            model_as_dict_keys = {k: v for k, v in model_as_dict.items() if k in primary_key_fields}
-            for primary_key in primary_key_fields:
-                if primary_key not in model_as_dict_keys.keys():
-                    logger.exception(f'{primary_key} should be specified when updating a document')
-                    raise Exception(f'{primary_key} should be specified when updating a document')
-            model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in primary_key_fields}
-            if model_as_dict_updates is None:
-                logger.exception('no field outside primary keys specified when updating the document')
-                raise Exception('no field outside primary keys specified when updating the document')
-
+            model_as_dict_keys = mongo_get_primary_keys_values(cls, model_as_dict)
             previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -445,6 +352,7 @@ class MongoCRUDModel(CRUDModel):
             raise ModelCouldNotBeFound(model_as_dict)
 
         try:
+            model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys.keys()}
             raw_result = cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates}).raw_result
             new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
             return previous_model_as_dict, new_model_as_dict
@@ -460,14 +368,8 @@ class MongoCRUDModel(CRUDModel):
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.
         """
-        query = {}
-        for key, value in kwargs.items():
-            if value is not None:
-                if key == '_id':
-                    query[key] = ObjectId(value)
-                else:
-                    query[key] = value
         try:
+            query = mongo_build_query(**kwargs)
             if query == {}:
                 logger.exception('No delete criterias provided: criterias should be provided when calling delete')
                 raise Exception('No delete criterias provided: criterias should be provided when calling delete')
@@ -667,9 +569,15 @@ class MongoCRUDController(CRUDController):
 
         cls.query_get_parser = mongo_query_parser_with_fields(cls._marshmallow_fields)
         cls.query_delete_parser = mongo_query_parser_with_fields(cls._marshmallow_fields)
-        cls._audit_model = None
-        cls._audit_marshmallow_fields = None
-        cls.query_get_audit_parser = None
+        if audit:
+            cls._audit_model = mongo_create_audit_model(cls._model)
+            cls._audit_marshmallow_fields = get_mongo_field_values(cls._audit_model)
+            cls.query_get_audit_parser = mongo_query_parser_with_fields(cls._audit_marshmallow_fields)
+        else:
+            cls._audit_model = None
+            cls._audit_marshmallow_fields = None
+            cls.query_get_audit_parser = None
+
         cls._model_description_dictionary = _retrieve_mongo_model_description_dictionary(cls._model)
 
     @classmethod
@@ -683,8 +591,12 @@ class MongoCRUDController(CRUDController):
         cls.json_post_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
         cls.json_put_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
         cls.get_response_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
-        cls.get_audit_response_model = None
-        cls.get_model_description_response_model = _model_describing_mongo_mapping(namespace, cls._model)
+        if cls._audit_model:
+            cls.get_audit_response_model = mongo_model_with_fields(namespace, 'Audit' + cls._model.__collection__.name,
+                                                             cls._audit_marshmallow_fields)
+        else:
+            cls.get_audit_response_model = None
+        cls.get_model_description_response_model = model_describing_mongo_mapping(namespace, cls._model)
 
 def _ignore_read_only_fields(model_properties, input_dictionnaries):
     read_only_fields = [item[0] for item in model_properties.items() if item[1].get('readOnly', None)]
@@ -713,7 +625,7 @@ def _retrieve_mongo_model_description_dictionary(mongo_class):
     description = {
         'collection': mongo_class.__collection__.full_name,
     }
-    mapper = list(column for column in inspect.getmembers(mongo_class) if type(column[1]) == MongoColumn)
+    mapper = mongo_inspect(mongo_class)
     for column in mapper:
         description[column[1].key] = column[1].name
     return description

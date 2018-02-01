@@ -3,6 +3,7 @@ import enum
 from flask_restplus import fields, reqparse, inputs
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from marshmallow import validate
+from pycommon_database.mongo import mongo_get_choices, get_mongo_field_values
 
 
 def get_rest_plus_type(marshmallow_field):
@@ -230,13 +231,27 @@ def _mongo_get_default_example(field):
         return 'xxxx'
     return 'sample_value'
 
-def mongo_get_choices(field):
-    if isinstance(field.type_, enum.EnumMeta):
-        return list(field.type_.__members__.keys())
-    return None
-
 def _mongo_is_read_only_value(field):
     return (field.autoincrement is not None) if field else None
+
+def model_describing_mongo_mapping(api, mongo_class):
+    """
+    Flask RestPlus Model describing a MONGODB model.
+    """
+    exported_fields = {
+        'collection': fields.String(required=True, example='collection', description='Collection name'),
+    }
+
+    exported_fields.update({
+        field.name: fields.String(
+            required=field.required,
+            example='column',
+            description=field.doc,
+        )
+        for field in get_mongo_field_values(mongo_class)
+    })
+
+    return api.model(''.join([mongo_class.__collection__.name, 'Description']), exported_fields)
 
 def mongo_model_with_fields(api, name: str, fields_list):
     """
