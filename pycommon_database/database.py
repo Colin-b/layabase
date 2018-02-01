@@ -568,7 +568,7 @@ class MongoCRUDController(CRUDController):
         cls._marshmallow_fields = get_mongo_field_values(cls._model)
 
         cls.query_get_parser = mongo_query_parser_with_fields(cls._marshmallow_fields)
-        cls.query_delete_parser = mongo_query_parser_with_fields(cls._marshmallow_fields)
+        cls.query_delete_parser = mongo_query_parser_with_fields((marsh_field for marsh_field in cls._marshmallow_fields if marsh_field.primary_key))
         if audit:
             cls._audit_model = mongo_create_audit_model(cls._model)
             cls._audit_marshmallow_fields = get_mongo_field_values(cls._audit_model)
