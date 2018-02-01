@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from marshmallow_sqlalchemy import ModelSchema
 import urllib.parse
-from flask_restplus import inputs, fields
+from flask_restplus import inputs
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from mongomock import MongoClient as MongoMockClient
