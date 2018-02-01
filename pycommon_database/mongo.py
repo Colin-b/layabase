@@ -1,4 +1,5 @@
 from bson.objectid import ObjectId
+import pymongo
 import enum
 import inspect
 import logging
@@ -18,8 +19,8 @@ class MongoColumn:
         # these default to None because .index and .unique is *not*
         # an informational flag about Column - there can still be an
         # Index or UniqueConstraint referring to this Column.
-        self.index = kwargs.pop('index', None)
-        self.unique = kwargs.pop('unique', None)
+        self.index = kwargs.pop('index', False)
+        self.unique = kwargs.pop('unique', False)
 
         self.doc = kwargs.pop('doc', None)
         self.onupdate = kwargs.pop('onupdate', None)
@@ -32,6 +33,21 @@ class MongoColumn:
 def mongo_inspect(mongo_class):
     mapper = list(column for column in inspect.getmembers(mongo_class) if type(column[1]) == MongoColumn)
     return mapper
+
+def mongo_create_indexes(mongo_class, unique = True):
+    try:
+        columns = get_mongo_field_values(mongo_class)
+        criteria = [(column.name, pymongo.ASCENDING) for column in columns if column.index and column.unique == unique]
+        if criteria != []:
+            print(f"create an index on {mongo_class.__collection__.name} using criterias {criteria}, unique = {unique}")
+            result = mongo_class.__collection__.create_index(criteria, unique = unique)
+            return result
+        return None
+    except pymongo.errors.DuplicateKeyError:
+        logger.exception(f'duplicate key found for criteria {criteria} when creating a unique index')
+        raise
+    except:
+        raise
 
 def mongo_build_query(**kwargs):
     query = {}

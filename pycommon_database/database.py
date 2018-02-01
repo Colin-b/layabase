@@ -19,7 +19,8 @@ from pycommon_database.mongo import (
     get_mongo_field_values,
     get_mongo_enum_field_values,
     get_mongo_autoincrement_field_values,
-    mongo_validate_fields
+    mongo_validate_fields,
+    mongo_create_indexes
 )
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
@@ -279,6 +280,8 @@ class MongoCRUDModel(CRUDModel):
     __db__ = None
     __collection__ = None
     __counters__ = None
+    __unique_indexes__ = None
+    __indexes__ = None
 
     @classmethod
     def get_all(cls, **kwargs):
@@ -579,6 +582,9 @@ class MongoCRUDController(CRUDController):
             cls.query_get_audit_parser = None
 
         cls._model_description_dictionary = _retrieve_mongo_model_description_dictionary(cls._model)
+        """ create indexes if any """
+        cls._model.__unique_indexes__ = mongo_create_indexes(cls._model, True)
+        cls._model.__indexes__ = mongo_create_indexes(cls._model, False)
 
     @classmethod
     def namespace(cls, namespace):
