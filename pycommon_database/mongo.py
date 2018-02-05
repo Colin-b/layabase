@@ -115,4 +115,34 @@ def mongo_validate_fields(mongo_class, models_as_list_of_dict, check_nullable=Tr
                 logger.exception(f'Field {field} was given value {model_dict[field]}, not part of allowed list of values {enum_fields[field]}')
                 raise Exception(f'Field {field} was given value {model_dict[field]}, not part of allowed list of values {enum_fields[field]}')
 
+def mongo_get_list_fields(mongo_class):
+    mongo_class_fields = get_mongo_field_values(mongo_class)
+    return [mongo_class_field.name for mongo_class_field in mongo_class_fields if mongo_class_field.type_ == list]
 
+def mongo_from_dict_to_list_of_list(mongo_class, input_dict):
+    list_fields = mongo_get_list_fields(mongo_class)
+    output = {}
+    for key, value in input_dict.items():
+        if key not in list_fields:
+            output[key] = value
+        else:
+            new_value = []
+            """ here value is a dict and should be made into a list of lists {key1:value1,...,keyx:valuex} --> [[key1,value1],...,[keyx, valuex]] """
+            for k, v in value.items():
+                new_value.append([k, v])
+            output[key] = new_value
+    return output
+
+def mongo_from_list_of_list_to_dict(mongo_class, input_dict):
+    list_fields = mongo_get_list_fields(mongo_class)
+    output = {}
+    for key, value in input_dict.items():
+        if key not in list_fields:
+            output[key] = value
+        else:
+            new_value = {}
+            """ here value is a list of lists and shoubd be made into a dict [[key1,value1],...,[keyx, valuex]] ---> {key1:value1,...,keyx:valuex}"""
+            for subfield in value:
+                new_value[subfield[0]] = subfield[1]
+            output[key] = new_value
+    return output

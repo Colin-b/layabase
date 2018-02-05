@@ -20,7 +20,9 @@ from pycommon_database.mongo import (
     get_mongo_enum_field_values,
     get_mongo_autoincrement_field_values,
     mongo_validate_fields,
-    mongo_create_indexes
+    mongo_create_indexes,
+    mongo_from_list_of_list_to_dict,
+    mongo_from_dict_to_list_of_list
 )
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
@@ -290,10 +292,11 @@ class MongoCRUDModel(CRUDModel):
         """
         try:
             query = mongo_build_query(**kwargs)
-            all_docs = cls.__collection__.find(query)
+            fmt_query = mongo_from_list_of_list_to_dict(cls, query)
+            all_docs = cls.__collection__.find(fmt_query)
             json_results = []
             for result in all_docs:
-                json_results.append(result)
+                json_results.append(mongo_from_dict_to_list_of_list(cls, result))
             return json_results
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -311,6 +314,7 @@ class MongoCRUDModel(CRUDModel):
         try:
             """ validate fields provided """
             mongo_validate_fields(cls, models_as_list_of_dict)
+            fmt_models_as_list_of_dict = []
             if not isinstance(models_as_list_of_dict, (list, tuple)):
                 models_as_list_of_dict = [models_as_list_of_dict]
             for model_dict in models_as_list_of_dict:
@@ -321,8 +325,9 @@ class MongoCRUDModel(CRUDModel):
                 auto_inc_fields = get_mongo_autoincrement_field_values(cls)
                 for auto_inc_field in auto_inc_fields:
                     model_dict[auto_inc_field.name] = _mongo_auto_increment(cls, auto_inc_field)
+                fmt_models_as_list_of_dict += [mongo_from_list_of_list_to_dict(cls, model_dict)]
 
-            object_ids = cls.__collection__.insert(models_as_list_of_dict)
+            object_ids = cls.__collection__.insert(fmt_models_as_list_of_dict)
             return models_as_list_of_dict
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -347,17 +352,21 @@ class MongoCRUDModel(CRUDModel):
             if '_id' in model_as_dict.keys():
                 model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
             model_as_dict_keys = mongo_get_primary_keys_values(cls, model_as_dict)
-            previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+            fmt_model_as_dict_keys = mongo_from_list_of_list_to_dict(cls, model_as_dict_keys)
+            fmt_previous_model_as_dict = cls.__collection__.find_one(fmt_model_as_dict_keys)
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
-        if not previous_model_as_dict:
+        if not fmt_previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict)
 
         try:
             model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys.keys()}
-            raw_result = cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates}).raw_result
-            new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+            fmt_model_as_dict_updates = mongo_from_list_of_list_to_dict(cls, model_as_dict_updates)
+            raw_result = cls.__collection__.update_one(fmt_model_as_dict_keys, {'$set': fmt_model_as_dict_updates}).raw_result
+            fmt_new_model_as_dict = cls.__collection__.find_one(fmt_model_as_dict_keys)
+            previous_model_as_dict = mongo_from_dict_to_list_of_list(cls, fmt_previous_model_as_dict)
+            new_model_as_dict = mongo_from_dict_to_list_of_list(cls, fmt_new_model_as_dict)
             return previous_model_as_dict, new_model_as_dict
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -376,7 +385,8 @@ class MongoCRUDModel(CRUDModel):
             if query == {}:
                 logger.exception('No delete criterias provided: criterias should be provided when calling delete')
                 raise Exception('No delete criterias provided: criterias should be provided when calling delete')
-            nb_removed = cls.__collection__.delete_many(query).deleted_count
+            fmt_query = mongo_from_list_of_list_to_dict(cls, query)
+            nb_removed = cls.__collection__.delete_many(fmt_query).deleted_count
             return nb_removed
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')

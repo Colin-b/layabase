@@ -198,8 +198,21 @@ def mongo_get_rest_plus_type(field):
         return fields.DateTime
     if isinstance(field.type_,enum.EnumMeta):
         return fields.String
+    if field.type_ == list:
+        return fields.List
 
+    print(f'Flask RestPlus field type cannot be guessed for {field.name} field.')
     raise Exception(f'Flask RestPlus field type cannot be guessed for {field.name} field.')
+
+def mongo_get_rest_plus_subtype(field):
+    """
+    Return the Flask RestPlus field subtype (as a class) corresponding to this Mongo field if it is a list, else same as type
+
+    :raises Exception if field type is not managed yet.
+    """
+    if field.type_ == list:
+        return fields.List(cls_or_instance=fields.String)
+    return mongo_get_rest_plus_type(field)
 
 def _mongo_get_example(field):
     default_value = _mongo_get_default_value(field)
@@ -210,7 +223,7 @@ def _mongo_get_example(field):
     return str(choices[0]) if choices else _mongo_get_default_example(field)
 
 def _mongo_get_default_value(field):
-    return field.default if field else None
+    return field.default if field else [] if field.type_ == list else None
 
 def _mongo_get_default_example(field):
     """
@@ -228,7 +241,7 @@ def _mongo_get_default_example(field):
     if field_flask == fields.DateTime:
         return '2017-09-24T15:36:09'
     if field_flask == fields.List:
-        return 'xxxx'
+        return [['field1','value1'], ['fieldx','valuex']]
     return 'sample_value'
 
 def _mongo_is_read_only_value(field):
@@ -264,7 +277,8 @@ def mongo_model_with_fields(api, name: str, fields_list):
             description=field.doc,
             enum=mongo_get_choices(field),
             default=_mongo_get_default_value(field),
-            readonly=_mongo_is_read_only_value(field)
+            readonly=_mongo_is_read_only_value(field),
+            cls_or_instance=mongo_get_rest_plus_subtype(field)
         )
         for field in fields_list
     }
@@ -277,11 +291,19 @@ def mongo_query_parser_with_fields(fields_list, required_fieldname_list=None):
         if unknown_fields:
             raise Exception(f'Required field(s) is(are) not contained in the field list {unknown_fields}')
     for field in fields_list:
-        query_parser.add_argument(
-            field.name,
-            required=required_fieldname_list and field.name in required_fieldname_list,
-            type=field.type_
-        )
+        if field.type_ == list:
+            query_parser.add_argument(
+                field.name,
+                required=required_fieldname_list and field.name in required_fieldname_list,
+                type=str,
+                action='append'
+            )
+        else:
+            query_parser.add_argument(
+                field.name,
+                required=required_fieldname_list and field.name in required_fieldname_list,
+                type=field.type_
+            )
     return query_parser
 
 

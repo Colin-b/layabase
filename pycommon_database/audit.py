@@ -4,7 +4,8 @@ from pycommon_database.mongo import (
     MongoColumn,
     mongo_inspect,
     mongo_get_primary_keys_values,
-    mongo_build_query
+    mongo_build_query,
+    mongo_from_list_of_list_to_dict
 )
 import datetime
 import enum
@@ -84,26 +85,29 @@ class MongoAuditModel(AuditModel):
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
 
-        cls._audit_action(action='I', model_as_dict=dict(model_as_dict))
+        fmt_model_as_dict = mongo_from_list_of_list_to_dict(cls._model, model_as_dict)
+        cls._audit_action(action='I', model_as_dict=dict(fmt_model_as_dict))
 
     @classmethod
     def audit_update(cls, model_as_dict: dict):
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
         model_as_dict_keys = mongo_get_primary_keys_values(cls._model, model_as_dict)
-        previous_model_as_dict = cls._model.__collection__.find_one(model_as_dict_keys)
-        if not previous_model_as_dict:
+        fmt_model_as_dict_keys = mongo_from_list_of_list_to_dict(cls._model, model_as_dict)
+        fmt_previous_model_as_dict = cls._model.__collection__.find_one(fmt_model_as_dict_keys)
+        if not fmt_previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict)
 
-        cls._audit_action(action='U', model_as_dict=previous_model_as_dict)
+        cls._audit_action(action='U', model_as_dict=fmt_previous_model_as_dict)
 
     @classmethod
     def audit_remove(cls, **kwargs):
         query = mongo_build_query(**kwargs)
-        all_docs = cls._model.__collection__.find(query)
-        removed_dict_models = [removed_dict_model for removed_dict_model in all_docs]
-        for removed_dict_model in removed_dict_models:
-            cls._audit_action(action='D', model_as_dict=removed_dict_model)
+        fmt_query = mongo_from_list_of_list_to_dict(cls._model, query)
+        all_docs = cls._model.__collection__.find(fmt_query)
+        fmt_removed_dict_models = [removed_dict_model for removed_dict_model in all_docs]
+        for fmt_removed_dict_model in fmt_removed_dict_models:
+            cls._audit_action(action='D', model_as_dict=fmt_removed_dict_model)
 
     @classmethod
     def _audit_action(cls, action, model_as_dict):
