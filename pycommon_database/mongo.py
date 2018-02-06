@@ -34,7 +34,7 @@ def mongo_inspect(mongo_class):
     mapper = list(column for column in inspect.getmembers(mongo_class) if type(column[1]) == MongoColumn)
     return mapper
 
-def mongo_create_indexes(mongo_class, unique = True):
+def mongo_create_indexes(mongo_class, unique=True):
     try:
         columns = get_mongo_field_values(mongo_class)
         criteria = [(column.name, pymongo.ASCENDING) for column in columns if column.index and column.unique == unique]
@@ -141,7 +141,7 @@ def mongo_from_list_of_list_to_dict(mongo_class, input_dict):
             output[key] = value
         else:
             new_value = {}
-            """ here value is a list of lists and shoubd be made into a dict [[key1,value1],...,[keyx, valuex]] ---> {key1:value1,...,keyx:valuex}"""
+            """ here value is a list of lists and should be made into a dict [[key1,value1],...,[keyx, valuex]] ---> {key1:value1,...,keyx:valuex}"""
             for subfield in value:
                 new_value[subfield[0]] = subfield[1]
             output[key] = new_value

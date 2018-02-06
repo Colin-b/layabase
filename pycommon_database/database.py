@@ -286,6 +286,21 @@ class MongoCRUDModel(CRUDModel):
     __indexes__ = None
 
     @classmethod
+    def validate_input(cls, models_as_list_of_dict: list, check_nullable=True, check_unique=True):
+        try:
+            """ validate fields provided """
+            mongo_validate_fields(cls, models_as_list_of_dict, check_nullable)
+        except exc.sa_exc.DBAPIError:
+            logger.exception('Database could not be reached.')
+            raise Exception('Database could not be reached.')
+        except Exception:
+            raise
+
+    @classmethod
+    def create_indexes(cls, unique=True):
+        return mongo_create_indexes(cls, unique)
+
+    @classmethod
     def get_all(cls, **kwargs):
         """
         Return all models formatted as a list of dictionaries.
@@ -313,7 +328,7 @@ class MongoCRUDModel(CRUDModel):
             raise ValidationFailed({}, message='No data provided.')
         try:
             """ validate fields provided """
-            mongo_validate_fields(cls, models_as_list_of_dict)
+            cls.validate_input(models_as_list_of_dict)
             fmt_models_as_list_of_dict = []
             if not isinstance(models_as_list_of_dict, (list, tuple)):
                 models_as_list_of_dict = [models_as_list_of_dict]
@@ -347,7 +362,7 @@ class MongoCRUDModel(CRUDModel):
             raise ValidationFailed({}, message='No data provided.')
         try:
             """ validate fields provided """
-            mongo_validate_fields(cls, model_as_dict, check_nullable=False)
+            cls.validate_input(model_as_dict, check_nullable=False, check_unique=False)
             """ if _id present in a document, convert it to ObjectId """
             if '_id' in model_as_dict.keys():
                 model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
@@ -593,8 +608,8 @@ class MongoCRUDController(CRUDController):
 
         cls._model_description_dictionary = _retrieve_mongo_model_description_dictionary(cls._model)
         """ create indexes if any """
-        cls._model.__unique_indexes__ = mongo_create_indexes(cls._model, True)
-        cls._model.__indexes__ = mongo_create_indexes(cls._model, False)
+        cls._model.__unique_indexes__ = cls._model.create_indexes(True)
+        cls._model.__indexes__ = cls._model.create_indexes(False)
 
     @classmethod
     def namespace(cls, namespace):
