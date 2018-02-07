@@ -297,6 +297,10 @@ class MongoCRUDModel(CRUDModel):
             raise
 
     @classmethod
+    def process_output(cls, json_output):
+        return json_output
+
+    @classmethod
     def create_indexes(cls, unique=True):
         return mongo_create_indexes(cls, unique)
 
@@ -311,7 +315,8 @@ class MongoCRUDModel(CRUDModel):
             all_docs = cls.__collection__.find(fmt_query)
             json_results = []
             for result in all_docs:
-                json_results.append(mongo_from_dict_to_list_of_list(cls, result))
+                json_result = cls.process_output(result)
+                json_results.append(mongo_from_dict_to_list_of_list(cls, json_result))
             return json_results
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
