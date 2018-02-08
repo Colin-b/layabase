@@ -20,9 +20,7 @@ from pycommon_database.mongo import (
     get_mongo_enum_field_values,
     get_mongo_autoincrement_field_values,
     mongo_validate_fields,
-    mongo_create_indexes,
-    mongo_from_list_of_list_to_dict,
-    mongo_from_dict_to_list_of_list
+    mongo_create_indexes
 )
 from pycommon_database.flask_restplus_models import (
     model_with_fields,
@@ -286,7 +284,7 @@ class MongoCRUDModel(CRUDModel):
     __indexes__ = None
 
     @classmethod
-    def validate_input(cls, models_as_list_of_dict: list, check_nullable=True, check_unique=True):
+    def validate_input(cls, models_as_list_of_dict: list, check_nullable=True, check_unique=True, insert=True):
         try:
             """ validate fields provided """
             mongo_validate_fields(cls, models_as_list_of_dict, check_nullable)
@@ -311,12 +309,11 @@ class MongoCRUDModel(CRUDModel):
         """
         try:
             query = mongo_build_query(**kwargs)
-            fmt_query = mongo_from_list_of_list_to_dict(cls, query)
-            all_docs = cls.__collection__.find(fmt_query)
+            all_docs = cls.__collection__.find(query)
             json_results = []
             for result in all_docs:
                 json_result = cls.process_output(result)
-                json_results.append(mongo_from_dict_to_list_of_list(cls, json_result))
+                json_results.append(json_result)
             return json_results
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -334,7 +331,6 @@ class MongoCRUDModel(CRUDModel):
         try:
             """ validate fields provided """
             cls.validate_input(models_as_list_of_dict)
-            fmt_models_as_list_of_dict = []
             if not isinstance(models_as_list_of_dict, (list, tuple)):
                 models_as_list_of_dict = [models_as_list_of_dict]
             for model_dict in models_as_list_of_dict:
@@ -345,9 +341,8 @@ class MongoCRUDModel(CRUDModel):
                 auto_inc_fields = get_mongo_autoincrement_field_values(cls)
                 for auto_inc_field in auto_inc_fields:
                     model_dict[auto_inc_field.name] = _mongo_auto_increment(cls, auto_inc_field)
-                fmt_models_as_list_of_dict += [mongo_from_list_of_list_to_dict(cls, model_dict)]
 
-            object_ids = cls.__collection__.insert(fmt_models_as_list_of_dict)
+            object_ids = cls.__collection__.insert(models_as_list_of_dict)
             return models_as_list_of_dict
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -367,26 +362,22 @@ class MongoCRUDModel(CRUDModel):
             raise ValidationFailed({}, message='No data provided.')
         try:
             """ validate fields provided """
-            cls.validate_input(model_as_dict, check_nullable=False, check_unique=False)
+            cls.validate_input(model_as_dict, check_nullable=False, check_unique=False, insert=False)
             """ if _id present in a document, convert it to ObjectId """
             if '_id' in model_as_dict.keys():
                 model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
             model_as_dict_keys = mongo_get_primary_keys_values(cls, model_as_dict)
-            fmt_model_as_dict_keys = mongo_from_list_of_list_to_dict(cls, model_as_dict_keys)
-            fmt_previous_model_as_dict = cls.__collection__.find_one(fmt_model_as_dict_keys)
+            previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
-        if not fmt_previous_model_as_dict:
+        if not previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict)
 
         try:
             model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys.keys()}
-            fmt_model_as_dict_updates = mongo_from_list_of_list_to_dict(cls, model_as_dict_updates)
-            raw_result = cls.__collection__.update_one(fmt_model_as_dict_keys, {'$set': fmt_model_as_dict_updates}).raw_result
-            fmt_new_model_as_dict = cls.__collection__.find_one(fmt_model_as_dict_keys)
-            previous_model_as_dict = mongo_from_dict_to_list_of_list(cls, fmt_previous_model_as_dict)
-            new_model_as_dict = mongo_from_dict_to_list_of_list(cls, fmt_new_model_as_dict)
+            raw_result = cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates}).raw_result
+            new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
             return previous_model_as_dict, new_model_as_dict
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -405,8 +396,7 @@ class MongoCRUDModel(CRUDModel):
             if query == {}:
                 logger.exception('No delete criterias provided: criterias should be provided when calling delete')
                 raise Exception('No delete criterias provided: criterias should be provided when calling delete')
-            fmt_query = mongo_from_list_of_list_to_dict(cls, query)
-            nb_removed = cls.__collection__.delete_many(fmt_query).deleted_count
+            nb_removed = cls.__collection__.delete_many(query).deleted_count
             return nb_removed
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
@@ -589,6 +579,11 @@ class CRUDController:
 
 
 class MongoCRUDController(CRUDController):
+    _marshall_fields = None
+    _marshall_primary_keys = None
+    _audit_marshall_fields = None
+    _audit_marshall_primary_keys = None
+
     @classmethod
     def model(cls, value, audit: bool = False):
         """
@@ -598,17 +593,18 @@ class MongoCRUDController(CRUDController):
         :param audit: True to add an extra model representing the audit table. No audit by default.
         """
         cls._model = value
-        cls._marshmallow_fields = get_mongo_field_values(cls._model)
+        cls._marshall_fields = get_mongo_field_values(cls._model)
+        cls._marshall_primary_keys = [marsh_field for marsh_field in cls._marshall_fields if marsh_field.primary_key]
 
-        cls.query_get_parser = mongo_query_parser_with_fields(cls._marshmallow_fields)
-        cls.query_delete_parser = mongo_query_parser_with_fields((marsh_field for marsh_field in cls._marshmallow_fields if marsh_field.primary_key))
+        cls.query_get_parser = mongo_query_parser_with_fields(cls._marshall_primary_keys)
+        cls.query_delete_parser = mongo_query_parser_with_fields(cls._marshall_primary_keys)
         if audit:
             cls._audit_model = mongo_create_audit_model(cls._model)
-            cls._audit_marshmallow_fields = get_mongo_field_values(cls._audit_model)
-            cls.query_get_audit_parser = mongo_query_parser_with_fields(cls._audit_marshmallow_fields)
+            cls._audit_marshall_fields = get_mongo_field_values(cls._audit_model)
+            cls._audit_marshall_primary_keys = [marsh_field for marsh_field in cls._audit_marshall_fields if marsh_field.primary_key]
+            cls.query_get_audit_parser = mongo_query_parser_with_fields(cls._audit_marshall_primary_keys)
         else:
             cls._audit_model = None
-            cls._audit_marshmallow_fields = None
             cls.query_get_audit_parser = None
 
         cls._model_description_dictionary = _retrieve_mongo_model_description_dictionary(cls._model)
@@ -624,12 +620,12 @@ class MongoCRUDController(CRUDController):
 
         :param namespace: Flask RestPlus API.
         """
-        cls.json_post_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
-        cls.json_put_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
-        cls.get_response_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshmallow_fields)
+        cls.json_post_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshall_fields)
+        cls.json_put_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshall_fields)
+        cls.get_response_model = mongo_model_with_fields(namespace, cls._model.__collection__.name, cls._marshall_fields)
         if cls._audit_model:
             cls.get_audit_response_model = mongo_model_with_fields(namespace, 'Audit' + cls._model.__collection__.name,
-                                                             cls._audit_marshmallow_fields)
+                                                             cls._audit_marshall_fields)
         else:
             cls.get_audit_response_model = None
         cls.get_model_description_response_model = model_describing_mongo_mapping(namespace, cls._model)
@@ -823,14 +819,11 @@ def load_and_reset(database_connection_url: str, create_models_func: callable, p
                 logger.info(f'Resetting all data related to collection "{model_class.__collection__.name}"...')
                 nb_removed = model_class.__collection__.delete_many({}).deleted_count
                 logger.info(f'{nb_removed} records deleted')
+                logger.info(f'Drop collection "{model_class.__collection__.name}"')
+                model_class.__collection__.drop()
                 logger.info(f'Resetting counter "{model_class.__collection__.name}" located in collection "counters"')
                 nb_removed = base['counters'].delete_many({'_id': model_class.__collection__.name}).deleted_count
                 logger.info(f'{nb_removed} records deleted')
-                """
-                logger.info(f'Resetting counter "{model_class.__collection__.name}" located in collection "counters"')
-                nb_inserted = base['counters'].insert({'_id': model_class.__collection__.name, 'sequence_value': 0})
-                logger.info(f'{nb_inserted} records inserted')
-                #base['counters'].findAndModify({'query': {'_id': model_class.__collection__.name}, 'update': {'$inc': {'sequence_value': 1}}, 'new': 'true'})
-                base['counters'].update({'_id': model_class.__collection__.name}, {'$inc': {'sequence_value': 1}})
-"""
+
             logger.info(f'All data related to {base.metadata.bind.url} reset.')
+        return base

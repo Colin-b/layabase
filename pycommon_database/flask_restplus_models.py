@@ -200,6 +200,8 @@ def mongo_get_rest_plus_type(field):
         return fields.String
     if field.type_ == list:
         return fields.List
+    if field.type_ == dict:
+        return fields.Raw
 
     print(f'Flask RestPlus field type cannot be guessed for {field.name} field.')
     raise Exception(f'Flask RestPlus field type cannot be guessed for {field.name} field.')
@@ -223,7 +225,7 @@ def _mongo_get_example(field):
     return str(choices[0]) if choices else _mongo_get_default_example(field)
 
 def _mongo_get_default_value(field):
-    return field.default if field else [] if field.type_ == list else None
+    return field.default if field else [] if field.type_ == list else {} if field.type_ == dict else None
 
 def _mongo_get_default_example(field):
     """
@@ -242,6 +244,8 @@ def _mongo_get_default_example(field):
         return '2017-09-24T15:36:09'
     if field_flask == fields.List:
         return [['field1','value1'], ['fieldx','valuex']]
+    if field_flask == fields.Raw:
+        return {'field1':'value1','fieldx':'valuex'}
     return 'sample_value'
 
 def _mongo_is_read_only_value(field):
