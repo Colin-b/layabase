@@ -10,15 +10,20 @@ setup(
     install_requires=[
         # Used to manage fields
         'flask-restplus==0.10.1',
-        # Used to Manage Database
-        'marshmallow_sqlalchemy==0.13.2',
-        # Used to Manage MongoDatabase
-        'pymongo',
-        'mongomock'
     ],
     extras_require={
         'testing': [
-        'nose'],
-
+            'nose',
+            # Used to Manage Mongo Database
+            'mongomock',
+        ],
+        # Used to Manage Mongo Database
+        'mongo': [
+            'pymongo==3.6.0',
+        ],
+        # Used to Manage Non-Mongo Database
+        'sqlalchemy': [
+            'marshmallow_sqlalchemy==0.13.2',
+        ],
     },
 )

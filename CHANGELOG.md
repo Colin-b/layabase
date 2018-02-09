@@ -6,6 +6,16 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.0.0 (2018-02-09) ##
+
+### Release notes ###
+
+- Optional dependencies should be chose upon installation thanks to mongo and sqlalchemy extra requires.
+
+### Enhancements ###
+
+- Add support for Mongo database.
+
 ## Version 9.3.1 (2018-01-18) ##
 
 ### Bug fixes ###
