@@ -10,7 +10,6 @@ from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
-from pycommon_database.audit_sqlalchemy import create_from as create_audit_from
 
 logger = logging.getLogger(__name__)
 
@@ -313,7 +312,8 @@ class CRUDModel:
 
     @classmethod
     def create_audit(cls):
-        return create_audit_from(cls)
+        from pycommon_database.audit_sqlalchemy import create_from
+        return create_from(cls)
 
 
 def load(database_connection_url: str, create_models_func: callable, **kwargs):

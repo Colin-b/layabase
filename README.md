@@ -4,13 +4,13 @@ Provide helper to manipulate database(s).
 
 ## SQLAlchemy model ##
 
-Extending pycommon_database.database.CRUDModel will provides C.R.U.D. methods on your SQLAlchemy model.
+Extending pycommon_database.database_sqlalchemy.CRUDModel will provides C.R.U.D. methods on your SQLAlchemy model.
 
 ### Model definition ###
 
 ```python
 from sqlalchemy import Column, String
-from pycommon_database.database import CRUDModel
+from pycommon_database.database_sqlalchemy import CRUDModel
 
 base = None
 

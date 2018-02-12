@@ -11,12 +11,12 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
     level=logging.DEBUG)
 
-from pycommon_database import database, flask_restplus_errors, flask_restplus_models
+from pycommon_database import database, database_sqlalchemy, database_mongo, flask_restplus_errors
 
 logger = logging.getLogger(__name__)
 
 
-class CRUDModelTest(unittest.TestCase):
+class SQLAlchemyCRUDModelTest(unittest.TestCase):
     _db = None
     _model = None
 
@@ -29,7 +29,7 @@ class CRUDModelTest(unittest.TestCase):
     def _create_models(cls, base):
         logger.info('Declare model class...')
 
-        class TestModel(database.CRUDModel, base):
+        class TestModel(database_sqlalchemy.CRUDModel, base):
             __tablename__ = 'sample_table_name'
 
             key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
@@ -50,17 +50,17 @@ class CRUDModelTest(unittest.TestCase):
 
     def test_get_all_when_db_down(self):
         with self.assertRaises(Exception) as cm:
-            CRUDModelTest._model.get_all()
+            self._model.get_all()
         self.assertEqual('Database could not be reached.', cm.exception.args[0])
 
     def test_get_when_db_down(self):
         with self.assertRaises(Exception) as cm:
-            CRUDModelTest._model.get()
+            self._model.get()
         self.assertEqual('Database could not be reached.', cm.exception.args[0])
 
     def test_add_when_db_down(self):
         with self.assertRaises(Exception) as cm:
-            CRUDModelTest._model.add({
+            self._model.add({
                 'key': 'my_key1',
                 'mandatory': 1,
                 'optional': 'my_value1',
@@ -69,7 +69,7 @@ class CRUDModelTest(unittest.TestCase):
 
     def test_update_when_db_down(self):
         with self.assertRaises(Exception) as cm:
-            CRUDModelTest._model.update({
+            self._model.update({
                 'key': 'my_key1',
                 'mandatory': 1,
                 'optional': 'my_value1',
@@ -78,7 +78,7 @@ class CRUDModelTest(unittest.TestCase):
 
     def test_remove_when_db_down(self):
         with self.assertRaises(Exception) as cm:
-            CRUDModelTest._model.remove()
+            self._model.remove()
         self.assertEqual('Database could not be reached.', cm.exception.args[0])
 
 
