@@ -11,10 +11,12 @@ List all changes in various categories:
 ### Release notes ###
 
 - Optional dependencies should be chose upon installation thanks to mongo and sqlalchemy extra requires.
+- CRUDModel class is now within database_sqlalchemy instead of database module.
 
 ### Enhancements ###
 
 - Add support for Mongo database.
+- All SQLAlchemy create_engine parameters can now be provided to database.load function
 
 ## Version 9.3.1 (2018-01-18) ##
 
