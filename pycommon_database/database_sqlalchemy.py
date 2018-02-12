@@ -200,29 +200,6 @@ class CRUDModel:
         return schema
 
     @classmethod
-    def post_schema(cls):
-        """
-        Create a new Marshmallow SQL Alchemy schema instance.
-
-        :return: The newly created schema instance.
-        """
-
-        class PostSchema(ModelSchema):
-            class Meta:
-                model = cls
-                ordered = True
-
-        post_schema = PostSchema(session=cls._session)
-        mapper = inspect(cls)
-        for attr in mapper.attrs:
-            schema_field = post_schema.fields.get(attr.key, None)
-            if schema_field:
-                cls._enrich_schema_field(schema_field, attr)
-                cls._enrich_post_schema_field(schema_field, attr)
-
-        return post_schema
-
-    @classmethod
     def _enrich_schema_field(cls, marshmallow_field, sql_alchemy_field):
         # Default value
         defaults = [column.default.arg for column in sql_alchemy_field.columns if column.default]
@@ -233,11 +210,6 @@ class CRUDModel:
         autoincrement = [column.autoincrement for column in sql_alchemy_field.columns if column.autoincrement]
         if autoincrement and isinstance(autoincrement[0], bool):
             marshmallow_field.metadata['sqlalchemy_autoincrement'] = autoincrement[0]
-
-    @classmethod
-    def _enrich_post_schema_field(cls, marshmallow_field, sql_alchemy_field):
-        auto_increments = [column.autoincrement for column in sql_alchemy_field.columns]
-        marshmallow_field.dump_only = True in auto_increments
 
     @classmethod
     def query_get_parser(cls):
