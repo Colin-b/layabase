@@ -23,15 +23,14 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     return database_sqlalchemy.load(database_connection_url, create_models_func, **kwargs)
 
 
-def reset(base):
+def reset(base_or_mongo_client):
     """
     If the database was already created, then drop all tables and recreate them all.
     """
-    # TODO check type of base
-    if _is_mongo(base.connection_url):
-        database_mongo.reset(base)
+    if hasattr(base_or_mongo_client, 'metadata'):  # metadata attribute is only on SQLAlchemy base
+        database_sqlalchemy.reset(base_or_mongo_client)
     else:
-        database_sqlalchemy.reset(base)
+        database_mongo.reset(base_or_mongo_client)
 
 
 class ControllerModelNotSet(Exception):
@@ -86,8 +85,7 @@ class CRUDController:
         cls.query_get_parser = cls._model.query_get_parser()
         cls.query_delete_parser = cls._model.query_delete_parser()
         if audit:
-            # TODO Ensure this method handle mongo ?
-            cls._audit_model = audit.create_from(cls._model)
+            cls._audit_model = cls._model.create_audit()
             # TODO Ensure it works fine thanks to inheritance
             cls.query_get_audit_parser = cls._audit_model.query_get_parser()
         else:

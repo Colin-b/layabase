@@ -10,6 +10,7 @@ from flask_restplus import fields as flask_restplus_fields, reqparse
 from bson.objectid import ObjectId
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
+from pycommon_database.audit_mongo import create_from as create_audit_from
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +245,10 @@ class CRUDModel:
         :return: list of all Mongo fields (can be empty)
         """
         return [attribute[1] for attribute in inspect.getmembers(cls) if type(attribute[1]) == MongoField]
+
+    @classmethod
+    def create_audit(cls):
+        return create_audit_from(cls)
 
 
 def load(database_connection_url: str, create_models_func: callable):
