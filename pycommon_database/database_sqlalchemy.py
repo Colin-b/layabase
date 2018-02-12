@@ -270,7 +270,8 @@ class CRUDModel:
         }
 
         if hasattr(cls, 'table_args__'):
-            exported_fields['schema'] = flask_restplus_fields.String(required=True, example='schema', description='Table schema')
+            exported_fields['schema'] = flask_restplus_fields.String(required=True, example='schema',
+                                                                     description='Table schema')
 
         exported_fields.update({
             marshmallow_field.name: flask_restplus_fields.String(
@@ -293,7 +294,8 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel) (Mandatory).
+    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
+     (Mandatory).
     :param pool_recycle: Number of seconds to wait before recycling a connection pool. Default value is 60.
     """
     if not database_connection_url:

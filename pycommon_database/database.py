@@ -15,7 +15,8 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel) (Mandatory).
+    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
+     (Mandatory).
     :param kwargs: Additional custom parameters.
     """
     if _is_mongo(database_connection_url):
@@ -107,11 +108,12 @@ class CRUDController:
         cls.json_put_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
         cls.get_response_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
         if cls._audit_model:
-            # TODO Ensure it works fine thanks to inheritance
-            cls.get_audit_response_model = namespace.model('Audit' + cls._model.__name__, cls._audit_model.flask_restplus_fields())
+            cls.get_audit_response_model = namespace.model('Audit' + cls._model.__name__,
+                                                           cls._audit_model.flask_restplus_fields())
         else:
             cls.get_audit_response_model = None
-        cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']), cls._model.flask_restplus_description_fields())
+        cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),
+                                                                   cls._model.flask_restplus_description_fields())
 
 
     @classmethod

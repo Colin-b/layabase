@@ -50,7 +50,8 @@ class CRUDModel:
         enum_fields = {field.name: field.choices for field in cls.get_fields() if field.choices}
         for field in model_as_dict:
             if field in enum_fields and model_as_dict[field] not in enum_fields[field]:
-                raise Exception(f'Field {field} was given value {model_as_dict[field]}, not part of allowed list of values {enum_fields[field]}')
+                raise Exception(
+                    f'"{field}" value "{model_as_dict[field]}" should be amongst {enum_fields[field]}.')
 
     @classmethod
     def create_indexes(cls):
@@ -225,7 +226,8 @@ class CRUDModel:
     @classmethod
     def flask_restplus_description_fields(cls) -> dict:
         exported_fields = {
-            'collection': flask_restplus_fields.String(required=True, example='collection', description='Collection name'),
+            'collection': flask_restplus_fields.String(required=True, example='collection',
+                                                       description='Collection name'),
         }
 
         exported_fields.update({
@@ -256,7 +258,8 @@ def load(database_connection_url: str, create_models_func: callable):
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel) (Mandatory).
+    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
+    (Mandatory).
     """
     if not database_connection_url:
         raise NoDatabaseProvided()
@@ -340,7 +343,8 @@ def _get_flask_restplus_type(field: MongoField):
 
 def _get_rest_plus_subtype(field: MongoField):
     """
-    Return the Flask RestPlus field subtype (as a class) corresponding to this Mongo field if it is a list, else same as type
+    Return the Flask RestPlus field subtype (as a class) corresponding to this Mongo field if it is a list,
+    else same as type
 
     :raises Exception if field type is not managed yet.
     """
