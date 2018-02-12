@@ -287,6 +287,15 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         )
         self.assertEqual({'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}, self._model.get())
 
+    def test_update_unexisting_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self._model.update({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+            })
+        self.assertEqual({'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}, cm.exception.requested_data)
+
     def test_add_with_unknown_field_is_valid(self):
         self.assertEqual(
             {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
@@ -1334,6 +1343,14 @@ class SQLAlchemyCRUDControllerFailuresTest(unittest.TestCase):
         logger.info(f'End of {self._testMethodName}')
         logger.info(f'-------------------------------')
 
+    def test_model_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.model(None)
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
     def test_namespace_method_without_setting_model(self):
         class TestNamespace:
             pass
@@ -1355,7 +1372,7 @@ class SQLAlchemyCRUDControllerFailuresTest(unittest.TestCase):
 
     def test_post_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
-            self.TestController.get({})
+            self.TestController.post({})
         self.assertRegex(
             cm.exception.args[0],
             "Model was not attached to TestController. "
