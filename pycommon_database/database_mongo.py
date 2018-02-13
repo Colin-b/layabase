@@ -72,8 +72,10 @@ class CRUDModel:
         try:
             criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_fields() if field.index_type == index_type]
             if criteria:
-                logger.debug(f"Create a {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
-                cls.__collection__.create_index(criteria, unique=index_type == MongoField.UNIQUE_INDEX)
+                # Avoid using auto generated index name that might be too long
+                index_name = f'uidx{cls.__collection__.name}' if index_type == MongoField.UNIQUE_INDEX else f'idx{cls.__collection__.name}'
+                logger.debug(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
+                cls.__collection__.create_index(criteria, unique=index_type == MongoField.UNIQUE_INDEX, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
             raise
