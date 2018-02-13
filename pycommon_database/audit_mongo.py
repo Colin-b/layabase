@@ -4,7 +4,7 @@ import enum
 import inspect
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
-from pycommon_database.database_mongo import MongoField
+from pycommon_database.database_mongo import Column
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +16,9 @@ class AuditModel:
     _model = None
     __collection__ = None
 
-    audit_user = MongoField(name='audit_user', type=str, primary_key=True)
-    audit_date_utc = MongoField(name='audit_date_utc', type=datetime.datetime, primary_key=True)
-    audit_action = MongoField(name='audit_action', type=enum.Enum('action_type', 'I U D'))
+    audit_user = Column(name='audit_user', type=str, primary_key=True)
+    audit_date_utc = Column(name='audit_date_utc', type=datetime.datetime, primary_key=True)
+    audit_action = Column(name='audit_action', type=enum.Enum('action_type', 'I U D'))
 
     @classmethod
     def audit_add(cls, model_as_dict: dict):
@@ -61,7 +61,7 @@ def create_from(model):
         _model = model
 
     for attribute in inspect.getmembers(model):
-        if type(attribute[1]) == MongoField:
+        if type(attribute[1]) == Column:
             setattr(AuditModelForModel, attribute[0], attribute[1])
 
     return AuditModelForModel

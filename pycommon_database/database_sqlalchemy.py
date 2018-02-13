@@ -75,7 +75,7 @@ class CRUDModel:
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
-        :returns The inserted model formatted as a list of dictionaries.
+        :returns The inserted models formatted as a list of dictionaries.
         """
         if not models_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')

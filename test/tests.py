@@ -2510,5 +2510,788 @@ class FlaskRestPlusErrorsTest(unittest.TestCase):
             pass
 
 
+class MongoCRUDControllerTest(unittest.TestCase):
+    class TestController(database.CRUDController):
+        pass
+
+    class TestAutoIncrementController(database.CRUDController):
+        pass
+
+    class TestDateController(database.CRUDController):
+        pass
+
+    _db = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls._db = database.load('mongomock', cls._create_models)
+
+    @classmethod
+    def tearDownClass(cls):
+        database.reset(cls._db)
+
+    @classmethod
+    def _create_models(cls, base):
+        logger.info('Declare model class...')
+
+        from enum import Enum, auto
+        class EnumTest(Enum):
+            Value1 = auto()
+            Value2 = auto()
+
+        class TestModel(database_mongo.CRUDModel):
+            __tablename__ = 'sample_table_name'
+
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        class TestAutoIncrementModel(database_mongo.CRUDModel):
+            __tablename__ = 'auto_increment_table_name'
+
+            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            enum_field = database_mongo.Column(EnumTest, is_nullable=False, description='Test Documentation')
+            optional_with_default = database_mongo.Column(str, default_value='Test value')
+
+        class TestDateModel(database_mongo.CRUDModel):
+            __tablename__ = 'date_table_name'
+
+            key = database_mongo.Column(str, is_primary_key=True)
+            date_str = database_mongo.Column(datetime.date)
+            datetime_str = database_mongo.Column(datetime.datetime)
+
+        logger.info('Save model class...')
+        cls.TestController.model(TestModel)
+        cls.TestAutoIncrementController.model(TestAutoIncrementModel)
+        cls.TestDateController.model(TestDateModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel]
+
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+        database.reset(self._db)
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_get_all_without_data_returns_empty_list(self):
+        self.assertEqual([], self.TestController.get({}))
+
+    def test_post_with_nothing_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post(None)
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_post_list_with_nothing_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many(None)
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_post_with_empty_dict_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({})
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_post_many_with_empty_list_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([])
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_put_with_nothing_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put(None)
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_put_with_empty_dict_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put({})
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_delete_without_nothing_do_not_fail(self):
+        self.assertEqual(0, self.TestController.delete({}))
+
+    def test_post_without_mandatory_field_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({
+                'key': 'my_key',
+            })
+        self.assertEqual({'mandatory': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'key': 'my_key'}, cm.exception.received_data)
+
+    def test_post_many_without_mandatory_field_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([{
+                'key': 'my_key',
+            }])
+        self.assertEqual({0: {'mandatory': ['Missing data for required field.']}}, cm.exception.errors)
+        self.assertEqual([{'key': 'my_key'}], cm.exception.received_data)
+
+    def test_post_without_key_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({
+                'mandatory': 1,
+            })
+        self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'mandatory': 1}, cm.exception.received_data)
+
+    def test_post_many_without_key_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([{
+                'mandatory': 1,
+            }])
+        self.assertEqual({0: {'key': ['Missing data for required field.']}}, cm.exception.errors)
+        self.assertEqual([{'mandatory': 1}], cm.exception.received_data)
+
+    def test_post_with_wrong_type_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({
+                'key': 256,
+                'mandatory': 1,
+            })
+        self.assertEqual({'key': ['Not a valid string.']}, cm.exception.errors)
+        self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
+
+    def test_post_many_with_wrong_type_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([{
+                'key': 256,
+                'mandatory': 1,
+            }])
+        self.assertEqual({0: {'key': ['Not a valid string.']}}, cm.exception.errors)
+        self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
+
+    def test_put_with_wrong_type_is_invalid(self):
+        self.TestController.post({
+            'key': 'value1',
+            'mandatory': 1,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put({
+                'key': 'value1',
+                'mandatory': 'invalid value',
+            })
+        self.assertEqual({'mandatory': ['Not a valid integer.']}, cm.exception.errors)
+        self.assertEqual({'key': 'value1', 'mandatory': 'invalid value'}, cm.exception.received_data)
+
+    def test_post_without_optional_is_valid(self):
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': None},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+            })
+        )
+
+    def test_post_many_without_optional_is_valid(self):
+        self.assertEqual(
+            [
+                {'mandatory': 1, 'key': 'my_key', 'optional': None},
+                {'mandatory': 2, 'key': 'my_key2', 'optional': None},
+            ],
+            self.TestController.post_many([
+                {
+                    'key': 'my_key',
+                    'mandatory': 1,
+                },
+                {
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                }
+            ])
+        )
+
+    def test_post_with_optional_is_valid(self):
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+            })
+        )
+
+    def test_post_many_with_optional_is_valid(self):
+        self.assertListEqual(
+            [
+                {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+                {'mandatory': 2, 'key': 'my_key2', 'optional': 'my_value2'},
+            ],
+            self.TestController.post_many([
+                {
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                },
+                {
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                }
+            ])
+        )
+
+    def test_post_with_unknown_field_is_valid(self):
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+                # This field do not exists in schema
+                'unknown': 'my_value',
+            })
+        )
+
+    def test_post_many_with_unknown_field_is_valid(self):
+        self.assertListEqual(
+            [
+                {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+                {'mandatory': 2, 'key': 'my_key2', 'optional': 'my_value2'},
+            ],
+            self.TestController.post_many([
+                {
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                    # This field do not exists in schema
+                    'unknown': 'my_value',
+                },
+                {
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                    # This field do not exists in schema
+                    'unknown': 'my_value2',
+                },
+            ])
+        )
+
+    def test_post_with_specified_incremented_field_is_ignored_and_valid(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                from collections import OrderedDict
+                test_fields = [name for name, model in fields.items()]
+                property_list = []
+                for field_name in test_fields:
+                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
+                        property_list.append(tuple((field_name, {'readOnly': True})))
+                    else:
+                        property_list.append(tuple((field_name, {})))
+
+                model = lambda: None
+                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
+                return model
+
+        self.TestAutoIncrementController.namespace(TestAPI)
+        self.assertEqual(
+            {'optional_with_default': 'Test value', 'key': 1, 'enum_field': 'Value1'},
+            self.TestAutoIncrementController.post({
+                'key': 'my_key',
+                'enum_field': 'Value1',
+            })
+        )
+
+    def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                from collections import OrderedDict
+                test_fields = [name for name, model in fields.items()]
+                property_list = []
+                for field_name in test_fields:
+                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
+                        property_list.append(tuple((field_name, {'readOnly': True})))
+                    else:
+                        property_list.append(tuple((field_name, {})))
+
+                model = lambda: None
+                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
+                return model
+
+        self.TestAutoIncrementController.namespace(TestAPI)
+
+        self.assertListEqual(
+            [
+                {'optional_with_default': 'Test value', 'enum_field': 'Value1', 'key': 1},
+                {'optional_with_default': 'Test value', 'enum_field': 'Value2', 'key': 2},
+            ],
+            self.TestAutoIncrementController.post_many([{
+                'key': 'my_key',
+                'enum_field': 'Value1',
+            }, {
+                'key': 'my_key',
+                'enum_field': 'Value2',
+            }])
+        )
+
+    def test_get_without_filter_is_retrieving_the_only_item(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.assertEqual(
+            [{
+                'mandatory': 1,
+                'optional': 'my_value1',
+                'key': 'my_key1'
+            }],
+            self.TestController.get({}))
+
+    def test_get_from_another_thread_than_post(self):
+        def save_get_result():
+            self.thread_get_result = self.TestController.get({})
+
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+
+        self.thread_get_result = None
+        get_thread = Thread(name='GetInOtherThread', target=save_get_result)
+        get_thread.start()
+        get_thread.join()
+
+        self.assertEqual(
+            [{
+                'mandatory': 1,
+                'optional': 'my_value1',
+                'key': 'my_key1'
+            }],
+            self.thread_get_result)
+
+    def test_get_without_filter_is_retrieving_everything_with_multiple_posts(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
+            ],
+            self.TestController.get({}))
+
+    def test_get_without_filter_is_retrieving_everything(self):
+        self.TestController.post_many([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+                'optional': 'my_value2',
+            },
+        ])
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
+            ],
+            self.TestController.get({}))
+
+    def test_get_with_filter_is_retrieving_subset_with_multiple_posts(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+            ],
+            self.TestController.get({'optional': 'my_value1'}))
+
+    def test_get_with_filter_is_retrieving_subset(self):
+        self.TestController.post_many([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+                'optional': 'my_value2',
+            },
+        ])
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+            ],
+            self.TestController.get({'optional': 'my_value1'}))
+
+    def test_put_is_updating(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.assertEqual(
+            (
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'},
+            ),
+            self.TestController.put({
+                'key': 'my_key1',
+                'optional': 'my_value',
+            })
+        )
+        self.assertEqual([{'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'}],
+                         self.TestController.get({'mandatory': 1}))
+
+    def test_put_is_updating_date(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        self.assertEqual(
+            (
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
+                {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00+00:00', 'key': 'my_key1'},
+            ),
+            self.TestDateController.put({
+                'key': 'my_key1',
+                'date_str': '2018-06-01',
+                'datetime_str': '1989-12-31T01:00:00',
+            })
+        )
+        self.assertEqual([
+            {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00+00:00', 'key': 'my_key1'}
+        ],
+            self.TestDateController.get({'date_str': '2018-06-01'}))
+
+    def test_get_date_is_handled_for_valid_date(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        d = datetime.datetime.strptime('2017-05-15', '%Y-%m-%d').date()
+        self.assertEqual(
+            [
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
+            ],
+            self.TestDateController.get({
+                'date_str': d,
+            })
+        )
+
+    def test_get_date_is_handled_for_unused_date(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        d = datetime.datetime.strptime('2016-09-23', '%Y-%m-%d').date()
+        self.assertEqual(
+            [],
+            self.TestDateController.get({
+                'date_str': d,
+            })
+        )
+
+    def test_get_date_is_handled_for_valid_datetime(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        dt = datetime.datetime.strptime('2016-09-23T23:59:59', '%Y-%m-%dT%H:%M:%S')
+        self.assertEqual(
+            [
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
+            ],
+            self.TestDateController.get({
+                'datetime_str': dt,
+            })
+        )
+
+    def test_get_date_is_handled_for_unused_datetime(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2017-05-15',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        dt = datetime.datetime.strptime('2016-09-24T23:59:59', '%Y-%m-%dT%H:%M:%S')
+        self.assertEqual(
+            [],
+            self.TestDateController.get({
+                'datetime_str': dt,
+            })
+        )
+
+    def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.put({
+            'key': 'my_key1',
+            'optional': 'my_value',
+        })
+        self.assertEqual([], self.TestController.get({'optional': 'my_value1'}))
+
+    def test_delete_with_filter_is_removing_the_proper_row(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(1, self.TestController.delete({'key': 'my_key1'}))
+        self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
+                         self.TestController.get({}))
+
+    def test_delete_without_filter_is_removing_everything(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(2, self.TestController.delete({}))
+        self.assertEqual([], self.TestController.get({}))
+
+    def test_query_get_parser(self):
+        self.assertEqual(
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
+            },
+            {arg.name: arg.type for arg in self.TestController.query_get_parser.args})
+
+    def test_query_delete_parser(self):
+        self.assertEqual(
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+            },
+            {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
+
+    def test_json_post_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                test_defaults = [field.default for field in fields.values() if
+                                 hasattr(field, 'default') and field.default]
+                return name, test_fields, test_defaults
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            ('TestModel', ['key', 'mandatory', 'optional'], []),
+            self.TestController.json_post_model
+        )
+
+    def test_json_post_model_with_auto_increment_and_enum(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                test_defaults = [field.default for field in fields.values() if
+                                 hasattr(field, 'default') and field.default]
+                return name, test_fields, test_defaults
+
+        self.TestAutoIncrementController.namespace(TestAPI)
+        self.assertEqual(
+            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default'], ['Test value']),
+            self.TestAutoIncrementController.json_post_model
+        )
+
+    def test_json_put_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                return name, test_fields
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            ('TestModel', ['key', 'mandatory', 'optional']),
+            self.TestController.json_put_model
+        )
+
+    def test_json_put_model_with_auto_increment_and_enum(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name, field in fields.items()]
+                test_fields.sort()
+                return name, test_fields
+
+        self.TestAutoIncrementController.namespace(TestAPI)
+        self.assertEqual(
+            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default']),
+            self.TestAutoIncrementController.json_put_model
+        )
+
+    def test_get_response_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                return name, test_fields
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            ('TestModel', ['key', 'mandatory', 'optional']),
+            self.TestController.get_response_model)
+
+    def test_get_response_model_with_enum(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                test_descriptions = [field.description for field in fields.values() if field.description]
+                test_descriptions.sort()
+                test_enums = [field.enum for field in fields.values() if hasattr(field, 'enum') and field.enum]
+                return name, test_fields, test_descriptions, test_enums
+
+        self.TestAutoIncrementController.namespace(TestAPI)
+        self.assertEqual(
+            (
+                'TestAutoIncrementModel',
+                ['enum_field', 'key', 'optional_with_default'],
+                ['Test Documentation'],
+                [['Value1', 'Value2']]
+            ),
+            self.TestAutoIncrementController.get_response_model)
+
+    def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.TestController.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+            ],
+            self.TestController.get({'limit': 2}))
+
+    def test_get_with_offset_1_is_retrieving_subset_of_n_minus_1_first_elements(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.TestController.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+                {'key': 'my_key3', 'mandatory': 3, 'optional': 'my_value3'},
+            ],
+            self.TestController.get({'offset': 1}))
+
+    def test_get_with_limit_1_and_offset_1_is_retrieving_middle_element(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.TestController.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+
+            ],
+            self.TestController.get({'offset': 1, 'limit': 1}))
+
+    def test_get_model_description_returns_description(self):
+        self.assertEqual(
+            {
+                'key': 'key',
+                'mandatory': 'mandatory',
+                'optional': 'optional',
+                'table': 'sample_table_name'
+            },
+            self.TestController.get_model_description())
+
+    def test_get_model_description_response_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                return name, test_fields
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
+            self.TestController.get_model_description_response_model)
+
+
+
 if __name__ == '__main__':
     unittest.main()

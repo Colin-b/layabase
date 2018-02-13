@@ -24,14 +24,14 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     return database_sqlalchemy.load(database_connection_url, create_models_func, **kwargs)
 
 
-def reset(base_or_mongo_client):
+def reset(base):
     """
     If the database was already created, then drop all tables and recreate them all.
     """
-    if hasattr(base_or_mongo_client, 'metadata'):  # metadata attribute is only on SQLAlchemy base
-        database_sqlalchemy.reset(base_or_mongo_client)
+    if hasattr(base, 'is_mongos'):
+        database_mongo.reset(base)
     else:
-        database_mongo.reset(base_or_mongo_client)
+        database_sqlalchemy.reset(base)
 
 
 class ControllerModelNotSet(Exception):

@@ -14,7 +14,7 @@ from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCould
 logger = logging.getLogger(__name__)
 
 
-class MongoField:
+class Column:
     """
     Definition of a Mondo Database field.
     """
@@ -22,23 +22,21 @@ class MongoField:
     UNIQUE_INDEX = 'unique'
     NON_UNIQUE_INDEX = 'non_unique'
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, field_type=str, **kwargs):
         """
 
-        :param name: Field name
-        :param kwargs: Optional attributes.
+        :param field_type: Python field type. Default to str.
 
-        field_type: Python field type. Default to str.
-        default_value: Default value matching type. Default to None.
-        description: Field description.
-        index_type: Type of index amongst UNIQUE_INDEX or NON_UNIQUE_INDEX. Default to None.
-        is_primary_key: bool value. Default to False.
-        is_nullable: bool value. Default to opposite of is_primary_key (True)
-        is_required: bool value. Default to False.
-        should_auto_increment: bool value. Default to False. Only valid for int fields.
+        :param default_value: Default value matching type. Default to None.
+        :param description: Field description.
+        :param index_type: Type of index amongst UNIQUE_INDEX or NON_UNIQUE_INDEX. Default to None.
+        :param is_primary_key: bool value. Default to False.
+        :param is_nullable: bool value. Default to opposite of is_primary_key (True)
+        :param is_required: bool value. Default to False.
+        :param should_auto_increment: bool value. Default to False. Only valid for int fields.
         """
-        self.name = name
-        self.field_type = kwargs.pop('field_type', str)
+        self.name = None
+        self.field_type = field_type or str
         self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else None
         self.default_value = kwargs.pop('default_value', None)
         if self.default_value is None:
@@ -55,6 +53,11 @@ class MongoField:
             raise Exception('Only int fields can be auto incremented.')
 
 
+def to_mongo_field(attribute):
+    attribute[1].name = attribute[0]
+    return attribute[1]
+
+
 class CRUDModel:
     __tablename__ = None  # Name of the collection described by this model
     __collection__ = None
@@ -64,8 +67,8 @@ class CRUDModel:
     def _base(cls, base):
         cls.__collection__ = base[cls.__tablename__]
         cls.__counters__ = base['counters']
-        cls._create_indexes(MongoField.UNIQUE_INDEX)
-        cls._create_indexes(MongoField.NON_UNIQUE_INDEX)
+        cls._create_indexes(Column.UNIQUE_INDEX)
+        cls._create_indexes(Column.NON_UNIQUE_INDEX)
 
     @classmethod
     def _create_indexes(cls, index_type: str):
@@ -73,15 +76,15 @@ class CRUDModel:
             criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_fields() if field.index_type == index_type]
             if criteria:
                 # Avoid using auto generated index name that might be too long
-                index_name = f'uidx{cls.__collection__.name}' if index_type == MongoField.UNIQUE_INDEX else f'idx{cls.__collection__.name}'
+                index_name = f'uidx{cls.__collection__.name}' if index_type == Column.UNIQUE_INDEX else f'idx{cls.__collection__.name}'
                 logger.debug(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
-                cls.__collection__.create_index(criteria, unique=index_type == MongoField.UNIQUE_INDEX, name=index_name)
+                cls.__collection__.create_index(criteria, unique=index_type == Column.UNIQUE_INDEX, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
             raise
 
     @classmethod
-    def get_all(cls, **kwargs):
+    def get_all(cls, **kwargs) -> list:
         """
         Return all models formatted as a list of dictionaries.
         """
@@ -90,27 +93,49 @@ class CRUDModel:
         return list(all_docs)
 
     @classmethod
-    def add_all(cls, models_as_list_of_dict: list):
+    def add_all(cls, models_as_list_of_dict: list) -> list:
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
-        :returns The inserted model formatted as a list of dictionaries.
+        :returns The inserted models formatted as a list of dictionaries.
         """
         if not models_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')
         mandatory_fields = [field.name for field in cls.get_fields() if
                             not field.is_nullable and not field.should_auto_increment]
-        for model_dict in models_as_list_of_dict:
-            cls._validate_input(model_dict, mandatory_fields)
+        for model_as_dict in models_as_list_of_dict:
+            cls._validate_input(model_as_dict, mandatory_fields)
             # if _id present in a document, convert it to ObjectId
-            if '_id' in model_dict.keys():
-                model_dict['_id'] = ObjectId(model_dict['_id'])
+            if '_id' in model_as_dict.keys():
+                model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
             # handle auto-incrementation of fields when needed
             for auto_inc_field in [field for field in cls.get_fields() if field.should_auto_increment]:
-                model_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
+                model_as_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
 
         cls.__collection__.insert(models_as_list_of_dict)
         return models_as_list_of_dict
+
+    @classmethod
+    def add(cls, model_as_dict: dict) -> dict:
+        """
+        Add a model formatted as a dictionary.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns The inserted model formatted as a dictionary.
+        """
+        if not model_as_dict:
+            raise ValidationFailed({}, message='No data provided.')
+        mandatory_fields = [field.name for field in cls.get_fields() if
+                            not field.is_nullable and not field.should_auto_increment]
+        cls._validate_input(model_as_dict, mandatory_fields)
+        # if _id present in a document, convert it to ObjectId
+        if '_id' in model_as_dict.keys():
+            model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
+        # handle auto-incrementation of fields when needed
+        for auto_inc_field in [field for field in cls.get_fields() if field.should_auto_increment]:
+            model_as_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
+
+        cls.__collection__.insert(model_as_dict)
+        return model_as_dict
 
     @classmethod
     def _validate_input(cls, model_as_dict: dict, mandatory_fields: list):
@@ -127,7 +152,7 @@ class CRUDModel:
                     f'"{field}" value "{model_as_dict[field]}" should be amongst {enum_fields[field]}.')
 
     @classmethod
-    def _increment(cls, field: MongoField):
+    def _increment(cls, field: Column):
         counter_key = {'_id': cls.__collection__.name}
         counter_element = cls.__counters__.find_one(counter_key)
         if not counter_element:
@@ -218,7 +243,7 @@ class CRUDModel:
     @classmethod
     def description_dictionary(cls) -> dict:
         description = {
-            'collection': cls.__collection__.full_name,
+            'collection': cls.__tablename__,
         }
         for field in cls.get_fields():
             description[field.name] = field.name
@@ -257,11 +282,11 @@ class CRUDModel:
         return exported_fields
 
     @classmethod
-    def get_fields(cls) -> List[MongoField]:
+    def get_fields(cls) -> List[Column]:
         """
         :return: list of all Mongo fields (can be empty)
         """
-        return [attribute[1] for attribute in inspect.getmembers(cls) if type(attribute[1]) == MongoField]
+        return [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if type(attribute[1]) == Column]
 
     @classmethod
     def create_audit(cls):
@@ -283,12 +308,13 @@ def load(database_connection_url: str, create_models_func: callable):
         raise NoRelatedModels()
 
     logger.info(f'Connecting to {database_connection_url}...')
+    database_name = os.path.basename(database_connection_url)
     if database_connection_url.startswith('mongomock'):
         import mongomock  # This is a test dependency only
-        base = mongomock.MongoClient()
+        client = mongomock.MongoClient()
     else:
-        database_name = os.path.basename(database_connection_url)
-        base = pymongo.MongoClient(database_connection_url)[database_name]
+        client = pymongo.MongoClient(database_connection_url)
+    base = client[database_name]
     logger.debug(f'Creating models...')
     for model_class in create_models_func(base):
         model_class._base(base)
@@ -300,7 +326,7 @@ def reset(base):
     If the database was already created, then drop all tables and recreate them all.
     """
     if base:
-        for collection in base:
+        for collection in base._collections.values():
             _reset_collection(base, collection)
 
 
@@ -327,7 +353,7 @@ def _reset_collection(base, collection):
     logger.info(f'{nb_removed} counter records deleted')
 
 
-def _get_flask_restplus_type(field: MongoField):
+def _get_flask_restplus_type(field: Column):
     """
     Return the Flask RestPlus field type (as a class) corresponding to this Mongo field.
 
@@ -355,7 +381,7 @@ def _get_flask_restplus_type(field: MongoField):
     raise Exception(f'Flask RestPlus field type cannot be guessed for {field} field.')
 
 
-def _get_rest_plus_subtype(field: MongoField):
+def _get_rest_plus_subtype(field: Column):
     """
     Return the Flask RestPlus field subtype (as a class) corresponding to this Mongo field if it is a list,
     else same as type
@@ -367,14 +393,14 @@ def _get_rest_plus_subtype(field: MongoField):
     return _get_flask_restplus_type(field)
 
 
-def _get_example(field: MongoField) -> str:
+def _get_example(field: Column) -> str:
     if field.default_value:
         return str(field.default_value)
 
     return str(field.choices[0]) if field.choices else _get_default_example(field)
 
 
-def _get_default_example(field: MongoField) -> str:
+def _get_default_example(field: Column) -> str:
     """
     Return an Example value corresponding to this Mongodb field.
     """
