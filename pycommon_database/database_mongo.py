@@ -4,6 +4,7 @@ import enum
 import os.path
 import inspect
 import dateutil.parser
+import copy
 import pymongo
 import pymongo.errors
 from typing import List
@@ -156,7 +157,7 @@ class CRUDModel:
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
 
-        new_model_as_dict = dict(model_as_dict)  # TODO Deep copy
+        new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
         fields = cls.get_fields()
@@ -176,7 +177,7 @@ class CRUDModel:
 
     @classmethod
     def _validate_update(cls, model_as_dict: dict) -> (dict, dict):
-        new_model_as_dict = dict(model_as_dict)  # TODO Deep copy
+        new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
         updated_fields = [field for field in cls.get_fields() if field.name in new_model_as_dict]
@@ -292,7 +293,6 @@ class CRUDModel:
     @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
         primary_key_fields = [field.name for field in cls.get_fields() if field.is_primary_key]
-        # TODO Avoid iteration here, be more pythonic
         for primary_key in primary_key_fields:
             if primary_key not in model_as_dict:
                 raise Exception(f'{primary_key} is mandatory.')
