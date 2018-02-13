@@ -2970,8 +2970,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
         })
         self.assertEqual(
             (
-                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
-                {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00+00:00', 'key': 'my_key1'},
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59', 'key': 'my_key1'},
+                {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00', 'key': 'my_key1'},
             ),
             self.TestDateController.put({
                 'key': 'my_key1',
@@ -2980,7 +2980,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
         self.assertEqual([
-            {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00+00:00', 'key': 'my_key1'}
+            {'date_str': '2018-06-01', 'datetime_str': '1989-12-31T01:00:00', 'key': 'my_key1'}
         ],
             self.TestDateController.get({'date_str': '2018-06-01'}))
 
@@ -2993,7 +2993,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         d = datetime.datetime.strptime('2017-05-15', '%Y-%m-%d').date()
         self.assertEqual(
             [
-                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59', 'key': 'my_key1'},
             ],
             self.TestDateController.get({
                 'date_str': d,
@@ -3023,7 +3023,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         dt = datetime.datetime.strptime('2016-09-23T23:59:59', '%Y-%m-%dT%H:%M:%S')
         self.assertEqual(
             [
-                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59+00:00', 'key': 'my_key1'},
+                {'date_str': '2017-05-15', 'datetime_str': '2016-09-23T23:59:59', 'key': 'my_key1'},
             ],
             self.TestDateController.get({
                 'datetime_str': dt,

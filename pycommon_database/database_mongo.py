@@ -32,7 +32,7 @@ class Column:
         :param description: Field description.
         :param index_type: Type of index amongst UNIQUE_INDEX or NON_UNIQUE_INDEX. Default to None.
         :param is_primary_key: bool value. Default to False.
-        :param is_nullable: bool value. Default to opposite of is_primary_key (True)
+        :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
         """
@@ -46,11 +46,11 @@ class Column:
         self.index_type = kwargs.pop('index_type', None)
 
         self.is_primary_key = bool(kwargs.pop('is_primary_key', False))
-        self.is_nullable = bool(kwargs.pop('is_nullable', not self.is_primary_key))
-        self.is_required = bool(kwargs.pop('is_required', False))
         self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
         if self.should_auto_increment and self.field_type is not int:
             raise Exception('Only int fields can be auto incremented.')
+        self.is_nullable = bool(kwargs.pop('is_nullable', not self.is_primary_key or self.should_auto_increment))
+        self.is_required = bool(kwargs.pop('is_required', False))
 
     def __str__(self):
         return f'{self.name}'
@@ -92,7 +92,7 @@ class Column:
         value = model_as_dict.get(self.name)
 
         if self.field_type == datetime.datetime:
-            model_as_dict[self.name] = value.isoformat()
+            model_as_dict[self.name] = value.isoformat()  # TODO Time Offset is missing to be fully compliant with RFC
         if self.field_type == datetime.date:
             model_as_dict[self.name] = value.date().isoformat()
 
