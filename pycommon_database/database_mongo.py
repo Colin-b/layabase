@@ -74,17 +74,23 @@ class Column:
         if self.field_type == datetime.date:
             if isinstance(value, str):
                 value = dateutil.parser.parse(value).date()
-                model_as_dict[self.name] = value
+        if isinstance(self.field_type, enum.EnumMeta):
+            if isinstance(value, str):
+                value = self.field_type[value]
 
         if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
 
-        if self.choices and value not in self.choices:
-            return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+        if self.choices and not isinstance(value, enum.Enum):
+            if value not in self.choices:
+                return {self.name: [f'Value "{value} ({type(value)})" is not within {self.choices}.']}
 
         # dates cannot be stored in Mongo, use datetime instead
         if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
             model_as_dict[self.name] = datetime.datetime.combine(value, datetime.datetime.min.time())
+        # Enum cannot be stored in Mongo, use str instead
+        if isinstance(value, enum.Enum):
+            model_as_dict[self.name] = value.name
 
         return {}
 
@@ -245,11 +251,11 @@ class CRUDModel:
         counter_element = cls.__counters__.find_one(counter_key)
         if not counter_element:
             # counter not created yet, create it with default value 1
-            cls.__counters__.insert({'_id': cls.__collection__.name, field_name: 1})
+            cls.__counters__.insert_one({'_id': cls.__collection__.name, field_name: 1})
         elif field_name not in counter_element.keys():
-            cls.__counters__.update(counter_key, {'$set': {field_name: 1}})
+            cls.__counters__.update_one(counter_key, {'$set': {field_name: 1}})
         else:
-            cls.__counters__.update(counter_key, {'$inc': {field_name: 1}})
+            cls.__counters__.update_one(counter_key, {'$inc': {field_name: 1}})
         return cls.__counters__.find_one(counter_key)[field_name]
 
     @classmethod
