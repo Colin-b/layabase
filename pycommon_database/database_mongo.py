@@ -3,6 +3,7 @@ import datetime
 import enum
 import os.path
 import inspect
+import dateutil.parser
 import pymongo
 import pymongo.errors
 from typing import List
@@ -64,8 +65,14 @@ class Column:
             return {}
 
         if not isinstance(value, self.field_type):
-            # TODO Handle type conversion
-            return {self.name: [f'Not a valid {self.field_type.__name__}.']}
+            if isinstance(value, str) and self.field_type == datetime.datetime:
+                value = dateutil.parser.parse(value)
+                model_as_dict[self.name] = value
+            elif isinstance(value, str) and self.field_type == datetime.date:
+                value = dateutil.parser.parse(value)
+                model_as_dict[self.name] = value
+            else:
+                return {self.name: [f'Not a valid {self.field_type.__name__}.']}
 
         if self.choices and value not in self.choices:
             return {self.name: [f'Value "{value}" is not within {self.choices}.']}
@@ -185,7 +192,7 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(models_as_list_of_dict, errors)
 
-        cls.__collection__.insert(models_as_list_of_dict)
+        cls.__collection__.insert_many(models_as_list_of_dict)
         return [model for model in models_as_list_of_dict if model.pop('_id')]
 
     @classmethod
@@ -203,7 +210,7 @@ class CRUDModel:
         if '_id' in new_model_as_dict:
             new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
 
-        cls.__collection__.insert(new_model_as_dict)
+        cls.__collection__.insert_one(new_model_as_dict)
         del new_model_as_dict['_id']
         return new_model_as_dict
 
