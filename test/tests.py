@@ -3274,7 +3274,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'key',
                 'mandatory': 'mandatory',
                 'optional': 'optional',
-                'table': 'sample_table_name'
+                'collection': 'sample_table_name'
             },
             self.TestController.get_model_description())
 
@@ -3288,7 +3288,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
+            ('TestModelDescription', ['collection', 'key', 'mandatory', 'optional']),
             self.TestController.get_model_description_response_model)
 
 

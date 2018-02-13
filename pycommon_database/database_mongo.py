@@ -52,6 +52,9 @@ class Column:
         if self.should_auto_increment and self.field_type is not int:
             raise Exception('Only int fields can be auto incremented.')
 
+    def __str__(self):
+        return f'{self.name}'
+
 
 def to_mongo_field(attribute):
     attribute[1].name = attribute[0]
@@ -89,8 +92,7 @@ class CRUDModel:
         Return all models formatted as a list of dictionaries.
         """
         query = cls._build_query(**kwargs)
-        all_docs = cls.__collection__.find(query)
-        return list(all_docs)
+        return [model for model in cls.__collection__.find(query) if model.pop('_id')]
 
     @classmethod
     def add_all(cls, models_as_list_of_dict: list) -> list:
@@ -113,7 +115,7 @@ class CRUDModel:
                 model_as_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
 
         cls.__collection__.insert(models_as_list_of_dict)
-        return models_as_list_of_dict
+        return [model for model in models_as_list_of_dict if model.pop('_id')]
 
     @classmethod
     def add(cls, model_as_dict: dict) -> dict:
@@ -135,6 +137,7 @@ class CRUDModel:
             model_as_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
 
         cls.__collection__.insert(model_as_dict)
+        del model_as_dict['_id']
         return model_as_dict
 
     @classmethod
@@ -186,11 +189,13 @@ class CRUDModel:
         model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys}
         raw_result = cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates}).raw_result
         new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        del previous_model_as_dict['_id']
+        del new_model_as_dict['_id']
         return previous_model_as_dict, new_model_as_dict
 
     @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
-        primary_key_fields = [field for field in cls.get_fields() if field.is_primary_key]
+        primary_key_fields = [field.name for field in cls.get_fields() if field.is_primary_key]
         # TODO Avoid iteration here, be more pythonic
         for primary_key in primary_key_fields:
             if primary_key not in model_as_dict:
@@ -203,8 +208,6 @@ class CRUDModel:
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.
         """
-        if not kwargs:
-            raise Exception('Remove called without criteria. At least one criterion is mandatory,')
         query = cls._build_query(**kwargs)
         nb_removed = cls.__collection__.delete_many(query).deleted_count
         return nb_removed
