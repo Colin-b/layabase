@@ -64,18 +64,25 @@ class Column:
             model_as_dict[self.name] = self.default_value  # Make sure value is set in any case
             return {}
 
+        if self.field_type == datetime.datetime:
+            if isinstance(value, str):
+                value = dateutil.parser.parse(value)
+                model_as_dict[self.name] = value
+        if self.field_type == datetime.date:
+            if isinstance(value, str):
+                value = dateutil.parser.parse(value).date()
+                model_as_dict[self.name] = value
+
         if not isinstance(value, self.field_type):
-            if isinstance(value, str) and self.field_type == datetime.datetime:
-                value = dateutil.parser.parse(value)
-                model_as_dict[self.name] = value
-            elif isinstance(value, str) and self.field_type == datetime.date:
-                value = dateutil.parser.parse(value)
-                model_as_dict[self.name] = value
-            else:
-                return {self.name: [f'Not a valid {self.field_type.__name__}.']}
+            return {self.name: [f'Not a valid {self.field_type.__name__}.']}
 
         if self.choices and value not in self.choices:
             return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+
+        # dates cannot be stored in Mongo, use datetime instead
+        if isinstance(value, datetime.date):
+            model_as_dict[self.name] = datetime.datetime.combine(value, datetime.datetime.min.time())
+
         return {}
 
 
@@ -116,7 +123,11 @@ class CRUDModel:
         """
         limit = kwargs.pop('limit', 0)
         offset = kwargs.pop('offset', 0)
-        query = cls._build_query(**kwargs)
+        model_to_query, errors = cls._validate_update(kwargs)
+        if errors:
+            raise ValidationFailed(kwargs, errors)
+
+        query = cls._build_query(**model_to_query)
         models = cls.__collection__.find(query, projection={'_id': False}, skip=offset, limit=limit)
         return list(models)  # Convert Cursor to dict
 
@@ -145,9 +156,6 @@ class CRUDModel:
 
     @classmethod
     def _validate_update(cls, model_as_dict: dict) -> (dict, dict):
-        if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
-
         new_model_as_dict = dict(model_as_dict)  # TODO Deep copy
         errors = {}
 
@@ -235,6 +243,9 @@ class CRUDModel:
         :returns A tuple containing previous model formatted as a dictionary (first item)
         and new model formatted as a dictionary (second item).
         """
+        if not model_as_dict:
+            raise ValidationFailed({}, message='No data provided.')
+
         new_model_as_dict, errors = cls._validate_update(model_as_dict)
         if errors:
             raise ValidationFailed(model_as_dict, errors)
