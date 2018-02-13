@@ -56,6 +56,9 @@ class Column:
         return f'{self.name}'
 
     def validate(self, model_as_dict: dict) -> dict:
+        """
+        Validate and deserialize.
+        """
         value = model_as_dict.get(self.name)
 
         if value is None:
@@ -80,10 +83,18 @@ class Column:
             return {self.name: [f'Value "{value}" is not within {self.choices}.']}
 
         # dates cannot be stored in Mongo, use datetime instead
-        if isinstance(value, datetime.date):
+        if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
             model_as_dict[self.name] = datetime.datetime.combine(value, datetime.datetime.min.time())
 
         return {}
+
+    def serialize(self, model_as_dict: dict):
+        value = model_as_dict.get(self.name)
+
+        if self.field_type == datetime.datetime:
+            model_as_dict[self.name] = value.isoformat()
+        if self.field_type == datetime.date:
+            model_as_dict[self.name] = value.date().isoformat()
 
 
 def to_mongo_field(attribute):
@@ -129,7 +140,7 @@ class CRUDModel:
 
         query = cls._build_query(**model_to_query)
         models = cls.__collection__.find(query, projection={'_id': False}, skip=offset, limit=limit)
-        return list(models)  # Convert Cursor to dict
+        return [cls._serialize(model) for model in models]  # Convert Cursor to dict
 
     @classmethod
     def _validate_insert(cls, model_as_dict: dict) -> (dict, dict):
@@ -173,6 +184,12 @@ class CRUDModel:
         return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
+    def _serialize(cls, model_as_dict: dict) -> dict:
+        for field in cls.get_fields():
+            field.serialize(model_as_dict)
+        return model_as_dict
+
+    @classmethod
     def add_all(cls, models_as_list_of_dict: list) -> list:
         """
         Add models formatted as a list of dictionaries.
@@ -201,7 +218,7 @@ class CRUDModel:
             raise ValidationFailed(models_as_list_of_dict, errors)
 
         cls.__collection__.insert_many(models_as_list_of_dict)
-        return [model for model in models_as_list_of_dict if model.pop('_id')]
+        return [cls._serialize(model) for model in models_as_list_of_dict if model.pop('_id')]
 
     @classmethod
     def add(cls, model_as_dict: dict) -> dict:
@@ -220,7 +237,7 @@ class CRUDModel:
 
         cls.__collection__.insert_one(new_model_as_dict)
         del new_model_as_dict['_id']
-        return new_model_as_dict
+        return cls._serialize(new_model_as_dict)
 
     @classmethod
     def _increment(cls, field_name: str):
@@ -261,7 +278,7 @@ class CRUDModel:
         model_as_dict_updates = {k: v for k, v in new_model_as_dict.items() if k not in model_as_dict_keys}
         cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
         new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
-        return previous_model_as_dict, new_model_as_dict
+        return cls._serialize(previous_model_as_dict), cls._serialize(new_model_as_dict)
 
     @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
