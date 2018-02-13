@@ -15,64 +15,67 @@ logger = logging.getLogger(__name__)
 
 
 class MongoField:
-    def __init__(self, *args, **kwargs):
-        self.name = kwargs.pop('name', None)
-        self.type_ = kwargs.pop('type', None)
-        self.key = kwargs.pop('key', self.name)
-        self.primary_key = kwargs.pop('primary_key', False)
-        self.nullable = kwargs.pop('nullable', not self.primary_key)
-        self.default = kwargs.pop('default', None)
-        if self.default is None:
-            self.default = [] if self.type_ == list else {} if self.type_ == dict else None
-        self.choices = list(self.type_.__members__.keys()) if isinstance(self.type_, enum.EnumMeta) else None
-        self.required = kwargs.pop('required', False)
-        self.index = kwargs.pop('index', False)
-        self.unique = kwargs.pop('unique', False)
-        self.doc = kwargs.pop('doc', None)
-        self.auto_increment = kwargs.pop('auto_increment', None)
+    """
+    Definition of a Mondo Database field.
+    """
+
+    UNIQUE_INDEX = 'unique'
+    NON_UNIQUE_INDEX = 'non_unique'
+
+    def __init__(self, name, **kwargs):
+        """
+
+        :param name: Field name
+        :param kwargs: Optional attributes.
+
+        field_type: Python field type. Default to str.
+        default_value: Default value matching type. Default to None.
+        description: Field description.
+        index_type: Type of index amongst UNIQUE_INDEX or NON_UNIQUE_INDEX. Default to None.
+        is_primary_key: bool value. Default to False.
+        is_nullable: bool value. Default to opposite of is_primary_key (True)
+        is_required: bool value. Default to False.
+        should_auto_increment: bool value. Default to False. Only valid for int fields.
+        """
+        self.name = name
+        self.field_type = kwargs.pop('field_type', str)
+        self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else None
+        self.default_value = kwargs.pop('default_value', None)
+        if self.default_value is None:
+            self.default_value = [] if self.field_type == list else {} if self.field_type == dict else None
+        self.description = kwargs.pop('description', None)
+        self.index_type = kwargs.pop('index_type', None)
+
+        self.is_primary_key = bool(kwargs.pop('is_primary_key', False))
+        self.is_nullable = bool(kwargs.pop('is_nullable', not self.is_primary_key))
+        # TODO This field should be validated as well if it is only for client input
+        self.is_required = bool(kwargs.pop('is_required', False))
+        self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
+        if self.should_auto_increment and self.field_type is not int:
+            raise Exception('Only int fields can be auto incremented.')
 
 
 class CRUDModel:
-    __db__ = None
+    __tablename__ = None  # Name of the collection described by this model
     __collection__ = None
     __counters__ = None
-    __unique_indexes__ = None
-    __indexes__ = None
 
     @classmethod
-    def _validate_input(cls, model_as_dict: dict, mandatory_fields: list):
-        # TODO Use an intersection instead?
-        for mandatory_field in mandatory_fields:
-            if mandatory_field not in model_as_dict:
-                raise Exception(f'{mandatory_field} is mandatory.')
-
-        # make sure all enum fields have the correct value available in choices when provided
-        enum_fields = {field.name: field.choices for field in cls.get_fields() if field.choices}
-        for field in model_as_dict:
-            if field in enum_fields and model_as_dict[field] not in enum_fields[field]:
-                raise Exception(
-                    f'"{field}" value "{model_as_dict[field]}" should be amongst {enum_fields[field]}.')
+    def _base(cls, base):
+        cls.__collection__ = base[cls.__tablename__]
+        cls.__counters__ = base['counters']
+        cls._create_indexes(MongoField.UNIQUE_INDEX)
+        cls._create_indexes(MongoField.NON_UNIQUE_INDEX)
 
     @classmethod
-    def create_indexes(cls):
-        """
-        Create indexes if any.
-        """
-        cls.__unique_indexes__ = cls._create_indexes(True)
-        cls.__indexes__ = cls._create_indexes(False)
-
-    @classmethod
-    def _create_indexes(cls, unique: bool):
+    def _create_indexes(cls, index_type: str):
         try:
-            criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_fields() if
-                        field.index and field.unique == unique]
+            criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_fields() if field.index_type == index_type]
             if criteria:
-                logger.debug(
-                    f"Create a unique?({unique}) index on {cls.__collection__.name} using {criteria} criteria.")
-                return cls.__collection__.create_index(criteria, unique=unique)
-            return None
+                logger.debug(f"Create a {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
+                cls.__collection__.create_index(criteria, unique=index_type == MongoField.UNIQUE_INDEX)
         except pymongo.errors.DuplicateKeyError:
-            logger.exception(f'Duplicate key found for {criteria} criteria when creating a unique index.')
+            logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
             raise
 
     @classmethod
@@ -93,35 +96,46 @@ class CRUDModel:
         """
         if not models_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')
-        mandatory_fields = [field.name for field in cls.get_fields() if not field.nullable and not field.auto_increment]
+        mandatory_fields = [field.name for field in cls.get_fields() if
+                            not field.is_nullable and not field.should_auto_increment]
         for model_dict in models_as_list_of_dict:
             cls._validate_input(model_dict, mandatory_fields)
             # if _id present in a document, convert it to ObjectId
             if '_id' in model_dict.keys():
                 model_dict['_id'] = ObjectId(model_dict['_id'])
             # handle auto-incrementation of fields when needed
-            for auto_inc_field in [field for field in cls.get_fields() if field.auto_increment]:
+            for auto_inc_field in [field for field in cls.get_fields() if field.should_auto_increment]:
                 model_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
 
         cls.__collection__.insert(models_as_list_of_dict)
         return models_as_list_of_dict
 
     @classmethod
+    def _validate_input(cls, model_as_dict: dict, mandatory_fields: list):
+        # TODO Use an intersection instead?
+        for mandatory_field in mandatory_fields:
+            if mandatory_field not in model_as_dict:
+                raise Exception(f'{mandatory_field} is mandatory.')
+
+        # make sure all enum fields have the correct value available in choices when provided
+        enum_fields = {field.name: field.choices for field in cls.get_fields() if field.choices}
+        for field in model_as_dict:
+            if field in enum_fields and model_as_dict[field] not in enum_fields[field]:
+                raise Exception(
+                    f'"{field}" value "{model_as_dict[field]}" should be amongst {enum_fields[field]}.')
+
+    @classmethod
     def _increment(cls, field: MongoField):
-        if field.auto_increment == 'inc' and cls.__counters__:
-            counter_key = {'_id': cls.__collection__.name}
-            counter_element = cls.__counters__.find_one(counter_key)
-            if not counter_element:
-                # counter not created yet, create it with default value 1
-                cls.__counters__.insert({'_id': cls.__collection__.name, field.name: 1})
-                counter_element = cls.__counters__.find_one(counter_key)
-                # TODO Missing return instruction ?
-            elif field.name not in counter_element.keys():
-                cls.__counters__.update(counter_key, {'$set': {field.name: 1}})
-            else:
-                cls.__counters__.update(counter_key, {'$inc': {field.name: 1}})
-            return cls.__counters__.find_one(counter_key)[field.name]
-        return 1
+        counter_key = {'_id': cls.__collection__.name}
+        counter_element = cls.__counters__.find_one(counter_key)
+        if not counter_element:
+            # counter not created yet, create it with default value 1
+            cls.__counters__.insert({'_id': cls.__collection__.name, field.name: 1})
+        elif field.name not in counter_element.keys():
+            cls.__counters__.update(counter_key, {'$set': {field.name: 1}})
+        else:
+            cls.__counters__.update(counter_key, {'$inc': {field.name: 1}})
+        return cls.__counters__.find_one(counter_key)[field.name]
 
     @classmethod
     def update(cls, model_as_dict: dict):
@@ -149,7 +163,7 @@ class CRUDModel:
 
     @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
-        primary_key_fields = [field for field in cls.get_fields() if field.primary_key]
+        primary_key_fields = [field for field in cls.get_fields() if field.is_primary_key]
         # TODO Avoid iteration here, be more pythonic
         for primary_key in primary_key_fields:
             if primary_key not in model_as_dict:
@@ -184,7 +198,7 @@ class CRUDModel:
     def _query_parser(cls):
         query_parser = reqparse.RequestParser()
         for field in cls.get_fields():
-            if field.type_ == list:
+            if field.field_type == list:
                 query_parser.add_argument(
                     field.name,
                     required=False,
@@ -195,7 +209,7 @@ class CRUDModel:
                 query_parser.add_argument(
                     field.name,
                     required=False,
-                    type=field.type_
+                    type=field.field_type
                 )
         return query_parser
 
@@ -205,19 +219,19 @@ class CRUDModel:
             'collection': cls.__collection__.full_name,
         }
         for field in cls.get_fields():
-            description[field.key] = field.name
+            description[field.name] = field.name
         return description
 
     @classmethod
     def flask_restplus_fields(cls) -> dict:
         return {
             field.name: _get_flask_restplus_type(field)(
-                required=field.required,
+                required=field.is_required,
                 example=_get_example(field),
-                description=field.doc,
+                description=field.description,
                 enum=field.choices,
-                default=field.default,
-                readonly=field.auto_increment is not None,
+                default=field.default_value,
+                readonly=field.should_auto_increment,
                 cls_or_instance=_get_rest_plus_subtype(field)
             )
             for field in cls.get_fields()
@@ -232,9 +246,9 @@ class CRUDModel:
 
         exported_fields.update({
             field.name: flask_restplus_fields.String(
-                required=field.required,
+                required=field.is_required,
                 example='column',
-                description=field.doc,
+                description=field.description,
             )
             for field in cls.get_fields()
         })
@@ -269,25 +283,23 @@ def load(database_connection_url: str, create_models_func: callable):
     logger.info(f'Connecting to {database_connection_url}...')
     if database_connection_url.startswith('mongomock'):
         import mongomock  # This is a test dependency only
-        client = mongomock.MongoClient()
+        base = mongomock.MongoClient()
     else:
         database_name = os.path.basename(database_connection_url)
-        client = pymongo.MongoClient(database_connection_url)[database_name]
+        base = pymongo.MongoClient(database_connection_url)[database_name]
     logger.debug(f'Creating models...')
-    for model_class in create_models_func(client):
-        model_class.create_indexes()
-    return client
+    for model_class in create_models_func(base):
+        model_class._base(base)
+    return base
 
 
-def reset(client):
+def reset(base):
     """
     If the database was already created, then drop all tables and recreate them all.
     """
-    # TODO Reset should be able to retrieve models from client
-    if client and model_classes:
-        for model_class in model_classes:
-            _reset_collection(client, model_class)
-        logger.info(f'All data related to {client.metadata.bind.url} reset.')
+    if base:
+        for collection in base:
+            _reset_collection(base, collection)
 
 
 class NoDatabaseProvided(Exception):
@@ -300,17 +312,17 @@ class NoRelatedModels(Exception):
         Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
-def _reset_collection(client, model_class):
-    logger.info(f'Resetting all data related to collection "{model_class.__collection__.name}"...')
-    nb_removed = model_class.__collection__.delete_many({}).deleted_count
-    logger.info(f'{nb_removed} records deleted')
+def _reset_collection(base, collection):
+    logger.info(f'Resetting all data related to "{collection.name}" collection...')
+    nb_removed = collection.delete_many({}).deleted_count
+    logger.info(f'{nb_removed} records deleted.')
 
-    logger.info(f'Drop collection "{model_class.__collection__.name}"')
-    model_class.__collection__.drop()
+    logger.info(f'Drop collection "{collection.name}".')
+    collection.drop()
 
-    logger.info(f'Resetting counter "{model_class.__collection__.name}" located in collection "counters"')
-    nb_removed = client['counters'].delete_many({'_id': model_class.__collection__.name}).deleted_count
-    logger.info(f'{nb_removed} records deleted')
+    logger.info(f'Resetting counters."{collection.name}".')
+    nb_removed = base['counters'].delete_many({'_id': collection.name}).deleted_count
+    logger.info(f'{nb_removed} counter records deleted')
 
 
 def _get_flask_restplus_type(field: MongoField):
@@ -319,23 +331,23 @@ def _get_flask_restplus_type(field: MongoField):
 
     :raises Exception if field type is not managed yet.
     """
-    if field.type_ == str:
+    if field.field_type == str:
         return flask_restplus_fields.String
-    if field.type_ == int:
+    if field.field_type == int:
         return flask_restplus_fields.Integer
-    if field.type_ == float:
+    if field.field_type == float:
         return flask_restplus_fields.Float
-    if field.type_ == bool:
+    if field.field_type == bool:
         return flask_restplus_fields.Boolean
-    if field.type_ == datetime.date:
+    if field.field_type == datetime.date:
         return flask_restplus_fields.Date
-    if field.type_ == datetime.datetime:
+    if field.field_type == datetime.datetime:
         return flask_restplus_fields.DateTime
-    if isinstance(field.type_,enum.EnumMeta):
+    if isinstance(field.field_type, enum.EnumMeta):
         return flask_restplus_fields.String
-    if field.type_ == list:
+    if field.field_type == list:
         return flask_restplus_fields.List
-    if field.type_ == dict:
+    if field.field_type == dict:
         return flask_restplus_fields.Raw
 
     raise Exception(f'Flask RestPlus field type cannot be guessed for {field} field.')
@@ -348,14 +360,14 @@ def _get_rest_plus_subtype(field: MongoField):
 
     :raises Exception if field type is not managed yet.
     """
-    if field.type_ == list:
+    if field.field_type == list:
         return flask_restplus_fields.List(cls_or_instance=flask_restplus_fields.String)
     return _get_flask_restplus_type(field)
 
 
 def _get_example(field: MongoField) -> str:
-    if field.default:
-        return str(field.default)
+    if field.default_value:
+        return str(field.default_value)
 
     return str(field.choices[0]) if field.choices else _get_default_example(field)
 
