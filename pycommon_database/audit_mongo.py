@@ -16,9 +16,9 @@ class AuditModel:
     _model = None
     __collection__ = None
 
-    audit_user = Column(name='audit_user', type=str, primary_key=True)
-    audit_date_utc = Column(name='audit_date_utc', type=datetime.datetime, primary_key=True)
-    audit_action = Column(name='audit_action', type=enum.Enum('action_type', 'I U D'))
+    audit_user = Column(str, is_primary_key=True)
+    audit_date_utc = Column(datetime.datetime, is_primary_key=True)
+    audit_action = Column(enum.Enum('action_type', 'I U D'))
 
     @classmethod
     def audit_add(cls, model_as_dict: dict):
@@ -49,15 +49,15 @@ class AuditModel:
     @classmethod
     def _audit_action(cls, action, model_as_dict):
         model_as_dict['audit_user'] = ''
-        model_as_dict['audit_date_utc'] = datetime.datetime.utcnow().isoformat()
+        model_as_dict['audit_date_utc'] = datetime.datetime.utcnow()
         model_as_dict['audit_action'] = action
         audit_model_as_dict = {k: v for k, v in model_as_dict.items() if k != '_id'}
-        cls.__collection__.insert(audit_model_as_dict)
+        cls.__collection__.insert_one(audit_model_as_dict)
 
 
 def create_from(model):
     class AuditModelForModel(AuditModel, *model.__bases__):
-        __collection__ = model.__db__['audit_' + model.__collection__.name]
+        __tablename__ = f'audit_{model.__tablename__}'
         _model = model
 
     for attribute in inspect.getmembers(model):

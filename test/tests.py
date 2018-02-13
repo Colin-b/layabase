@@ -51,6 +51,10 @@ class SQlAlchemyDatabaseTest(unittest.TestCase):
 
                 key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
+                @classmethod
+                def _post_init(cls, base):
+                    pass
+
             return [TestModel]
 
         db = database.load('sqlite:///:memory:', create_models)
@@ -3291,6 +3295,940 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ('TestModelDescription', ['collection', 'key', 'mandatory', 'optional']),
             self.TestController.get_model_description_response_model)
 
+class MongoCRUDControllerFailuresTest(unittest.TestCase):
+    class TestController(database.CRUDController):
+        pass
+
+    _db = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls._db = database.load('mongomock', cls._create_models)
+
+    @classmethod
+    def tearDownClass(cls):
+        database.reset(cls._db)
+
+    @classmethod
+    def _create_models(cls, base):
+        logger.info('Declare model class...')
+
+        class TestModel(database_mongo.CRUDModel):
+            __tablename__ = 'sample_table_name'
+
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        logger.info('Save model class...')
+        return [TestModel]
+
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+        database.reset(self._db)
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_model_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.model(None)
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+    def test_namespace_method_without_setting_model(self):
+        class TestNamespace:
+            pass
+
+        with self.assertRaises(Exception) as cm:
+            self.TestController.namespace(TestNamespace)
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+    def test_get_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.get({})
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+    def test_post_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({})
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+    def test_post_many_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([])
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+    def test_put_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put({})
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+    def test_delete_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.delete({})
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+    def test_audit_method_without_setting_model(self):
+        self.assertEqual([], self.TestController.get_audit({}))
+
+    def test_model_description_method_without_setting_model(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.get_model_description()
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
+class MongoCRUDControllerAuditTest(unittest.TestCase):
+    class TestController(database.CRUDController):
+        pass
+
+    _db = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls._db = database.load('mongomock', cls._create_models)
+
+    @classmethod
+    def tearDownClass(cls):
+        database.reset(cls._db)
+
+    @classmethod
+    def _create_models(cls, base):
+        logger.info('Declare model class...')
+
+        class TestModel(database_mongo.CRUDModel):
+            __tablename__ = 'sample_table_name'
+
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        logger.info('Save model class...')
+        cls.TestController.model(TestModel, audit=True)
+        return [TestModel]
+
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+        database.reset(self._db)
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_get_all_without_data_returns_empty_list(self):
+        self.assertEqual([], self.TestController.get({}))
+        self._check_audit([])
+
+    def test_get_parser_fields_order(self):
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+                'limit',
+                'offset',
+            ],
+            [arg.name for arg in self.TestController.query_get_parser.args]
+        )
+
+    def test_delete_parser_fields_order(self):
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            [arg.name for arg in self.TestController.query_delete_parser.args]
+        )
+
+    def test_post_model_fields_order(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                return list(fields.keys())
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            self.TestController.json_post_model
+        )
+
+    def test_put_model_fields_order(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                return list(fields.keys())
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            self.TestController.json_put_model
+        )
+
+    def test_get_response_model_fields_order(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                return list(fields.keys())
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            [
+                'key',
+                'mandatory',
+                'optional',
+            ],
+            self.TestController.get_response_model
+        )
+
+    def test_post_with_nothing_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post(None)
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_many_with_nothing_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many(None)
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_with_empty_dict_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({})
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_many_with_empty_list_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([])
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_put_with_nothing_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put(None)
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_put_with_empty_dict_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put({})
+        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_delete_without_nothing_do_not_fail(self):
+        self.assertEqual(0, self.TestController.delete({}))
+        self._check_audit([])
+
+    def test_post_without_mandatory_field_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({
+                'key': 'my_key',
+            })
+        self.assertEqual({'mandatory': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'key': 'my_key'}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_many_without_mandatory_field_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([{
+                'key': 'my_key',
+            }])
+        self.assertEqual({0: {'mandatory': ['Missing data for required field.']}}, cm.exception.errors)
+        self.assertEqual([{'key': 'my_key'}], cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_without_key_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({
+                'mandatory': 1,
+            })
+        self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'mandatory': 1}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_many_without_key_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([{
+                'mandatory': 1,
+            }])
+        self.assertEqual({0: {'key': ['Missing data for required field.']}}, cm.exception.errors)
+        self.assertEqual([{'mandatory': 1}], cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_with_wrong_type_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post({
+                'key': 256,
+                'mandatory': 1,
+            })
+        self.assertEqual({'key': ['Not a valid str.']}, cm.exception.errors)
+        self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
+        self._check_audit([])
+
+    def test_post_many_with_wrong_type_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestController.post_many([{
+                'key': 256,
+                'mandatory': 1,
+            }])
+        self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
+        self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
+        self._check_audit([])
+
+    def test_put_with_wrong_type_is_invalid(self):
+        self.TestController.post({
+            'key': 'value1',
+            'mandatory': 1,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put({
+                'key': 'value1',
+                'mandatory': 'invalid_value',
+            })
+        self.assertEqual({'mandatory': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'value1',
+                    'mandatory': 1,
+                    'optional': None,
+                },
+            ]
+        )
+
+    def test_post_without_optional_is_valid(self):
+        self.assertEqual(
+            {'optional': None, 'mandatory': 1, 'key': 'my_key'},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+            })
+        )
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': None,
+                },
+            ]
+        )
+
+    def test_post_many_without_optional_is_valid(self):
+        self.assertListEqual(
+            [{'optional': None, 'mandatory': 1, 'key': 'my_key'}],
+            self.TestController.post_many([{
+                'key': 'my_key',
+                'mandatory': 1,
+            }])
+        )
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': None,
+                },
+            ]
+        )
+
+    def _check_audit(self, expected_audit, filter_audit={}):
+        audit = self.TestController.get_audit(filter_audit)
+        audit = [{key: audit_line[key] for key in sorted(audit_line.keys())} for audit_line in audit]
+
+        if not expected_audit:
+            self.assertEqual(audit, expected_audit)
+        else:
+            self.assertRegex(f'{audit}', f'{expected_audit}')
+
+    def test_post_with_optional_is_valid(self):
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+            })
+        )
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                }
+            ]
+        )
+
+    def test_post_many_with_optional_is_valid(self):
+        self.assertListEqual(
+            [{'mandatory': 1, 'key': 'my_key', 'optional': 'my_value'}],
+            self.TestController.post_many([{
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+            }])
+        )
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                }
+            ]
+        )
+
+    def test_post_with_unknown_field_is_valid(self):
+        self.assertEqual(
+            {'optional': 'my_value', 'mandatory': 1, 'key': 'my_key'},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+                # This field do not exists in schema
+                'unknown': 'my_value',
+            })
+        )
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                },
+            ]
+        )
+
+    def test_post_many_with_unknown_field_is_valid(self):
+        self.assertListEqual(
+            [{'optional': 'my_value', 'mandatory': 1, 'key': 'my_key'}],
+            self.TestController.post_many([{
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+                # This field do not exists in schema
+                'unknown': 'my_value',
+            }])
+        )
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                },
+            ]
+        )
+
+    def test_get_without_filter_is_retrieving_the_only_item(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.assertEqual(
+            [{
+                'mandatory': 1,
+                'optional': 'my_value1',
+                'key': 'my_key1'
+            }],
+            self.TestController.get({}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+            ]
+        )
+
+    def test_get_without_filter_is_retrieving_everything_with_multiple_posts(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
+            ],
+            self.TestController.get({}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                },
+            ]
+        )
+
+    def test_get_without_filter_is_retrieving_everything(self):
+        self.TestController.post_many([
+            {
+                'key': 'my_key1',
+                'mandatory': 1,
+                'optional': 'my_value1',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+                'optional': 'my_value2',
+            }
+        ])
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
+            ],
+            self.TestController.get({}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                },
+            ]
+        )
+
+    def test_get_with_filter_is_retrieving_subset(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+            ],
+            self.TestController.get({'optional': 'my_value1'}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                },
+            ]
+        )
+
+    def test_put_is_updating(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.assertEqual(
+            (
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'},
+            ),
+            self.TestController.put({
+                'key': 'my_key1',
+                'optional': 'my_value',
+            })
+        )
+        self.assertEqual([{'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'}],
+                         self.TestController.get({'mandatory': 1}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'U',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                },
+            ]
+        )
+
+    def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.put({
+            'key': 'my_key1',
+            'optional': 'my_value',
+        })
+        self.assertEqual([], self.TestController.get({'optional': 'my_value1'}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'U',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value',
+                },
+            ]
+        )
+
+    def test_delete_with_filter_is_removing_the_proper_row(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(1, self.TestController.delete({'key': 'my_key1'}))
+        self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
+                         self.TestController.get({}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                },
+                {
+                    'audit_action': 'D',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+            ]
+        )
+
+    def test_audit_filter_on_model_is_returning_only_selected_data(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.put({
+            'key': 'my_key1',
+            'mandatory': 2,
+        })
+        self.TestController.delete({'key': 'my_key1'})
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'U',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 2,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'D',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 2,
+                    'optional': 'my_value1',
+                },
+            ],
+            filter_audit={'key': 'my_key1'}
+        )
+
+    def test_audit_filter_on_audit_model_is_returning_only_selected_data(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.put({
+            'key': 'my_key1',
+            'mandatory': 2,
+        })
+        time.sleep(1)
+        self.TestController.delete({'key': 'my_key1'})
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'U',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 2,
+                    'optional': 'my_value1',
+                },
+            ],
+            filter_audit={'audit_action': 'U'}
+        )
+
+    def test_delete_without_filter_is_removing_everything(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(2, self.TestController.delete({}))
+        self.assertEqual([], self.TestController.get({}))
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'I',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                },
+                {
+                    'audit_action': 'D',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'D',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': 'my_value2',
+                },
+            ]
+        )
+
+    def test_query_get_parser(self):
+        self.assertEqual(
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
+            },
+            {arg.name: arg.type for arg in self.TestController.query_get_parser.args})
+        self._check_audit([])
+
+    def test_query_get_audit_parser(self):
+        self.assertEqual(
+            {
+                'audit_action': str,
+                'audit_date_utc': inputs.datetime_from_iso8601,
+                'audit_user': str,
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
+            },
+            {arg.name: arg.type for arg in self.TestController.query_get_audit_parser.args})
+        self._check_audit([])
+
+    def test_query_delete_parser(self):
+        self.assertEqual(
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+            },
+            {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
+        self._check_audit([])
+
+    def test_get_response_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                return name, test_fields
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            ('TestModel', ['key', 'mandatory', 'optional']),
+            self.TestController.get_response_model)
+        self._check_audit([])
+
+    def test_get_audit_response_model(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                test_fields = [name for name in fields.keys()]
+                test_fields.sort()
+                return name, test_fields
+
+        self.TestController.namespace(TestAPI)
+        self.assertEqual(
+            (
+                'AuditTestModel', [
+                    'audit_action',
+                    'audit_date_utc',
+                    'audit_user',
+                    'key',
+                    'mandatory',
+                    'optional'
+                ],
+            ),
+            self.TestController.get_audit_response_model)
+        self._check_audit([])
 
 
 if __name__ == '__main__':

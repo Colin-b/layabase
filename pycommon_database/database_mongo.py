@@ -112,13 +112,16 @@ class CRUDModel:
     __tablename__ = None  # Name of the collection described by this model
     __collection__ = None
     __counters__ = None
+    audit_model = None
 
     @classmethod
-    def _base(cls, base):
+    def _post_init(cls, base):
         cls.__collection__ = base[cls.__tablename__]
         cls.__counters__ = base['counters']
         cls._create_indexes(Column.UNIQUE_INDEX)
         cls._create_indexes(Column.NON_UNIQUE_INDEX)
+        if cls.audit_model:
+            cls.audit_model.__collection__ = base[cls.audit_model.__tablename__]
 
     @classmethod
     def _create_indexes(cls, index_type: str):
@@ -335,7 +338,7 @@ class CRUDModel:
                 query_parser.add_argument(
                     field.name,
                     required=False,
-                    type=field.field_type
+                    type=_get_python_type(field)
                 )
         return query_parser
 
@@ -390,7 +393,8 @@ class CRUDModel:
     @classmethod
     def create_audit(cls):
         from pycommon_database.audit_mongo import create_from
-        return create_from(cls)
+        cls.audit_model = create_from(cls)
+        return cls.audit_model
 
 
 def load(database_connection_url: str, create_models_func: callable):
@@ -416,7 +420,7 @@ def load(database_connection_url: str, create_models_func: callable):
     base = client[database_name]
     logger.debug(f'Creating models...')
     for model_class in create_models_func(base):
-        model_class._base(base)
+        model_class._post_init(base)
     return base
 
 
@@ -519,3 +523,21 @@ def _get_default_example(field: Column) -> str:
     if field_flask == flask_restplus_fields.Raw:
         return str({'field1':'value1','fieldx':'valuex'})
     return 'sample_value'
+
+
+def _get_python_type(field: Column):
+    """
+    Return the Python type corresponding to this Mongo field.
+
+    :raises Exception if field type is not managed yet.
+    """
+    if field.field_type == bool:
+        return inputs.boolean
+    if field.field_type == datetime.date:
+        return inputs.date_from_iso8601
+    if field.field_type == datetime.datetime:
+        return inputs.datetime_from_iso8601
+    if isinstance(field.field_type, enum.EnumMeta):
+        return str
+
+    return field.field_type

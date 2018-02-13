@@ -87,7 +87,6 @@ class CRUDController:
         cls.query_delete_parser = cls._model.query_delete_parser()
         if audit:
             cls._audit_model = cls._model.create_audit()
-            # TODO Ensure it works fine thanks to inheritance
             cls.query_get_audit_parser = cls._audit_model.query_get_parser()
         else:
             cls._audit_model = None
@@ -139,8 +138,6 @@ class CRUDController:
                                                              new_sample_dictionary)
         new_sample_model = cls._model.add(new_sample_dictionary)
         if cls._audit_model:
-            # TODO Add session at the same time instead of on each request
-            cls._audit_model._session = cls._model._session
             cls._audit_model.audit_add(new_sample_model)
         return new_sample_model
 
@@ -158,8 +155,6 @@ class CRUDController:
                                                                     new_sample_dictionaries_list)
         new_sample_models = cls._model.add_all(new_sample_dictionaries_list)
         if cls._audit_model:
-            # TODO Add session at the same time instead of on each request
-            cls._audit_model._session = cls._model._session
             for new_sample_model in new_sample_models:
                 cls._audit_model.audit_add(new_sample_model)
         return new_sample_models
@@ -176,8 +171,6 @@ class CRUDController:
             raise ControllerModelNotSet(cls)
         updated_sample_model = cls._model.update(updated_sample_dictionary)
         if cls._audit_model:
-            # TODO Add session at the same time instead of on each request
-            cls._audit_model._session = cls._model._session
             cls._audit_model.audit_update(updated_sample_model[1])
         return updated_sample_model
 
@@ -190,8 +183,6 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if cls._audit_model:
-            # TODO Add session at the same time instead of on each request
-            cls._audit_model._session = cls._model._session
             cls._audit_model.audit_remove(**request_arguments)
         return cls._model.remove(**request_arguments)
 
@@ -202,8 +193,6 @@ class CRUDController:
         """
         if not cls._audit_model:
             return []
-        # TODO Add session at the same time instead of on each request
-        cls._audit_model._session = cls._model._session
         return cls._audit_model.get_all(**request_arguments)
 
     @classmethod

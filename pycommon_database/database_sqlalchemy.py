@@ -21,6 +21,13 @@ class CRUDModel:
     Calling load_from(...) will provide you one.
     """
     _session = None
+    audit_model = None
+
+    @classmethod
+    def _post_init(cls, session):
+        cls._session = session
+        if cls.audit_model:
+            cls.audit_model._session = session
 
     @classmethod
     def get_all(cls, **kwargs):
@@ -286,7 +293,8 @@ class CRUDModel:
     @classmethod
     def create_audit(cls):
         from pycommon_database.audit_sqlalchemy import create_from
-        return create_from(cls)
+        cls.audit_model = create_from(cls)
+        return cls.audit_model
 
 
 def load(database_connection_url: str, create_models_func: callable, **kwargs):
@@ -336,7 +344,7 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     session = sessionmaker(bind=engine)()
     logger.info(f'Connected to {database_connection_url}.')
     for model_class in model_classes:
-        model_class._session = session
+        model_class._post_init(session)
     return base
 
 
