@@ -6,7 +6,7 @@ import inspect
 import pymongo
 import pymongo.errors
 from typing import List
-from flask_restplus import fields as flask_restplus_fields, reqparse
+from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from bson.objectid import ObjectId
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
@@ -46,7 +46,6 @@ class Column:
 
         self.is_primary_key = bool(kwargs.pop('is_primary_key', False))
         self.is_nullable = bool(kwargs.pop('is_nullable', not self.is_primary_key))
-        # TODO This field should be validated as well if it is only for client input
         self.is_required = bool(kwargs.pop('is_required', False))
         self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
         if self.should_auto_increment and self.field_type is not int:
@@ -54,6 +53,23 @@ class Column:
 
     def __str__(self):
         return f'{self.name}'
+
+    def validate(self, model_as_dict: dict) -> dict:
+        value = model_as_dict.get(self.name)
+
+        if value is None:
+            if not self.is_nullable:
+                return {self.name: ['Missing data for required field.']}
+            model_as_dict[self.name] = self.default_value  # Make sure value is set in any case
+            return {}
+
+        if not isinstance(value, self.field_type):
+            # TODO Handle type conversion
+            return {self.name: [f'Not a valid {self.field_type.__name__}.']}
+
+        if self.choices and value not in self.choices:
+            return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+        return {}
 
 
 def to_mongo_field(attribute):
@@ -91,28 +107,83 @@ class CRUDModel:
         """
         Return all models formatted as a list of dictionaries.
         """
+        limit = kwargs.pop('limit', 0)
+        offset = kwargs.pop('offset', 0)
         query = cls._build_query(**kwargs)
-        return [model for model in cls.__collection__.find(query) if model.pop('_id')]
+        models = cls.__collection__.find(query, projection={'_id': False}, skip=offset, limit=limit)
+        return list(models)  # Convert Cursor to dict
+
+    @classmethod
+    def _validate_insert(cls, model_as_dict: dict) -> (dict, dict):
+        if not model_as_dict:
+            raise ValidationFailed({}, message='No data provided.')
+
+        new_model_as_dict = dict(model_as_dict)  # TODO Deep copy
+        errors = {}
+
+        fields = cls.get_fields()
+        for field in fields:
+            errors.update(field.validate(new_model_as_dict))
+            if field.should_auto_increment and not errors:
+                new_model_as_dict[field.name] = cls._increment(field.name)
+
+        field_names = [field.name for field in fields]
+        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
+        if unknown_fields:
+            for unknown_field in unknown_fields:
+                del new_model_as_dict[unknown_field]
+            logger.warning(f'Skipping unknown fields {unknown_fields}.')
+
+        return model_as_dict if errors else new_model_as_dict, errors
+
+    @classmethod
+    def _validate_update(cls, model_as_dict: dict) -> (dict, dict):
+        if not model_as_dict:
+            raise ValidationFailed({}, message='No data provided.')
+
+        new_model_as_dict = dict(model_as_dict)  # TODO Deep copy
+        errors = {}
+
+        updated_fields = [field for field in cls.get_fields() if field.name in new_model_as_dict]
+        for field in updated_fields:
+            errors.update(field.validate(new_model_as_dict))
+
+        updated_field_names = [field.name for field in updated_fields]
+        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
+        if unknown_fields:
+            for unknown_field in unknown_fields:
+                del new_model_as_dict[unknown_field]
+            logger.warning(f'Skipping unknown fields {unknown_fields}.')
+
+        return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
     def add_all(cls, models_as_list_of_dict: list) -> list:
         """
         Add models formatted as a list of dictionaries.
-        :raises ValidationFailed in case Marshmallow validation fail.
+        :raises ValidationFailed in case validation fail.
         :returns The inserted models formatted as a list of dictionaries.
         """
         if not models_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')
-        mandatory_fields = [field.name for field in cls.get_fields() if
-                            not field.is_nullable and not field.should_auto_increment]
-        for model_as_dict in models_as_list_of_dict:
-            cls._validate_input(model_as_dict, mandatory_fields)
+
+        errors = {}
+
+        for index, model_as_dict in enumerate(models_as_list_of_dict):
+            new_model_as_dict, model_errors = cls._validate_insert(model_as_dict)
+            if model_errors:
+                errors[index] = model_errors
+                continue
+
             # if _id present in a document, convert it to ObjectId
-            if '_id' in model_as_dict.keys():
-                model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
-            # handle auto-incrementation of fields when needed
-            for auto_inc_field in [field for field in cls.get_fields() if field.should_auto_increment]:
-                model_as_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
+            if '_id' in new_model_as_dict:
+                new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
+
+            if not errors:
+                models_as_list_of_dict[index] = new_model_as_dict
+
+        if errors:
+            raise ValidationFailed(models_as_list_of_dict, errors)
 
         cls.__collection__.insert(models_as_list_of_dict)
         return [model for model in models_as_list_of_dict if model.pop('_id')]
@@ -121,76 +192,57 @@ class CRUDModel:
     def add(cls, model_as_dict: dict) -> dict:
         """
         Add a model formatted as a dictionary.
-        :raises ValidationFailed in case Marshmallow validation fail.
+        :raises ValidationFailed in case validation fail.
         :returns The inserted model formatted as a dictionary.
         """
-        if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
-        mandatory_fields = [field.name for field in cls.get_fields() if
-                            not field.is_nullable and not field.should_auto_increment]
-        cls._validate_input(model_as_dict, mandatory_fields)
+        new_model_as_dict, errors = cls._validate_insert(model_as_dict)
+        if errors:
+            raise ValidationFailed(model_as_dict, errors)
+
         # if _id present in a document, convert it to ObjectId
-        if '_id' in model_as_dict.keys():
-            model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
-        # handle auto-incrementation of fields when needed
-        for auto_inc_field in [field for field in cls.get_fields() if field.should_auto_increment]:
-            model_as_dict[auto_inc_field.name] = cls._increment(auto_inc_field)
+        if '_id' in new_model_as_dict:
+            new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
 
-        cls.__collection__.insert(model_as_dict)
-        del model_as_dict['_id']
-        return model_as_dict
+        cls.__collection__.insert(new_model_as_dict)
+        del new_model_as_dict['_id']
+        return new_model_as_dict
 
     @classmethod
-    def _validate_input(cls, model_as_dict: dict, mandatory_fields: list):
-        # TODO Use an intersection instead?
-        for mandatory_field in mandatory_fields:
-            if mandatory_field not in model_as_dict:
-                raise Exception(f'{mandatory_field} is mandatory.')
-
-        # make sure all enum fields have the correct value available in choices when provided
-        enum_fields = {field.name: field.choices for field in cls.get_fields() if field.choices}
-        for field in model_as_dict:
-            if field in enum_fields and model_as_dict[field] not in enum_fields[field]:
-                raise Exception(
-                    f'"{field}" value "{model_as_dict[field]}" should be amongst {enum_fields[field]}.')
-
-    @classmethod
-    def _increment(cls, field: Column):
+    def _increment(cls, field_name: str):
         counter_key = {'_id': cls.__collection__.name}
         counter_element = cls.__counters__.find_one(counter_key)
         if not counter_element:
             # counter not created yet, create it with default value 1
-            cls.__counters__.insert({'_id': cls.__collection__.name, field.name: 1})
-        elif field.name not in counter_element.keys():
-            cls.__counters__.update(counter_key, {'$set': {field.name: 1}})
+            cls.__counters__.insert({'_id': cls.__collection__.name, field_name: 1})
+        elif field_name not in counter_element.keys():
+            cls.__counters__.update(counter_key, {'$set': {field_name: 1}})
         else:
-            cls.__counters__.update(counter_key, {'$inc': {field.name: 1}})
-        return cls.__counters__.find_one(counter_key)[field.name]
+            cls.__counters__.update(counter_key, {'$inc': {field_name: 1}})
+        return cls.__counters__.find_one(counter_key)[field_name]
 
     @classmethod
     def update(cls, model_as_dict: dict):
         """
         Update a model formatted as a dictionary.
-        :raises ValidationFailed in case Marshmallow validation fail.
+        :raises ValidationFailed in case validation fail.
         :returns A tuple containing previous model formatted as a dictionary (first item)
         and new model formatted as a dictionary (second item).
         """
-        if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
-        cls._validate_input(model_as_dict, mandatory_fields=[])
-        # if _id present in a document, convert it to ObjectId
-        if '_id' in model_as_dict.keys():
-            model_as_dict['_id'] = ObjectId(model_as_dict['_id'])
-        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
-        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
-        if not previous_model_as_dict:
-            raise ModelCouldNotBeFound(model_as_dict)
+        new_model_as_dict, errors = cls._validate_update(model_as_dict)
+        if errors:
+            raise ValidationFailed(model_as_dict, errors)
 
-        model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys}
-        raw_result = cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates}).raw_result
-        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
-        del previous_model_as_dict['_id']
-        del new_model_as_dict['_id']
+        # if _id present in a document, convert it to ObjectId
+        if '_id' in new_model_as_dict:
+            new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
+        model_as_dict_keys = cls._to_primary_keys_model(new_model_as_dict)
+        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
+        if not previous_model_as_dict:
+            raise ModelCouldNotBeFound(model_as_dict_keys)
+
+        model_as_dict_updates = {k: v for k, v in new_model_as_dict.items() if k not in model_as_dict_keys}
+        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
+        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
         return previous_model_as_dict, new_model_as_dict
 
     @classmethod
@@ -218,7 +270,10 @@ class CRUDModel:
 
     @classmethod
     def query_get_parser(cls):
-        return cls._query_parser()
+        query_get_parser = cls._query_parser()
+        query_get_parser.add_argument('limit', type=inputs.positive)
+        query_get_parser.add_argument('offset', type=inputs.natural)
+        return query_get_parser
 
     @classmethod
     def query_delete_parser(cls):

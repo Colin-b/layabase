@@ -2655,7 +2655,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 256,
                 'mandatory': 1,
             })
-        self.assertEqual({'key': ['Not a valid string.']}, cm.exception.errors)
+        self.assertEqual({'key': ['Not a valid str.']}, cm.exception.errors)
         self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
 
     def test_post_many_with_wrong_type_is_invalid(self):
@@ -2664,7 +2664,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 256,
                 'mandatory': 1,
             }])
-        self.assertEqual({0: {'key': ['Not a valid string.']}}, cm.exception.errors)
+        self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
         self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
 
     def test_put_with_wrong_type_is_invalid(self):
@@ -2677,7 +2677,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'value1',
                 'mandatory': 'invalid value',
             })
-        self.assertEqual({'mandatory': ['Not a valid integer.']}, cm.exception.errors)
+        self.assertEqual({'mandatory': ['Not a valid int.']}, cm.exception.errors)
         self.assertEqual({'key': 'value1', 'mandatory': 'invalid value'}, cm.exception.received_data)
 
     def test_post_without_optional_is_valid(self):
