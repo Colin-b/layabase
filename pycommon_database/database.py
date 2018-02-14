@@ -1,8 +1,5 @@
 import logging
 
-import pycommon_database.database_mongo as database_mongo
-import pycommon_database.database_sqlalchemy as database_sqlalchemy
-
 logger = logging.getLogger(__name__)
 
 
@@ -20,7 +17,10 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     :param kwargs: Additional custom parameters.
     """
     if _is_mongo(database_connection_url):
+        import pycommon_database.database_mongo as database_mongo
         return database_mongo.load(database_connection_url, create_models_func)
+
+    import pycommon_database.database_sqlalchemy as database_sqlalchemy
     return database_sqlalchemy.load(database_connection_url, create_models_func, **kwargs)
 
 
@@ -29,8 +29,10 @@ def reset(base):
     If the database was already created, then drop all tables and recreate them all.
     """
     if hasattr(base, 'is_mongos'):
+        import pycommon_database.database_mongo as database_mongo
         database_mongo.reset(base)
     else:
+        import pycommon_database.database_sqlalchemy as database_sqlalchemy
         database_sqlalchemy.reset(base)
 
 

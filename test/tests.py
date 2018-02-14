@@ -2524,6 +2524,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestDateController(database.CRUDController):
         pass
 
+    class TestDictController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2564,11 +2567,18 @@ class MongoCRUDControllerTest(unittest.TestCase):
             date_str = database_mongo.Column(datetime.date)
             datetime_str = database_mongo.Column(datetime.datetime)
 
+        class TestDictModel(database_mongo.CRUDModel):
+            __tablename__ = 'dict_table_name'
+
+            key = database_mongo.Column(str, is_primary_key=True)
+            dict_col = database_mongo.Column(dict)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
         cls.TestDateController.model(TestDateModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel]
+        cls.TestDictController.model(TestDictModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -2718,6 +2728,18 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'my_key',
                 'mandatory': 1,
                 'optional': 'my_value',
+            })
+        )
+
+    def test_post_dict_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
             })
         )
 
