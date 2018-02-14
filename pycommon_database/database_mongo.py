@@ -145,6 +145,9 @@ class CRUDModel:
 
     @classmethod
     def get_index_fields(cls, index_type: IndexType) -> List[Column]:
+        """
+        In case a field is a dictionary and some fields within it should be indexed, override this method.
+        """
         return [field for field in cls.get_fields() if field.index_type == index_type]
 
     @classmethod
