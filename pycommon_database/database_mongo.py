@@ -16,13 +16,15 @@ from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCould
 logger = logging.getLogger(__name__)
 
 
+class IndexType(enum.Enum):
+    Unique = enum.auto()
+    NonUnique = enum.auto()
+
+
 class Column:
     """
     Definition of a Mondo Database field.
     """
-
-    UNIQUE_INDEX = 'unique'
-    NON_UNIQUE_INDEX = 'non_unique'
 
     def __init__(self, field_type=str, **kwargs):
         """
@@ -31,7 +33,7 @@ class Column:
 
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
-        :param index_type: Type of index amongst UNIQUE_INDEX or NON_UNIQUE_INDEX. Default to None.
+        :param index_type: Type of index amongst IndexType enum. Default to None.
         :param is_primary_key: bool value. Default to False.
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
@@ -123,23 +125,27 @@ class CRUDModel:
     def _post_init(cls, base):
         cls.__collection__ = base[cls.__tablename__]
         cls.__counters__ = base['counters']
-        cls._create_indexes(Column.UNIQUE_INDEX)
-        cls._create_indexes(Column.NON_UNIQUE_INDEX)
+        cls._create_indexes(IndexType.Unique)
+        cls._create_indexes(IndexType.NonUnique)
         if cls.audit_model:
             cls.audit_model.__collection__ = base[cls.audit_model.__tablename__]
 
     @classmethod
-    def _create_indexes(cls, index_type: str):
+    def _create_indexes(cls, index_type: IndexType):
         try:
-            criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_fields() if field.index_type == index_type]
+            criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_index_fields(index_type)]
             if criteria:
                 # Avoid using auto generated index name that might be too long
-                index_name = f'uidx{cls.__collection__.name}' if index_type == Column.UNIQUE_INDEX else f'idx{cls.__collection__.name}'
+                index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
                 logger.debug(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
-                cls.__collection__.create_index(criteria, unique=index_type == Column.UNIQUE_INDEX, name=index_name)
+                cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
             raise
+
+    @classmethod
+    def get_index_fields(cls, index_type: IndexType) -> List[Column]:
+        return [field for field in cls.get_fields() if field.index_type == index_type]
 
     @classmethod
     def get_all(cls, **kwargs) -> list:
