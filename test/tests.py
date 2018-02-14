@@ -19,6 +19,21 @@ from pycommon_database import database, flask_restplus_errors, database_sqlalche
 logger = logging.getLogger(__name__)
 
 
+class MongoColumnTest(unittest.TestCase):
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_str_column_cannot_auto_increment(self):
+        with self.assertRaises(Exception) as cm:
+            database_mongo.Column(should_auto_increment=True)
+        self.assertEqual('Only int fields can be auto incremented.', cm.exception.args[0])
+
+
 class SQlAlchemyDatabaseTest(unittest.TestCase):
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -2857,6 +2872,32 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'enum_field': 'Value1',
             })
         )
+
+    def test_post_with_invalid_enum_choice_is_invalid(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                from collections import OrderedDict
+                test_fields = [name for name, model in fields.items()]
+                property_list = []
+                for field_name in test_fields:
+                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
+                        property_list.append(tuple((field_name, {'readOnly': True})))
+                    else:
+                        property_list.append(tuple((field_name, {})))
+
+                model = lambda: None
+                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
+                return model
+
+        self.TestAutoIncrementController.namespace(TestAPI)
+        with self.assertRaises(Exception) as cm:
+            self.TestAutoIncrementController.post({
+                'key': 'my_key',
+                'enum_field': 'InvalidValue',
+            })
+        self.assertEqual({'enum_field': ['Value "InvalidValue" is not within [\'Value1\', \'Value2\'].']}, cm.exception.errors)
+        self.assertEqual({'enum_field': 'InvalidValue'}, cm.exception.received_data)
 
     def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
         class TestAPI:
