@@ -65,7 +65,6 @@ class Column:
         if value is None:
             if not self.is_nullable:
                 return {self.name: ['Missing data for required field.']}
-            model_as_dict[self.name] = self.default_value  # Make sure value is set in any case
             return {}
 
         if self.field_type == datetime.datetime:
@@ -97,6 +96,11 @@ class Column:
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name)
+
+        if value is None:
+            if self.is_nullable:
+                model_as_dict[self.name] = self.default_value  # Make sure value is set in any case
+            return
 
         if self.field_type == datetime.datetime:
             model_as_dict[self.name] = value.isoformat()  # TODO Time Offset is missing to be fully compliant with RFC
