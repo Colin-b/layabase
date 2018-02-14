@@ -2527,6 +2527,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestDictController(database.CRUDController):
         pass
 
+    class TestIndexController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2585,12 +2588,19 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = MyDictColumn(dict, is_nullable=False)
 
+        class TestIndexModel(database_mongo.CRUDModel):
+            __tablename__ = 'index_table_name'
+
+            unique_key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            non_unique_key = database_mongo.Column(datetime.date, index_type=database_mongo.IndexType.NonUnique)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
         cls.TestDateController.model(TestDateModel)
         cls.TestDictController.model(TestDictModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel]
+        cls.TestIndexController.model(TestIndexModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
