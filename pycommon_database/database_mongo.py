@@ -265,15 +265,12 @@ class CRUDModel:
     @classmethod
     def _increment(cls, field_name: str):
         counter_key = {'_id': cls.__collection__.name}
-        counter_element = cls.__counters__.find_one(counter_key)
-        if not counter_element:
-            # counter not created yet, create it with default value 1
-            cls.__counters__.insert_one({'_id': cls.__collection__.name, field_name: 1})
-        elif field_name not in counter_element.keys():
-            cls.__counters__.update_one(counter_key, {'$set': {field_name: 1}})
-        else:
-            cls.__counters__.update_one(counter_key, {'$inc': {field_name: 1}})
-        return cls.__counters__.find_one(counter_key)[field_name]
+        counter_update = {'$inc': {'%s.counter' % field_name: 1},
+                          '$set': {'%s.timestamp' % field_name: datetime.datetime.utcnow().isoformat()}}
+        counter_element = cls.__counters__.find_one_and_update(counter_key, counter_update,
+                                                               return_document=pymongo.ReturnDocument.AFTER,
+                                                               upsert=True)
+        return counter_element[field_name]['counter']
 
     @classmethod
     def update(cls, model_as_dict: dict):
