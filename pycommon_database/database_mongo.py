@@ -39,7 +39,7 @@ class Column:
         :param is_required: bool value. Default to False.
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
         """
-        self.name = None
+        self.name = kwargs.pop('name', None)
         self.field_type = field_type or str
         self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else None
         self.default_value = kwargs.pop('default_value', None)
@@ -61,6 +61,9 @@ class Column:
     def validate(self, model_as_dict: dict) -> dict:
         """
         Validate and deserialize.
+        :param model_as_dict: The model to validate (as Python dictionary) and that will be updated to Mongo valid
+        dictionary
+        :return: Validation errors that might have occurred. Empty if no error occurred.
         """
         value = model_as_dict.get(self.name)
 
@@ -116,22 +119,37 @@ def to_mongo_field(attribute):
 
 
 class CRUDModel:
+    """
+    Class providing CRUD helper methods for a Mongo model.
+    __collection__ class property must be specified in Model.
+    __counters__ class property must be specified in Model.
+    Calling load_from(...) will provide you those properties.
+    """
     __tablename__ = None  # Name of the collection described by this model
-    __collection__ = None
-    __counters__ = None
+    __collection__ = None  # Mongo collection
+    __counters__ = None  # Mongo counters collection (to increment fields)
+    __fields__: List[Column] = None  # All Mongo fields within this model
     audit_model = None
 
     @classmethod
     def _post_init(cls, base):
+        """
+        Finish initializing this model class after it is created and added to proper controller.
+        :param base: Mongo database
+        """
         cls.__collection__ = base[cls.__tablename__]
         cls.__counters__ = base['counters']
+        cls.__fields__ = cls.get_fields()
         cls._create_indexes(IndexType.Unique)
         cls._create_indexes(IndexType.NonUnique)
         if cls.audit_model:
-            cls.audit_model.__collection__ = base[cls.audit_model.__tablename__]
+            cls.audit_model._post_init(base)
 
     @classmethod
     def _create_indexes(cls, index_type: IndexType):
+        """
+        Create indexes of specified type.
+        """
         try:
             criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_index_fields(index_type)]
             if criteria:
@@ -148,7 +166,7 @@ class CRUDModel:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
-        return [field for field in cls.get_fields() if field.index_type == index_type]
+        return [field for field in cls.__fields__ if field.index_type == index_type]
 
     @classmethod
     def get_all(cls, **kwargs) -> list:
@@ -173,13 +191,12 @@ class CRUDModel:
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
-        fields = cls.get_fields()
-        for field in fields:
+        for field in cls.__fields__:
             errors.update(field.validate(new_model_as_dict))
             if field.should_auto_increment and not errors:
                 new_model_as_dict[field.name] = cls._increment(field.name)
 
-        field_names = [field.name for field in fields]
+        field_names = [field.name for field in cls.__fields__]
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
         if unknown_fields:
             for unknown_field in unknown_fields:
@@ -193,7 +210,7 @@ class CRUDModel:
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
-        updated_fields = [field for field in cls.get_fields() if field.name in new_model_as_dict]
+        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
         for field in updated_fields:
             errors.update(field.validate(new_model_as_dict))
 
@@ -208,7 +225,7 @@ class CRUDModel:
 
     @classmethod
     def _serialize(cls, model_as_dict: dict) -> dict:
-        for field in cls.get_fields():
+        for field in cls.__fields__:
             field.serialize(model_as_dict)
         return model_as_dict
 
@@ -302,10 +319,10 @@ class CRUDModel:
 
     @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
-        primary_key_fields = [field.name for field in cls.get_fields() if field.is_primary_key]
+        primary_key_fields = [field.name for field in cls.__fields__ if field.is_primary_key]
         for primary_key in primary_key_fields:
             if primary_key not in model_as_dict:
-                raise Exception(f'{primary_key} is mandatory.')
+                raise ValidationFailed(model_as_dict, {primary_key: ['Missing data for required field.']})
         return {k: v for k, v in model_as_dict.items() if k in primary_key_fields}
 
     @classmethod
@@ -373,7 +390,7 @@ class CRUDModel:
                 readonly=field.should_auto_increment,
                 cls_or_instance=_get_rest_plus_subtype(field)
             )
-            for field in cls.get_fields()
+            for field in cls.__fields__
         }
 
     @classmethod
@@ -389,13 +406,14 @@ class CRUDModel:
                 example='column',
                 description=field.description,
             )
-            for field in cls.get_fields()
+            for field in cls.__fields__
         })
         return exported_fields
 
     @classmethod
     def get_fields(cls) -> List[Column]:
         """
+        Inspect all members and extract Mongo fields.
         :return: list of all Mongo fields (can be empty)
         """
         return [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if isinstance(attribute[1], Column)]

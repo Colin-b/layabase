@@ -1,7 +1,7 @@
 import logging
 import datetime
 import enum
-import inspect
+import copy
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 from pycommon_database.database_mongo import Column
@@ -25,7 +25,7 @@ class AuditModel:
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
 
-        cls._audit_action(action='I', model_as_dict=dict(model_as_dict))
+        cls._audit_action(action='I', model_as_dict=copy.deepcopy(model_as_dict))
 
     @classmethod
     def audit_update(cls, model_as_dict: dict):
@@ -41,9 +41,7 @@ class AuditModel:
     @classmethod
     def audit_remove(cls, **kwargs):
         query = cls._build_query(**kwargs)
-        all_docs = cls._model.__collection__.find(query)
-        removed_dict_models = [removed_dict_model for removed_dict_model in all_docs]
-        for removed_dict_model in removed_dict_models:
+        for removed_dict_model in cls._model.__collection__.find(query):
             cls._audit_action(action='D', model_as_dict=removed_dict_model)
 
     @classmethod
@@ -51,8 +49,8 @@ class AuditModel:
         model_as_dict['audit_user'] = ''
         model_as_dict['audit_date_utc'] = datetime.datetime.utcnow()
         model_as_dict['audit_action'] = action
-        audit_model_as_dict = {k: v for k, v in model_as_dict.items() if k != '_id'}
-        cls.__collection__.insert_one(audit_model_as_dict)
+        model_as_dict.pop('_id', None)
+        cls.__collection__.insert_one(model_as_dict)
 
 
 def create_from(model):
@@ -60,8 +58,7 @@ def create_from(model):
         __tablename__ = f'audit_{model.__tablename__}'
         _model = model
 
-    for attribute in inspect.getmembers(model):
-        if isinstance(attribute[1], Column):
-            setattr(AuditModelForModel, attribute[0], attribute[1])
+    for field in model.get_fields():
+        setattr(AuditModelForModel, field.name, field)
 
     return AuditModelForModel

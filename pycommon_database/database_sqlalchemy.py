@@ -27,7 +27,7 @@ class CRUDModel:
     def _post_init(cls, session):
         cls._session = session
         if cls.audit_model:
-            cls.audit_model._session = session
+            cls.audit_model._post_init(session)
 
     @classmethod
     def get_all(cls, **kwargs):
