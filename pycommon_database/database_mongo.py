@@ -392,7 +392,7 @@ class CRUDModel:
         """
         :return: list of all Mongo fields (can be empty)
         """
-        return [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if type(attribute[1]) == Column]
+        return [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if isinstance(attribute[1], Column)]
 
     @classmethod
     def create_audit(cls):

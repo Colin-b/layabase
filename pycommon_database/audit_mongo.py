@@ -61,7 +61,7 @@ def create_from(model):
         _model = model
 
     for attribute in inspect.getmembers(model):
-        if type(attribute[1]) == Column:
+        if isinstance(attribute[1], Column):
             setattr(AuditModelForModel, attribute[0], attribute[1])
 
     return AuditModelForModel

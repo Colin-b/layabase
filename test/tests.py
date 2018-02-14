@@ -2570,8 +2570,20 @@ class MongoCRUDControllerTest(unittest.TestCase):
         class TestDictModel(database_mongo.CRUDModel):
             __tablename__ = 'dict_table_name'
 
+            class MyDictColumn(database_mongo.Column):
+                def validate(self, model_as_dict: dict):
+                    errors = database_mongo.Column.validate(self, model_as_dict)
+                    if not errors:
+
+                        value = model_as_dict[self.name]
+
+                        if len(value) != 2:
+                            errors.update({self.name: ['Length should be 2.']})
+
+                    return errors
+
             key = database_mongo.Column(str, is_primary_key=True)
-            dict_col = database_mongo.Column(dict)
+            dict_col = MyDictColumn(dict, is_nullable=False)
 
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
@@ -2742,6 +2754,17 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 },
             })
         )
+
+    def test_post_dict_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                },
+            })
+        self.assertEqual({'dict_col': ['Length should be 2.']}, cm.exception.errors)
+        self.assertEqual({'key': 'my_key', 'dict_col': {'first_key': 'my_value'}}, cm.exception.received_data)
 
     def test_post_many_with_optional_is_valid(self):
         self.assertListEqual(
