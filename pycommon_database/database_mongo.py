@@ -172,8 +172,8 @@ class CRUDModel:
         cls.__collection__ = base[cls.__tablename__]
         cls.__counters__ = base['counters']
         cls.__fields__ = cls.get_fields()
-        cls._create_indexes('unique')
-        cls._create_indexes('other')
+        cls._create_indexes(IndexType.Unique)
+        cls._create_indexes(IndexType.Other)
         if cls.audit_model:
             cls.audit_model._post_init(base)
 
@@ -187,7 +187,7 @@ class CRUDModel:
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
-                logger.debug(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
+                logger.info(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
                 cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
@@ -275,6 +275,8 @@ class CRUDModel:
         if not models_as_list_of_dict:
             raise ValidationFailed({}, message='No data provided.')
 
+        new_models_as_list_of_dict = copy.deepcopy(models_as_list_of_dict)
+
         errors = {}
 
         for index, model_as_dict in enumerate(models_as_list_of_dict):
@@ -288,18 +290,16 @@ class CRUDModel:
                 new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
 
             if not errors:
-                models_as_list_of_dict[index] = new_model_as_dict
+                new_models_as_list_of_dict[index] = new_model_as_dict
 
         if errors:
             raise ValidationFailed(models_as_list_of_dict, errors)
 
         try:
-            cls.__collection__.insert_many(models_as_list_of_dict)
-            return [cls._serialize(model) for model in models_as_list_of_dict if model.pop('_id')]
-        except pymongo.errors.BulkWriteError as bulk_error:
-            raise ValidationFailed(models_as_list_of_dict, message=bulk_error._OperationFailure__details['writeErrors'][0]['errmsg'])
-        except Exception:
-            raise
+            cls.__collection__.insert_many(new_models_as_list_of_dict)
+            return [cls._serialize(model) for model in new_models_as_list_of_dict if model.pop('_id')]
+        except pymongo.errors.BulkWriteError as e:
+            raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
 
     @classmethod
     def add(cls, model_as_dict: dict) -> dict:
@@ -316,9 +316,12 @@ class CRUDModel:
         if '_id' in new_model_as_dict:
             new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
 
-        cls.__collection__.insert_one(new_model_as_dict)
-        del new_model_as_dict['_id']
-        return cls._serialize(new_model_as_dict)
+        try:
+            cls.__collection__.insert_one(new_model_as_dict)
+            del new_model_as_dict['_id']
+            return cls._serialize(new_model_as_dict)
+        except pymongo.errors.DuplicateKeyError:
+            raise ValidationFailed(model_as_dict, message='This item already exists.')
 
     @classmethod
     def _increment(cls, field_name: str):
@@ -513,12 +516,12 @@ class NoRelatedModels(Exception):
 
 
 def _reset_collection(base, collection):
+    """
+    Reset collection and keep indexes.
+    """
     logger.info(f'Resetting all data related to "{collection.name}" collection...')
     nb_removed = collection.delete_many({}).deleted_count
     logger.info(f'{nb_removed} records deleted.')
-
-    logger.info(f'Drop collection "{collection.name}".')
-    collection.drop()
 
     logger.info(f'Resetting counters."{collection.name}".')
     nb_removed = base['counters'].delete_many({'_id': collection.name}).deleted_count

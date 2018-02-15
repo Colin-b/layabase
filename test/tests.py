@@ -2709,6 +2709,71 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual({'key': ['Not a valid str.']}, cm.exception.errors)
         self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
 
+    def test_post_twice_with_unique_index_is_invalid(self):
+        self.assertEqual(
+            {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
+            self.TestIndexController.post({
+                'unique_key': 'test',
+                'non_unique_key': '2017-01-01',
+            })
+        )
+        with self.assertRaises(Exception) as cm:
+            self.TestIndexController.post({
+                'unique_key': 'test',
+                'non_unique_key': '2017-01-01',
+            })
+        self.assertEqual({'': ['This item already exists.']}, cm.exception.errors)
+        self.assertEqual({'non_unique_key': '2017-01-01', 'unique_key': 'test'}, cm.exception.received_data)
+
+    def test_post_many_with_same_unique_index_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIndexController.post_many([
+                {
+                    'unique_key': 'test',
+                    'non_unique_key': '2017-01-01',
+                },
+                {
+                    'unique_key': 'test',
+                    'non_unique_key': '2017-01-01',
+                }
+            ])
+        self.assertEqual({'': ['batch op errors occurred']}, cm.exception.errors)
+        self.assertEqual([
+                {
+                    'unique_key': 'test',
+                    'non_unique_key': '2017-01-01',
+                },
+                {
+                    'unique_key': 'test',
+                    'non_unique_key': '2017-01-01',
+                }
+            ],
+            cm.exception.received_data)
+
+    def test_post_different_unique_index_is_valid(self):
+        self.assertEqual(
+            {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
+            self.TestIndexController.post({
+                'unique_key': 'test',
+                'non_unique_key': '2017-01-01',
+            })
+        )
+        self.assertEqual(
+            {'non_unique_key': '2017-01-01', 'unique_key': 'test2'},
+            self.TestIndexController.post({
+                'unique_key': 'test2',
+                'non_unique_key': '2017-01-01',
+            })
+        )
+        self.assertEqual(
+            [
+                {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
+                {'non_unique_key': '2017-01-01', 'unique_key': 'test2'},
+            ],
+            self.TestIndexController.get({})
+        )
+
+
     def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([{
