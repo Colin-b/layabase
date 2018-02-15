@@ -2805,6 +2805,22 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_get_with_non_nullable_None_is_valid(self):
+        self.assertEqual(
+            {'mandatory': 1, 'key': 'my_key', 'optional': None},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+            })
+        )
+        self.assertEqual(
+            [{'mandatory': 1, 'key': 'my_key', 'optional': None}],
+            self.TestController.get({
+                'key': 'my_key',
+                'mandatory': None,
+            })
+        )
+
     def test_post_many_without_optional_is_valid(self):
         self.assertEqual(
             [
