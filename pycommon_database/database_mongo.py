@@ -59,19 +59,42 @@ class Column:
     def __str__(self):
         return f'{self.name}'
 
-    def validate(self, model_as_dict: dict, check_nullable=True) -> dict:
+    def validate_query(self, model_as_dict: dict):
+        value = model_as_dict.get(self.name)
+        if value is None:
+            return {}
+        return self._validate_value(value)
+
+    def validate_insert(self, model_as_dict: dict):
         """
-        Validate.
-        :param model_as_dict: The model to validate (as Python dictionary). Unmodified.
-        :return: Validation errors that might have occurred. Empty if no error occurred.
+        Validate data on insert.
+        Even if this method is the same one as validate_update, users with a custom field type might want
+        to perform a different validation in case of insert and update (typically checking for missing fields)
         """
         value = model_as_dict.get(self.name)
-
         if value is None:
-            if check_nullable and not self.is_nullable:
+            if not self.is_nullable:
                 return {self.name: ['Missing data for required field.']}
             return {}
+        return self._validate_value(value)
 
+    def validate_update(self, model_as_dict: dict):
+        """
+        Validate data on update.
+        Even if this method is the same one as validate_insert, users with a custom field type might want
+        to perform a different validation in case of insert and update (typically not checking for missing fields)
+        """
+        value = model_as_dict.get(self.name)
+        if value is None:
+            if not self.is_nullable:
+                return {self.name: ['Missing data for required field.']}
+            return {}
+        return self._validate_value(value)
+
+    def _validate_value(self, value) -> dict:
+        """
+        :return: Validation errors that might have occurred. Empty if no error occurred.
+        """
         if self.field_type == datetime.datetime:
             if isinstance(value, str):
                 try:
@@ -207,13 +230,33 @@ class CRUDModel:
         """
         limit = kwargs.pop('limit', 0) or 0
         offset = kwargs.pop('offset', 0) or 0
-        model_to_query, errors = cls._validate_update(kwargs, check_nullable=False)
+        model_to_query, errors = cls._validate_query(kwargs)
         if errors:
             raise ValidationFailed(kwargs, errors)
 
         query = cls._build_query(**model_to_query)
         models = cls.__collection__.find(query, projection={'_id': False}, skip=offset, limit=limit)
         return [cls._serialize(model) for model in models]  # Convert Cursor to dict
+
+    @classmethod
+    def _validate_query(cls, model_as_dict: dict) -> (dict, dict):
+        new_model_as_dict = copy.deepcopy(model_as_dict)
+        errors = {}
+
+        queried_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
+        for field in queried_fields:
+            errors.update(field.validate_query(new_model_as_dict))
+            if not errors:
+                field.deserialize(new_model_as_dict)
+
+        queried_fields_names = [field.name for field in queried_fields]
+        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in queried_fields_names]
+        if unknown_fields:
+            for unknown_field in unknown_fields:
+                del new_model_as_dict[unknown_field]
+            logger.warning(f'Skipping unknown fields {unknown_fields}.')
+
+        return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
     def _validate_insert(cls, model_as_dict: dict) -> (dict, dict):
@@ -224,7 +267,7 @@ class CRUDModel:
         errors = {}
 
         for field in cls.__fields__:
-            errors.update(field.validate(new_model_as_dict))
+            errors.update(field.validate_insert(new_model_as_dict))
             if not errors:
                 field.deserialize(new_model_as_dict)
                 if field.should_auto_increment:
@@ -240,13 +283,13 @@ class CRUDModel:
         return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
-    def _validate_update(cls, model_as_dict: dict, check_nullable=True) -> (dict, dict):
+    def _validate_update(cls, model_as_dict: dict) -> (dict, dict):
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
         updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
         for field in updated_fields:
-            errors.update(field.validate(new_model_as_dict, check_nullable))
+            errors.update(field.validate_update(new_model_as_dict))
             if not errors:
                 field.deserialize(new_model_as_dict)
 
@@ -375,7 +418,11 @@ class CRUDModel:
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.
         """
-        query = cls._build_query(**kwargs)
+        model_to_query, errors = cls._validate_query(kwargs)
+        if errors:
+            raise ValidationFailed(kwargs, errors)
+
+        query = cls._build_query(**model_to_query)
         nb_removed = cls.__collection__.delete_many(query).deleted_count
         return nb_removed
 

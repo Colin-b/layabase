@@ -2589,15 +2589,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             __tablename__ = 'dict_table_name'
 
             class MyDictColumn(database_mongo.Column):
-                def validate(self, model_as_dict: dict):
-                    errors = database_mongo.Column.validate(self, model_as_dict)
+                def _validate_value(self, value):
+                    errors = database_mongo.Column._validate_value(self, value)
                     if not errors:
-
-                        value = model_as_dict[self.name]
-
                         if len(value) != 2:
                             errors.update({self.name: ['Length should be 2.']})
-
                     return errors
 
             key = database_mongo.Column(str, is_primary_key=True)
