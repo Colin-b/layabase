@@ -7,6 +7,7 @@ from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from flask_restplus import fields as flask_rest_plus_fields, inputs
 from threading import Thread
 import time
+import enum
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -2529,6 +2530,11 @@ class FlaskRestPlusErrorsTest(unittest.TestCase):
             pass
 
 
+class EnumTest(enum.Enum):
+    Value1 = 1
+    Value2 = 2
+
+
 class MongoCRUDControllerTest(unittest.TestCase):
     class TestController(database.CRUDController):
         pass
@@ -2558,11 +2564,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
     @classmethod
     def _create_models(cls, base):
         logger.info('Declare model class...')
-
-        from enum import Enum, auto
-        class EnumTest(Enum):
-            Value1 = auto()
-            Value2 = auto()
 
         class TestModel(database_mongo.CRUDModel):
             __tablename__ = 'sample_table_name'
@@ -2769,7 +2770,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestIndexController.get({})
         )
 
-
     def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([{
@@ -2791,6 +2791,34 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         self.assertEqual({'mandatory': ['Not a valid int.']}, cm.exception.errors)
         self.assertEqual({'key': 'value1', 'mandatory': 'invalid value'}, cm.exception.received_data)
+
+    def test_put_with_optional_as_None_is_valid(self):
+        self.TestController.post({
+            'key': 'value1',
+            'mandatory': 1,
+        })
+        self.TestController.put({
+            'key': 'value1',
+            'mandatory': 1,
+            'optional': None,
+        })
+        self.assertEqual(
+            [{'mandatory': 1, 'key': 'value1', 'optional': None}],
+            self.TestController.get({})
+        )
+
+    def test_put_with_non_nullable_as_None_is_invalid(self):
+        self.TestController.post({
+            'key': 'value1',
+            'mandatory': 1,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestController.put({
+                'key': 'value1',
+                'mandatory': None,
+            })
+        self.assertEqual({'mandatory': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'key': 'value1', 'mandatory': None}, cm.exception.received_data)
 
     def test_post_without_optional_is_valid(self):
         self.assertEqual(
@@ -2947,6 +2975,32 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestAutoIncrementController.post({
                 'key': 'my_key',
                 'enum_field': 'Value1',
+            })
+        )
+
+    def test_post_with_enum_is_valid(self):
+        class TestAPI:
+            @classmethod
+            def model(cls, name, fields):
+                from collections import OrderedDict
+                test_fields = [name for name, model in fields.items()]
+                property_list = []
+                for field_name in test_fields:
+                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
+                        property_list.append(tuple((field_name, {'readOnly': True})))
+                    else:
+                        property_list.append(tuple((field_name, {})))
+
+                model = lambda: None
+                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
+                return model
+
+        self.TestAutoIncrementController.namespace(TestAPI)
+        self.assertEqual(
+            {'optional_with_default': 'Test value', 'key': 1, 'enum_field': 'Value1'},
+            self.TestAutoIncrementController.post({
+                'key': 'my_key',
+                'enum_field': EnumTest.Value1,
             })
         )
 
@@ -3174,6 +3228,50 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ],
             self.TestDateController.get({
                 'date_str': d,
+            })
+        )
+
+    def test_post_invalid_date_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestDateController.post({
+                'key': 'my_key1',
+                'date_str': 'this is not a date',
+                'datetime_str': '2016-09-23T23:59:59',
+            })
+        self.assertEqual({'date_str': ['Not a valid date.']}, cm.exception.errors)
+        self.assertEqual({
+                'key': 'my_key1',
+                'date_str': 'this is not a date',
+                'datetime_str': '2016-09-23T23:59:59',
+            },
+            cm.exception.received_data)
+
+    def test_post_invalid_datetime_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestDateController.post({
+                'key': 'my_key1',
+                'date_str': '2016-09-23',
+                'datetime_str': 'This is not a valid datetime',
+            })
+        self.assertEqual({'datetime_str': ['Not a valid datetime.']}, cm.exception.errors)
+        self.assertEqual({
+                'key': 'my_key1',
+                'date_str': '2016-09-23',
+                'datetime_str': 'This is not a valid datetime',
+            },
+            cm.exception.received_data)
+
+    def test_post_datetime_for_a_date_is_valid(self):
+        self.assertEqual(
+            {
+                'key': 'my_key1',
+                'date_str': '2017-05-01',
+                'datetime_str': '2017-05-30T01:05:45',
+            },
+            self.TestDateController.post({
+                'key': 'my_key1',
+                'date_str': datetime.datetime.strptime('2017-05-01T01:05:45', '%Y-%m-%dT%H:%M:%S'),
+                'datetime_str': '2017-05-30T01:05:45',
             })
         )
 

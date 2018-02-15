@@ -125,8 +125,8 @@ class Column:
         """
         value = model_as_dict.get(self.name)
 
-        # Ensure that None value are not stored to save space
         if value is None:
+            # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
 
