@@ -16,6 +16,11 @@ from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCould
 logger = logging.getLogger(__name__)
 
 
+class IndexType(enum.Enum):
+    Unique = enum.auto()
+    NonUnique = enum.auto()
+
+
 class Column:
     """
     Definition of a Mondo Database field.
@@ -28,7 +33,7 @@ class Column:
 
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
-        :param index_type: Type of index amongst 'unique' or 'other'. Default to None.
+        :param index_type: Type of index amongst IndexType enum. Default to None.
         :param is_primary_key: bool value. Default to False.
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
@@ -53,7 +58,7 @@ class Column:
     def __str__(self):
         return f'{self.name}'
 
-    def validate(self, model_as_dict: dict, check_nullable=True) -> dict:
+    def validate(self, model_as_dict: dict) -> dict:
         """
         Validate and deserialize.
         :param model_as_dict: The model to validate (as Python dictionary) and that will be updated to Mongo valid
@@ -63,7 +68,7 @@ class Column:
         value = model_as_dict.get(self.name)
 
         if value is None:
-            if check_nullable and not self.is_nullable:
+            if not self.is_nullable:
                 return {self.name: ['Missing data for required field.']}
             return {}
 
@@ -133,13 +138,13 @@ class CRUDModel:
         cls.__collection__ = base[cls.__tablename__]
         cls.__counters__ = base['counters']
         cls.__fields__ = cls.get_fields()
-        cls._create_indexes('unique')
-        cls._create_indexes('other')
+        cls._create_indexes(IndexType.Unique)
+        cls._create_indexes(IndexType.NonUnique)
         if cls.audit_model:
             cls.audit_model._post_init(base)
 
     @classmethod
-    def _create_indexes(cls, index_type: str):
+    def _create_indexes(cls, index_type: IndexType):
         """
         Create indexes of specified type.
         """
@@ -147,15 +152,15 @@ class CRUDModel:
             criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_index_fields(index_type)]
             if criteria:
                 # Avoid using auto generated index name that might be too long
-                index_name = f'uidx{cls.__collection__.name}' if index_type == 'unique' else f'idx{cls.__collection__.name}'
+                index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
                 logger.debug(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
-                cls.__collection__.create_index(criteria, unique=index_type == 'unique', name=index_name)
+                cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
             raise
 
     @classmethod
-    def get_index_fields(cls, index_type: str) -> List[Column]:
+    def get_index_fields(cls, index_type: IndexType) -> List[Column]:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
@@ -166,9 +171,9 @@ class CRUDModel:
         """
         Return all models formatted as a list of dictionaries.
         """
-        limit = kwargs.pop('limit', 0) or 0
-        offset = kwargs.pop('offset', 0) or 0
-        model_to_query, errors = cls._validate_update(kwargs, check_nullable=False)
+        limit = kwargs.pop('limit', 0)
+        offset = kwargs.pop('offset', 0)
+        model_to_query, errors = cls._validate_update(kwargs)
         if errors:
             raise ValidationFailed(kwargs, errors)
 
@@ -199,13 +204,13 @@ class CRUDModel:
         return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
-    def _validate_update(cls, model_as_dict: dict, check_nullable=True) -> (dict, dict):
+    def _validate_update(cls, model_as_dict: dict) -> (dict, dict):
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
         updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
         for field in updated_fields:
-            errors.update(field.validate(new_model_as_dict, check_nullable))
+            errors.update(field.validate(new_model_as_dict))
 
         updated_field_names = [field.name for field in updated_fields]
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
@@ -250,13 +255,8 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(models_as_list_of_dict, errors)
 
-        try:
-            cls.__collection__.insert_many(models_as_list_of_dict)
-            return [cls._serialize(model) for model in models_as_list_of_dict if model.pop('_id')]
-        except pymongo.errors.BulkWriteError as bulk_error:
-            raise ValidationFailed(models_as_list_of_dict, message=bulk_error._OperationFailure__details['writeErrors'][0]['errmsg'])
-        except Exception:
-            raise
+        cls.__collection__.insert_many(models_as_list_of_dict)
+        return [cls._serialize(model) for model in models_as_list_of_dict if model.pop('_id')]
 
     @classmethod
     def add(cls, model_as_dict: dict) -> dict:
