@@ -16,6 +16,12 @@ from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCould
 logger = logging.getLogger(__name__)
 
 
+@enum.unique
+class IndexType(enum.IntEnum):
+    Unique = 1
+    Other = 2
+
+
 class Column:
     """
     Definition of a Mondo Database field.
@@ -28,7 +34,7 @@ class Column:
 
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
-        :param index_type: Type of index amongst 'unique' or 'other'. Default to None.
+        :param index_type: Type of index amongst IndexType enum. Default to None.
         :param is_primary_key: bool value. Default to False.
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
@@ -55,9 +61,8 @@ class Column:
 
     def validate(self, model_as_dict: dict, check_nullable=True) -> dict:
         """
-        Validate and deserialize.
-        :param model_as_dict: The model to validate (as Python dictionary) and that will be updated to Mongo valid
-        dictionary
+        Validate.
+        :param model_as_dict: The model to validate (as Python dictionary). Unmodified.
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
         value = model_as_dict.get(self.name)
@@ -69,28 +74,60 @@ class Column:
 
         if self.field_type == datetime.datetime:
             if isinstance(value, str):
-                value = dateutil.parser.parse(value)
-                model_as_dict[self.name] = value
-        if self.field_type == datetime.date:
+                try:
+                    value = dateutil.parser.parse(value)
+                except:
+                    return {self.name: ['Not a valid datetime.']}
+        elif self.field_type == datetime.date:
             if isinstance(value, str):
-                value = dateutil.parser.parse(value).date()
-        if isinstance(self.field_type, enum.EnumMeta):
+                try:
+                    value = dateutil.parser.parse(value).date()
+                except:
+                    return {self.name: ['Not a valid date.']}
+        elif isinstance(self.field_type, enum.EnumMeta):
             if isinstance(value, str):
                 if value not in self.choices:
                     return {self.name: [f'Value "{value}" is not within {self.choices}.']}
-                value = self.field_type[value]
+                return {}  # Consider string values valid for Enum type
 
         if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
 
-        # dates cannot be stored in Mongo, use datetime instead
-        if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
-            model_as_dict[self.name] = datetime.datetime.combine(value, datetime.datetime.min.time())
-        # Enum cannot be stored in Mongo, use str instead
-        if isinstance(value, enum.Enum):
-            model_as_dict[self.name] = value.name
-
         return {}
+
+    def deserialize(self, model_as_dict: dict):
+        """
+        Ensure that every value within model is properly typed so that insertion in Mongo can be performed.
+        :param model_as_dict: Model with modified values if required.
+        """
+        value = model_as_dict.get(self.name)
+
+        # Ensure that None value are not stored to save space
+        if value is None:
+            model_as_dict.pop(self.name, None)
+            return
+
+        if self.field_type == datetime.datetime:
+            if isinstance(value, str):
+                value = dateutil.parser.parse(value)
+        elif self.field_type == datetime.date:
+            if isinstance(value, str):
+                value = dateutil.parser.parse(value)
+            elif isinstance(value, datetime.date):
+                # dates cannot be stored in Mongo, use datetime instead
+                if not isinstance(value, datetime.datetime):
+                    value = datetime.datetime.combine(value, datetime.datetime.min.time())
+                # Ensure that time is not something else than midnight
+                else:
+                    value = datetime.datetime.combine(value.date(), datetime.datetime.min.time())
+        elif isinstance(self.field_type, enum.EnumMeta):
+            # Enum cannot be stored in Mongo, use enum value instead
+            if isinstance(value, enum.Enum):
+                value = value.value
+            elif isinstance(value, str):
+                value = self.field_type[value].value
+
+        model_as_dict[self.name] = value
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name)
@@ -102,8 +139,10 @@ class Column:
 
         if self.field_type == datetime.datetime:
             model_as_dict[self.name] = value.isoformat()  # TODO Time Offset is missing to be fully compliant with RFC
-        if self.field_type == datetime.date:
+        elif self.field_type == datetime.date:
             model_as_dict[self.name] = value.date().isoformat()
+        elif isinstance(self.field_type, enum.EnumMeta):
+            model_as_dict[self.name] = self.field_type(value).name
 
 
 def to_mongo_field(attribute):
@@ -139,7 +178,7 @@ class CRUDModel:
             cls.audit_model._post_init(base)
 
     @classmethod
-    def _create_indexes(cls, index_type: str):
+    def _create_indexes(cls, index_type: IndexType):
         """
         Create indexes of specified type.
         """
@@ -147,15 +186,15 @@ class CRUDModel:
             criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_index_fields(index_type)]
             if criteria:
                 # Avoid using auto generated index name that might be too long
-                index_name = f'uidx{cls.__collection__.name}' if index_type == 'unique' else f'idx{cls.__collection__.name}'
+                index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
                 logger.debug(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
-                cls.__collection__.create_index(criteria, unique=index_type == 'unique', name=index_name)
+                cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
             raise
 
     @classmethod
-    def get_index_fields(cls, index_type: str) -> List[Column]:
+    def get_index_fields(cls, index_type: IndexType) -> List[Column]:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
@@ -186,8 +225,10 @@ class CRUDModel:
 
         for field in cls.__fields__:
             errors.update(field.validate(new_model_as_dict))
-            if field.should_auto_increment and not errors:
-                new_model_as_dict[field.name] = cls._increment(field.name)
+            if not errors:
+                field.deserialize(new_model_as_dict)
+                if field.should_auto_increment:
+                    new_model_as_dict[field.name] = cls._increment(field.name)
 
         field_names = [field.name for field in cls.__fields__]
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
@@ -206,6 +247,8 @@ class CRUDModel:
         updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
         for field in updated_fields:
             errors.update(field.validate(new_model_as_dict, check_nullable))
+            if not errors:
+                field.deserialize(new_model_as_dict)
 
         updated_field_names = [field.name for field in updated_fields]
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
