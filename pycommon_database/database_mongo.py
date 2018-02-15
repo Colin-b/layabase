@@ -74,11 +74,13 @@ class Column:
         if self.field_type == datetime.date:
             if isinstance(value, str):
                 value = dateutil.parser.parse(value).date()
+        if isinstance(self.field_type, enum.EnumMeta):
+            if isinstance(value, str):
+                if value not in self.choices:
+                    return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+                value = self.field_type[value]
 
-        if self.choices and value not in self.choices:
-            return {self.name: [f'Value "{value} of type {self.field_type.__name__}" is not within {self.choices}.']}
-
-        if not self.choices and not isinstance(value, self.field_type):
+        if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
 
         # dates cannot be stored in Mongo, use datetime instead
