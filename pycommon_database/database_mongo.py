@@ -56,7 +56,7 @@ class Column:
         self.is_nullable = bool(kwargs.pop('is_nullable', True))
         if not self.is_nullable:
             if self.should_auto_increment:
-                raise Exception('A field cannnot be mandatory and auto incremented at the same time.')
+                raise Exception('A field cannot be mandatory and auto incremented at the same time.')
             if self.default_value:
                 raise Exception('A field cannot be mandatory and having a default value at the same time.')
         else:
@@ -162,6 +162,10 @@ class Column:
             elif isinstance(value, str):
                 value = self.field_type[value].value
 
+        if self.name == '_id':
+            if not isinstance(value, ObjectId):
+                value = ObjectId(value)
+
         model_as_dict[self.name] = value
 
     def serialize(self, model_as_dict: dict):
@@ -178,6 +182,9 @@ class Column:
             model_as_dict[self.name] = value.date().isoformat()
         elif isinstance(self.field_type, enum.EnumMeta):
             model_as_dict[self.name] = self.field_type(value).name
+
+        if self.name == '_id':
+            model_as_dict[self.name] = str(value)
 
 
 def to_mongo_field(attribute):
@@ -246,8 +253,7 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(kwargs, errors)
 
-        query = cls._build_query(**model_to_query)
-        models = cls.__collection__.find(query, projection={'_id': False}, skip=offset, limit=limit)
+        models = cls.__collection__.find(model_to_query, skip=offset, limit=limit)
         return [cls._serialize(model) for model in models]  # Convert Cursor to dict
 
     @classmethod
@@ -336,6 +342,16 @@ class CRUDModel:
     def _serialize(cls, model_as_dict: dict) -> dict:
         for field in cls.__fields__:
             field.serialize(model_as_dict)
+
+        # Make sure fields that were stored in a previous version of a model are not returned if removed since then
+        # It also ensure _id can be skipped unless specified otherwise in the model
+        known_fields = [field.name for field in cls.__fields__]
+        removed_fields = [field_name for field_name in model_as_dict if field_name not in known_fields]
+        if removed_fields:
+            for removed_field in removed_fields:
+                del model_as_dict[removed_field]
+            logger.debug(f'Skipping removed fields {removed_fields}.')
+
         return model_as_dict
 
     @classmethod
@@ -358,10 +374,6 @@ class CRUDModel:
                 errors[index] = model_errors
                 continue
 
-            # if _id present in a document, convert it to ObjectId
-            if '_id' in new_model_as_dict:
-                new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
-
             if not errors:
                 new_models_as_list_of_dict[index] = new_model_as_dict
 
@@ -370,7 +382,7 @@ class CRUDModel:
 
         try:
             cls.__collection__.insert_many(new_models_as_list_of_dict)
-            return [cls._serialize(model) for model in new_models_as_list_of_dict if model.pop('_id')]
+            return [cls._serialize(model) for model in new_models_as_list_of_dict]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
 
@@ -385,13 +397,8 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(model_as_dict, errors)
 
-        # if _id present in a document, convert it to ObjectId
-        if '_id' in new_model_as_dict:
-            new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
-
         try:
             cls.__collection__.insert_one(new_model_as_dict)
-            del new_model_as_dict['_id']
             return cls._serialize(new_model_as_dict)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(model_as_dict, message='This item already exists.')
@@ -421,9 +428,6 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(model_as_dict, errors)
 
-        # if _id present in a document, convert it to ObjectId
-        if '_id' in new_model_as_dict:
-            new_model_as_dict['_id'] = ObjectId(new_model_as_dict['_id'])
         model_as_dict_keys = cls._to_primary_keys_model(new_model_as_dict)
         previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
         if not previous_model_as_dict:
@@ -431,16 +435,14 @@ class CRUDModel:
 
         model_as_dict_updates = {k: v for k, v in new_model_as_dict.items() if k not in model_as_dict_keys}
         cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
-        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
+        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
         return cls._serialize(previous_model_as_dict), cls._serialize(new_model_as_dict)
 
     @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
-        primary_key_fields = [field.name for field in cls.__fields__ if field.is_primary_key]
-        for primary_key in primary_key_fields:
-            if primary_key not in model_as_dict:
-                raise ValidationFailed(model_as_dict, {primary_key: ['Missing data for required field.']})
-        return {k: v for k, v in model_as_dict.items() if k in primary_key_fields}
+        primary_key_field_names = [field.name for field in cls.__fields__ if field.is_primary_key]
+        return {field_name: value for field_name, value in model_as_dict.items() if
+                field_name in primary_key_field_names}
 
     @classmethod
     def remove(cls, **kwargs) -> int:
@@ -452,13 +454,8 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(kwargs, errors)
 
-        query = cls._build_query(**model_to_query)
-        nb_removed = cls.__collection__.delete_many(query).deleted_count
+        nb_removed = cls.__collection__.delete_many(model_to_query).deleted_count
         return nb_removed
-
-    @staticmethod
-    def _build_query(**kwargs) -> dict:
-        return {key: ObjectId(value) if key == '_id' else value for key, value in kwargs.items() if value is not None}
 
     @classmethod
     def query_get_parser(cls):

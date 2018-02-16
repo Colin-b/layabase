@@ -34,6 +34,16 @@ class MongoColumnTest(unittest.TestCase):
             database_mongo.Column(should_auto_increment=True)
         self.assertEqual('Only int fields can be auto incremented.', cm.exception.args[0])
 
+    def test_auto_incremented_field_cannot_be_non_nullable(self):
+        with self.assertRaises(Exception) as cm:
+            database_mongo.Column(int, should_auto_increment=True, is_nullable=False)
+        self.assertEqual('A field cannot be mandatory and auto incremented at the same time.', cm.exception.args[0])
+
+    def test_field_with_default_value_cannot_be_non_nullable(self):
+        with self.assertRaises(Exception) as cm:
+            database_mongo.Column(default_value='test', is_nullable=False)
+        self.assertEqual('A field cannot be mandatory and having a default value at the same time.', cm.exception.args[0])
+
 
 class SQlAlchemyDatabaseTest(unittest.TestCase):
     def setUp(self):
@@ -2918,6 +2928,29 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_put_without_primary_key_is_invalid(self):
+        self.TestDictController.post({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': 'my_value',
+                'second_key': 3,
+            },
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestDictController.put({
+                'dict_col': {
+                    'first_key': 'my_value2',
+                    'second_key': 4,
+                },
+            })
+        self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({
+                'dict_col': {
+                    'first_key': 'my_value2',
+                    'second_key': 4,
+                },
+            }, cm.exception.received_data)
+
     def test_post_dict_with_dot_notation_is_valid(self):
         self.assertEqual(
             {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
@@ -3310,6 +3343,103 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'datetime_str': '2016-09-23T23:59:59',
             },
             cm.exception.received_data)
+
+    def test_get_invalid_date_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestDateController.get({
+                'date_str': 'this is not a date',
+            })
+        self.assertEqual({'date_str': ['Not a valid date.']}, cm.exception.errors)
+        self.assertEqual({
+                'date_str': 'this is not a date',
+            },
+            cm.exception.received_data)
+
+    def test_delete_invalid_date_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestDateController.delete({
+                'date_str': 'this is not a date',
+            })
+        self.assertEqual({'date_str': ['Not a valid date.']}, cm.exception.errors)
+        self.assertEqual({
+                'date_str': 'this is not a date',
+            },
+            cm.exception.received_data)
+
+    def test_get_with_unknown_fields_is_valid(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2018-12-30',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        self.assertEqual(
+            [{
+                'key': 'my_key1',
+                'date_str': '2018-12-30',
+                'datetime_str': '2016-09-23T23:59:59',
+            }],
+            self.TestDateController.get({
+                'date_str': '2018-12-30',
+                'unknown_field': 'value',
+            })
+        )
+
+    def test_put_with_unknown_fields_is_valid(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2018-12-30',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        self.assertEqual(
+            (
+                {
+                    'key': 'my_key1',
+                    'date_str': '2018-12-30',
+                    'datetime_str': '2016-09-23T23:59:59',
+                },
+                {
+                    'key': 'my_key1',
+                    'date_str': '2018-12-31',
+                    'datetime_str': '2016-09-23T23:59:59',
+                }
+            ),
+            self.TestDateController.put({
+                'key': 'my_key1',
+                'date_str': '2018-12-31',
+                'unknown_field': 'value',
+            })
+        )
+        self.assertEqual(
+            [{
+                'key': 'my_key1',
+                'date_str': '2018-12-31',
+                'datetime_str': '2016-09-23T23:59:59',
+            }],
+            self.TestDateController.get({
+                'date_str': '2018-12-31',
+            })
+        )
+        self.assertEqual(
+            [],
+            self.TestDateController.get({
+                'date_str': '2018-12-30',
+            })
+        )
+
+    def test_put_unexisting_is_invalid(self):
+        self.TestDateController.post({
+            'key': 'my_key1',
+            'date_str': '2018-12-30',
+            'datetime_str': '2016-09-23T23:59:59',
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestDateController.put({
+                'key': 'my_key2',
+            })
+        self.assertEqual({
+                'key': 'my_key2',
+            },
+            cm.exception.requested_data)
 
     def test_post_invalid_datetime_is_invalid(self):
         with self.assertRaises(Exception) as cm:
