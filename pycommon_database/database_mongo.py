@@ -125,7 +125,7 @@ class Column:
         """
         value = model_as_dict.get(self.name)
 
-        if value is None:
+        if value is None and not (self.is_primary_key and self.is_nullable):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
@@ -286,6 +286,12 @@ class CRUDModel:
     def _validate_update(cls, model_as_dict: dict) -> (dict, dict):
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
+
+        # primary key is mandatory in an update:
+        # add missing primary keys if they are nullable, using their default value
+        missing_primary_keys = [field for field in cls.__fields__ if field.name not in model_as_dict and field.is_primary_key and field.is_nullable]
+        for missing_primary_key in missing_primary_keys:
+            new_model_as_dict[missing_primary_key.name] = missing_primary_key.default_value
 
         updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
         for field in updated_fields:
