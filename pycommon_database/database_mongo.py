@@ -286,9 +286,8 @@ class CRUDModel:
                 known_field_name, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
                 del new_model_as_dict[unknown_field]
                 if known_field_name:
-                    new_value = new_model_as_dict.get(known_field_name, {})
-                    new_value.update(field_value)
-                    new_model_as_dict[known_field_name] = new_value
+                    previous_dict = new_model_as_dict.setdefault(known_field_name, {})
+                    previous_dict.update(field_value)
                 else:
                     logger.warning(f'Skipping unknown field {unknown_field}.')
 
