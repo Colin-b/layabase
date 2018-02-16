@@ -266,13 +266,6 @@ class CRUDModel:
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
-        for field in cls.__fields__:
-            errors.update(field.validate_insert(new_model_as_dict))
-            if not errors:
-                field.deserialize(new_model_as_dict)
-                if field.should_auto_increment:
-                    new_model_as_dict[field.name] = cls._increment(field.name)
-
         field_names = [field.name for field in cls.__fields__]
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
         if unknown_fields:
@@ -290,6 +283,13 @@ class CRUDModel:
                 else:
                     logger.warning(f'Skipping unknown field {unknown_field}.')
 
+        for field in cls.__fields__:
+            errors.update(field.validate_insert(new_model_as_dict))
+            if not errors:
+                field.deserialize(new_model_as_dict)
+                if field.should_auto_increment:
+                    new_model_as_dict[field.name] = cls._increment(field.name)
+
         return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
@@ -303,21 +303,21 @@ class CRUDModel:
         for missing_primary_key in missing_primary_keys:
             new_model_as_dict[missing_primary_key.name] = missing_primary_key.default_value
 
-        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
-        for field in updated_fields:
-            errors.update(field.validate_update(new_model_as_dict))
-            if not errors:
-                field.deserialize(new_model_as_dict)
-
-        updated_field_names = [field.name for field in updated_fields]
+        updated_field_names = [field.name for field in cls.__fields__ if field.name in new_model_as_dict]
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
         if unknown_fields:
             for unknown_field in unknown_fields:
                 # allow mongo dot notation to access sub-documents if field is of dict type
                 dot_nota_field_list = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
-                if not dot_nota_field_dict:
+                if not dot_nota_field_list:
                     del new_model_as_dict[unknown_field]
                     logger.warning(f'Skipping unknown field {unknown_field}.')
+
+        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
+        for field in updated_fields:
+            errors.update(field.validate_update(new_model_as_dict))
+            if not errors:
+                field.deserialize(new_model_as_dict)
 
         return model_as_dict if errors else new_model_as_dict, errors
 
