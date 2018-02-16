@@ -298,7 +298,7 @@ class CRUDModel:
         return cls.audit_model
 
 
-def load(database_connection_url: str, create_models_func: callable, **kwargs):
+def _load(database_connection_url: str, create_models_func: callable, **kwargs):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
@@ -307,10 +307,6 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
      (Mandatory).
     :param pool_recycle: Number of seconds to wait before recycling a connection pool. Default value is 60.
     """
-    if not database_connection_url:
-        raise NoDatabaseProvided()
-    if not create_models_func:
-        raise NoRelatedModels()
     database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f'Connecting to {database_connection_url}...')
     logger.debug(f'Creating engine...')
@@ -349,7 +345,7 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     return base
 
 
-def reset(base):
+def _reset(base):
     """
     If the database was already created, then drop all tables and recreate them all.
     """
@@ -370,16 +366,6 @@ def _models_field_values(model_instances: list):
     if not model_instances:
         return []
     return model_instances[0].schema().dump(model_instances, many=True).data
-
-
-class NoDatabaseProvided(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'A database connection URL must be provided.')
-
-
-class NoRelatedModels(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
 class MultiSchemaNotSupported(Exception):

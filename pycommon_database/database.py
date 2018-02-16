@@ -5,7 +5,17 @@ logger = logging.getLogger(__name__)
 
 
 def _is_mongo(database_connection_url: str) -> bool:
-    return database_connection_url and database_connection_url.startswith('mongo')
+    return database_connection_url.startswith('mongo')
+
+
+class NoDatabaseProvided(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'A database connection URL must be provided.')
+
+
+class NoRelatedModels(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
 def load(database_connection_url: str, create_models_func: callable, **kwargs):
@@ -17,12 +27,17 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
      (Mandatory).
     :param kwargs: Additional custom parameters.
     """
+    if not database_connection_url:
+        raise NoDatabaseProvided()
+    if not create_models_func:
+        raise NoRelatedModels()
+
     if _is_mongo(database_connection_url):
         import pycommon_database.database_mongo as database_mongo
-        return database_mongo.load(database_connection_url, create_models_func)
+        return database_mongo._load(database_connection_url, create_models_func)
 
     import pycommon_database.database_sqlalchemy as database_sqlalchemy
-    return database_sqlalchemy.load(database_connection_url, create_models_func, **kwargs)
+    return database_sqlalchemy._load(database_connection_url, create_models_func, **kwargs)
 
 
 def reset(base):
@@ -31,10 +46,10 @@ def reset(base):
     """
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        database_mongo.reset(base)
+        database_mongo._reset(base)
     else:
         import pycommon_database.database_sqlalchemy as database_sqlalchemy
-        database_sqlalchemy.reset(base)
+        database_sqlalchemy._reset(base)
 
 
 class ControllerModelNotSet(Exception):

@@ -117,6 +117,31 @@ class SQlAlchemyDatabaseTest(unittest.TestCase):
         self.assertFalse(database_sqlalchemy._in_memory('sybase+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2'))
 
 
+class MongoDatabaseTest(unittest.TestCase):
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_none_connection_string_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            database.load(None, None)
+        self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
+
+    def test_empty_connection_string_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            database.load('', None)
+        self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
+
+    def test_no_create_models_function_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            database.load('mongomock', None)
+        self.assertEqual('A method allowing to create related models must be provided.', cm.exception.args[0])
+
+
 class SQlAlchemyCRUDModelTest(unittest.TestCase):
     _db = None
     _model = None

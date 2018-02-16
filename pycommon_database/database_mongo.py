@@ -543,7 +543,7 @@ class CRUDModel:
         return cls.audit_model
 
 
-def load(database_connection_url: str, create_models_func: callable):
+def _load(database_connection_url: str, create_models_func: callable):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
@@ -551,11 +551,6 @@ def load(database_connection_url: str, create_models_func: callable):
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
     (Mandatory).
     """
-    if not database_connection_url:
-        raise NoDatabaseProvided()
-    if not create_models_func:
-        raise NoRelatedModels()
-
     logger.info(f'Connecting to {database_connection_url}...')
     database_name = os.path.basename(database_connection_url)
     if database_connection_url.startswith('mongomock'):
@@ -570,23 +565,13 @@ def load(database_connection_url: str, create_models_func: callable):
     return base
 
 
-def reset(base):
+def _reset(base):
     """
     If the database was already created, then drop all tables and recreate them all.
     """
     if base:
         for collection in base._collections.values():
             _reset_collection(base, collection)
-
-
-class NoDatabaseProvided(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'A database connection URL must be provided.')
-
-
-class NoRelatedModels(Exception):
-    def __init__(self):
-        Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
 def _reset_collection(base, collection):
