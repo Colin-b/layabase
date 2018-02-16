@@ -277,8 +277,18 @@ class CRUDModel:
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
         if unknown_fields:
             for unknown_field in unknown_fields:
+                # allow mongo dot notation to access sub-documents if field is of dict type
+                dot_nota_field_list = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
                 del new_model_as_dict[unknown_field]
-            logger.warning(f'Skipping unknown fields {unknown_fields}.')
+                if dot_nota_field_list:
+                    new_value = new_model_as_dict.get(dot_nota_field_list[0])
+                    if new_value:
+                        new_value.update(dot_nota_field_list[1])
+                    else:
+                        new_value = dot_nota_field_list[1]
+                    new_model_as_dict[dot_nota_field_list[0]] = new_value
+                else:
+                    logger.warning(f'Skipping unknown field {unknown_field}.')
 
         return model_as_dict if errors else new_model_as_dict, errors
 
@@ -303,10 +313,27 @@ class CRUDModel:
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
         if unknown_fields:
             for unknown_field in unknown_fields:
-                del new_model_as_dict[unknown_field]
-            logger.warning(f'Skipping unknown fields {unknown_fields}.')
+                # allow mongo dot notation to access sub-documents if field is of dict type
+                dot_nota_field_list = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+                if not dot_nota_field_dict:
+                    del new_model_as_dict[unknown_field]
+                    logger.warning(f'Skipping unknown field {unknown_field}.')
 
         return model_as_dict if errors else new_model_as_dict, errors
+
+    @classmethod
+    def _handle_dot_notation(cls, field, value) -> dict:
+        parent_field = field.split('.', maxsplit=1)
+        dot_field = None
+        if len(parent_field) == 2:
+            for field in cls.__fields__:
+                if field.name == parent_field[0]:
+                    if field.field_type == dict:
+                        dot_field = field
+                    break
+        if dot_field:
+            return [parent_field[0], {parent_field[1]: value}]
+        return []
 
     @classmethod
     def _serialize(cls, model_as_dict: dict) -> dict:
