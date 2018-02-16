@@ -2593,10 +2593,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             __tablename__ = 'dict_table_name'
 
             class MyDictColumn(database_mongo.Column):
-                def _validate_value(self, value):
-                    errors = database_mongo.Column._validate_value(self, value)
+                def validate_insert(self, model_as_dict: dict):
+                    errors = database_mongo.Column.validate_insert(self, model_as_dict)
                     if not errors:
-                        if len(value) != 2:
+                        inner_dict = model_as_dict[self.name]
+                        if len(inner_dict) != 2:
                             errors.update({self.name: ['Length should be 2.']})
                     return errors
 
@@ -2914,6 +2915,38 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'first_key': 'my_value',
                     'second_key': 3,
                 },
+            })
+        )
+
+    def test_post_dict_with_dot_notation_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col.first_key': 'my_value',
+                'dict_col.second_key': 3,
+            })
+        )
+
+    def test_put_dict_with_dot_notation_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            (
+                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+                {'dict_col': {'first_key': 'new_value', 'second_key': 3}, 'key': 'my_key'}
+            ),
+            self.TestDictController.put({
+                'key': 'my_key',
+                'dict_col.first_key': 'new_value',
             })
         )
 
