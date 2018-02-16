@@ -53,7 +53,15 @@ class Column:
         self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
         if self.should_auto_increment and self.field_type is not int:
             raise Exception('Only int fields can be auto incremented.')
-        self.is_nullable = bool(kwargs.pop('is_nullable', not self.is_primary_key or self.should_auto_increment))
+        self.is_nullable = bool(kwargs.pop('is_nullable', True))
+        if not self.is_nullable:
+            if self.should_auto_increment:
+                raise Exception('A field cannnot be mandatory and auto incremented at the same time.')
+            if self.default_value:
+                raise Exception('A field cannot be mandatory and having a default value at the same time.')
+        else:
+            # Field will be optional only if it is not a primary key without default value and not auto incremented
+            self.is_nullable = not self.is_primary_key or self.default_value or self.should_auto_increment
         self.is_required = bool(kwargs.pop('is_required', False))
 
     def __str__(self):
@@ -125,9 +133,13 @@ class Column:
         """
         value = model_as_dict.get(self.name)
 
-        if value is None and not (self.is_primary_key and self.is_nullable):
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
+        if value is None:
+            if self.is_primary_key:
+                # Ensure that primary key is always set
+                model_as_dict[self.name] = self.default_value
+            else:
+                # Ensure that None value are not stored to save space
+                model_as_dict.pop(self.name, None)
             return
 
         if self.field_type == datetime.datetime:
@@ -224,7 +236,7 @@ class CRUDModel:
         return [field for field in cls.__fields__ if field.index_type == index_type]
 
     @classmethod
-    def get_all(cls, **kwargs) -> list:
+    def get_all(cls, **kwargs) -> List[dict]:
         """
         Return all models formatted as a list of dictionaries.
         """
@@ -297,12 +309,6 @@ class CRUDModel:
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
-        # primary key is mandatory in an update:
-        # add missing primary keys if they are nullable, using their default value
-        missing_primary_keys = [field for field in cls.__fields__ if field.name not in model_as_dict and field.is_primary_key and field.is_nullable]
-        for missing_primary_key in missing_primary_keys:
-            new_model_as_dict[missing_primary_key.name] = missing_primary_key.default_value
-
         updated_field_names = [field.name for field in cls.__fields__ if field.name in new_model_as_dict]
         unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
         if unknown_fields:
@@ -313,7 +319,7 @@ class CRUDModel:
                     del new_model_as_dict[unknown_field]
                     logger.warning(f'Skipping unknown field {unknown_field}.')
 
-        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
+        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict or field.is_primary_key]
         for field in updated_fields:
             errors.update(field.validate_update(new_model_as_dict))
             if not errors:
@@ -322,7 +328,7 @@ class CRUDModel:
         return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
-    def _handle_dot_notation(cls, field, value) -> dict:
+    def _handle_dot_notation(cls, field, value) -> list:
         parent_field = field.split('.', maxsplit=1)
         dot_field = None
         if len(parent_field) == 2:
@@ -342,7 +348,7 @@ class CRUDModel:
         return model_as_dict
 
     @classmethod
-    def add_all(cls, models_as_list_of_dict: list) -> list:
+    def add_all(cls, models_as_list_of_dict: List[dict]) -> List[dict]:
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case validation fail.
@@ -410,7 +416,7 @@ class CRUDModel:
         return counter_element[field_name]['counter']
 
     @classmethod
-    def update(cls, model_as_dict: dict):
+    def update(cls, model_as_dict: dict) -> (dict, dict):
         """
         Update a model formatted as a dictionary.
         :raises ValidationFailed in case validation fail.
@@ -446,7 +452,7 @@ class CRUDModel:
         return {k: v for k, v in model_as_dict.items() if k in primary_key_fields}
 
     @classmethod
-    def remove(cls, **kwargs):
+    def remove(cls, **kwargs) -> int:
         """
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.

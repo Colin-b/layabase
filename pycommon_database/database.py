@@ -1,9 +1,10 @@
 import logging
+from typing import List
 
 logger = logging.getLogger(__name__)
 
 
-def _is_mongo(database_connection_url: str):
+def _is_mongo(database_connection_url: str) -> bool:
     return database_connection_url and database_connection_url.startswith('mongo')
 
 
@@ -116,9 +117,8 @@ class CRUDController:
         cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),
                                                                    cls._model.flask_restplus_description_fields())
 
-
     @classmethod
-    def get(cls, request_arguments: dict):
+    def get(cls, request_arguments: dict) -> List[dict]:
         """
         Return all models formatted as a list of dictionaries.
         """
@@ -127,7 +127,7 @@ class CRUDController:
         return cls._model.get_all(**request_arguments)
 
     @classmethod
-    def post(cls, new_sample_dictionary: dict):
+    def post(cls, new_dict: dict) -> dict:
         """
         Add a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
@@ -136,15 +136,14 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if hasattr(cls.json_post_model, '_schema'):
-            new_sample_dictionary = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None),
-                                                             new_sample_dictionary)
-        new_sample_model = cls._model.add(new_sample_dictionary)
+            new_dict = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None), new_dict)
+        inserted_dict = cls._model.add(new_dict)
         if cls._audit_model:
-            cls._audit_model.audit_add(new_sample_model)
-        return new_sample_model
+            cls._audit_model.audit_add(inserted_dict)
+        return inserted_dict
 
     @classmethod
-    def post_many(cls, new_sample_dictionaries_list: list):
+    def post_many(cls, new_dicts: List[dict]) -> List[dict]:
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
@@ -153,16 +152,15 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if hasattr(cls.json_post_model, '_schema'):
-            new_sample_dictionaries_list = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None),
-                                                                    new_sample_dictionaries_list)
-        new_sample_models = cls._model.add_all(new_sample_dictionaries_list)
+            new_dicts = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None), new_dicts)
+        inserted_dicts = cls._model.add_all(new_dicts)
         if cls._audit_model:
-            for new_sample_model in new_sample_models:
-                cls._audit_model.audit_add(new_sample_model)
-        return new_sample_models
+            for inserted_dict in inserted_dicts:
+                cls._audit_model.audit_add(inserted_dict)
+        return inserted_dicts
 
     @classmethod
-    def put(cls, updated_sample_dictionary: dict):
+    def put(cls, updated_dict: dict) -> (dict, dict):
         """
         Update a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
@@ -171,13 +169,13 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        updated_sample_model = cls._model.update(updated_sample_dictionary)
+        previous_dict, new_dict = cls._model.update(updated_dict)
         if cls._audit_model:
-            cls._audit_model.audit_update(updated_sample_model[1])
-        return updated_sample_model
+            cls._audit_model.audit_update(new_dict)
+        return previous_dict, new_dict
 
     @classmethod
-    def delete(cls, request_arguments: dict):
+    def delete(cls, request_arguments: dict) -> int:
         """
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.
@@ -189,7 +187,7 @@ class CRUDController:
         return cls._model.remove(**request_arguments)
 
     @classmethod
-    def get_audit(cls, request_arguments: dict):
+    def get_audit(cls, request_arguments: dict) -> List[dict]:
         """
         Return all audit models formatted as a list of dictionaries.
         """
@@ -198,7 +196,7 @@ class CRUDController:
         return cls._audit_model.get_all(**request_arguments)
 
     @classmethod
-    def get_model_description(cls):
+    def get_model_description(cls) -> dict:
         if not cls._model_description_dictionary:
             raise ControllerModelNotSet(cls)
         return cls._model_description_dictionary

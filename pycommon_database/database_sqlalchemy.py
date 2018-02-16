@@ -8,6 +8,7 @@ from marshmallow import validate
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
+from typing import List
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
@@ -30,7 +31,7 @@ class CRUDModel:
             cls.audit_model._post_init(session)
 
     @classmethod
-    def get_all(cls, **kwargs):
+    def get_all(cls, **kwargs) -> List[dict]:
         """
         Return all models formatted as a list of dictionaries.
         """
@@ -60,7 +61,7 @@ class CRUDModel:
         raise Exception('Database could not be reached.')
 
     @classmethod
-    def get(cls, **kwargs):
+    def get(cls, **kwargs) -> dict:
         """
         Return the model formatted as a dictionary.
         """
@@ -78,7 +79,7 @@ class CRUDModel:
             cls._handle_connection_failure()
 
     @classmethod
-    def add_all(cls, models_as_list_of_dict: list):
+    def add_all(cls, models_as_list_of_dict: list) -> List[dict]:
         """
         Add models formatted as a list of dictionaries.
         :raises ValidationFailed in case Marshmallow validation fail.
@@ -104,7 +105,7 @@ class CRUDModel:
             raise
 
     @classmethod
-    def add(cls, model_as_dict: dict):
+    def add(cls, model_as_dict: dict) -> dict:
         """
         Add a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
@@ -131,7 +132,7 @@ class CRUDModel:
             raise
 
     @classmethod
-    def update(cls, model_as_dict: dict):
+    def update(cls, model_as_dict: dict) -> (dict, dict):
         """
         Update a model formatted as a dictionary.
         :raises ValidationFailed in case Marshmallow validation fail.
@@ -164,7 +165,7 @@ class CRUDModel:
             raise
 
     @classmethod
-    def remove(cls, **kwargs):
+    def remove(cls, **kwargs) -> int:
         """
         Remove the model(s) matching those criterion.
         :returns Number of removed rows.

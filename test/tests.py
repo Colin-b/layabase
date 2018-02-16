@@ -2551,6 +2551,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestIndexController(database.CRUDController):
         pass
 
+    class TestDefaultPrimaryKeyController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2606,13 +2609,20 @@ class MongoCRUDControllerTest(unittest.TestCase):
             unique_key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
             non_unique_key = database_mongo.Column(datetime.date, index_type=database_mongo.IndexType.Other)
 
+        class TestDefaultPrimaryKeyModel(database_mongo.CRUDModel):
+            __tablename__ = 'default_primary_table_name'
+
+            key = database_mongo.Column(is_primary_key=True, default_value='test')
+            optional = database_mongo.Column()
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
         cls.TestDateController.model(TestDateModel)
         cls.TestDictController.model(TestDictModel)
         cls.TestIndexController.model(TestIndexModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel]
+        cls.TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel, TestDefaultPrimaryKeyModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -2746,6 +2756,28 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 }
             ],
             cm.exception.received_data)
+
+    def test_post_without_primary_key_but_default_value_is_valid(self):
+        self.assertEqual(
+            {'key': 'test', 'optional': 'test2'},
+            self.TestDefaultPrimaryKeyController.post({
+                'optional': 'test2',
+            })
+        )
+
+    def test_put_without_primary_key_but_default_value_is_valid(self):
+        self.assertEqual(
+            {'key': 'test', 'optional': 'test2'},
+            self.TestDefaultPrimaryKeyController.post({
+                'optional': 'test2',
+            })
+        )
+        self.assertEqual(
+            ({'key': 'test', 'optional': 'test2'}, {'key': 'test', 'optional': 'test3'}),
+            self.TestDefaultPrimaryKeyController.put({
+                'optional': 'test3',
+            })
+        )
 
     def test_post_different_unique_index_is_valid(self):
         self.assertEqual(
