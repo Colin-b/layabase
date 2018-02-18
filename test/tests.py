@@ -2429,6 +2429,14 @@ class MongoFlaskRestPlusModelsTest(unittest.TestCase):
         field = database_mongo.Column(EnumTest)
         self.assertEqual(flask_rest_plus_fields.String, database_mongo._get_flask_restplus_type(field))
 
+    def test_rest_plus_type_for_dict_field_is_raw(self):
+        field = database_mongo.Column(dict)
+        self.assertEqual(flask_rest_plus_fields.Raw, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_list_field_is_list(self):
+        field = database_mongo.Column(list)
+        self.assertEqual(flask_rest_plus_fields.List, database_mongo._get_flask_restplus_type(field))
+
     def test_rest_plus_type_for_none_field_cannot_be_guessed(self):
         field = database_mongo.Column()
         field.field_type = None
@@ -2459,6 +2467,14 @@ class MongoFlaskRestPlusModelsTest(unittest.TestCase):
     def test_rest_plus_example_for_float_field_is_float(self):
         field = database_mongo.Column(float)
         self.assertEqual('0.0', database_mongo._get_example(field))
+
+    def test_rest_plus_example_for_dict_field_is_dict(self):
+        field = database_mongo.Column(dict)
+        self.assertEqual("{'field1': 'value1', 'fieldx': 'valuex'}", database_mongo._get_example(field))
+
+    def test_rest_plus_example_for_list_field_is_list(self):
+        field = database_mongo.Column(list)
+        self.assertEqual("[['field1', 'value1'], ['fieldx', 'valuex']]", database_mongo._get_example(field))
 
 
 class SQlAlchemyColumnsTest(unittest.TestCase):
