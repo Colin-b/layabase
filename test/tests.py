@@ -2392,6 +2392,75 @@ class SQLAlchemyFlaskRestPlusModelsTest(unittest.TestCase):
         self.assertEqual('sample_value', database_sqlalchemy._get_example(None))
 
 
+class MongoFlaskRestPlusModelsTest(unittest.TestCase):
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_rest_plus_type_for_string_field_is_string(self):
+        field = database_mongo.Column(str)
+        self.assertEqual(flask_rest_plus_fields.String, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_int_field_is_integer(self):
+        field = database_mongo.Column(int)
+        self.assertEqual(flask_rest_plus_fields.Integer, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_bool_field_is_boolean(self):
+        field = database_mongo.Column(bool)
+        self.assertEqual(flask_rest_plus_fields.Boolean, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_date_field_is_date(self):
+        field = database_mongo.Column(datetime.date)
+        self.assertEqual(flask_rest_plus_fields.Date, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_datetime_field_is_datetime(self):
+        field = database_mongo.Column(datetime.datetime)
+        self.assertEqual(flask_rest_plus_fields.DateTime, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_float_field_is_float(self):
+        field = database_mongo.Column(float)
+        self.assertEqual(flask_rest_plus_fields.Float, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_enum_field_is_string(self):
+        field = database_mongo.Column(EnumTest)
+        self.assertEqual(flask_rest_plus_fields.String, database_mongo._get_flask_restplus_type(field))
+
+    def test_rest_plus_type_for_none_field_cannot_be_guessed(self):
+        field = database_mongo.Column()
+        field.field_type = None
+        with self.assertRaises(Exception) as cm:
+            database_mongo._get_flask_restplus_type(field)
+        self.assertEqual('Flask RestPlus field type cannot be guessed for None field.', cm.exception.args[0])
+
+    def test_rest_plus_example_for_string_field(self):
+        field = database_mongo.Column(str)
+        self.assertEqual('sample_value', database_mongo._get_example(field))
+
+    def test_rest_plus_example_for_int_field_is_integer(self):
+        field = database_mongo.Column(int)
+        self.assertEqual('0', database_mongo._get_example(field))
+
+    def test_rest_plus_example_for_bool_field_is_true(self):
+        field = database_mongo.Column(bool)
+        self.assertEqual('true', database_mongo._get_example(field))
+
+    def test_rest_plus_example_for_date_field_is_YYYY_MM_DD(self):
+        field = database_mongo.Column(datetime.date)
+        self.assertEqual('2017-09-24', database_mongo._get_example(field))
+
+    def test_rest_plus_example_for_datetime_field_is_YYYY_MM_DDTHH_MM_SS(self):
+        field = database_mongo.Column(datetime.datetime)
+        self.assertEqual('2017-09-24T15:36:09', database_mongo._get_example(field))
+
+    def test_rest_plus_example_for_float_field_is_float(self):
+        field = database_mongo.Column(float)
+        self.assertEqual('0.0', database_mongo._get_example(field))
+
+
 class SQlAlchemyColumnsTest(unittest.TestCase):
     _model = None
 
@@ -2589,6 +2658,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestDefaultPrimaryKeyController(database.CRUDController):
         pass
 
+    class TestListController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2651,6 +2723,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(is_primary_key=True, default_value='test')
             optional = database_mongo.Column()
 
+        class TestListModel(database_mongo.CRUDModel):
+            __tablename__ = 'list_table_name'
+
+            key = database_mongo.Column(is_primary_key=True)
+            list_field = database_mongo.Column(list)
+            bool_field = database_mongo.Column(bool)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
@@ -2658,7 +2737,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestDictController.model(TestDictModel)
         cls.TestIndexController.model(TestIndexModel)
         cls.TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel, TestDefaultPrimaryKeyModel]
+        cls.TestListController.model(TestListModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -2938,6 +3018,16 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'my_key',
                 'mandatory': 1,
                 'optional': 'my_value',
+            })
+        )
+
+    def test_post_list_is_valid(self):
+        self.assertEqual(
+            {'bool_field': False, 'key': 'my_key', 'list_field': ['value1', 'value2']},
+            self.TestListController.post({
+                'key': 'my_key',
+                'list_field': ['value1', 'value2'],
+                'bool_field': False,
             })
         )
 
