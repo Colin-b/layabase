@@ -4177,7 +4177,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         class TestModel(database_mongo.CRUDModel):
             __tablename__ = 'sample_table_name'
 
-            key = database_mongo.Column(str, is_primary_key=True)
+            key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
 
@@ -4648,11 +4648,13 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
+        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
         })
+        time.sleep(1)
         self.assertEqual(
             [
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
@@ -4685,6 +4687,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
+        time.sleep(1)
         self.assertEqual(
             (
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
@@ -4724,6 +4727,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
+        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'optional': 'my_value',
@@ -4756,11 +4760,13 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
+        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
         })
+        time.sleep(1)
         self.assertEqual(1, self.TestController.delete({'key': 'my_key1'}))
         self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
                          self.TestController.get({}))
@@ -4799,10 +4805,12 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
+        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 2,
         })
+        time.sleep(1)
         self.TestController.delete({'key': 'my_key1'})
         self._check_audit(
             [
@@ -4840,6 +4848,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
+        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 2,
@@ -4860,6 +4869,51 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             filter_audit={'audit_action': 'Update'}
         )
 
+    def test_value_can_be_updated_to_previous_value(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        time.sleep(1)
+        self.TestController.put({
+            'key': 'my_key1',
+            'mandatory': 2,
+        })
+        time.sleep(1)
+        self.TestController.put({
+            'key': 'my_key1',
+            'mandatory': 1,  # Put back initial value
+        })
+        self._check_audit(
+            [
+                {
+                    'audit_action': 'Insert',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'Update',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 2,
+                    'optional': 'my_value1',
+                },
+                {
+                    'audit_action': 'Update',
+                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_user': '',
+                    'key': 'my_key1',
+                    'mandatory': 1,
+                    'optional': 'my_value1',
+                },
+            ]
+        )
+
     def test_delete_without_filter_is_removing_everything(self):
         self.TestController.post({
             'key': 'my_key1',
@@ -4871,6 +4925,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 2,
             'optional': 'my_value2',
         })
+        time.sleep(1)
         self.assertEqual(2, self.TestController.delete({}))
         self.assertEqual([], self.TestController.get({}))
         self._check_audit(
