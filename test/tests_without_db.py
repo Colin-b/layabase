@@ -2,16 +2,13 @@ import unittest
 import sqlalchemy
 import logging
 import sys
-import datetime
-from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
-from flask_restplus import fields as flask_rest_plus_fields, inputs
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)],
     level=logging.DEBUG)
 
-from pycommon_database import database, database_sqlalchemy, database_mongo, flask_restplus_errors
+from pycommon_database import database, database_sqlalchemy
 
 logger = logging.getLogger(__name__)
 
