@@ -134,12 +134,8 @@ class Column:
         value = model_as_dict.get(self.name)
 
         if value is None:
-            if self.is_primary_key:
-                # Ensure that primary key is always set
-                model_as_dict[self.name] = self.default_value
-            else:
-                # Ensure that None value are not stored to save space
-                model_as_dict.pop(self.name, None)
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
             return
 
         if self.field_type == datetime.datetime:
