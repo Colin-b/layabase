@@ -257,18 +257,21 @@ class CRUDModel:
         new_model_as_dict = copy.deepcopy(model_as_dict)
         errors = {}
 
+        queried_fields_names = [field.name for field in cls.__fields__ if field.name in new_model_as_dict]
+        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in queried_fields_names]
+        if unknown_fields:
+            for unknown_field in unknown_fields:
+                # allow mongo dot notation to access sub-documents if field is of dict type
+                known_field_name, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+                if not known_field_name:
+                    del new_model_as_dict[unknown_field]
+                    logger.warning(f'Skipping unknown field {unknown_field}.')
+
         queried_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict]
         for field in queried_fields:
             errors.update(field.validate_query(new_model_as_dict))
             if not errors:
                 field.deserialize(new_model_as_dict)
-
-        queried_fields_names = [field.name for field in queried_fields]
-        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in queried_fields_names]
-        if unknown_fields:
-            for unknown_field in unknown_fields:
-                del new_model_as_dict[unknown_field]
-            logger.warning(f'Skipping unknown fields {unknown_fields}.')
 
         return model_as_dict if errors else new_model_as_dict, errors
 

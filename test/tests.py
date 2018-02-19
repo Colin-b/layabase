@@ -3089,6 +3089,132 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_get_with_dot_notation_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            [
+                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            ],
+            self.TestDictController.get({
+                'dict_col.first_key': 'my_value',
+            })
+        )
+
+    def test_get_with_unmatching_dot_notation_is_empty(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            [],
+            self.TestDictController.get({
+                'dict_col.first_key': 'unknown',
+            })
+        )
+
+    def test_get_with_unknown_dot_notation_is_empty(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            [],
+            self.TestDictController.get({
+                'dict_col.unknown': 'my_value',
+            })
+        )
+
+    def test_delete_with_dot_notation_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            1,
+            self.TestDictController.delete({
+                'dict_col.first_key': 'my_value',
+            })
+        )
+        self.assertEqual(
+            [],
+            self.TestDictController.get({})
+        )
+
+    def test_delete_with_unmatching_dot_notation_is_empty(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            0,
+            self.TestDictController.delete({
+                'dict_col.first_key': 'unknown',
+            })
+        )
+        self.assertEqual(
+            [
+                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            ],
+            self.TestDictController.get({})
+        )
+
+    def test_delete_with_unknown_dot_notation_is_empty(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            0,
+            self.TestDictController.delete({
+                'dict_col.unknown': 'my_value',
+            })
+        )
+        self.assertEqual(
+            [
+                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            ],
+            self.TestDictController.get({})
+        )
+
     def test_put_without_primary_key_is_invalid(self):
         self.TestDictController.post({
             'key': 'my_key',
