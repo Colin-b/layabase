@@ -4,7 +4,7 @@ import enum
 import copy
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
-from pycommon_database.database_mongo import Column
+from pycommon_database.database_mongo import Column, IndexType
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class AuditModel:
     __collection__ = None
 
     audit_user = Column(str, is_primary_key=True)
-    audit_date_utc = Column(datetime.datetime, is_primary_key=True)
+    audit_date_utc = Column(datetime.datetime, is_primary_key=True, index_type=IndexType.Unique)
     audit_action = Column(Action)
 
     @classmethod
