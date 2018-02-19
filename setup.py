@@ -16,8 +16,6 @@ setup(
             'nose',
             # Used to Manage Mongo Database
             'mongomock',
-            # Test without DB
-            'sqlalchemy'
         ],
         # Used to Manage Mongo Database
         'mongo': [
