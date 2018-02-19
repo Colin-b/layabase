@@ -12,14 +12,12 @@ Extending pycommon_database.database_sqlalchemy.CRUDModel will provides C.R.U.D.
 from sqlalchemy import Column, String
 from pycommon_database.database_sqlalchemy import CRUDModel
 
-base = None
+base = None  # Base is provided when calling load method
 
 class MyModel(CRUDModel, base):
     
     key = Column(String, primary_key=True)
     value = Column(String)
-
-model_as_dict = MyModel.remove(key='key1')
 ```
 
 ### Retrieving data ###
@@ -47,6 +45,54 @@ inserted_model_as_dict = MyModel.add({'key': 'key1', 'value': 'value1'})
 
 ```python
 updated_model_as_dict = MyModel.update({'key': 'key1', 'value': 'new value'})
+```
+
+### Removing data ###
+
+```python
+nb_removed_models = MyModel.remove(key='key1')
+```
+
+## Mongo model ##
+
+Extending pycommon_database.database_mongo.CRUDModel will provides C.R.U.D. methods on your Mongo model.
+
+### Model definition ###
+
+```python
+from pycommon_database.database_mongo import CRUDModel, Column
+
+class MyModel(CRUDModel):
+
+    key = Column(str, is_primary_key=True)
+    dict_value = Column(dict)
+```
+
+### Retrieving data ###
+
+```python
+all_models_as_dict_list = MyModel.get_all()
+
+filtered_models_as_dict_list = MyModel.get_all(dict_value={'dict_key': 'value1'})
+
+filtered_model_as_dict = MyModel.get(key='key1')
+```
+
+### Inserting data ###
+
+```python
+inserted_models_as_dict_list = MyModel.add_all([
+    {'key': 'key1', 'dict_value': {'dict_key': 'value1'}},
+    {'key': 'key2', 'dict_value': {'dict_key': 'value2'}},
+])
+
+inserted_model_as_dict = MyModel.add({'key': 'key1', 'dict_value': {'dict_key': value1'}})
+```
+
+### Updating data ###
+
+```python
+updated_model_as_dict = MyModel.update({'key': 'key1', 'dict_value': {'dict_key': 'new value'}})
 ```
 
 ### Removing data ###

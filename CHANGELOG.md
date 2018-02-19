@@ -10,7 +10,7 @@ List all changes in various categories:
 
 ### Release notes ###
 
-- Optional dependencies should be chose upon installation thanks to mongo and sqlalchemy extra requires.
+- Optional dependencies should be chosen upon installation thanks to mongo and sqlalchemy extra requires.
 - CRUDModel class is now within database_sqlalchemy instead of database module.
 
 ### Enhancements ###
