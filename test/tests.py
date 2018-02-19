@@ -2864,6 +2864,36 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual({'': ['This item already exists.']}, cm.exception.errors)
         self.assertEqual({'non_unique_key': '2017-01-01', 'unique_key': 'test'}, cm.exception.received_data)
 
+    def test_get_all_without_primary_key_is_valid(self):
+        self.assertEqual(
+            {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
+            self.TestIndexController.post({
+                'unique_key': 'test',
+                'non_unique_key': '2017-01-01',
+            })
+        )
+        self.assertEqual(
+            [
+                {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
+            ],
+            self.TestIndexController.get({})
+        )
+
+    def test_get_all_with_none_primary_key_is_valid(self):
+        self.assertEqual(
+            {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
+            self.TestIndexController.post({
+                'unique_key': 'test',
+                'non_unique_key': '2017-01-01',
+            })
+        )
+        self.assertEqual(
+            [
+                {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
+            ],
+            self.TestIndexController.get({'unique_key': None})
+        )
+
     def test_post_many_with_same_unique_index_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestIndexController.post_many([
