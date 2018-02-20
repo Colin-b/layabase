@@ -250,7 +250,7 @@ class CRUDModel:
             raise ValidationFailed(kwargs, errors)
 
         models = cls.__collection__.find(model_to_query, skip=offset, limit=limit)
-        return [cls._serialize(model) for model in models]  # Convert Cursor to dict
+        return [cls.serialize(model) for model in models]  # Convert Cursor to dict
 
     @classmethod
     def _validate_query(cls, model_as_dict: dict) -> (dict, dict):
@@ -338,7 +338,7 @@ class CRUDModel:
         return None, None
 
     @classmethod
-    def _serialize(cls, model_as_dict: dict) -> dict:
+    def serialize(cls, model_as_dict: dict) -> dict:
         for field in cls.__fields__:
             field.serialize(model_as_dict)
 
@@ -381,7 +381,7 @@ class CRUDModel:
 
         try:
             cls.__collection__.insert_many(new_models_as_list_of_dict)
-            return [cls._serialize(model) for model in new_models_as_list_of_dict]
+            return [cls.serialize(model) for model in new_models_as_list_of_dict]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
 
@@ -398,7 +398,7 @@ class CRUDModel:
 
         try:
             cls.__collection__.insert_one(new_model_as_dict)
-            return cls._serialize(new_model_as_dict)
+            return cls.serialize(new_model_as_dict)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(model_as_dict, message='This item already exists.')
 
@@ -435,7 +435,7 @@ class CRUDModel:
         model_as_dict_updates = {k: v for k, v in new_model_as_dict.items() if k not in model_as_dict_keys}
         cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
         new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
-        return cls._serialize(previous_model_as_dict), cls._serialize(new_model_as_dict)
+        return cls.serialize(previous_model_as_dict), cls.serialize(new_model_as_dict)
 
     @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
