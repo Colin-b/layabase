@@ -225,7 +225,7 @@ class CRUDModel:
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
-                cls.__collection__.drop_index(index_or_name=index_name)
+                cls.__collection__.drop_indexes()
                 logger.info(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
                 cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
