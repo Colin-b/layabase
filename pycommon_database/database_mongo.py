@@ -67,17 +67,22 @@ class Column:
     def __str__(self):
         return f'{self.name}'
 
-    def validate_query(self, model_as_dict: dict):
+    def validate_query(self, model_as_dict: dict) -> dict:
+        """
+        Validate data queried.
+        :return: Validation errors that might have occurred. Empty if no error occurred.
+        """
         value = model_as_dict.get(self.name)
         if value is None:
             return {}
         return self._validate_value(value)
 
-    def validate_insert(self, model_as_dict: dict):
+    def validate_insert(self, model_as_dict: dict) -> dict:
         """
         Validate data on insert.
         Even if this method is the same one as validate_update, users with a custom field type might want
         to perform a different validation in case of insert and update (typically checking for missing fields)
+        :return: Validation errors that might have occurred. Empty if no error occurred.
         """
         value = model_as_dict.get(self.name)
         if value is None:
@@ -86,11 +91,12 @@ class Column:
             return {}
         return self._validate_value(value)
 
-    def validate_update(self, model_as_dict: dict):
+    def validate_update(self, model_as_dict: dict) -> dict:
         """
         Validate data on update.
         Even if this method is the same one as validate_insert, users with a custom field type might want
         to perform a different validation in case of insert and update (typically not checking for missing fields)
+        :return: Validation errors that might have occurred. Empty if no error occurred.
         """
         value = model_as_dict.get(self.name)
         if value is None:
