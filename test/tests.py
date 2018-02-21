@@ -2720,7 +2720,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 @classmethod
                 def _validation_model(cls):
                     class MyDictColumnModel(database_mongo.CRUDModel):
-                        first_key = database_mongo.Column(str, is_nullable=False)
+                        first_key = database_mongo.Column(EnumTest, is_nullable=False)
                         second_key = database_mongo.Column(int, is_nullable=False)
 
                     MyDictColumnModel.__fields__ = MyDictColumnModel.get_fields()
@@ -2734,6 +2734,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
                         errors.update(self._validation_model().validate_insert(value))
                     return errors
 
+                def deserialize_insert(self, model_as_dict: dict):
+                    value = model_as_dict[self.name]
+                    self._validation_model().deserialize_insert(value)
+
                 def validate_update(self, model_as_dict: dict) -> dict:
                     errors = database_mongo.Column.validate_update(self, model_as_dict)
                     if not errors:
@@ -2741,12 +2745,25 @@ class MongoCRUDControllerTest(unittest.TestCase):
                         errors.update(self._validation_model().validate_update(value))
                     return errors
 
+                def deserialize_update(self, model_as_dict: dict):
+                    value = model_as_dict[self.name]
+                    self._validation_model().deserialize_update(value)
+
                 def validate_query(self, model_as_dict: dict) -> dict:
                     errors = database_mongo.Column.validate_query(self, model_as_dict)
                     if not errors:
                         value = model_as_dict[self.name]
                         errors.update(self._validation_model().validate_query(value))
                     return errors
+
+                def deserialize_query(self, model_as_dict: dict):
+                    value = model_as_dict[self.name]
+                    self._validation_model().deserialize_query(value)
+
+                def serialize(self, model_as_dict: dict):
+                    value = model_as_dict[self.name]
+                    self._validation_model().serialize(value)
+
 
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = MyDictColumn(dict, is_nullable=False)
@@ -3103,11 +3120,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_post_dict_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
@@ -3115,39 +3132,39 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_get_with_dot_notation_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': EnumTest.Value1,
                     'second_key': 3,
                 },
             })
         )
         self.assertEqual(
             [
-                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+                {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             ],
             self.TestDictController.get({
-                'dict_col.first_key': 'my_value',
+                'dict_col.first_key': EnumTest.Value1,
             })
         )
 
     def test_update_with_dot_notation_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
         )
         self.assertEqual(
             (
-                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
-                {'dict_col': {'first_key': 'my_value', 'second_key': 4}, 'key': 'my_key'}
+                {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
+                {'dict_col': {'first_key': 'Value1', 'second_key': 4}, 'key': 'my_key'}
             ),
             self.TestDictController.put({
                 'key': 'my_key',
@@ -3157,11 +3174,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_update_with_dot_notation_invalid_value_is_invalid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
@@ -3176,11 +3193,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_delete_with_dot_notation_invalid_value_is_invalid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
@@ -3194,11 +3211,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_delete_with_dot_notation_valid_value_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
@@ -3207,38 +3224,53 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_col.second_key': 3,
             }))
 
+    def test_delete_with_dot_notation_enum_value_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'Value1',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(1, self.TestDictController.delete({
+                'dict_col.first_key': EnumTest.Value1,
+            }))
+
     def test_post_with_dot_notation_invalid_value_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestDictController.post({
                 'key': 'my_key',
-                'dict_col.first_key': 'my_value',
+                'dict_col.first_key': 'Value1',
                 'dict_col.second_key': 'invalid integer',
             })
         self.assertEqual({'second_key': ['Not a valid int.']}, cm.exception.errors)
-        self.assertEqual({'key': 'my_key', 'dict_col.first_key': 'my_value', 'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
+        self.assertEqual({'key': 'my_key', 'dict_col.first_key': 'Value1', 'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
 
     def test_post_with_dot_notation_valid_value_is_valid(self):
         self.assertEqual({
             'key': 'my_key',
             'dict_col': {
-                'first_key': 'my_value',
+                'first_key': 'Value2',
                 'second_key': 1,
             }
         },
             self.TestDictController.post({
                 'key': 'my_key',
-                'dict_col.first_key': 'my_value',
+                'dict_col.first_key': 'Value2',
                 'dict_col.second_key': 1,
             })
         )
 
     def test_get_with_unmatching_dot_notation_is_empty(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
@@ -3246,35 +3278,37 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             [],
             self.TestDictController.get({
-                'dict_col.first_key': 'unknown',
+                'dict_col.first_key': 'Value2',
             })
         )
 
-    def test_get_with_unknown_dot_notation_is_empty(self):
+    def test_get_with_unknown_dot_notation_returns_everything(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
         )
         self.assertEqual(
-            [],
+            [
+                {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'}
+            ],
             self.TestDictController.get({
-                'dict_col.unknown': 'my_value',
+                'dict_col.unknown': 'Value1',
             })
         )
 
     def test_delete_with_dot_notation_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
@@ -3282,7 +3316,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             1,
             self.TestDictController.delete({
-                'dict_col.first_key': 'my_value',
+                'dict_col.first_key': 'Value1',
             })
         )
         self.assertEqual(
@@ -3292,11 +3326,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_delete_with_unmatching_dot_notation_is_empty(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
@@ -3304,37 +3338,35 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             0,
             self.TestDictController.delete({
-                'dict_col.first_key': 'unknown',
+                'dict_col.first_key': 'Value2',
             })
         )
         self.assertEqual(
             [
-                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+                {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             ],
             self.TestDictController.get({})
         )
 
-    def test_delete_with_unknown_dot_notation_is_empty(self):
+    def test_delete_with_unknown_dot_notation_deletes_everything(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
         )
         self.assertEqual(
-            0,
+            1,
             self.TestDictController.delete({
-                'dict_col.unknown': 'my_value',
+                'dict_col.unknown': 'Value2',
             })
         )
         self.assertEqual(
-            [
-                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
-            ],
+            [],
             self.TestDictController.get({})
         )
 
@@ -3342,54 +3374,54 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.TestDictController.post({
             'key': 'my_key',
             'dict_col': {
-                'first_key': 'my_value',
+                'first_key': 'Value1',
                 'second_key': 3,
             },
         })
         with self.assertRaises(Exception) as cm:
             self.TestDictController.put({
                 'dict_col': {
-                    'first_key': 'my_value2',
+                    'first_key': 'Value2',
                     'second_key': 4,
                 },
             })
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({
                 'dict_col': {
-                    'first_key': 'my_value2',
+                    'first_key': 'Value2',
                     'second_key': 4,
                 },
             }, cm.exception.received_data)
 
     def test_post_dict_with_dot_notation_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
-                'dict_col.first_key': 'my_value',
+                'dict_col.first_key': 'Value1',
                 'dict_col.second_key': 3,
             })
         )
 
     def test_put_dict_with_dot_notation_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                     'second_key': 3,
                 },
             })
         )
         self.assertEqual(
             (
-                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
-                {'dict_col': {'first_key': 'new_value', 'second_key': 3}, 'key': 'my_key'}
+                {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
+                {'dict_col': {'first_key': 'Value2', 'second_key': 3}, 'key': 'my_key'}
             ),
             self.TestDictController.put({
                 'key': 'my_key',
-                'dict_col.first_key': 'new_value',
+                'dict_col.first_key': EnumTest.Value2,
             })
         )
 
@@ -3398,11 +3430,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestDictController.post({
                 'key': 'my_key',
                 'dict_col': {
-                    'first_key': 'my_value',
+                    'first_key': 'Value1',
                 },
             })
         self.assertEqual({'second_key': ['Missing data for required field.']}, cm.exception.errors)
-        self.assertEqual({'key': 'my_key', 'dict_col': {'first_key': 'my_value'}}, cm.exception.received_data)
+        self.assertEqual({'key': 'my_key', 'dict_col': {'first_key': 'Value1'}}, cm.exception.received_data)
 
     def test_post_many_with_optional_is_valid(self):
         self.assertListEqual(
