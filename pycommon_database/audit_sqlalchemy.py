@@ -41,7 +41,7 @@ class AuditModel:
         query = cls._session.query(cls._model)
         for key, value in kwargs.items():
             if value is not None:
-                query = query.filter(getattr(cls, key) == value)
+                query = query.filter(getattr(cls._model, key) == value)
         removed_dict_models = [inspect(removed_model).dict for removed_model in query.all()]
         for removed_dict_model in removed_dict_models:
             cls._audit_action(action='D', model_as_dict=removed_dict_model)

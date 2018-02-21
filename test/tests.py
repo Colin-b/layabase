@@ -1699,7 +1699,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'value1',
                     'mandatory': 1,
@@ -1720,9 +1720,9 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
-                    'key': 'my_key1',
+                    'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
                 },
@@ -1741,9 +1741,9 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
-                    'key': 'my_key1',
+                    'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
                 },
@@ -1757,7 +1757,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         if not expected_audit:
             self.assertEqual(audit, expected_audit)
         else:
-            self.assertRegex(f'{audit}', f'{expected_audit}')
+            self.assertRegex(f'{audit}', f'{expected_audit}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
 
     def test_post_with_optional_is_valid(self):
         self.assertEqual(
@@ -1772,7 +1772,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1794,7 +1794,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1818,7 +1818,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1842,7 +1842,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1868,7 +1868,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1898,7 +1898,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1906,7 +1906,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -1938,7 +1938,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1946,7 +1946,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -1975,7 +1975,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -1983,7 +1983,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2014,7 +2014,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2022,7 +2022,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2046,7 +2046,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2054,7 +2054,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2081,7 +2081,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2089,7 +2089,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2097,7 +2097,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2121,7 +2121,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2129,7 +2129,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2137,7 +2137,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2163,7 +2163,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2190,7 +2190,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2198,7 +2198,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2206,7 +2206,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2214,7 +2214,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -4156,8 +4156,12 @@ class MongoCRUDControllerFailuresTest(unittest.TestCase):
             "Model was not attached to TestController. "
             "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
 
+
 class MongoCRUDControllerAuditTest(unittest.TestCase):
     class TestController(database.CRUDController):
+        pass
+
+    class TestEnumController(database.CRUDController):
         pass
 
     _db = None
@@ -4181,9 +4185,16 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
 
+        class TestEnumModel(database_mongo.CRUDModel):
+            __tablename__ = 'enum_table_name'
+
+            key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            enum_fld = database_mongo.Column(EnumTest)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel, audit=True)
-        return [TestModel]
+        cls.TestEnumController.model(TestEnumModel, audit=True)
+        return [TestModel, TestEnumModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -4196,7 +4207,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
 
     def test_get_all_without_data_returns_empty_list(self):
         self.assertEqual([], self.TestController.get({}))
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_get_parser_fields_order(self):
         self.assertEqual(
@@ -4273,46 +4284,46 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.post(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post({})
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_with_empty_list_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([])
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_put_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.put(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_put_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.put({})
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_delete_without_nothing_do_not_fail(self):
         self.assertEqual(0, self.TestController.delete({}))
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_without_mandatory_field_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -4321,7 +4332,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         self.assertEqual({'mandatory': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({'key': 'my_key'}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_without_mandatory_field_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -4330,7 +4341,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }])
         self.assertEqual({0: {'mandatory': ['Missing data for required field.']}}, cm.exception.errors)
         self.assertEqual([{'key': 'my_key'}], cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -4339,7 +4350,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({'mandatory': 1}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -4348,7 +4359,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }])
         self.assertEqual({0: {'key': ['Missing data for required field.']}}, cm.exception.errors)
         self.assertEqual([{'mandatory': 1}], cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -4358,7 +4369,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         self.assertEqual({'key': ['Not a valid str.']}, cm.exception.errors)
         self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -4368,7 +4379,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }])
         self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
         self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_put_with_wrong_type_is_invalid(self):
         self.TestController.post({
@@ -4382,11 +4393,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         self.assertEqual({'mandatory': ['Not a valid int.']}, cm.exception.errors)
         self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'value1',
                     'mandatory': 1,
@@ -4403,15 +4414,35 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'mandatory': 1,
             })
         )
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
-                    'key': 'my_key1',
+                    'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
+                },
+            ]
+        )
+
+    def test_post_with_enum_is_valid(self):
+        self.assertEqual(
+            {'enum_fld': 'Value1', 'key': 'my_key'},
+            self.TestEnumController.post({
+                'key': 'my_key',
+                'enum_fld': EnumTest.Value1,
+            })
+        )
+        self._check_audit(self.TestEnumController,
+            [
+                {
+                    'audit_action': 'Insert',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'enum_fld': 'Value1',
+                    'key': 'my_key',
                 },
             ]
         )
@@ -4424,27 +4455,27 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'mandatory': 1,
             }])
         )
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
-                    'key': 'my_key1',
+                    'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
                 },
             ]
         )
 
-    def _check_audit(self, expected_audit, filter_audit={}):
-        audit = self.TestController.get_audit(filter_audit)
+    def _check_audit(self, controller, expected_audit, filter_audit={}):
+        audit = controller.get_audit(filter_audit)
         audit = [{key: audit_line[key] for key in sorted(audit_line.keys())} for audit_line in audit]
 
         if not expected_audit:
             self.assertEqual(audit, expected_audit)
         else:
-            self.assertRegex(f'{audit}', f'{expected_audit}')
+            self.assertRegex(f'{audit}', f'{expected_audit}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
 
     def test_post_with_optional_is_valid(self):
         self.assertEqual(
@@ -4455,11 +4486,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'optional': 'my_value',
             })
         )
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -4477,11 +4508,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'optional': 'my_value',
             }])
         )
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -4501,11 +4532,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'unknown': 'my_value',
             })
         )
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -4525,11 +4556,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'unknown': 'my_value',
             }])
         )
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -4551,11 +4582,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'key': 'my_key1'
             }],
             self.TestController.get({}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4581,11 +4612,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
             ],
             self.TestController.get({}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4593,7 +4624,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -4621,11 +4652,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}
             ],
             self.TestController.get({}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4633,7 +4664,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -4660,11 +4691,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
             ],
             self.TestController.get({'optional': 'my_value1'}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4672,7 +4703,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -4700,11 +4731,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         )
         self.assertEqual([{'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'}],
                          self.TestController.get({'mandatory': 1}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4712,7 +4743,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4733,11 +4764,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'optional': 'my_value',
         })
         self.assertEqual([], self.TestController.get({'optional': 'my_value1'}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4745,7 +4776,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4770,11 +4801,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual(1, self.TestController.delete({'key': 'my_key1'}))
         self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
                          self.TestController.get({}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4782,7 +4813,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -4790,7 +4821,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4812,11 +4843,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         })
         time.sleep(1)
         self.TestController.delete({'key': 'my_key1'})
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4824,7 +4855,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -4832,7 +4863,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -4855,11 +4886,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         })
         time.sleep(1)
         self.TestController.delete({'key': 'my_key1'})
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -4885,11 +4916,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'key': 'my_key1',
             'mandatory': 1,  # Put back initial value
         })
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4897,7 +4928,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -4905,7 +4936,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4928,11 +4959,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(2, self.TestController.delete({}))
         self.assertEqual([], self.TestController.get({}))
-        self._check_audit(
+        self._check_audit(self.TestController,
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4940,7 +4971,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -4948,7 +4979,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -4956,7 +4987,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d\-\d\d\-\d\dT\d\d\:\d\d\:\d\d\+00\:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -4975,7 +5006,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'offset': inputs.natural,
             },
             {arg.name: arg.type for arg in self.TestController.query_get_parser.args})
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_query_get_audit_parser(self):
         self.assertEqual(
@@ -4990,7 +5021,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'offset': inputs.natural,
             },
             {arg.name: arg.type for arg in self.TestController.query_get_audit_parser.args})
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_query_delete_parser(self):
         self.assertEqual(
@@ -5000,7 +5031,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'optional': str,
             },
             {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_get_response_model(self):
         class TestAPI:
@@ -5014,7 +5045,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual(
             ('TestModel', ['key', 'mandatory', 'optional']),
             self.TestController.get_response_model)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_get_audit_response_model(self):
         class TestAPI:
@@ -5037,7 +5068,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 ],
             ),
             self.TestController.get_audit_response_model)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
 
 if __name__ == '__main__':
