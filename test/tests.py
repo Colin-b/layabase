@@ -2716,12 +2716,36 @@ class MongoCRUDControllerTest(unittest.TestCase):
             __tablename__ = 'dict_table_name'
 
             class MyDictColumn(database_mongo.Column):
-                def validate_insert(self, model_as_dict: dict):
+
+                @classmethod
+                def _validation_model(cls):
+                    class MyDictColumnModel(database_mongo.CRUDModel):
+                        first_key = database_mongo.Column(str, is_nullable=False)
+                        second_key = database_mongo.Column(int, is_nullable=False)
+
+                    MyDictColumnModel.__fields__ = MyDictColumnModel.get_fields()
+
+                    return MyDictColumnModel
+
+                def validate_insert(self, model_as_dict: dict) -> dict:
                     errors = database_mongo.Column.validate_insert(self, model_as_dict)
                     if not errors:
-                        inner_dict = model_as_dict[self.name]
-                        if len(inner_dict) != 2:
-                            errors.update({self.name: ['Length should be 2.']})
+                        value = model_as_dict[self.name]
+                        errors.update(self._validation_model().validate_insert(value))
+                    return errors
+
+                def validate_update(self, model_as_dict: dict) -> dict:
+                    errors = database_mongo.Column.validate_update(self, model_as_dict)
+                    if not errors:
+                        value = model_as_dict[self.name]
+                        errors.update(self._validation_model().validate_update(value))
+                    return errors
+
+                def validate_query(self, model_as_dict: dict) -> dict:
+                    errors = database_mongo.Column.validate_query(self, model_as_dict)
+                    if not errors:
+                        value = model_as_dict[self.name]
+                        errors.update(self._validation_model().validate_query(value))
                     return errors
 
             key = database_mongo.Column(str, is_primary_key=True)
@@ -3109,6 +3133,105 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_update_with_dot_notation_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            (
+                {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+                {'dict_col': {'first_key': 'my_value', 'second_key': 4}, 'key': 'my_key'}
+            ),
+            self.TestDictController.put({
+                'key': 'my_key',
+                'dict_col.second_key': 4,
+            })
+        )
+
+    def test_update_with_dot_notation_invalid_value_is_invalid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        with self.assertRaises(Exception) as cm:
+            self.TestDictController.put({
+                'key': 'my_key',
+                'dict_col.second_key': 'invalid integer',
+            })
+        self.assertEqual({'second_key': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'key': 'my_key', 'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
+
+    def test_delete_with_dot_notation_invalid_value_is_invalid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        with self.assertRaises(Exception) as cm:
+            self.TestDictController.delete({
+                'dict_col.second_key': 'invalid integer',
+            })
+        self.assertEqual({'second_key': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
+
+    def test_delete_with_dot_notation_valid_value_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': 'my_value',
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(1, self.TestDictController.delete({
+                'dict_col.second_key': 3,
+            }))
+
+    def test_post_with_dot_notation_invalid_value_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col.first_key': 'my_value',
+                'dict_col.second_key': 'invalid integer',
+            })
+        self.assertEqual({'second_key': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'key': 'my_key', 'dict_col.first_key': 'my_value', 'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
+
+    def test_post_with_dot_notation_valid_value_is_valid(self):
+        self.assertEqual({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': 'my_value',
+                'second_key': 1,
+            }
+        },
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col.first_key': 'my_value',
+                'dict_col.second_key': 1,
+            })
+        )
+
     def test_get_with_unmatching_dot_notation_is_empty(self):
         self.assertEqual(
             {'dict_col': {'first_key': 'my_value', 'second_key': 3}, 'key': 'my_key'},
@@ -3278,7 +3401,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'first_key': 'my_value',
                 },
             })
-        self.assertEqual({'dict_col': ['Length should be 2.']}, cm.exception.errors)
+        self.assertEqual({'second_key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({'key': 'my_key', 'dict_col': {'first_key': 'my_value'}}, cm.exception.received_data)
 
     def test_post_many_with_optional_is_valid(self):
