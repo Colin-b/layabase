@@ -132,16 +132,13 @@ class Column:
 
         return {}
 
-    def deserialize(self, model_as_dict: dict):
+    def deserialize(self, value):
         """
-        Ensure that every value within model is properly typed so that insertion in Mongo can be performed.
-        :param model_as_dict: Model with modified values if required.
+        Convert this field value to the proper value that can be inserted in Mongo.
+        :param value: Original field value
+        :return Deserialized field value (can be inserted in Mongo)
         """
-        value = model_as_dict.get(self.name)
-
         if value is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
             return
 
         if self.field_type == datetime.datetime:
@@ -168,7 +165,7 @@ class Column:
             if not isinstance(value, ObjectId):
                 value = ObjectId(value)
 
-        model_as_dict[self.name] = value
+        return value
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name)
@@ -282,6 +279,47 @@ class CRUDModel:
         return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
+    def validate_query(cls, model_as_dict: dict) -> dict:
+        queried_fields_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
+        unknown_fields = [field_name for field_name in model_as_dict if field_name not in queried_fields_names]
+        new_model_as_dict = copy.deepcopy(model_as_dict)  # Is there really a need for a deep copy here?
+        if unknown_fields:
+            for unknown_field in unknown_fields:
+                # Convert dot notation fields into known fields to be able to validate them
+                known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+                if known_field:
+                    previous_dict = new_model_as_dict.setdefault(known_field.name, {})
+                    previous_dict.update(field_value)
+
+        errors = {}
+
+        for field in [field for field in cls.__fields__ if field.name in new_model_as_dict]:
+            errors.update(field.validate_query(new_model_as_dict))
+
+        return errors
+
+    @classmethod
+    def deserialize_query_model(cls, model_as_dict: dict):
+        queried_fields_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
+        unknown_fields = [field_name for field_name in model_as_dict if field_name not in queried_fields_names]
+        if unknown_fields:
+            for unknown_field in unknown_fields:
+                # allow mongo dot notation to access sub-documents if field is of dict type
+                known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
+                if known_field:
+                    model_as_dict[unknown_field] = known_field.deserialize(field_value)  # TODO Deserialize only once all values for this field are aggregated
+                else:
+                    del model_as_dict[unknown_field]
+                    logger.warning(f'Skipping unknown field {unknown_field}.')
+
+        for field in [field for field in cls.__fields__ if field.name in model_as_dict]:
+            if model_as_dict[field.name] is None:
+                # Ensure that None value are not stored to save space
+                del model_as_dict[field.name]
+            else:
+                model_as_dict[field.name] = field.deserialize(model_as_dict[field.name])
+
+    @classmethod
     def _validate_insert(cls, model_as_dict: dict) -> (dict, dict):
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
@@ -335,12 +373,12 @@ class CRUDModel:
         return model_as_dict if errors else new_model_as_dict, errors
 
     @classmethod
-    def _handle_dot_notation(cls, field_name: str, value) -> (str, dict):
+    def _handle_dot_notation(cls, field_name: str, value) -> (Column, dict):
         parent_field = field_name.split('.', maxsplit=1)
         if len(parent_field) == 2:
             for field in cls.__fields__:
                 if field.name == parent_field[0] and field.field_type == dict:
-                    return parent_field[0], {parent_field[1]: value}
+                    return field, {parent_field[1]: value}
         return None, None
 
     @classmethod
