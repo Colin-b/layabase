@@ -47,7 +47,7 @@ class AuditModel:
             cls._audit_action(action='D', model_as_dict=removed_dict_model)
 
     @classmethod
-    def _audit_action(cls, action, model_as_dict):
+    def _audit_action(cls, action: str, model_as_dict: dict):
         model_as_dict['audit_user'] = ''
         model_as_dict['audit_date_utc'] = datetime.datetime.utcnow().isoformat()
         model_as_dict['audit_action'] = action
