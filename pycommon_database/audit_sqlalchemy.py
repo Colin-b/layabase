@@ -41,13 +41,13 @@ class AuditModel:
         query = cls._session.query(cls._model)
         for key, value in kwargs.items():
             if value is not None:
-                query = query.filter(getattr(cls, key) == value)
+                query = query.filter(getattr(cls._model, key) == value)
         removed_dict_models = [inspect(removed_model).dict for removed_model in query.all()]
         for removed_dict_model in removed_dict_models:
             cls._audit_action(action='D', model_as_dict=removed_dict_model)
 
     @classmethod
-    def _audit_action(cls, action, model_as_dict):
+    def _audit_action(cls, action: str, model_as_dict: dict):
         model_as_dict['audit_user'] = ''
         model_as_dict['audit_date_utc'] = datetime.datetime.utcnow().isoformat()
         model_as_dict['audit_action'] = action

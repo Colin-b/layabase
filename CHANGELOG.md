@@ -18,6 +18,10 @@ List all changes in various categories:
 - Add support for Mongo database.
 - All SQLAlchemy create_engine parameters can now be provided to database.load function
 
+### Bug fixes ###
+
+- SQLAlchemy audit filtering on select was not working (always returning all records)
+
 ## Version 9.3.1 (2018-01-18) ##
 
 ### Bug fixes ###
