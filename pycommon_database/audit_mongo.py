@@ -54,9 +54,9 @@ class AuditModel:
     def _audit_action(cls, action: Action, model_as_dict: dict):
         model_as_dict['audit_user'] = ''
         model_as_dict['audit_date_utc'] = datetime.datetime.utcnow()
-        model_as_dict['audit_action'] = action.value
+        model_as_dict['audit_action'] = action.name
         model_as_dict.pop('_id', None)
-        cls.__collection__.insert_one(model_as_dict)
+        cls.add(model_as_dict)
 
 
 def create_from(model):
