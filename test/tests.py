@@ -2715,58 +2715,18 @@ class MongoCRUDControllerTest(unittest.TestCase):
         class TestDictModel(database_mongo.CRUDModel):
             __tablename__ = 'dict_table_name'
 
-            class MyDictColumn(database_mongo.Column):
+            class MyDictColumn(database_mongo.DictColumn):
 
                 @classmethod
-                def _validation_model(cls):
+                def get_validation_model(cls):
                     class MyDictColumnModel(database_mongo.CRUDModel):
                         first_key = database_mongo.Column(EnumTest, is_nullable=False)
                         second_key = database_mongo.Column(int, is_nullable=False)
 
-                    MyDictColumnModel.__fields__ = MyDictColumnModel.get_fields()
-
                     return MyDictColumnModel
 
-                def validate_insert(self, model_as_dict: dict) -> dict:
-                    errors = database_mongo.Column.validate_insert(self, model_as_dict)
-                    if not errors:
-                        value = model_as_dict[self.name]
-                        errors.update(self._validation_model().validate_insert(value))
-                    return errors
-
-                def deserialize_insert(self, model_as_dict: dict):
-                    value = model_as_dict[self.name]
-                    self._validation_model().deserialize_insert(value)
-
-                def validate_update(self, model_as_dict: dict) -> dict:
-                    errors = database_mongo.Column.validate_update(self, model_as_dict)
-                    if not errors:
-                        value = model_as_dict[self.name]
-                        errors.update(self._validation_model().validate_update(value))
-                    return errors
-
-                def deserialize_update(self, model_as_dict: dict):
-                    value = model_as_dict[self.name]
-                    self._validation_model().deserialize_update(value)
-
-                def validate_query(self, model_as_dict: dict) -> dict:
-                    errors = database_mongo.Column.validate_query(self, model_as_dict)
-                    if not errors:
-                        value = model_as_dict[self.name]
-                        errors.update(self._validation_model().validate_query(value))
-                    return errors
-
-                def deserialize_query(self, model_as_dict: dict):
-                    value = model_as_dict[self.name]
-                    self._validation_model().deserialize_query(value)
-
-                def serialize(self, model_as_dict: dict):
-                    value = model_as_dict[self.name]
-                    self._validation_model().serialize(value)
-
-
             key = database_mongo.Column(str, is_primary_key=True)
-            dict_col = MyDictColumn(dict, is_nullable=False)
+            dict_col = MyDictColumn(is_nullable=False)
 
         class TestIndexModel(database_mongo.CRUDModel):
             __tablename__ = 'index_table_name'

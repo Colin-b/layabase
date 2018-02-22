@@ -215,6 +215,70 @@ class Column:
             model_as_dict[self.name] = str(value)
 
 
+class DictColumn(Column):
+    """
+    Definition of a Mongo database dictionary field.
+    If you do not want to validate the content of this dict, just use a Column(dict) instead.
+    """
+    def __init__(self, **kwargs):
+        """
+        :param default_value: Default value matching type. Default to None.
+        :param description: Field description.
+        :param index_type: Type of index amongst IndexType enum. Default to None.
+        :param is_primary_key: bool value. Default to False.
+        :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
+        :param is_required: bool value. Default to False.
+        :param should_auto_increment: bool value. Default to False. Only valid for int fields.
+        """
+        kwargs.pop('field_type', None)
+        Column.__init__(self, field_type=dict, **kwargs)
+
+    def get_validation_model(self):
+        raise Exception('You must implement a custom model for your dictionary.')
+
+    def _validation_model(self):
+        dict_column_model = self.get_validation_model()
+        dict_column_model.__fields__ = dict_column_model.get_fields()
+        return dict_column_model
+
+    def validate_insert(self, model_as_dict: dict) -> dict:
+        errors = Column.validate_insert(self, model_as_dict)
+        if not errors:
+            value = model_as_dict[self.name]
+            errors.update(self._validation_model().validate_insert(value))
+        return errors
+
+    def deserialize_insert(self, model_as_dict: dict):
+        value = model_as_dict[self.name]
+        self._validation_model().deserialize_insert(value)
+
+    def validate_update(self, model_as_dict: dict) -> dict:
+        errors = Column.validate_update(self, model_as_dict)
+        if not errors:
+            value = model_as_dict[self.name]
+            errors.update(self._validation_model().validate_update(value))
+        return errors
+
+    def deserialize_update(self, model_as_dict: dict):
+        value = model_as_dict[self.name]
+        self._validation_model().deserialize_update(value)
+
+    def validate_query(self, model_as_dict: dict) -> dict:
+        errors = Column.validate_query(self, model_as_dict)
+        if not errors:
+            value = model_as_dict[self.name]
+            errors.update(self._validation_model().validate_query(value))
+        return errors
+
+    def deserialize_query(self, model_as_dict: dict):
+        value = model_as_dict[self.name]
+        self._validation_model().deserialize_query(value)
+
+    def serialize(self, model_as_dict: dict):
+        value = model_as_dict[self.name]
+        self._validation_model().serialize(value)
+
+
 def to_mongo_field(attribute):
     attribute[1].name = attribute[0]
     return attribute[1]

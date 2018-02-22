@@ -37,7 +37,7 @@ class AuditModel:
 
     @classmethod
     def audit_remove(cls, **kwargs):
-        for removed_dict_model in cls._model.get_all(kwargs):
+        for removed_dict_model in cls._model.get_all(**kwargs):
             cls._audit_action(action=Action.Delete, model_as_dict=removed_dict_model)
 
     @classmethod
