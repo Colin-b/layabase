@@ -4602,6 +4602,76 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             ]
         )
 
+    def test_put_with_enum_is_valid(self):
+        self.assertEqual(
+            {'enum_fld': 'Value1', 'key': 'my_key'},
+            self.TestEnumController.post({
+                'key': 'my_key',
+                'enum_fld': EnumTest.Value1,
+            })
+        )
+        self.assertEqual(
+            (
+                {'enum_fld': 'Value1', 'key': 'my_key'},
+                {'enum_fld': 'Value2', 'key': 'my_key'},
+            ),
+            self.TestEnumController.put({
+                'key': 'my_key',
+                'enum_fld': EnumTest.Value2,
+            })
+        )
+        self._check_audit(self.TestEnumController,
+            [
+                {
+                    'audit_action': 'Insert',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'enum_fld': 'Value1',
+                    'key': 'my_key',
+                },
+                {
+                    'audit_action': 'Update',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'enum_fld': 'Value2',
+                    'key': 'my_key',
+                },
+            ]
+        )
+
+    def test_delete_with_enum_is_valid(self):
+        self.assertEqual(
+            {'enum_fld': 'Value1', 'key': 'my_key'},
+            self.TestEnumController.post({
+                'key': 'my_key',
+                'enum_fld': EnumTest.Value1,
+            })
+        )
+        time.sleep(1)
+        self.assertEqual(1,
+            self.TestEnumController.delete({
+                'enum_fld': EnumTest.Value1,
+            })
+        )
+        self._check_audit(self.TestEnumController,
+            [
+                {
+                    'audit_action': 'Insert',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'enum_fld': 'Value1',
+                    'key': 'my_key',
+                },
+                {
+                    'audit_action': 'Delete',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'enum_fld': 'Value1',
+                    'key': 'my_key',
+                },
+            ]
+        )
+
     def test_post_many_without_optional_is_valid(self):
         self.assertListEqual(
             [{'optional': None, 'mandatory': 1, 'key': 'my_key'}],

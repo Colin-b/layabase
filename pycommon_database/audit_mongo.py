@@ -29,25 +29,15 @@ class AuditModel:
 
     @classmethod
     def audit_add(cls, model_as_dict: dict):
-        if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
-
         cls._audit_action(action=Action.Insert, model_as_dict=copy.deepcopy(model_as_dict))
 
     @classmethod
     def audit_update(cls, model_as_dict: dict):
-        if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
-        model_as_dict_keys = cls._model._to_primary_keys_model(model_as_dict)
-        previous_model_as_dict = cls._model.__collection__.find_one(model_as_dict_keys)
-        if not previous_model_as_dict:
-            raise ModelCouldNotBeFound(model_as_dict)
-
-        cls._audit_action(action=Action.Update, model_as_dict=cls.serialize(previous_model_as_dict))
+        cls._audit_action(action=Action.Update, model_as_dict=copy.deepcopy(model_as_dict))
 
     @classmethod
     def audit_remove(cls, **kwargs):
-        for removed_dict_model in cls._model.__collection__.find(kwargs):
+        for removed_dict_model in cls._model.get_all(kwargs):
             cls._audit_action(action=Action.Delete, model_as_dict=removed_dict_model)
 
     @classmethod
