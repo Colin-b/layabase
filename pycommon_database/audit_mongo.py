@@ -43,7 +43,7 @@ class AuditModel:
         if not previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict)
 
-        cls._audit_action(action=Action.Update, model_as_dict=previous_model_as_dict)
+        cls._audit_action(action=Action.Update, model_as_dict=cls.serialize(previous_model_as_dict))
 
     @classmethod
     def audit_remove(cls, **kwargs):
