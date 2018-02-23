@@ -381,7 +381,7 @@ class CRUDModel:
 
     @classmethod
     def update_one(cls, model_as_dict_keys: dict, model_as_dict_updates):
-        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
+        cls.__collection__.update_one(model_as_dict_keys, model_as_dict_updates)
 
     @classmethod
     def delete_many(cls, model_to_query: dict) -> int:

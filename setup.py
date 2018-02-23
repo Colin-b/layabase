@@ -15,7 +15,7 @@ setup(
         'testing': [
             'nose',
             # Used to Manage Mongo Database
-            'mongomock',
+            'mongomock==3.9.0',
         ],
         # Used to Manage Mongo Database
         'mongo': [
