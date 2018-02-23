@@ -226,7 +226,7 @@ class CRUDModel:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
                 logger.info(f"Create {index_name} {index_type} index on {cls.__collection__.name} using {criteria} criteria.")
-                cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
+                cls.create_index(criteria, unique=index_type == IndexType.Unique, index_name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type} index.')
             raise
@@ -249,7 +249,7 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(kwargs, errors)
 
-        models = cls.__collection__.find(model_to_query, skip=offset, limit=limit)
+        models = cls.find(model_to_query, skip=offset, limit=limit)
         return [cls._serialize(model) for model in models]  # Convert Cursor to dict
 
     @classmethod
@@ -354,6 +354,41 @@ class CRUDModel:
         return model_as_dict
 
     @classmethod
+    def create_index(cls, criteria: dict, unique=False, index_name=None):
+        if index_name:
+            cls.__collection__.create_index(criteria, unique=unique, name=index_name)
+        else:
+            cls.__collection__.create_index(criteria, unique=unique)
+
+    @classmethod
+    def find(cls, model_to_query: dict, skip=0, limit=0) -> List[dict]:
+        return cls.__collection__.find(model_to_query, skip=skip, limit=limit)
+
+    @classmethod
+    def find_one(cls, model_to_query: dict, projection={}) -> dict:
+        if projection:
+            return cls.__collection__.find_one(model_to_query, projection=projection)
+        else:
+            return cls.__collection__.find_one(model_to_query)
+
+    @classmethod
+    def insert_many(cls, models_as_list_of_dict: List[dict]):
+        cls.__collection__.insert_many(models_as_list_of_dict)
+
+    @classmethod
+    def insert_one(cls, model_as_dict: dict):
+        cls.__collection__.insert_one(model_as_dict)
+
+    @classmethod
+    def update_one(cls, model_as_dict_keys: dict, model_as_dict_updates):
+        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
+
+    @classmethod
+    def delete_many(cls, model_to_query: dict) -> int:
+        nb_removed = cls.__collection__.delete_many(model_to_query).deleted_count
+        return nb_removed
+
+    @classmethod
     def add_all(cls, models_as_list_of_dict: List[dict]) -> List[dict]:
         """
         Add models formatted as a list of dictionaries.
@@ -380,7 +415,7 @@ class CRUDModel:
             raise ValidationFailed(models_as_list_of_dict, errors)
 
         try:
-            cls.__collection__.insert_many(new_models_as_list_of_dict)
+            cls.insert_many(new_models_as_list_of_dict)
             return [cls._serialize(model) for model in new_models_as_list_of_dict]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
@@ -397,7 +432,7 @@ class CRUDModel:
             raise ValidationFailed(model_as_dict, errors)
 
         try:
-            cls.__collection__.insert_one(new_model_as_dict)
+            cls.insert_one(new_model_as_dict)
             return cls._serialize(new_model_as_dict)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(model_as_dict, message='This item already exists.')
@@ -428,13 +463,13 @@ class CRUDModel:
             raise ValidationFailed(model_as_dict, errors)
 
         model_as_dict_keys = cls._to_primary_keys_model(new_model_as_dict)
-        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
+        previous_model_as_dict = cls.find_one(model_as_dict_keys, projection={'_id': False})
         if not previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict_keys)
 
         model_as_dict_updates = {k: v for k, v in new_model_as_dict.items() if k not in model_as_dict_keys}
-        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
-        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        cls.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
+        new_model_as_dict = cls.find_one(model_as_dict_keys)
         return cls._serialize(previous_model_as_dict), cls._serialize(new_model_as_dict)
 
     @classmethod
@@ -453,7 +488,7 @@ class CRUDModel:
         if errors:
             raise ValidationFailed(kwargs, errors)
 
-        nb_removed = cls.__collection__.delete_many(model_to_query).deleted_count
+        nb_removed = cls.delete_many(model_to_query)
         return nb_removed
 
     @classmethod
