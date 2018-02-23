@@ -39,7 +39,7 @@ class AuditModel:
         if not model_as_dict:
             raise ValidationFailed({}, message='No data provided.')
         model_as_dict_keys = cls._model._to_primary_keys_model(model_as_dict)
-        previous_model_as_dict = cls._model.__collection__.find_one(model_as_dict_keys)
+        previous_model_as_dict = cls._model.find_one(model_as_dict_keys)
         if not previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict)
 
@@ -47,7 +47,7 @@ class AuditModel:
 
     @classmethod
     def audit_remove(cls, **kwargs):
-        for removed_dict_model in cls._model.__collection__.find(kwargs):
+        for removed_dict_model in cls._model.find(kwargs):
             cls._audit_action(action=Action.Delete, model_as_dict=removed_dict_model)
 
     @classmethod
