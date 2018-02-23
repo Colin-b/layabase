@@ -4570,6 +4570,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'enum_fld': EnumTest.Value1,
             })
         )
+        time.sleep(1)
         self.assertEqual(
             (
                 {'enum_fld': 'Value1', 'key': 'my_key'},
