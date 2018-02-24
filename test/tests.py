@@ -2717,8 +2717,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
             class MyDictColumn(database_mongo.DictColumn):
 
-                @classmethod
-                def get_validation_model(cls):
+                def get_description_model(self):
                     class MyDictColumnModel(database_mongo.CRUDModel):
                         first_key = database_mongo.Column(EnumTest, is_nullable=False)
                         second_key = database_mongo.Column(int, is_nullable=False)

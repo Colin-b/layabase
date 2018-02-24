@@ -233,53 +233,56 @@ class DictColumn(Column):
         kwargs.pop('field_type', None)
         Column.__init__(self, field_type=dict, **kwargs)
 
-    def get_validation_model(self):
-        raise Exception('You must implement a custom model for your dictionary.')
+    def get_description_model(self):
+        """
+        :return: A CRUDModel describing every dictionary fields.
+        """
+        raise Exception('You must implement a custom model describing the dictionary fields.')
 
-    def _validation_model(self):
-        dict_column_model = self.get_validation_model()
+    def _description_model(self):
+        dict_column_model = self.get_description_model()
         dict_column_model.__fields__ = dict_column_model.get_fields()
         return dict_column_model
 
     def get_index_fields(self, index_type: IndexType) -> List[Column]:
-        return self._validation_model().get_index_fields(index_type)
+        return self._description_model().get_index_fields(index_type)
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
             value = model_as_dict[self.name]
-            errors.update(self._validation_model().validate_insert(value))
+            errors.update(self._description_model().validate_insert(value))
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
         value = model_as_dict[self.name]
-        self._validation_model().deserialize_insert(value)
+        self._description_model().deserialize_insert(value)
 
     def validate_update(self, model_as_dict: dict) -> dict:
         errors = Column.validate_update(self, model_as_dict)
         if not errors:
             value = model_as_dict[self.name]
-            errors.update(self._validation_model().validate_update(value))
+            errors.update(self._description_model().validate_update(value))
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
         value = model_as_dict[self.name]
-        self._validation_model().deserialize_update(value)
+        self._description_model().deserialize_update(value)
 
     def validate_query(self, model_as_dict: dict) -> dict:
         errors = Column.validate_query(self, model_as_dict)
         if not errors:
             value = model_as_dict[self.name]
-            errors.update(self._validation_model().validate_query(value))
+            errors.update(self._description_model().validate_query(value))
         return errors
 
     def deserialize_query(self, model_as_dict: dict):
         value = model_as_dict[self.name]
-        self._validation_model().deserialize_query(value)
+        self._description_model().deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict[self.name]
-        self._validation_model().serialize(value)
+        self._description_model().serialize(value)
 
 
 def to_mongo_field(attribute):
