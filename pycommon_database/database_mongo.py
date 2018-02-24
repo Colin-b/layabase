@@ -241,6 +241,9 @@ class DictColumn(Column):
         dict_column_model.__fields__ = dict_column_model.get_fields()
         return dict_column_model
 
+    def get_index_fields(self, index_type: IndexType) -> List[Column]:
+        return self._validation_model().get_index_fields(index_type)
+
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
