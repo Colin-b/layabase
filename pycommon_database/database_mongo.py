@@ -335,7 +335,11 @@ class CRUDModel:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
-        return [field for field in cls.__fields__ if field.index_type == index_type]
+        index_fields = [field for field in cls.__fields__ if field.index_type == index_type]
+        for field in cls.__fields__:
+            if isinstance(field, DictColumn):
+                index_fields.extend(field.get_index_fields(index_type))
+        return index_fields
 
     @classmethod
     def get_all(cls, **model_to_query) -> List[dict]:
