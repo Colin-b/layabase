@@ -2742,8 +2742,17 @@ class MongoCRUDControllerTest(unittest.TestCase):
         class TestListModel(database_mongo.CRUDModel):
             __tablename__ = 'list_table_name'
 
+            class MyDictColumn(database_mongo.DictColumn):
+
+                def get_description_model(self):
+                    class MyDictColumnModel(database_mongo.CRUDModel):
+                        first_key = database_mongo.Column(EnumTest, is_nullable=False)
+                        second_key = database_mongo.Column(int, is_nullable=False)
+
+                    return MyDictColumnModel
+
             key = database_mongo.Column(is_primary_key=True)
-            list_field = database_mongo.Column(list)
+            list_field = database_mongo.ListColumn(MyDictColumn())
             bool_field = database_mongo.Column(bool)
 
         logger.info('Save model class...')
@@ -3067,13 +3076,108 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
-    def test_post_list_is_valid(self):
+    def test_post_list_of_dict_is_valid(self):
         self.assertEqual(
-            {'bool_field': False, 'key': 'my_key', 'list_field': ['value1', 'value2']},
+            {
+                'bool_field': False,
+                'key': 'my_key',
+                'list_field': [
+                    {'first_key': 'Value1', 'second_key': 1},
+                    {'first_key': 'Value2', 'second_key': 2},
+                ],
+            },
             self.TestListController.post({
                 'key': 'my_key',
-                'list_field': ['value1', 'value2'],
+                'list_field': [
+                    {'first_key': EnumTest.Value1, 'second_key': 1},
+                    {'first_key': EnumTest.Value2, 'second_key': 2}
+                ],
                 'bool_field': False,
+            })
+        )
+
+    def test_get_list_of_dict_is_valid(self):
+        self.TestListController.post({
+            'key': 'my_key',
+            'list_field': [
+                {'first_key': EnumTest.Value1, 'second_key': 1},
+                {'first_key': EnumTest.Value2, 'second_key': 2}
+            ],
+            'bool_field': False,
+        })
+        self.assertEqual(
+            [
+                {
+                    'bool_field': False,
+                    'key': 'my_key',
+                    'list_field': [
+                        {'first_key': 'Value1', 'second_key': 1},
+                        {'first_key': 'Value2', 'second_key': 2},
+                    ],
+                }
+            ],
+            self.TestListController.get({
+                'list_field': [
+                    {'first_key': EnumTest.Value1, 'second_key': 1},
+                    {'first_key': 'Value2', 'second_key': 2},
+                ],
+            })
+        )
+
+    def test_delete_list_of_dict_is_valid(self):
+        self.TestListController.post({
+            'key': 'my_key',
+            'list_field': [
+                {'first_key': EnumTest.Value1, 'second_key': 1},
+                {'first_key': EnumTest.Value2, 'second_key': 2}
+            ],
+            'bool_field': False,
+        })
+        self.assertEqual(
+            1,
+            self.TestListController.delete({
+                'list_field': [
+                    {'first_key': EnumTest.Value1, 'second_key': 1},
+                    {'first_key': 'Value2', 'second_key': 2},
+                ],
+            })
+        )
+
+    def test_put_list_of_dict_is_valid(self):
+        self.TestListController.post({
+            'key': 'my_key',
+            'list_field': [
+                {'first_key': EnumTest.Value1, 'second_key': 1},
+                {'first_key': EnumTest.Value2, 'second_key': 2}
+            ],
+            'bool_field': False,
+        })
+        self.assertEqual(
+            (
+                {
+                    'bool_field': False,
+                    'key': 'my_key',
+                    'list_field': [
+                        {'first_key': 'Value1', 'second_key': 1},
+                        {'first_key': 'Value2', 'second_key': 2},
+                    ],
+                },
+                {
+                    'bool_field': True,
+                    'key': 'my_key',
+                    'list_field': [
+                        {'first_key': 'Value2', 'second_key': 10},
+                        {'first_key': 'Value1', 'second_key': 2},
+                    ],
+                },
+            ),
+            self.TestListController.put({
+                'key': 'my_key',
+                'list_field': [
+                    {'first_key': EnumTest.Value2, 'second_key': 10},
+                    {'first_key': EnumTest.Value1, 'second_key': 2}
+                ],
+                'bool_field': True,
             })
         )
 
