@@ -64,6 +64,9 @@ class Column:
             self.is_nullable = not self.is_primary_key or self.default_value or self.should_auto_increment
         self.is_required = bool(kwargs.pop('is_required', False))
 
+    def _update_name(self, name):
+        self.name = name
+
     def __str__(self):
         return f'{self.name}'
 
@@ -255,7 +258,11 @@ class DictColumn(Column):
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
-        value = model_as_dict[self.name]
+        value = model_as_dict.get(self.name)
+        if value is None:
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
+            return
         self._description_model().deserialize_insert(value)
 
     def validate_update(self, model_as_dict: dict) -> dict:
@@ -266,7 +273,11 @@ class DictColumn(Column):
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
-        value = model_as_dict[self.name]
+        value = model_as_dict.get(self.name)
+        if value is None:
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
+            return
         self._description_model().deserialize_update(value)
 
     def validate_query(self, model_as_dict: dict) -> dict:
@@ -277,16 +288,127 @@ class DictColumn(Column):
         return errors
 
     def deserialize_query(self, model_as_dict: dict):
-        value = model_as_dict[self.name]
+        value = model_as_dict.get(self.name)
+        if value is None:
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
+            return
         self._description_model().deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
-        value = model_as_dict[self.name]
+        value = model_as_dict.get(self.name)
         self._description_model().serialize(value)
 
 
+class ListColumn(Column):
+    """
+    Definition of a Mongo database list field.
+    This list should only contains items of a specified type.
+    If you do not want to validate the content of this list, just use a Column(list) instead.
+    """
+    def __init__(self, list_item_type: Column, **kwargs):
+        """
+        :param list_item_type: Column describing an element of this list.
+
+        :param default_value: Default value matching type. Default to None.
+        :param description: Field description.
+        :param index_type: Type of index amongst IndexType enum. Default to None.
+        :param is_primary_key: bool value. Default to False.
+        :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
+        :param is_required: bool value. Default to False.
+        :param should_auto_increment: bool value. Default to False. Only valid for int fields.
+        """
+        kwargs.pop('field_type', None)
+        self.list_item_column = list_item_type
+        Column.__init__(self, field_type=list, **kwargs)
+
+    def _update_name(self, name):
+        Column._update_name(self, name)
+        self.list_item_column._update_name(name)
+
+    def validate_insert(self, model_as_dict: dict) -> dict:
+        errors = Column.validate_insert(self, model_as_dict)
+        if not errors:
+            values = model_as_dict[self.name]
+            for value in values:
+                errors.update(self.list_item_column.validate_insert({self.name: value}))
+        return errors
+
+    def deserialize_insert(self, model_as_dict: dict):
+        values = model_as_dict.get(self.name)
+        if values is None:
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
+            return
+        new_values = []
+        for value in values:
+            value_dict = {self.name: value}
+            self.list_item_column.deserialize_insert(value_dict)
+            if self.name in value_dict:
+                new_values.append(value_dict[self.name])
+
+        model_as_dict[self.name] = new_values
+
+    def validate_update(self, model_as_dict: dict) -> dict:
+        errors = Column.validate_update(self, model_as_dict)
+        if not errors:
+            values = model_as_dict[self.name]
+            for value in values:
+                errors.update(self.list_item_column.validate_update({self.name: value}))
+        return errors
+
+    def deserialize_update(self, model_as_dict: dict):
+        values = model_as_dict.get(self.name)
+        if values is None:
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
+            return
+        new_values = []
+        for value in values:
+            value_dict = {self.name: value}
+            self.list_item_column.deserialize_update(value_dict)
+            if self.name in value_dict:
+                new_values.append(value_dict[self.name])
+
+        model_as_dict[self.name] = new_values
+
+    def validate_query(self, model_as_dict: dict) -> dict:
+        errors = Column.validate_query(self, model_as_dict)
+        if not errors:
+            values = model_as_dict[self.name]
+            for value in values:
+                errors.update(self.list_item_column.validate_query({self.name: value}))
+        return errors
+
+    def deserialize_query(self, model_as_dict: dict):
+        values = model_as_dict.get(self.name)
+        if values is None:
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
+            return
+        new_values = []
+        for value in values:
+            value_dict = {self.name: value}
+            self.list_item_column.deserialize_query(value_dict)
+            if self.name in value_dict:
+                new_values.append(value_dict[self.name])
+
+        model_as_dict[self.name] = new_values
+
+    def serialize(self, model_as_dict: dict):
+        values = model_as_dict.get(self.name)
+        new_values = []
+        for value in values:
+            value_dict = {self.name: value}
+            self.list_item_column.serialize(value_dict)
+            if self.name in value_dict:
+                new_values.append(value_dict[self.name])
+
+        model_as_dict[self.name] = new_values
+
+
 def to_mongo_field(attribute):
-    attribute[1].name = attribute[0]
+    attribute[1]._update_name(attribute[0])
     return attribute[1]
 
 
