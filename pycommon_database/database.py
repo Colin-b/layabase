@@ -58,12 +58,11 @@ class ControllerModelNotSet(Exception):
                            f'Model was not attached to {controller_class.__name__}. Call {controller_class.model}.')
 
 
-def _ignore_read_only_fields(model_properties: dict, input_dictionnaries):
-    read_only_fields = [item[0] for item in model_properties.items() if item[1].get('readOnly', None)]
-    if isinstance(input_dictionnaries, list):
-        return [{k: v for k, v in d.items() if k not in read_only_fields} for d in input_dictionnaries]
-    else:
-        return {k: v for k, v in input_dictionnaries.items() if k not in read_only_fields}
+def _ignore_read_only_fields(model_properties: dict, model_as_dict: dict):
+    read_only_fields = [field_name for field_name, field_properties in model_properties.items() if field_properties.get('readOnly')]
+    if model_as_dict:
+        return {field_name: field_value for field_name, field_value in model_as_dict.items() if field_name not in read_only_fields}
+    return model_as_dict
 
 
 class CRUDController:
@@ -151,7 +150,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if hasattr(cls.json_post_model, '_schema'):
-            new_dict = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None), new_dict)
+            new_dict = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', {}), new_dict)
         inserted_dict = cls._model.add(new_dict)
         if cls._audit_model:
             cls._audit_model.audit_add(inserted_dict)
@@ -166,8 +165,11 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        if hasattr(cls.json_post_model, '_schema'):
-            new_dicts = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', None), new_dicts)
+        if new_dicts and hasattr(cls.json_post_model, '_schema'):
+            new_dicts = [
+                _ignore_read_only_fields(cls.json_post_model._schema.get('properties', {}), new_dict)
+                for new_dict in new_dicts
+            ]
         inserted_dicts = cls._model.add_all(new_dicts)
         if cls._audit_model:
             for inserted_dict in inserted_dicts:

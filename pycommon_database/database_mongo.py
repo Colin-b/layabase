@@ -836,49 +836,49 @@ class CRUDModel:
 
     @classmethod
     def flask_restplus_fields(cls) -> dict:
-        model_fields = {}
-        for field in cls.__fields__:
-            if isinstance(field, DictColumn):
-                model_fields[field.name] = flask_restplus_fields.Nested(
-                    field._description_model().flask_restplus_fields(),
-                    required=field.is_required,
-                    example=_get_example(field),
-                    description=field.description,
-                    enum=field.choices,
-                    default=field.default_value,
-                    readonly=field.should_auto_increment,
-                )
-            elif isinstance(field, ListColumn):
-                # TODO Handle list of Dict or List of list
-                model_fields[field.name] = flask_restplus_fields.List(
-                    _get_flask_restplus_type(field.list_item_column),
-                    required=field.is_required,
-                    example=_get_example(field),
-                    description=field.description,
-                    enum=field.choices,
-                    default=field.default_value,
-                    readonly=field.should_auto_increment,
-                )
-            elif field.field_type == list:
-                model_fields[field.name] = flask_restplus_fields.List(
-                    flask_restplus_fields.String,
-                    required=field.is_required,
-                    example=_get_example(field),
-                    description=field.description,
-                    enum=field.choices,
-                    default=field.default_value,
-                    readonly=field.should_auto_increment,
-                )
-            else:
-                model_fields[field.name] = _get_flask_restplus_type(field)(
-                    required=field.is_required,
-                    example=_get_example(field),
-                    description=field.description,
-                    enum=field.choices,
-                    default=field.default_value,
-                    readonly=field.should_auto_increment,
-                )
-        return model_fields
+        return {field.name: cls._to_flask_restplus_field(field) for field in cls.__fields__}
+
+    @classmethod
+    def _to_flask_restplus_field(cls, field: Column):
+        if isinstance(field, DictColumn):
+            return flask_restplus_fields.Nested(
+                field._description_model().flask_restplus_fields(),
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.choices,
+                default=field.default_value,
+                readonly=field.should_auto_increment,
+            )
+        elif isinstance(field, ListColumn):
+            return flask_restplus_fields.List(
+                cls._to_flask_restplus_field(field.list_item_column),
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.choices,
+                default=field.default_value,
+                readonly=field.should_auto_increment,
+            )
+        elif field.field_type == list:
+            return flask_restplus_fields.List(
+                flask_restplus_fields.String,
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.choices,
+                default=field.default_value,
+                readonly=field.should_auto_increment,
+            )
+        else:
+            return _get_flask_restplus_type(field)(
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.choices,
+                default=field.default_value,
+                readonly=field.should_auto_increment,
+            )
 
     @classmethod
     def flask_restplus_description_fields(cls) -> dict:
@@ -995,20 +995,19 @@ def _get_default_example(field: Column) -> str:
     """
     Return an Example value corresponding to this Mongodb field.
     """
-    field_flask = _get_flask_restplus_type(field)
-    if field_flask == flask_restplus_fields.Integer:
+    if field.field_type == int:
         return '0'
-    if field_flask == flask_restplus_fields.Float:
+    if field.field_type == float:
         return '0.0'
-    if field_flask == flask_restplus_fields.Boolean:
+    if field.field_type == bool:
         return 'true'
-    if field_flask == flask_restplus_fields.Date:
+    if field.field_type == datetime.date:
         return '2017-09-24'
-    if field_flask == flask_restplus_fields.DateTime:
+    if field.field_type == datetime.datetime:
         return '2017-09-24T15:36:09'
-    if field_flask == flask_restplus_fields.List:
+    if field.field_type == list:
         return str([['field1','value1'], ['fieldx','valuex']])
-    if field_flask == flask_restplus_fields.Raw:
+    if field.field_type == dict:
         return str({'field1':'value1','fieldx':'valuex'})
     return 'sample_value'
 

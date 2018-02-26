@@ -20,6 +20,34 @@ from pycommon_database import database, flask_restplus_errors, database_sqlalche
 logger = logging.getLogger(__name__)
 
 
+class TestAPI:
+    @classmethod
+    def model(cls, name, fields):
+        from collections import OrderedDict
+        property_list = []
+        for field_name in fields:
+            if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
+                property_list.append(tuple((field_name, {'readOnly': True})))
+            else:
+                property_list.append(tuple((field_name, {})))
+
+        model = lambda: None
+        # This is used to ignore read only fields
+        setattr(model, '_schema', {'properties': OrderedDict(property_list)})
+        # Those are set to be able to test the content that was provided to this method
+        setattr(model, 'fields', fields)
+        setattr(model, 'field_names', list(fields.keys()))
+        setattr(model, 'fields_required', [field_name for field_name, field in fields.items() if field.required])
+        setattr(model, 'fields_example', {field_name: field.example for field_name, field in fields.items()})
+        setattr(model, 'fields_description', {field_name: field.description for field_name, field in fields.items()})
+        setattr(model, 'fields_enum', {field_name: field.enum for field_name, field in fields.items() if hasattr(field, 'enum')})
+        setattr(model, 'fields_default', {field_name: field.default for field_name, field in fields.items()})
+        setattr(model, 'fields_readonly', {field_name: field.readonly for field_name, field in fields.items()})
+        setattr(model, 'name', name)
+
+        return model
+
+
 class MongoColumnTest(unittest.TestCase):
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -631,8 +659,11 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
 
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
+        cls.TestController.namespace(TestAPI)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
+        cls.TestAutoIncrementController.namespace(TestAPI)
         cls.TestDateController.model(TestDateModel)
+        cls.TestDateController.namespace(TestAPI)
         return [TestModel, TestAutoIncrementModel, TestDateModel]
 
     def setUp(self):
@@ -843,23 +874,6 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
         )
 
     def test_post_with_specified_incremented_field_is_ignored_and_valid(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                from collections import OrderedDict
-                test_fields = [name for name, model in fields.items()]
-                property_list = []
-                for field_name in test_fields:
-                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
-                        property_list.append(tuple((field_name, {'readOnly': True})))
-                    else:
-                        property_list.append(tuple((field_name, {})))
-
-                model = lambda: None
-                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
-                return model
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
             {'optional_with_default': 'Test value', 'key': 1, 'enum_field': 'Value1'},
             self.TestAutoIncrementController.post({
@@ -869,24 +883,6 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
         )
 
     def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                from collections import OrderedDict
-                test_fields = [name for name, model in fields.items()]
-                property_list = []
-                for field_name in test_fields:
-                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
-                        property_list.append(tuple((field_name, {'readOnly': True})))
-                    else:
-                        property_list.append(tuple((field_name, {})))
-
-                model = lambda: None
-                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
-                return model
-
-        self.TestAutoIncrementController.namespace(TestAPI)
-
         self.assertListEqual(
             [
                 {'optional_with_default': 'Test value', 'enum_field': 'Value1', 'key': 1},
@@ -1175,98 +1171,70 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
 
     def test_json_post_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                test_defaults = [field.default for field in fields.values() if
-                                 hasattr(field, 'default') and field.default]
-                return name, test_fields, test_defaults
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional'], []),
-            self.TestController.json_post_model
+            'TestModel',
+            self.TestController.json_post_model.name
+        )
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.json_post_model.field_names
         )
 
     def test_json_post_model_with_auto_increment_and_enum(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                test_defaults = [field.default for field in fields.values() if
-                                 hasattr(field, 'default') and field.default]
-                return name, test_fields, test_defaults
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
-            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default'], ['Test value']),
-            self.TestAutoIncrementController.json_post_model
+            'TestAutoIncrementModel',
+            self.TestAutoIncrementController.json_post_model.name
+        )
+        self.assertEqual(
+            ['key', 'enum_field', 'optional_with_default'],
+            self.TestAutoIncrementController.json_post_model.field_names
+        )
+        self.assertEqual(
+            {'enum_field': None, 'key': None, 'optional_with_default': 'Test value'},
+            self.TestAutoIncrementController.json_post_model.fields_default
         )
 
     def test_json_put_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional']),
-            self.TestController.json_put_model
+            'TestModel',
+            self.TestController.json_put_model.name
+        )
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.json_put_model.field_names
         )
 
     def test_json_put_model_with_auto_increment_and_enum(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
-            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default']),
-            self.TestAutoIncrementController.json_put_model
+            'TestAutoIncrementModel',
+            self.TestAutoIncrementController.json_put_model.name
+        )
+        self.assertEqual(
+            ['key', 'enum_field', 'optional_with_default'],
+            self.TestAutoIncrementController.json_put_model.field_names
         )
 
     def test_get_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional']),
-            self.TestController.get_response_model)
+            'TestModel',
+            self.TestController.get_response_model.name)
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.get_response_model.field_names)
 
     def test_get_response_model_with_enum(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                test_descriptions = [field.description for field in fields.values() if field.description]
-                test_descriptions.sort()
-                test_enums = [field.enum for field in fields.values() if hasattr(field, 'enum') and field.enum]
-                return name, test_fields, test_descriptions, test_enums
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
-            (
-                'TestAutoIncrementModel',
-                ['enum_field', 'key', 'optional_with_default'],
-                ['Test Documentation'],
-                [['Value1', 'Value2']]
-            ),
-            self.TestAutoIncrementController.get_response_model)
+            'TestAutoIncrementModel',
+            self.TestAutoIncrementController.get_response_model.name)
+        self.assertEqual(
+            ['key', 'enum_field', 'optional_with_default'],
+            self.TestAutoIncrementController.get_response_model.field_names)
+        self.assertEqual(
+            {'enum_field': 'Test Documentation', 'key': None, 'optional_with_default': None},
+            self.TestAutoIncrementController.get_response_model.fields_description)
+        self.assertEqual(
+            {'enum_field': ['Value1', 'Value2'], 'optional_with_default': None},
+            self.TestAutoIncrementController.get_response_model.fields_enum)
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
         self.TestController.post({
@@ -1348,17 +1316,12 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             self.TestController.get_model_description())
 
     def test_get_model_description_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModelDescription', ['key', 'mandatory', 'optional', 'table']),
-            self.TestController.get_model_description_response_model)
+            'TestModelDescription',
+            self.TestController.get_model_description_response_model.name)
+        self.assertEqual(
+            ['table', 'key', 'mandatory', 'optional'],
+            self.TestController.get_model_description_response_model.field_names)
 
 
 class SQLAlchemyCRUDControllerFailuresTest(unittest.TestCase):
@@ -1478,6 +1441,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._db = database.load('sqlite:///:memory:', cls._create_models)
+        cls.TestController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -1534,51 +1498,33 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         )
 
     def test_post_model_fields_order(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                return list(fields.keys())
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
             [
                 'key',
                 'mandatory',
                 'optional',
             ],
-            self.TestController.json_post_model
+            self.TestController.json_post_model.field_names
         )
 
     def test_put_model_fields_order(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                return list(fields.keys())
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
             [
                 'key',
                 'mandatory',
                 'optional',
             ],
-            self.TestController.json_put_model
+            self.TestController.json_put_model.field_names
         )
 
     def test_get_response_model_fields_order(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                return list(fields.keys())
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
             [
                 'key',
                 'mandatory',
                 'optional',
             ],
-            self.TestController.get_response_model
+            self.TestController.get_response_model.field_names
         )
 
     def test_post_with_nothing_is_invalid(self):
@@ -2261,40 +2207,21 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         self._check_audit([])
 
     def test_get_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional']),
-            self.TestController.get_response_model)
+            'TestModel',
+            self.TestController.get_response_model.name)
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.get_response_model.field_names)
         self._check_audit([])
 
     def test_get_audit_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            (
-                'AuditTestModel', [
-                    'audit_action',
-                    'audit_date_utc',
-                    'audit_user',
-                    'key',
-                    'mandatory',
-                    'optional'
-                ],
-            ),
-            self.TestController.get_audit_response_model)
+            'AuditTestModel',
+            self.TestController.get_audit_response_model.name)
+        self.assertEqual(
+            ['audit_user', 'audit_date_utc', 'audit_action', 'key', 'mandatory', 'optional'],
+            self.TestController.get_audit_response_model.field_names)
         self._check_audit([])
 
 
@@ -2688,6 +2615,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._db = database.load('mongomock', cls._create_models)
+        cls.TestController.namespace(TestAPI)
+        cls.TestAutoIncrementController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -3818,23 +3747,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
         )
 
     def test_post_with_specified_incremented_field_is_ignored_and_valid(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                from collections import OrderedDict
-                test_fields = [name for name, model in fields.items()]
-                property_list = []
-                for field_name in test_fields:
-                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
-                        property_list.append(tuple((field_name, {'readOnly': True})))
-                    else:
-                        property_list.append(tuple((field_name, {})))
-
-                model = lambda: None
-                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
-                return model
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
             {'optional_with_default': 'Test value', 'key': 1, 'enum_field': 'Value1'},
             self.TestAutoIncrementController.post({
@@ -3844,23 +3756,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
         )
 
     def test_post_with_enum_is_valid(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                from collections import OrderedDict
-                test_fields = [name for name, model in fields.items()]
-                property_list = []
-                for field_name in test_fields:
-                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
-                        property_list.append(tuple((field_name, {'readOnly': True})))
-                    else:
-                        property_list.append(tuple((field_name, {})))
-
-                model = lambda: None
-                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
-                return model
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
             {'optional_with_default': 'Test value', 'key': 1, 'enum_field': 'Value1'},
             self.TestAutoIncrementController.post({
@@ -3870,23 +3765,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
         )
 
     def test_post_with_invalid_enum_choice_is_invalid(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                from collections import OrderedDict
-                test_fields = [name for name, model in fields.items()]
-                property_list = []
-                for field_name in test_fields:
-                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
-                        property_list.append(tuple((field_name, {'readOnly': True})))
-                    else:
-                        property_list.append(tuple((field_name, {})))
-
-                model = lambda: None
-                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
-                return model
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         with self.assertRaises(Exception) as cm:
             self.TestAutoIncrementController.post({
                 'key': 'my_key',
@@ -3896,24 +3774,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual({'enum_field': 'InvalidValue'}, cm.exception.received_data)
 
     def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                from collections import OrderedDict
-                test_fields = [name for name, model in fields.items()]
-                property_list = []
-                for field_name in test_fields:
-                    if hasattr(fields[field_name], 'readonly') and fields[field_name].readonly:
-                        property_list.append(tuple((field_name, {'readOnly': True})))
-                    else:
-                        property_list.append(tuple((field_name, {})))
-
-                model = lambda: None
-                setattr(model, '_schema', {'properties': OrderedDict(property_list)})
-                return model
-
-        self.TestAutoIncrementController.namespace(TestAPI)
-
         self.assertListEqual(
             [
                 {'optional_with_default': 'Test value', 'enum_field': 'Value1', 'key': 1},
@@ -4343,98 +4203,70 @@ class MongoCRUDControllerTest(unittest.TestCase):
             {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
 
     def test_json_post_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                test_defaults = [field.default for field in fields.values() if
-                                 hasattr(field, 'default') and field.default]
-                return name, test_fields, test_defaults
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional'], []),
-            self.TestController.json_post_model
+            'TestModel',
+            self.TestController.json_post_model.name
+        )
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.json_post_model.field_names
         )
 
     def test_json_post_model_with_auto_increment_and_enum(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                test_defaults = [field.default for field in fields.values() if
-                                 hasattr(field, 'default') and field.default]
-                return name, test_fields, test_defaults
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
-            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default'], ['Test value']),
-            self.TestAutoIncrementController.json_post_model
+            'TestAutoIncrementModel',
+            self.TestAutoIncrementController.json_post_model.name
+        )
+        self.assertEqual(
+            ['enum_field', 'key', 'optional_with_default'],
+            self.TestAutoIncrementController.json_post_model.field_names
+        )
+        self.assertEqual(
+            {'enum_field': None, 'key': None, 'optional_with_default': 'Test value'},
+            self.TestAutoIncrementController.json_post_model.fields_default
         )
 
     def test_json_put_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional']),
-            self.TestController.json_put_model
+            'TestModel',
+            self.TestController.json_put_model.name
+        )
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.json_put_model.field_names
         )
 
     def test_json_put_model_with_auto_increment_and_enum(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name, field in fields.items()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
-            ('TestAutoIncrementModel', ['enum_field', 'key', 'optional_with_default']),
-            self.TestAutoIncrementController.json_put_model
+            'TestAutoIncrementModel',
+            self.TestAutoIncrementController.json_put_model.name
+        )
+        self.assertEqual(
+            ['enum_field', 'key', 'optional_with_default'],
+            self.TestAutoIncrementController.json_put_model.field_names
         )
 
     def test_get_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional']),
-            self.TestController.get_response_model)
+            'TestModel',
+            self.TestController.get_response_model.name)
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.get_response_model.field_names)
 
     def test_get_response_model_with_enum(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                test_descriptions = [field.description for field in fields.values() if field.description]
-                test_descriptions.sort()
-                test_enums = [field.enum for field in fields.values() if hasattr(field, 'enum') and field.enum]
-                return name, test_fields, test_descriptions, test_enums
-
-        self.TestAutoIncrementController.namespace(TestAPI)
         self.assertEqual(
-            (
-                'TestAutoIncrementModel',
-                ['enum_field', 'key', 'optional_with_default'],
-                ['Test Documentation'],
-                [['Value1', 'Value2']]
-            ),
-            self.TestAutoIncrementController.get_response_model)
+            'TestAutoIncrementModel',
+            self.TestAutoIncrementController.get_response_model.name)
+        self.assertEqual(
+            ['enum_field', 'key', 'optional_with_default'],
+            self.TestAutoIncrementController.get_response_model.field_names)
+        self.assertEqual(
+            {'enum_field': 'Test Documentation', 'key': None, 'optional_with_default': None},
+            self.TestAutoIncrementController.get_response_model.fields_description)
+        self.assertEqual(
+            {'enum_field': ['Value1', 'Value2'], 'optional_with_default': None},
+            self.TestAutoIncrementController.get_response_model.fields_enum)
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
         self.TestController.post({
@@ -4516,17 +4348,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestController.get_model_description())
 
     def test_get_model_description_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModelDescription', ['collection', 'key', 'mandatory', 'optional']),
-            self.TestController.get_model_description_response_model)
+            'TestModelDescription',
+            self.TestController.get_model_description_response_model.name)
+        self.assertEqual(
+            ['collection', 'key', 'mandatory', 'optional'],
+            self.TestController.get_model_description_response_model.field_names)
 
 
 class MongoCRUDControllerFailuresTest(unittest.TestCase):
@@ -4649,6 +4476,8 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._db = database.load('mongomock', cls._create_models)
+        cls.TestController.namespace(TestAPI)
+        cls.TestEnumController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -4712,51 +4541,33 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         )
 
     def test_post_model_fields_order(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                return list(fields.keys())
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
             [
                 'key',
                 'mandatory',
                 'optional',
             ],
-            self.TestController.json_post_model
+            self.TestController.json_post_model.field_names
         )
 
     def test_put_model_fields_order(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                return list(fields.keys())
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
             [
                 'key',
                 'mandatory',
                 'optional',
             ],
-            self.TestController.json_put_model
+            self.TestController.json_put_model.field_names
         )
 
     def test_get_response_model_fields_order(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                return list(fields.keys())
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
             [
                 'key',
                 'mandatory',
                 'optional',
             ],
-            self.TestController.get_response_model
+            self.TestController.get_response_model.field_names
         )
 
     def test_post_with_nothing_is_invalid(self):
@@ -5585,40 +5396,28 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self._check_audit(self.TestController, [])
 
     def test_get_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            ('TestModel', ['key', 'mandatory', 'optional']),
-            self.TestController.get_response_model)
+            'TestModel',
+            self.TestController.get_response_model.name)
+        self.assertEqual(
+            ['key', 'mandatory', 'optional'],
+            self.TestController.get_response_model.field_names)
         self._check_audit(self.TestController, [])
 
     def test_get_audit_response_model(self):
-        class TestAPI:
-            @classmethod
-            def model(cls, name, fields):
-                test_fields = [name for name in fields.keys()]
-                test_fields.sort()
-                return name, test_fields
-
-        self.TestController.namespace(TestAPI)
         self.assertEqual(
-            (
-                'AuditTestModel', [
-                    'audit_action',
-                    'audit_date_utc',
-                    'audit_user',
-                    'key',
-                    'mandatory',
-                    'optional'
-                ],
-            ),
-            self.TestController.get_audit_response_model)
+            'AuditTestModel',
+            self.TestController.get_audit_response_model.name)
+        self.assertEqual(
+            [
+                'audit_action',
+                'audit_date_utc',
+                'audit_user',
+                'key',
+                'mandatory',
+                'optional'
+            ],
+            self.TestController.get_audit_response_model.field_names)
         self._check_audit(self.TestController, [])
 
 
