@@ -804,7 +804,7 @@ class CRUDModel:
             for inner_field in field.get_description_model().get_fields():
                 cls._add_field_to_query_parser(query_parser, inner_field, f'{field.name}.')
         elif isinstance(field, ListColumn):
-            # TODO Handle list of Dict or list of list
+            # Note that List of dict or list of list might be wrongly parsed
             query_parser.add_argument(
                 f'{prefix}{field.name}',
                 required=field.is_required,
@@ -836,18 +836,49 @@ class CRUDModel:
 
     @classmethod
     def flask_restplus_fields(cls) -> dict:
-        return {
-            field.name: _get_flask_restplus_type(field)(
-                required=field.is_required,
-                example=_get_example(field),
-                description=field.description,
-                enum=field.choices,
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-                cls_or_instance=_get_rest_plus_subtype(field)
-            )
-            for field in cls.__fields__
-        }
+        model_fields = {}
+        for field in cls.__fields__:
+            if isinstance(field, DictColumn):
+                model_fields[field.name] = flask_restplus_fields.Nested(
+                    field._description_model().flask_restplus_fields(),
+                    required=field.is_required,
+                    example=_get_example(field),
+                    description=field.description,
+                    enum=field.choices,
+                    default=field.default_value,
+                    readonly=field.should_auto_increment,
+                )
+            elif isinstance(field, ListColumn):
+                # TODO Handle list of Dict or List of list
+                model_fields[field.name] = flask_restplus_fields.List(
+                    _get_flask_restplus_type(field.list_item_column),
+                    required=field.is_required,
+                    example=_get_example(field),
+                    description=field.description,
+                    enum=field.choices,
+                    default=field.default_value,
+                    readonly=field.should_auto_increment,
+                )
+            elif field.field_type == list:
+                model_fields[field.name] = flask_restplus_fields.List(
+                    flask_restplus_fields.String,
+                    required=field.is_required,
+                    example=_get_example(field),
+                    description=field.description,
+                    enum=field.choices,
+                    default=field.default_value,
+                    readonly=field.should_auto_increment,
+                )
+            else:
+                model_fields[field.name] = _get_flask_restplus_type(field)(
+                    required=field.is_required,
+                    example=_get_example(field),
+                    description=field.description,
+                    enum=field.choices,
+                    default=field.default_value,
+                    readonly=field.should_auto_increment,
+                )
+        return model_fields
 
     @classmethod
     def flask_restplus_description_fields(cls) -> dict:
@@ -951,18 +982,6 @@ def _get_flask_restplus_type(field: Column):
         return flask_restplus_fields.Raw
 
     raise Exception(f'Flask RestPlus field type cannot be guessed for {field} field.')
-
-
-def _get_rest_plus_subtype(field: Column):
-    """
-    Return the Flask RestPlus field subtype (as a class) corresponding to this Mongo field if it is a list,
-    else same as type
-
-    :raises Exception if field type is not managed yet.
-    """
-    if field.field_type == list:
-        return flask_restplus_fields.List(cls_or_instance=flask_restplus_fields.String)
-    return _get_flask_restplus_type(field)
 
 
 def _get_example(field: Column) -> str:
