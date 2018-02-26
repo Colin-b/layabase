@@ -2617,6 +2617,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls._db = database.load('mongomock', cls._create_models)
         cls.TestController.namespace(TestAPI)
         cls.TestAutoIncrementController.namespace(TestAPI)
+        cls.TestDateController.namespace(TestAPI)
+        cls.TestDictController.namespace(TestAPI)
+        cls.TestOptionalDictController.namespace(TestAPI)
+        cls.TestIndexController.namespace(TestAPI)
+        cls.TestDefaultPrimaryKeyController.namespace(TestAPI)
+        cls.TestListController.namespace(TestAPI)
+        cls.TestIdController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):

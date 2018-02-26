@@ -974,6 +974,8 @@ def _get_flask_restplus_type(field: Column):
         return flask_restplus_fields.Date
     if field.field_type == datetime.datetime:
         return flask_restplus_fields.DateTime
+    if field.field_type == ObjectId:
+        return flask_restplus_fields.String
     if isinstance(field.field_type, enum.EnumMeta):
         return flask_restplus_fields.String
     if field.field_type == list:
@@ -1009,6 +1011,8 @@ def _get_default_example(field: Column) -> str:
         return str([['field1','value1'], ['fieldx','valuex']])
     if field.field_type == dict:
         return str({'field1':'value1','fieldx':'valuex'})
+    if field.field_type == ObjectId:
+        return '1234567890QBCDEF01234567'
     return 'sample_value'
 
 
