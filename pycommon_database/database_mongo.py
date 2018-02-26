@@ -10,6 +10,7 @@ import pymongo.errors
 from typing import List
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from bson.objectid import ObjectId
+from bson.errors import BSONError
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
@@ -42,6 +43,8 @@ class Column:
         """
         self.name = kwargs.pop('name', None)
         self.field_type = field_type or str
+        if '_id' == self.name:
+            self.field_type = ObjectId
         self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else None
         self.default_value = kwargs.pop('default_value', None)
         if self.default_value is None:
@@ -66,6 +69,8 @@ class Column:
 
     def _update_name(self, name):
         self.name = name
+        if '_id' == self.name:
+            self.field_type = ObjectId
 
     def __str__(self):
         return f'{self.name}'
@@ -129,6 +134,12 @@ class Column:
                 if value not in self.choices:
                     return {self.name: [f'Value "{value}" is not within {self.choices}.']}
                 return {}  # Consider string values valid for Enum type
+        elif self.field_type == ObjectId:
+            if not isinstance(value, ObjectId):
+                try:
+                    value = ObjectId(value)
+                except BSONError as e:
+                    return {self.name: [e.args[0]]}
 
         if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
@@ -192,8 +203,7 @@ class Column:
                 value = value.value
             elif isinstance(value, str):
                 value = self.field_type[value].value
-
-        if self.name == '_id':
+        elif self.field_type == ObjectId:
             if not isinstance(value, ObjectId):
                 value = ObjectId(value)
 
@@ -213,8 +223,7 @@ class Column:
             model_as_dict[self.name] = value.date().isoformat()
         elif isinstance(self.field_type, enum.EnumMeta):
             model_as_dict[self.name] = self.field_type(value).name
-
-        if self.name == '_id':
+        elif self.field_type == ObjectId:
             model_as_dict[self.name] = str(value)
 
 

@@ -2677,6 +2677,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestListController(database.CRUDController):
         pass
 
+    class TestIdController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2755,6 +2758,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             list_field = database_mongo.ListColumn(MyDictColumn())
             bool_field = database_mongo.Column(bool)
 
+        class TestIdModel(database_mongo.CRUDModel):
+            __tablename__ = 'id_table_name'
+
+            _id = database_mongo.Column(is_primary_key=True)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
@@ -2763,7 +2771,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIndexController.model(TestIndexModel)
         cls.TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
         cls.TestListController.model(TestListModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel]
+        cls.TestIdController.model(TestIdModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel, TestIdModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -2887,6 +2896,22 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ],
             self.TestIndexController.get({})
         )
+
+    def test_post_id_is_valid(self):
+        self.assertEqual(
+            {'_id': '123456789abcdef012345678'},
+            self.TestIdController.post({
+                '_id': '123456789ABCDEF012345678',
+            })
+        )
+
+    def test_invalid_id_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIdController.post({
+                '_id': 'invalid value',
+            })
+        self.assertEqual({'_id': ["'invalid value' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string"]}, cm.exception.errors)
+        self.assertEqual({'_id': 'invalid value'}, cm.exception.received_data)
 
     def test_get_all_with_none_primary_key_is_valid(self):
         self.assertEqual(
