@@ -329,7 +329,7 @@ class ListColumn(Column):
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
-            values = model_as_dict[self.name]
+            values = model_as_dict.get(self.name) or []
             for value in values:
                 errors.update(self.list_item_column.validate_insert({self.name: value}))
         return errors
@@ -375,7 +375,7 @@ class ListColumn(Column):
     def validate_query(self, model_as_dict: dict) -> dict:
         errors = Column.validate_query(self, model_as_dict)
         if not errors:
-            values = model_as_dict[self.name]
+            values = model_as_dict.get(self.name) or []
             for value in values:
                 errors.update(self.list_item_column.validate_query({self.name: value}))
         return errors
@@ -396,7 +396,7 @@ class ListColumn(Column):
         model_as_dict[self.name] = new_values
 
     def serialize(self, model_as_dict: dict):
-        values = model_as_dict.get(self.name)
+        values = model_as_dict.get(self.name, [])
         new_values = []
         for value in values:
             value_dict = {self.name: value}

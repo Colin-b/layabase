@@ -3096,6 +3096,33 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_post_optional_missing_list_of_dict_is_valid(self):
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': 'my_key',
+                'list_field': [],
+            },
+            self.TestListController.post({
+                'key': 'my_key',
+                'bool_field': False,
+            })
+        )
+
+    def test_post_optional_list_of_dict_as_None_is_valid(self):
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': 'my_key',
+                'list_field': [],
+            },
+            self.TestListController.post({
+                'key': 'my_key',
+                'bool_field': False,
+                'list_field': None,
+            })
+        )
+
     def test_get_list_of_dict_is_valid(self):
         self.TestListController.post({
             'key': 'my_key',
@@ -3124,6 +3151,31 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_get_optional_list_of_dict_as_None_is_skipped(self):
+        self.TestListController.post({
+            'key': 'my_key',
+            'list_field': [
+                {'first_key': EnumTest.Value1, 'second_key': 1},
+                {'first_key': EnumTest.Value2, 'second_key': 2}
+            ],
+            'bool_field': False,
+        })
+        self.assertEqual(
+            [
+                {
+                    'bool_field': False,
+                    'key': 'my_key',
+                    'list_field': [
+                        {'first_key': 'Value1', 'second_key': 1},
+                        {'first_key': 'Value2', 'second_key': 2},
+                    ],
+                }
+            ],
+            self.TestListController.get({
+                'list_field': None,
+            })
+        )
+
     def test_delete_list_of_dict_is_valid(self):
         self.TestListController.post({
             'key': 'my_key',
@@ -3140,6 +3192,22 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     {'first_key': EnumTest.Value1, 'second_key': 1},
                     {'first_key': 'Value2', 'second_key': 2},
                 ],
+            })
+        )
+
+    def test_delete_optional_list_of_dict_as_None_is_valid(self):
+        self.TestListController.post({
+            'key': 'my_key',
+            'list_field': [
+                {'first_key': EnumTest.Value1, 'second_key': 1},
+                {'first_key': EnumTest.Value2, 'second_key': 2}
+            ],
+            'bool_field': False,
+        })
+        self.assertEqual(
+            1,
+            self.TestListController.delete({
+                'list_field': None,
             })
         )
 
@@ -3177,6 +3245,40 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     {'first_key': EnumTest.Value2, 'second_key': 10},
                     {'first_key': EnumTest.Value1, 'second_key': 2}
                 ],
+                'bool_field': True,
+            })
+        )
+
+    def test_put_without_optional_list_of_dict_is_valid(self):
+        self.TestListController.post({
+            'key': 'my_key',
+            'list_field': [
+                {'first_key': EnumTest.Value1, 'second_key': 1},
+                {'first_key': EnumTest.Value2, 'second_key': 2}
+            ],
+            'bool_field': False,
+        })
+        self.assertEqual(
+            (
+                {
+                    'bool_field': False,
+                    'key': 'my_key',
+                    'list_field': [
+                        {'first_key': 'Value1', 'second_key': 1},
+                        {'first_key': 'Value2', 'second_key': 2},
+                    ],
+                },
+                {
+                    'bool_field': True,
+                    'key': 'my_key',
+                    'list_field': [
+                        {'first_key': 'Value1', 'second_key': 1},
+                        {'first_key': 'Value2', 'second_key': 2},
+                    ],
+                },
+            ),
+            self.TestListController.put({
+                'key': 'my_key',
                 'bool_field': True,
             })
         )
