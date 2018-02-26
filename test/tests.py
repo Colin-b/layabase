@@ -2668,6 +2668,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestDictController(database.CRUDController):
         pass
 
+    class TestOptionalDictController(database.CRUDController):
+        pass
+
     class TestIndexController(database.CRUDController):
         pass
 
@@ -2730,6 +2733,21 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = MyDictColumn(is_nullable=False)
 
+        class TestOptionalDictModel(database_mongo.CRUDModel):
+            __tablename__ = 'optional_dict_table_name'
+
+            class MyDictColumn(database_mongo.DictColumn):
+
+                def get_description_model(self):
+                    class MyDictColumnModel(database_mongo.CRUDModel):
+                        first_key = database_mongo.Column(EnumTest, is_nullable=False)
+                        second_key = database_mongo.Column(int, is_nullable=False)
+
+                    return MyDictColumnModel
+
+            key = database_mongo.Column(str, is_primary_key=True)
+            dict_col = MyDictColumn()
+
         class TestIndexModel(database_mongo.CRUDModel):
             __tablename__ = 'index_table_name'
 
@@ -2768,11 +2786,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
         cls.TestDateController.model(TestDateModel)
         cls.TestDictController.model(TestDictModel)
+        cls.TestOptionalDictController.model(TestOptionalDictModel)
         cls.TestIndexController.model(TestIndexModel)
         cls.TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
         cls.TestListController.model(TestListModel)
         cls.TestIdController.model(TestIdModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel, TestIdModel]
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel, TestIdModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -3317,6 +3336,122 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'first_key': 'Value1',
                     'second_key': 3,
                 },
+            })
+        )
+
+    def test_post_missing_optional_dict_is_valid(self):
+        self.assertEqual(
+            {'key': 'my_key'},
+            self.TestOptionalDictController.post({
+                'key': 'my_key',
+            })
+        )
+
+    def test_post_optional_dict_as_None_is_valid(self):
+        self.assertEqual(
+            {'key': 'my_key'},
+            self.TestOptionalDictController.post({
+                'key': 'my_key',
+                'dict_col': None,
+            })
+        )
+
+    def test_put_missing_optional_dict_is_valid(self):
+        self.TestOptionalDictController.post({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': 'Value1',
+                'second_key': 3,
+            },
+        })
+        self.assertEqual(
+            (
+                {
+                    'key': 'my_key',
+                    'dict_col': {
+                        'first_key': 'Value1',
+                        'second_key': 3,
+                    },
+                },
+                {
+                    'key': 'my_key',
+                    'dict_col': {
+                        'first_key': 'Value1',
+                        'second_key': 3,
+                    },
+                }
+            ),
+            self.TestOptionalDictController.put({
+                'key': 'my_key',
+            })
+        )
+
+    def test_put_optional_dict_as_None_is_valid(self):
+        self.TestOptionalDictController.post({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': 'Value1',
+                'second_key': 3,
+            },
+        })
+        self.assertEqual(
+            (
+                {
+                    'key': 'my_key',
+                    'dict_col': {
+                        'first_key': 'Value1',
+                        'second_key': 3,
+                    },
+                },
+                {
+                    'key': 'my_key',
+                    'dict_col': {
+                        'first_key': 'Value1',
+                        'second_key': 3,
+                    },
+                }
+            ),
+            self.TestOptionalDictController.put({
+                'key': 'my_key',
+                'dict_col': None,
+            })
+        )
+
+    def test_get_optional_dict_as_None_is_valid(self):
+        self.TestOptionalDictController.post({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': 'Value1',
+                'second_key': 3,
+            },
+        })
+        self.assertEqual(
+            [
+                {
+                    'key': 'my_key',
+                    'dict_col': {
+                        'first_key': 'Value1',
+                        'second_key': 3,
+                    },
+                }
+            ],
+            self.TestOptionalDictController.get({
+                'dict_col': None,
+            })
+        )
+
+    def test_delete_optional_dict_as_None_is_valid(self):
+        self.TestOptionalDictController.post({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': 'Value1',
+                'second_key': 3,
+            },
+        })
+        self.assertEqual(
+            1,
+            self.TestOptionalDictController.delete({
+                'dict_col': None,
             })
         )
 

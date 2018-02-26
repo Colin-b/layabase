@@ -262,8 +262,9 @@ class DictColumn(Column):
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
-            value = model_as_dict[self.name]
-            errors.update(self._description_model().validate_insert(value))
+            value = model_as_dict.get(self.name)
+            if value is not None:
+                errors.update(self._description_model().validate_insert(value))
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
@@ -277,8 +278,9 @@ class DictColumn(Column):
     def validate_update(self, model_as_dict: dict) -> dict:
         errors = Column.validate_update(self, model_as_dict)
         if not errors:
-            value = model_as_dict[self.name]
-            errors.update(self._description_model().validate_update(value))
+            value = model_as_dict.get(self.name)
+            if value is not None:
+                errors.update(self._description_model().validate_update(value))
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
@@ -292,8 +294,9 @@ class DictColumn(Column):
     def validate_query(self, model_as_dict: dict) -> dict:
         errors = Column.validate_query(self, model_as_dict)
         if not errors:
-            value = model_as_dict[self.name]
-            errors.update(self._description_model().validate_query(value))
+            value = model_as_dict.get(self.name)
+            if value is not None:
+                errors.update(self._description_model().validate_query(value))
         return errors
 
     def deserialize_query(self, model_as_dict: dict):
@@ -305,7 +308,7 @@ class DictColumn(Column):
         self._description_model().deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
-        value = model_as_dict.get(self.name)
+        value = model_as_dict.get(self.name, {})
         self._description_model().serialize(value)
 
 
@@ -791,20 +794,36 @@ class CRUDModel:
     def _query_parser(cls):
         query_parser = reqparse.RequestParser()
         for field in cls.get_fields():
-            if field.field_type == list:
-                query_parser.add_argument(
-                    field.name,
-                    required=False,
-                    type=str,
-                    action='append'
-                )
-            else:
-                query_parser.add_argument(
-                    field.name,
-                    required=False,
-                    type=_get_python_type(field)
-                )
+            cls._add_field_to_query_parser(query_parser, field)
         return query_parser
+
+    @classmethod
+    def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=''):
+        if isinstance(field, DictColumn):
+            # Describe every dict column field as dot notation
+            for inner_field in field.get_description_model().get_fields():
+                cls._add_field_to_query_parser(query_parser, inner_field, f'{field.name}.')
+        elif isinstance(field, ListColumn):
+            # TODO Handle list of Dict or list of list
+            query_parser.add_argument(
+                f'{prefix}{field.name}',
+                required=field.is_required,
+                type=_get_python_type(field.list_item_column),
+                action='append'
+            )
+        elif field.field_type == list:
+            query_parser.add_argument(
+                f'{prefix}{field.name}',
+                required=field.is_required,
+                type=str,  # Consider anything as valid, thus consider as str in query
+                action='append'
+            )
+        else:
+            query_parser.add_argument(
+                f'{prefix}{field.name}',
+                required=field.is_required,
+                type=_get_python_type(field)
+            )
 
     @classmethod
     def description_dictionary(cls) -> dict:
