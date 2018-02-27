@@ -995,12 +995,12 @@ def _get_flask_restplus_type(field: Column):
     return flask_restplus_fields.String
 
 
-def _get_example(field: Column) -> str:
+def _get_example(field: Column):
     if field.default_value:
-        return str(field.default_value)
+        return field.default_value
 
     if isinstance(field, DictColumn):
-        return str(
+        return (
             {
                 dict_key.name: _get_example(dict_key)
                 for dict_key in field._description_model().__fields__
@@ -1008,29 +1008,29 @@ def _get_example(field: Column) -> str:
         )
 
     if isinstance(field, ListColumn):
-        return str([_get_example(field.list_item_column)])
+        return [_get_example(field.list_item_column)]
 
-    return str(field.choices[0]) if field.choices else _get_default_example(field)
+    return field.choices[0] if field.choices else _get_default_example(field)
 
 
-def _get_default_example(field: Column) -> str:
+def _get_default_example(field: Column):
     """
     Return an Example value corresponding to this Mongodb field.
     """
     if field.field_type == int:
-        return '0'
+        return 1
     if field.field_type == float:
-        return '0.0'
+        return 1.4
     if field.field_type == bool:
-        return 'true'
+        return True
     if field.field_type == datetime.date:
         return '2017-09-24'
     if field.field_type == datetime.datetime:
         return '2017-09-24T15:36:09'
     if field.field_type == list:
-        return str([['field1','value1'], ['fieldx','valuex']])
+        return [['field1','value1'], ['fieldx','valuex']]
     if field.field_type == dict:
-        return str({'field1':'value1','fieldx':'valuex'})
+        return {'field1':'value1','fieldx':'valuex'}
     if field.field_type == ObjectId:
         return '1234567890QBCDEF01234567'
     return 'sample_value'

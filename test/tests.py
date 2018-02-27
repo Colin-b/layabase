@@ -2943,15 +2943,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestListController.json_post_model.fields_enum)
         self.assertEqual(
             {
-                'bool_field': 'true',
+                'bool_field': True,
                 'key': 'sample_value',
                 'list_field': (
-                    '["{\'first_key\': \'Value1\', \'second_key\': \'0\'}"]',
+                    [{'first_key': 'Value1', 'second_key': 1}],
                     {'list_field_inner': (
-                        "{'first_key': 'Value1', 'second_key': '0'}",
+                        {'first_key': 'Value1', 'second_key': 1},
                         {
                             'first_key': 'Value1',
-                            'second_key': '0'
+                            'second_key': 1
                         })
                     }
                 )
@@ -3060,15 +3060,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestListController.json_put_model.fields_enum)
         self.assertEqual(
             {
-                'bool_field': 'true',
+                'bool_field': True,
                 'key': 'sample_value',
                 'list_field': (
-                    '["{\'first_key\': \'Value1\', \'second_key\': \'0\'}"]',
+                    [{'first_key': 'Value1', 'second_key': 1}],
                     {'list_field_inner': (
-                        "{'first_key': 'Value1', 'second_key': '0'}",
+                        {'first_key': 'Value1', 'second_key': 1},
                         {
                             'first_key': 'Value1',
-                            'second_key': '0'
+                            'second_key': 1
                         })
                     }
                 )
@@ -4562,15 +4562,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestListController.get_response_model.fields_enum)
         self.assertEqual(
             {
-                'bool_field': 'true',
+                'bool_field': True,
                 'key': 'sample_value',
                 'list_field': (
-                    '["{\'first_key\': \'Value1\', \'second_key\': \'0\'}"]',
+                    [{'first_key': 'Value1', 'second_key': 1}],
                     {'list_field_inner': (
-                        "{'first_key': 'Value1', 'second_key': '0'}",
+                        {'first_key': 'Value1', 'second_key': 1},
                         {
                             'first_key': 'Value1',
-                            'second_key': '0'
+                            'second_key': 1
                         })
                     }
                 )
@@ -4696,11 +4696,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestUnvalidatedListAndDictController.get_response_model.fields_enum)
         self.assertEqual(
             {
-                'dict_field': "{'field1': 'value1', 'fieldx': 'valuex'}",
-                'float_key': '0.0',
-                'float_with_default': '34',
+                'dict_field': {'field1': 'value1', 'fieldx': 'valuex'},
+                'float_key': 1.4,
+                'float_with_default': 34,
                 'list_field': (
-                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    [['field1', 'value1'], ['fieldx', 'valuex']],
                     {
                         'list_field_inner': None
                     }
