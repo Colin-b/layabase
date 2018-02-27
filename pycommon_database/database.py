@@ -25,7 +25,9 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
      (Mandatory).
-    :param kwargs: Additional custom parameters.
+    :param kwargs: Additional custom parameters:
+     for SQLAlchemy: create_engine methods parameters.
+     for Mongo: unused.
     """
     if not database_connection_url:
         raise NoDatabaseProvided()

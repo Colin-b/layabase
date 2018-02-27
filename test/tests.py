@@ -2569,30 +2569,22 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def _create_models(cls, base):
         logger.info('Declare model class...')
 
-        class TestModel(database_mongo.CRUDModel):
-            __tablename__ = 'sample_table_name'
-
+        class TestModel(database_mongo.CRUDModel, base=base, table_name='sample_table_name'):
             key = database_mongo.Column(str, is_primary_key=True)
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
 
-        class TestAutoIncrementModel(database_mongo.CRUDModel):
-            __tablename__ = 'auto_increment_table_name'
-
+        class TestAutoIncrementModel(database_mongo.CRUDModel, base=base, table_name='auto_increment_table_name'):
             key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
             enum_field = database_mongo.Column(EnumTest, is_nullable=False, description='Test Documentation')
             optional_with_default = database_mongo.Column(str, default_value='Test value')
 
-        class TestDateModel(database_mongo.CRUDModel):
-            __tablename__ = 'date_table_name'
-
+        class TestDateModel(database_mongo.CRUDModel, base=base, table_name='date_table_name'):
             key = database_mongo.Column(str, is_primary_key=True)
             date_str = database_mongo.Column(datetime.date)
             datetime_str = database_mongo.Column(datetime.datetime)
 
-        class TestDictModel(database_mongo.CRUDModel):
-            __tablename__ = 'dict_table_name'
-
+        class TestDictModel(database_mongo.CRUDModel, base=base, table_name='dict_table_name'):
             class MyDictColumn(database_mongo.DictColumn):
 
                 def get_description_model(self):
@@ -2605,9 +2597,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = MyDictColumn(is_nullable=False)
 
-        class TestOptionalDictModel(database_mongo.CRUDModel):
-            __tablename__ = 'optional_dict_table_name'
-
+        class TestOptionalDictModel(database_mongo.CRUDModel, base=base, table_name='optional_dict_table_name'):
             class MyDictColumn(database_mongo.DictColumn):
 
                 def get_description_model(self):
@@ -2620,21 +2610,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = MyDictColumn()
 
-        class TestIndexModel(database_mongo.CRUDModel):
-            __tablename__ = 'index_table_name'
-
+        class TestIndexModel(database_mongo.CRUDModel, base=base, table_name='index_table_name'):
             unique_key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
             non_unique_key = database_mongo.Column(datetime.date, index_type=database_mongo.IndexType.Other)
 
-        class TestDefaultPrimaryKeyModel(database_mongo.CRUDModel):
-            __tablename__ = 'default_primary_table_name'
-
+        class TestDefaultPrimaryKeyModel(database_mongo.CRUDModel, base=base, table_name='default_primary_table_name'):
             key = database_mongo.Column(is_primary_key=True, default_value='test')
             optional = database_mongo.Column()
 
-        class TestListModel(database_mongo.CRUDModel):
-            __tablename__ = 'list_table_name'
-
+        class TestListModel(database_mongo.CRUDModel, base=base, table_name='list_table_name'):
             class MyDictColumn(database_mongo.DictColumn):
 
                 def get_description_model(self):
@@ -2648,17 +2632,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
             list_field = database_mongo.ListColumn(MyDictColumn())
             bool_field = database_mongo.Column(bool)
 
-        class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel):
-            __tablename__ = 'list_and_dict_table_name'
-
+        class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel, base=base, table_name='list_and_dict_table_name'):
             float_key = database_mongo.Column(float, is_primary_key=True)
             float_with_default = database_mongo.Column(float, default_value=34)
             dict_field = database_mongo.Column(dict, is_required=True)
             list_field = database_mongo.Column(list, is_required=True)
 
-        class TestIdModel(database_mongo.CRUDModel):
-            __tablename__ = 'id_table_name'
-
+        class TestIdModel(database_mongo.CRUDModel, base=base, table_name='id_table_name'):
             _id = database_mongo.Column(is_primary_key=True)
 
         logger.info('Save model class...')
@@ -4874,9 +4854,7 @@ class MongoCRUDControllerFailuresTest(unittest.TestCase):
     def _create_models(cls, base):
         logger.info('Declare model class...')
 
-        class TestModel(database_mongo.CRUDModel):
-            __tablename__ = 'sample_table_name'
-
+        class TestModel(database_mongo.CRUDModel, base=base, table_name='sample_table_name'):
             key = database_mongo.Column(str, is_primary_key=True)
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
@@ -4987,16 +4965,12 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     def _create_models(cls, base):
         logger.info('Declare model class...')
 
-        class TestModel(database_mongo.CRUDModel):
-            __tablename__ = 'sample_table_name'
-
+        class TestModel(database_mongo.CRUDModel, base=base, table_name='sample_table_name', audit=True):
             key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
 
-        class TestEnumModel(database_mongo.CRUDModel):
-            __tablename__ = 'enum_table_name'
-
+        class TestEnumModel(database_mongo.CRUDModel, base=base, table_name='enum_table_name', audit=True):
             key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
             enum_fld = database_mongo.Column(EnumTest)
 

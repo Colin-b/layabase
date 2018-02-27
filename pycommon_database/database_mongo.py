@@ -251,20 +251,15 @@ class DictColumn(Column):
         """
         raise Exception('You must implement a custom model describing the dictionary fields.')
 
-    def _description_model(self):
-        dict_column_model = self.get_description_model()
-        dict_column_model.__fields__ = dict_column_model.get_fields()
-        return dict_column_model
-
     def get_index_fields(self, index_type: IndexType) -> List[Column]:
-        return self._description_model().get_index_fields(index_type)
+        return self.get_description_model().get_index_fields(index_type)
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self._description_model().validate_insert(value))
+                errors.update(self.get_description_model().validate_insert(value))
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
@@ -273,14 +268,14 @@ class DictColumn(Column):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
-        self._description_model().deserialize_insert(value)
+        self.get_description_model().deserialize_insert(value)
 
     def validate_update(self, model_as_dict: dict) -> dict:
         errors = Column.validate_update(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self._description_model().validate_update(value))
+                errors.update(self.get_description_model().validate_update(value))
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
@@ -289,14 +284,14 @@ class DictColumn(Column):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
-        self._description_model().deserialize_update(value)
+        self.get_description_model().deserialize_update(value)
 
     def validate_query(self, model_as_dict: dict) -> dict:
         errors = Column.validate_query(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self._description_model().validate_query(value))
+                errors.update(self.get_description_model().validate_query(value))
         return errors
 
     def deserialize_query(self, model_as_dict: dict):
@@ -305,11 +300,11 @@ class DictColumn(Column):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
-        self._description_model().deserialize_query(value)
+        self.get_description_model().deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name, {})
-        self._description_model().serialize(value)
+        self.get_description_model().serialize(value)
 
 
 class ListColumn(Column):
@@ -437,19 +432,18 @@ class CRUDModel:
     __fields__: List[Column] = []  # All Mongo fields within this model
     audit_model = None
 
-    @classmethod
-    def _post_init(cls, base):
-        """
-        Finish initializing this model class after it is created and added to proper controller.
-        :param base: Mongo database
-        """
-        cls.__collection__ = base[cls.__tablename__]
-        cls.__counters__ = base['counters']
-        cls.__fields__ = cls.get_fields()
-        cls._create_indexes(IndexType.Unique)
-        cls._create_indexes(IndexType.Other)
-        if cls.audit_model:
-            cls.audit_model._post_init(base)
+    def __init_subclass__(cls, base=None, table_name=None, audit=False, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.__tablename__ = table_name
+        cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if isinstance(attribute[1], Column)]
+        if base is not None:  # Allow to not provide base to create fake models
+            cls.__collection__ = base[cls.__tablename__]
+            cls.__counters__ = base['counters']
+            cls._create_indexes(IndexType.Unique)
+            cls._create_indexes(IndexType.Other)
+        if audit:
+            from pycommon_database.audit_mongo import _create_from
+            cls.audit_model = _create_from(cls, base)
 
     @classmethod
     def _create_indexes(cls, index_type: IndexType):
@@ -793,7 +787,7 @@ class CRUDModel:
     @classmethod
     def _query_parser(cls):
         query_parser = reqparse.RequestParser()
-        for field in cls.get_fields():
+        for field in cls.__fields__:
             cls._add_field_to_query_parser(query_parser, field)
         return query_parser
 
@@ -801,7 +795,7 @@ class CRUDModel:
     def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=''):
         if isinstance(field, DictColumn):
             # Describe every dict column field as dot notation
-            for inner_field in field.get_description_model().get_fields():
+            for inner_field in field.get_description_model().__fields__:
                 cls._add_field_to_query_parser(query_parser, inner_field, f'{field.name}.')
         elif isinstance(field, ListColumn):
             # Note that List of dict or list of list might be wrongly parsed
@@ -830,7 +824,7 @@ class CRUDModel:
         description = {
             'collection': cls.__tablename__,
         }
-        for field in cls.get_fields():
+        for field in cls.__fields__:
             description[field.name] = field.name
         return description
 
@@ -842,7 +836,7 @@ class CRUDModel:
     def _to_flask_restplus_field(cls, field: Column):
         if isinstance(field, DictColumn):
             return flask_restplus_fields.Nested(
-                field._description_model().flask_restplus_fields(),
+                field.get_description_model().flask_restplus_fields(),
                 required=field.is_required,
                 example=_get_example(field),
                 description=field.description,
@@ -898,17 +892,7 @@ class CRUDModel:
         return exported_fields
 
     @classmethod
-    def get_fields(cls) -> List[Column]:
-        """
-        Inspect all members and extract Mongo fields.
-        :return: list of all Mongo fields (can be empty)
-        """
-        return [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if isinstance(attribute[1], Column)]
-
-    @classmethod
     def create_audit(cls):
-        from pycommon_database.audit_mongo import create_from
-        cls.audit_model = create_from(cls)
         return cls.audit_model
 
 
@@ -929,8 +913,7 @@ def _load(database_connection_url: str, create_models_func: callable):
         client = pymongo.MongoClient(database_connection_url)
     base = client[database_name]
     logger.debug(f'Creating models...')
-    for model_class in create_models_func(base):
-        model_class._post_init(base)
+    create_models_func(base)
     return base
 
 
