@@ -2593,26 +2593,22 @@ class MongoCRUDControllerTest(unittest.TestCase):
             datetime_str = database_mongo.Column(datetime.datetime)
 
         class TestDictModel(database_mongo.CRUDModel, base=base, table_name='dict_table_name'):
-            class MyDictColumn(database_mongo.DictColumn):
-                def get_fields(self):
-                    return {
-                        'first_key': database_mongo.Column(EnumTest, is_nullable=False),
-                        'second_key': database_mongo.Column(int, is_nullable=False),
-                    }
-
             key = database_mongo.Column(str, is_primary_key=True)
-            dict_col = MyDictColumn(is_nullable=False)
+            dict_col = database_mongo.DictColumn(
+                {
+                    'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                    'second_key': database_mongo.Column(int, is_nullable=False),
+                },
+                is_nullable=False)
 
         class TestOptionalDictModel(database_mongo.CRUDModel, base=base, table_name='optional_dict_table_name'):
-            class MyDictColumn(database_mongo.DictColumn):
-                def get_fields(self):
-                    return {
-                        'first_key': database_mongo.Column(EnumTest, is_nullable=False),
-                        'second_key': database_mongo.Column(int, is_nullable=False),
-                    }
-
             key = database_mongo.Column(str, is_primary_key=True)
-            dict_col = MyDictColumn()
+            dict_col = database_mongo.DictColumn(
+                lambda: {
+                    'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                    'second_key': database_mongo.Column(int, is_nullable=False),
+                }
+            )
 
         class TestIndexModel(database_mongo.CRUDModel, base=base, table_name='index_table_name'):
             unique_key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
@@ -2623,15 +2619,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             optional = database_mongo.Column()
 
         class TestListModel(database_mongo.CRUDModel, base=base, table_name='list_table_name'):
-            class MyDictColumn(database_mongo.DictColumn):
-                def get_fields(self):
-                    return {
+            key = database_mongo.Column(is_primary_key=True)
+            list_field = database_mongo.ListColumn(database_mongo.DictColumn({
                         'first_key': database_mongo.Column(EnumTest, is_nullable=False),
                         'second_key': database_mongo.Column(int, is_nullable=False),
-                    }
-
-            key = database_mongo.Column(is_primary_key=True)
-            list_field = database_mongo.ListColumn(MyDictColumn())
+                    }))
             bool_field = database_mongo.Column(bool)
 
         class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel, base=base, table_name='list_and_dict_table_name'):
@@ -2962,9 +2954,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'bool_field': None,
                 'key': None,
                 'list_field': (
-                    [],
+                    None,
                     {'list_field_inner': (
-                        {},
+                        None,
                         {
                             'first_key': None,
                             'second_key': None
@@ -3079,9 +3071,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'bool_field': None,
                 'key': None,
                 'list_field': (
-                    [],
+                    None,
                     {'list_field_inner': (
-                        {},
+                        None,
                         {
                             'first_key': None,
                             'second_key': None
@@ -4581,9 +4573,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'bool_field': None,
                 'key': None,
                 'list_field': (
-                    [],
+                    None,
                     {'list_field_inner': (
-                        {},
+                        None,
                         {
                             'first_key': None,
                             'second_key': None
@@ -4709,11 +4701,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestUnvalidatedListAndDictController.get_response_model.fields_example)
         self.assertEqual(
             {
-                'dict_field': {},
+                'dict_field': None,
                 'float_key': None,
                 'float_with_default': 34,
                 'list_field': (
-                    [],
+                    None,
                     {
                         'list_field_inner': None
                     }

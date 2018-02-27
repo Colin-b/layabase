@@ -41,16 +41,14 @@ class Column:
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
-        TODO Introduce min and max length, regex, choices for other types than enum
+        TODO Introduce min and max length, regex
         """
         self.name = kwargs.pop('name', None)
         self.field_type = field_type or str
         if '_id' == self.name:
             self.field_type = ObjectId
-        self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else None
+        self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else kwargs.pop('choices', None)
         self.default_value = kwargs.pop('default_value', None)
-        if self.default_value is None:
-            self.default_value = [] if self.field_type == list else {} if self.field_type == dict else None
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
 
@@ -142,6 +140,14 @@ class Column:
                     value = ObjectId(value)
                 except BSONError as e:
                     return {self.name: [e.args[0]]}
+        elif self.field_type == str:
+            if isinstance(value, str):
+                if self.choices and value not in self.choices:
+                    return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+        elif self.field_type == int:
+            if isinstance(value, int):
+                if self.choices and value not in self.choices:
+                    return {self.name: [f'Value "{value}" is not within {self.choices}.']}
 
         if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
@@ -234,8 +240,9 @@ class DictColumn(Column):
     Definition of a Mongo database dictionary field.
     If you do not want to validate the content of this dict, just use a Column(dict) instead.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, fields: Dict[str, Column], **kwargs):
         """
+        :param fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
@@ -245,13 +252,10 @@ class DictColumn(Column):
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
         """
         kwargs.pop('field_type', None)
+        self.get_fields = (lambda : fields) if (isinstance(fields, dict) and fields) else fields
+        if not self.get_fields:
+            raise Exception('fields is a mandatory parameter.')
         Column.__init__(self, field_type=dict, **kwargs)
-
-    def get_fields(self) -> Dict[str, Column]:
-        """
-        :return: A representation of the dictionary.
-        """
-        return {}
 
     def _description_model(self):
         """
@@ -996,7 +1000,7 @@ def _get_flask_restplus_type(field: Column):
 
 
 def _get_example(field: Column):
-    if field.default_value:
+    if field.default_value is not None:
         return field.default_value
 
     if isinstance(field, DictColumn):
