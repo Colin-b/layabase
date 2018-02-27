@@ -432,7 +432,7 @@ class CRUDModel:
     __fields__: List[Column] = []  # All Mongo fields within this model
     audit_model = None
 
-    def __init_subclass__(cls, base=None, table_name=None, audit=False, **kwargs):
+    def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if isinstance(attribute[1], Column)]
@@ -693,6 +693,9 @@ class CRUDModel:
 
         try:
             cls.__collection__.insert_many(new_models_as_list_of_dict)
+            if cls.audit_model:
+                for inserted_dict in new_models_as_list_of_dict:
+                    cls.audit_model.audit_add(inserted_dict)
             return [cls.serialize(model) for model in new_models_as_list_of_dict]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
@@ -711,6 +714,8 @@ class CRUDModel:
         cls.deserialize_insert(model_as_dict)
         try:
             cls.__collection__.insert_one(model_as_dict)
+            if cls.audit_model:
+                cls.audit_model.audit_add(model_as_dict)
             return cls.serialize(model_as_dict)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(model_as_dict), message='This item already exists.')
@@ -750,6 +755,8 @@ class CRUDModel:
         model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys}
         cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
         new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        if cls.audit_model:
+            cls.audit_model.audit_update(new_model_as_dict)
         return cls.serialize(previous_model_as_dict), cls.serialize(new_model_as_dict)
 
     @classmethod
@@ -770,6 +777,8 @@ class CRUDModel:
 
         cls.deserialize_query(model_to_query)
 
+        if cls.audit_model:
+            cls.audit_model.audit_remove(**model_to_query)
         nb_removed = cls.__collection__.delete_many(model_to_query).deleted_count
         return nb_removed
 

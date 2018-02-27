@@ -72,7 +72,6 @@ class CRUDController:
     Class providing methods to interact with a CRUDModel.
     """
     _model = None
-    _audit_model = None
 
     # CRUD request parsers
     query_get_parser = None
@@ -105,10 +104,9 @@ class CRUDController:
         cls.query_get_parser = cls._model.query_get_parser()
         cls.query_delete_parser = cls._model.query_delete_parser()
         if audit:
-            cls._audit_model = cls._model.create_audit()
-            cls.query_get_audit_parser = cls._audit_model.query_get_parser()
+            cls._model.create_audit()
+            cls.query_get_audit_parser = cls._model.audit_model.query_get_parser()
         else:
-            cls._audit_model = None
             cls.query_get_audit_parser = None
         cls._model_description_dictionary = cls._model.description_dictionary()
 
@@ -125,9 +123,9 @@ class CRUDController:
         cls.json_post_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
         cls.json_put_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
         cls.get_response_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
-        if cls._audit_model:
+        if cls._model.audit_model:
             cls.get_audit_response_model = namespace.model('Audit' + cls._model.__name__,
-                                                           cls._audit_model.flask_restplus_fields())
+                                                           cls._model.audit_model.flask_restplus_fields())
         else:
             cls.get_audit_response_model = None
         cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),
@@ -153,10 +151,7 @@ class CRUDController:
             raise ControllerModelNotSet(cls)
         if hasattr(cls.json_post_model, '_schema'):
             new_dict = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', {}), new_dict)
-        inserted_dict = cls._model.add(new_dict)
-        if cls._audit_model:
-            cls._audit_model.audit_add(inserted_dict)
-        return inserted_dict
+        return cls._model.add(new_dict)
 
     @classmethod
     def post_many(cls, new_dicts: List[dict]) -> List[dict]:
@@ -172,11 +167,7 @@ class CRUDController:
                 _ignore_read_only_fields(cls.json_post_model._schema.get('properties', {}), new_dict)
                 for new_dict in new_dicts
             ]
-        inserted_dicts = cls._model.add_all(new_dicts)
-        if cls._audit_model:
-            for inserted_dict in inserted_dicts:
-                cls._audit_model.audit_add(inserted_dict)
-        return inserted_dicts
+        return cls._model.add_all(new_dicts)
 
     @classmethod
     def put(cls, updated_dict: dict) -> (dict, dict):
@@ -188,10 +179,7 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        previous_dict, new_dict = cls._model.update(updated_dict)
-        if cls._audit_model:
-            cls._audit_model.audit_update(new_dict)
-        return previous_dict, new_dict
+        return cls._model.update(updated_dict)
 
     @classmethod
     def delete(cls, request_arguments: dict) -> int:
@@ -201,8 +189,6 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        if cls._audit_model:
-            cls._audit_model.audit_remove(**request_arguments)
         return cls._model.remove(**request_arguments)
 
     @classmethod
@@ -210,9 +196,11 @@ class CRUDController:
         """
         Return all audit models formatted as a list of dictionaries.
         """
-        if not cls._audit_model:
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+        if not cls._model.audit_model:
             return []
-        return cls._audit_model.get_all(**request_arguments)
+        return cls._model.audit_model.get_all(**request_arguments)
 
     @classmethod
     def get_model_description(cls) -> dict:

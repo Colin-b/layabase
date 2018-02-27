@@ -35,6 +35,14 @@ class CRUDModel:
         """
         Return all models formatted as a list of dictionaries.
         """
+        all_models = cls.get_all_models(**kwargs)
+        return cls.schema().dump(all_models, many=True).data
+
+    @classmethod
+    def get_all_models(cls, **kwargs) -> list:
+        """
+        Return all SQLAlchemy models.
+        """
         query = cls._session.query(cls)
         if 'order_by' in kwargs:
             query = query.order_by(*kwargs.pop('order_by'))
@@ -46,8 +54,7 @@ class CRUDModel:
             elif value is not None:
                 query = query.filter(getattr(cls, key) == value)
         try:
-            all_models = query.all()
-            return cls.schema().dump(all_models, many=True).data
+            return query.all()
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
 
@@ -95,7 +102,10 @@ class CRUDModel:
             raise ValidationFailed(models_as_list_of_dict, marshmallow_errors=errors)
         try:
             cls._session.add_all(models)
-            ret = cls._session.commit()
+            if cls.audit_model:
+                for inserted_dict in models_as_list_of_dict:
+                    cls.audit_model.audit_add(inserted_dict)
+            cls._session.commit()
             return _models_field_values(models)
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
@@ -122,6 +132,8 @@ class CRUDModel:
             raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
         try:
             cls._session.add(model)
+            if cls.audit_model:
+                cls.audit_model.audit_add(model_as_dict)
             ret = cls._session.commit()
             return _model_field_values(model)
         except exc.sa_exc.DBAPIError:
@@ -155,6 +167,8 @@ class CRUDModel:
         new_model_as_dict = _model_field_values(new_model)
         try:
             cls._session.add(new_model)
+            if cls.audit_model:
+                cls.audit_model.audit_update(new_model_as_dict)
             cls._session.commit()
             return previous_model_as_dict, new_model_as_dict
         except exc.sa_exc.DBAPIError:
@@ -175,6 +189,8 @@ class CRUDModel:
             for key, value in kwargs.items():
                 if value is not None:
                     query = query.filter(getattr(cls, key) == value)
+            if cls.audit_model:
+                cls.audit_model.audit_remove(**kwargs)
             nb_removed = query.delete()
             cls._session.commit()
             return nb_removed
@@ -293,8 +309,8 @@ class CRUDModel:
 
     @classmethod
     def create_audit(cls):
-        from pycommon_database.audit_sqlalchemy import create_from
-        cls.audit_model = create_from(cls)
+        from pycommon_database.audit_sqlalchemy import _create_from
+        cls.audit_model = _create_from(cls)
         return cls.audit_model
 
 

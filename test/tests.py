@@ -1445,7 +1445,12 @@ class SQLAlchemyCRUDControllerFailuresTest(unittest.TestCase):
             "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
 
     def test_audit_method_without_setting_model(self):
-        self.assertEqual([], self.TestController.get_audit({}))
+        with self.assertRaises(Exception) as cm:
+            self.TestController.get_audit({})
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
 
     def test_model_description_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
@@ -2137,6 +2142,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
+        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
@@ -4931,7 +4937,12 @@ class MongoCRUDControllerFailuresTest(unittest.TestCase):
             "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
 
     def test_audit_method_without_setting_model(self):
-        self.assertEqual([], self.TestController.get_audit({}))
+        with self.assertRaises(Exception) as cm:
+            self.TestController.get_audit({})
+        self.assertRegex(
+            cm.exception.args[0],
+            "Model was not attached to TestController. "
+            "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
 
     def test_model_description_method_without_setting_model(self):
         with self.assertRaises(Exception) as cm:
