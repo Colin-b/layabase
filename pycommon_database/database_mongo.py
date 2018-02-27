@@ -434,7 +434,7 @@ class CRUDModel:
     __tablename__ = None  # Name of the collection described by this model
     __collection__ = None  # Mongo collection
     __counters__ = None  # Mongo counters collection (to increment fields)
-    __fields__: List[Column] = None  # All Mongo fields within this model
+    __fields__: List[Column] = []  # All Mongo fields within this model
     audit_model = None
 
     @classmethod
