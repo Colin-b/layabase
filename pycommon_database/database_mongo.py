@@ -40,6 +40,7 @@ class Column:
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
+        TODO Introduce min and max length, regex, choices for other types than enum
         """
         self.name = kwargs.pop('name', None)
         self.field_type = field_type or str
