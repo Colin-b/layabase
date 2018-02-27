@@ -2593,26 +2593,22 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestDictModel(database_mongo.CRUDModel, base=base, table_name='dict_table_name'):
             class MyDictColumn(database_mongo.DictColumn):
-
-                def get_description_model(self):
-                    class MyDictColumnModel(database_mongo.CRUDModel):
-                        first_key = database_mongo.Column(EnumTest, is_nullable=False)
-                        second_key = database_mongo.Column(int, is_nullable=False)
-
-                    return MyDictColumnModel
+                def get_fields(self):
+                    return {
+                        'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                        'second_key': database_mongo.Column(int, is_nullable=False),
+                    }
 
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = MyDictColumn(is_nullable=False)
 
         class TestOptionalDictModel(database_mongo.CRUDModel, base=base, table_name='optional_dict_table_name'):
             class MyDictColumn(database_mongo.DictColumn):
-
-                def get_description_model(self):
-                    class MyDictColumnModel(database_mongo.CRUDModel):
-                        first_key = database_mongo.Column(EnumTest, is_nullable=False)
-                        second_key = database_mongo.Column(int, is_nullable=False)
-
-                    return MyDictColumnModel
+                def get_fields(self):
+                    return {
+                        'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                        'second_key': database_mongo.Column(int, is_nullable=False),
+                    }
 
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = MyDictColumn()
@@ -2627,13 +2623,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestListModel(database_mongo.CRUDModel, base=base, table_name='list_table_name'):
             class MyDictColumn(database_mongo.DictColumn):
-
-                def get_description_model(self):
-                    class MyDictColumnModel(database_mongo.CRUDModel):
-                        first_key = database_mongo.Column(EnumTest, is_nullable=False)
-                        second_key = database_mongo.Column(int, is_nullable=False)
-
-                    return MyDictColumnModel
+                def get_fields(self):
+                    return {
+                        'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                        'second_key': database_mongo.Column(int, is_nullable=False),
+                    }
 
             key = database_mongo.Column(is_primary_key=True)
             list_field = database_mongo.ListColumn(MyDictColumn())

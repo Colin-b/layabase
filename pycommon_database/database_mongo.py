@@ -7,7 +7,7 @@ import dateutil.parser
 import copy
 import pymongo
 import pymongo.errors
-from typing import List
+from typing import List, Dict
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from bson.objectid import ObjectId
 from bson.errors import BSONError
@@ -245,21 +245,34 @@ class DictColumn(Column):
         kwargs.pop('field_type', None)
         Column.__init__(self, field_type=dict, **kwargs)
 
-    def get_description_model(self):
+    def get_fields(self) -> Dict[str, Column]:
+        """
+        :return: A representation of the dictionary.
+        """
+        return {}
+
+    def _description_model(self):
         """
         :return: A CRUDModel describing every dictionary fields.
         """
-        raise Exception('You must implement a custom model describing the dictionary fields.')
+        class FakeModel(CRUDModel):
+            pass
+        
+        for name, column in self.get_fields().items():
+            column._update_name(name)
+            FakeModel.__fields__.append(column)
+        
+        return FakeModel
 
     def get_index_fields(self, index_type: IndexType) -> List[Column]:
-        return self.get_description_model().get_index_fields(index_type)
+        return self._description_model().get_index_fields(index_type)
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self.get_description_model().validate_insert(value))
+                errors.update(self._description_model().validate_insert(value))
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
@@ -268,14 +281,14 @@ class DictColumn(Column):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
-        self.get_description_model().deserialize_insert(value)
+        self._description_model().deserialize_insert(value)
 
     def validate_update(self, model_as_dict: dict) -> dict:
         errors = Column.validate_update(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self.get_description_model().validate_update(value))
+                errors.update(self._description_model().validate_update(value))
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
@@ -284,14 +297,14 @@ class DictColumn(Column):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
-        self.get_description_model().deserialize_update(value)
+        self._description_model().deserialize_update(value)
 
     def validate_query(self, model_as_dict: dict) -> dict:
         errors = Column.validate_query(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self.get_description_model().validate_query(value))
+                errors.update(self._description_model().validate_query(value))
         return errors
 
     def deserialize_query(self, model_as_dict: dict):
@@ -300,11 +313,11 @@ class DictColumn(Column):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
-        self.get_description_model().deserialize_query(value)
+        self._description_model().deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name, {})
-        self.get_description_model().serialize(value)
+        self._description_model().serialize(value)
 
 
 class ListColumn(Column):
@@ -804,7 +817,7 @@ class CRUDModel:
     def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=''):
         if isinstance(field, DictColumn):
             # Describe every dict column field as dot notation
-            for inner_field in field.get_description_model().__fields__:
+            for inner_field in field._description_model().__fields__:
                 cls._add_field_to_query_parser(query_parser, inner_field, f'{field.name}.')
         elif isinstance(field, ListColumn):
             # Note that List of dict or list of list might be wrongly parsed
@@ -845,7 +858,7 @@ class CRUDModel:
     def _to_flask_restplus_field(cls, field: Column):
         if isinstance(field, DictColumn):
             return flask_restplus_fields.Nested(
-                field.get_description_model().flask_restplus_fields(),
+                field._description_model().flask_restplus_fields(),
                 required=field.is_required,
                 example=_get_example(field),
                 description=field.description,
