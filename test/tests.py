@@ -61,6 +61,14 @@ class TestAPI:
         return model
 
 
+def parser_types(flask_parser) -> dict:
+    return {arg.name: arg.type for arg in flask_parser.args}
+
+
+def parser_actions(flask_parser) -> dict:
+    return {arg.name: arg.action for arg in flask_parser.args}
+
+
 class MongoColumnTest(unittest.TestCase):
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -1172,7 +1180,7 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
                 'limit': inputs.positive,
                 'offset': inputs.natural,
             },
-            {arg.name: arg.type for arg in self.TestController.query_get_parser.args})
+            parser_types(self.TestController.query_get_parser))
 
     def test_query_delete_parser(self):
         self.assertEqual(
@@ -1181,7 +1189,7 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
                 'mandatory': int,
                 'optional': str,
             },
-            {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
+            parser_types(self.TestController.query_delete_parser))
 
     def test_json_post_model(self):
         self.assertEqual(
@@ -2182,7 +2190,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 'limit': inputs.positive,
                 'offset': inputs.natural,
             },
-            {arg.name: arg.type for arg in self.TestController.query_get_parser.args})
+            parser_types(self.TestController.query_get_parser))
         self._check_audit([])
 
     def test_query_get_audit_parser(self):
@@ -2197,7 +2205,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 'limit': inputs.positive,
                 'offset': inputs.natural,
             },
-            {arg.name: arg.type for arg in self.TestController.query_get_audit_parser.args})
+            parser_types(self.TestController.query_get_audit_parser))
         self._check_audit([])
 
     def test_query_delete_parser(self):
@@ -2207,7 +2215,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 'mandatory': int,
                 'optional': str,
             },
-            {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
+            parser_types(self.TestController.query_delete_parser))
         self._check_audit([])
 
     def test_get_response_model(self):
@@ -2971,11 +2979,239 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
         self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
 
-    def test_list_post_model(self):
+    def test_json_post_model_with_list_of_dict(self):
         self.assertEqual(
-            {'bool_field': 'Boolean', 'key': 'String', 'list_field': 'List'},
-            self.TestListController.json_post_model.fields_flask_type
-        )
+            'TestListModel',
+            self.TestListController.json_post_model.name)
+        self.assertEqual(
+            {
+                'bool_field': 'Boolean',
+                'key': 'String',
+                'list_field': (
+                    'List',
+                    {'list_field_inner': (
+                        'Nested',
+                        {
+                            'first_key': 'String',
+                            'second_key': 'Integer'
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_post_model.fields_flask_type)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    None,
+                    {'list_field_inner': (
+                        None,
+                        {
+                            'first_key': None,
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_post_model.fields_description)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    None,
+                    {'list_field_inner': (
+                        None,
+                        {
+                            'first_key': ['Value1', 'Value2'],
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_post_model.fields_enum)
+        self.assertEqual(
+            {
+                'bool_field': 'true',
+                'key': 'sample_value',
+                'list_field': (
+                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    {'list_field_inner': (
+                        "{'field1': 'value1', 'fieldx': 'valuex'}",
+                        {
+                            'first_key': 'Value1',
+                            'second_key': '0'
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_post_model.fields_example)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    [],
+                    {'list_field_inner': (
+                        {},
+                        {
+                            'first_key': None,
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_post_model.fields_default)
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': False,
+                'list_field': (
+                    False,
+                    {'list_field_inner': (
+                        False,
+                        {
+                            'first_key': False,
+                            'second_key': False
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_post_model.fields_required)
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': False,
+                'list_field': (
+                    False,
+                    {'list_field_inner': (
+                        False,
+                        {
+                            'first_key': False,
+                            'second_key': False
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_post_model.fields_readonly)
+
+    def test_json_put_model_with_list_of_dict(self):
+        self.assertEqual(
+            'TestListModel',
+            self.TestListController.json_put_model.name)
+        self.assertEqual(
+            {
+                'bool_field': 'Boolean',
+                'key': 'String',
+                'list_field': (
+                    'List',
+                    {'list_field_inner': (
+                        'Nested',
+                        {
+                            'first_key': 'String',
+                            'second_key': 'Integer'
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_put_model.fields_flask_type)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    None,
+                    {'list_field_inner': (
+                        None,
+                        {
+                            'first_key': None,
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_put_model.fields_description)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    None,
+                    {'list_field_inner': (
+                        None,
+                        {
+                            'first_key': ['Value1', 'Value2'],
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_put_model.fields_enum)
+        self.assertEqual(
+            {
+                'bool_field': 'true',
+                'key': 'sample_value',
+                'list_field': (
+                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    {'list_field_inner': (
+                        "{'field1': 'value1', 'fieldx': 'valuex'}",
+                        {
+                            'first_key': 'Value1',
+                            'second_key': '0'
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_put_model.fields_example)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    [],
+                    {'list_field_inner': (
+                        {},
+                        {
+                            'first_key': None,
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_put_model.fields_default)
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': False,
+                'list_field': (
+                    False,
+                    {'list_field_inner': (
+                        False,
+                        {
+                            'first_key': False,
+                            'second_key': False
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_put_model.fields_required)
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': False,
+                'list_field': (
+                    False,
+                    {'list_field_inner': (
+                        False,
+                        {
+                            'first_key': False,
+                            'second_key': False
+                        })
+                    }
+                )
+            },
+            self.TestListController.json_put_model.fields_readonly)
 
     def test_put_with_wrong_type_is_invalid(self):
         self.TestController.post({
@@ -4213,7 +4449,47 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'limit': inputs.positive,
                 'offset': inputs.natural,
             },
-            {arg.name: arg.type for arg in self.TestController.query_get_parser.args})
+            parser_types(self.TestController.query_get_parser))
+
+    def test_query_get_parser_with_list_of_dict(self):
+        self.assertEqual(
+            {
+                'bool_field': inputs.boolean,
+                'key': str,
+                'list_field': dict,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
+            },
+            parser_types(self.TestListController.query_get_parser))
+        self.assertEqual(
+            {
+                'bool_field': 'store',
+                'key': 'store',
+                'list_field': 'append',
+                'limit': 'store',
+                'offset': 'store',
+            },
+            parser_actions(self.TestListController.query_get_parser))
+
+    def test_query_get_parser_with_dict(self):
+        self.assertEqual(
+            {
+                'dict_col.first_key': str,
+                'dict_col.second_key': int,
+                'key': str,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
+            },
+            parser_types(self.TestDictController.query_get_parser))
+        self.assertEqual(
+            {
+                'dict_col.first_key': 'store',
+                'dict_col.second_key': 'store',
+                'key': 'store',
+                'limit': 'store',
+                'offset': 'store',
+            },
+            parser_actions(self.TestDictController.query_get_parser))
 
     def test_query_delete_parser(self):
         self.assertEqual(
@@ -4222,7 +4498,39 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'mandatory': int,
                 'optional': str,
             },
-            {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
+            parser_types(self.TestController.query_delete_parser))
+
+    def test_query_delete_parser_with_list_of_dict(self):
+        self.assertEqual(
+            {
+                'bool_field': inputs.boolean,
+                'key': str,
+                'list_field': dict,
+            },
+            parser_types(self.TestListController.query_delete_parser))
+        self.assertEqual(
+            {
+                'bool_field': 'store',
+                'key': 'store',
+                'list_field': 'append',
+            },
+            parser_actions(self.TestListController.query_delete_parser))
+
+    def test_query_delete_parser_with_dict(self):
+        self.assertEqual(
+            {
+                'dict_col.first_key': str,
+                'dict_col.second_key': int,
+                'key': str,
+            },
+            parser_types(self.TestDictController.query_delete_parser))
+        self.assertEqual(
+            {
+                'dict_col.first_key': 'store',
+                'dict_col.second_key': 'store',
+                'key': 'store',
+            },
+            parser_actions(self.TestDictController.query_delete_parser))
 
     def test_json_post_model(self):
         self.assertEqual(
@@ -5497,7 +5805,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'limit': inputs.positive,
                 'offset': inputs.natural,
             },
-            {arg.name: arg.type for arg in self.TestController.query_get_parser.args})
+            parser_types(self.TestController.query_get_parser))
         self._check_audit(self.TestController, [])
 
     def test_query_get_audit_parser(self):
@@ -5512,7 +5820,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'limit': inputs.positive,
                 'offset': inputs.natural,
             },
-            {arg.name: arg.type for arg in self.TestController.query_get_audit_parser.args})
+            parser_types(self.TestController.query_get_audit_parser))
         self._check_audit(self.TestController, [])
 
     def test_query_delete_parser(self):
@@ -5522,7 +5830,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'mandatory': int,
                 'optional': str,
             },
-            {arg.name: arg.type for arg in self.TestController.query_delete_parser.args})
+            parser_types(self.TestController.query_delete_parser))
         self._check_audit(self.TestController, [])
 
     def test_get_response_model(self):
