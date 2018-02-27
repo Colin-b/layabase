@@ -2946,9 +2946,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'bool_field': 'true',
                 'key': 'sample_value',
                 'list_field': (
-                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    '["{\'first_key\': \'Value1\', \'second_key\': \'0\'}"]',
                     {'list_field_inner': (
-                        "{'field1': 'value1', 'fieldx': 'valuex'}",
+                        "{'first_key': 'Value1', 'second_key': '0'}",
                         {
                             'first_key': 'Value1',
                             'second_key': '0'
@@ -3063,9 +3063,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'bool_field': 'true',
                 'key': 'sample_value',
                 'list_field': (
-                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    '["{\'first_key\': \'Value1\', \'second_key\': \'0\'}"]',
                     {'list_field_inner': (
-                        "{'field1': 'value1', 'fieldx': 'valuex'}",
+                        "{'first_key': 'Value1', 'second_key': '0'}",
                         {
                             'first_key': 'Value1',
                             'second_key': '0'
@@ -4565,9 +4565,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'bool_field': 'true',
                 'key': 'sample_value',
                 'list_field': (
-                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    '["{\'first_key\': \'Value1\', \'second_key\': \'0\'}"]',
                     {'list_field_inner': (
-                        "{'field1': 'value1', 'fieldx': 'valuex'}",
+                        "{'first_key': 'Value1', 'second_key': '0'}",
                         {
                             'first_key': 'Value1',
                             'second_key': '0'

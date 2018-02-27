@@ -999,6 +999,17 @@ def _get_example(field: Column) -> str:
     if field.default_value:
         return str(field.default_value)
 
+    if isinstance(field, DictColumn):
+        return str(
+            {
+                dict_key.name: _get_example(dict_key)
+                for dict_key in field._description_model().__fields__
+            }
+        )
+
+    if isinstance(field, ListColumn):
+        return str([_get_example(field.list_item_column)])
+
     return str(field.choices[0]) if field.choices else _get_default_example(field)
 
 
