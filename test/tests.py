@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 class TestAPI:
     @classmethod
     def model(cls, name, fields):
+        def _fields_values(all_fields: dict, value_from_field) -> dict:
+            return {
+                field_name: _fields_values(field.model, value_from_field) if isinstance(field, flask_rest_plus_fields.Nested) else value_from_field(field)
+                for field_name, field in all_fields.items()
+            }
+
         from collections import OrderedDict
         property_list = []
         for field_name in fields:
@@ -36,13 +42,13 @@ class TestAPI:
         setattr(model, '_schema', {'properties': OrderedDict(property_list)})
         # Those are set to be able to test the content that was provided to this method
         setattr(model, 'fields', fields)
-        setattr(model, 'field_names', list(fields.keys()))
-        setattr(model, 'fields_required', [field_name for field_name, field in fields.items() if field.required])
-        setattr(model, 'fields_example', {field_name: field.example for field_name, field in fields.items()})
-        setattr(model, 'fields_description', {field_name: field.description for field_name, field in fields.items()})
-        setattr(model, 'fields_enum', {field_name: field.enum for field_name, field in fields.items() if hasattr(field, 'enum')})
-        setattr(model, 'fields_default', {field_name: field.default for field_name, field in fields.items()})
-        setattr(model, 'fields_readonly', {field_name: field.readonly for field_name, field in fields.items()})
+        setattr(model, 'fields_required', _fields_values(fields, lambda field: field.required))
+        setattr(model, 'fields_example',  _fields_values(fields, lambda field: field.example))
+        setattr(model, 'fields_description',  _fields_values(fields, lambda field: field.description))
+        setattr(model, 'fields_enum',  _fields_values(fields, lambda field: field.enum if hasattr(field, 'enum') else None))
+        setattr(model, 'fields_default',  _fields_values(fields, lambda field: field.default))
+        setattr(model, 'fields_readonly',  _fields_values(fields, lambda field: field.readonly))
+        setattr(model, 'fields_flask_type',  _fields_values(fields, lambda field: field.__class__.__name__))
         setattr(model, 'name', name)
 
         return model
@@ -1176,8 +1182,8 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             self.TestController.json_post_model.name
         )
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.json_post_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_post_model.fields_flask_type
         )
 
     def test_json_post_model_with_auto_increment_and_enum(self):
@@ -1186,8 +1192,8 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             self.TestAutoIncrementController.json_post_model.name
         )
         self.assertEqual(
-            ['key', 'enum_field', 'optional_with_default'],
-            self.TestAutoIncrementController.json_post_model.field_names
+            {'enum_field': 'String', 'key': 'Integer', 'optional_with_default': 'String'},
+            self.TestAutoIncrementController.json_post_model.fields_flask_type
         )
         self.assertEqual(
             {'enum_field': None, 'key': None, 'optional_with_default': 'Test value'},
@@ -1200,8 +1206,8 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             self.TestController.json_put_model.name
         )
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.json_put_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_put_model.fields_flask_type
         )
 
     def test_json_put_model_with_auto_increment_and_enum(self):
@@ -1210,8 +1216,8 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             self.TestAutoIncrementController.json_put_model.name
         )
         self.assertEqual(
-            ['key', 'enum_field', 'optional_with_default'],
-            self.TestAutoIncrementController.json_put_model.field_names
+            {'enum_field': 'String', 'key': 'Integer', 'optional_with_default': 'String'},
+            self.TestAutoIncrementController.json_put_model.fields_flask_type
         )
 
     def test_get_response_model(self):
@@ -1219,21 +1225,21 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             'TestModel',
             self.TestController.get_response_model.name)
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.get_response_model.field_names)
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.get_response_model.fields_flask_type)
 
     def test_get_response_model_with_enum(self):
         self.assertEqual(
             'TestAutoIncrementModel',
             self.TestAutoIncrementController.get_response_model.name)
         self.assertEqual(
-            ['key', 'enum_field', 'optional_with_default'],
-            self.TestAutoIncrementController.get_response_model.field_names)
+            {'enum_field': 'String', 'key': 'Integer', 'optional_with_default': 'String'},
+            self.TestAutoIncrementController.get_response_model.fields_flask_type)
         self.assertEqual(
             {'enum_field': 'Test Documentation', 'key': None, 'optional_with_default': None},
             self.TestAutoIncrementController.get_response_model.fields_description)
         self.assertEqual(
-            {'enum_field': ['Value1', 'Value2'], 'optional_with_default': None},
+            {'enum_field': ['Value1', 'Value2'], 'key': None, 'optional_with_default': None},
             self.TestAutoIncrementController.get_response_model.fields_enum)
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
@@ -1320,8 +1326,11 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             'TestModelDescription',
             self.TestController.get_model_description_response_model.name)
         self.assertEqual(
-            ['table', 'key', 'mandatory', 'optional'],
-            self.TestController.get_model_description_response_model.field_names)
+            {'key': 'String',
+             'mandatory': 'String',
+             'optional': 'String',
+             'table': 'String'},
+            self.TestController.get_model_description_response_model.fields_flask_type)
 
 
 class SQLAlchemyCRUDControllerFailuresTest(unittest.TestCase):
@@ -1499,32 +1508,20 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
 
     def test_post_model_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-            ],
-            self.TestController.json_post_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_post_model.fields_flask_type
         )
 
     def test_put_model_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-            ],
-            self.TestController.json_put_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_put_model.fields_flask_type
         )
 
     def test_get_response_model_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-            ],
-            self.TestController.get_response_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.get_response_model.fields_flask_type
         )
 
     def test_post_with_nothing_is_invalid(self):
@@ -2211,8 +2208,8 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'TestModel',
             self.TestController.get_response_model.name)
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.get_response_model.field_names)
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.get_response_model.fields_flask_type)
         self._check_audit([])
 
     def test_get_audit_response_model(self):
@@ -2220,8 +2217,13 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'AuditTestModel',
             self.TestController.get_audit_response_model.name)
         self.assertEqual(
-            ['audit_user', 'audit_date_utc', 'audit_action', 'key', 'mandatory', 'optional'],
-            self.TestController.get_audit_response_model.field_names)
+            {'audit_action': 'String',
+             'audit_date_utc': 'DateTime',
+             'audit_user': 'String',
+             'key': 'String',
+             'mandatory': 'Integer',
+             'optional': 'String'},
+            self.TestController.get_audit_response_model.fields_flask_type)
         self._check_audit([])
 
 
@@ -2961,6 +2963,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
             }])
         self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
         self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
+
+    def test_list_post_model(self):
+        self.assertEqual(
+            {'bool_field': 'Boolean', 'key': 'String', 'list_field': 'List'},
+            self.TestListController.json_post_model.fields_flask_type
+        )
 
     def test_put_with_wrong_type_is_invalid(self):
         self.TestController.post({
@@ -4215,8 +4223,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestController.json_post_model.name
         )
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.json_post_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_post_model.fields_flask_type
         )
 
     def test_json_post_model_with_auto_increment_and_enum(self):
@@ -4225,8 +4233,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestAutoIncrementController.json_post_model.name
         )
         self.assertEqual(
-            ['enum_field', 'key', 'optional_with_default'],
-            self.TestAutoIncrementController.json_post_model.field_names
+            {'enum_field': 'String', 'key': 'Integer', 'optional_with_default': 'String'},
+            self.TestAutoIncrementController.json_post_model.fields_flask_type
         )
         self.assertEqual(
             {'enum_field': None, 'key': None, 'optional_with_default': 'Test value'},
@@ -4239,8 +4247,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestController.json_put_model.name
         )
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.json_put_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_put_model.fields_flask_type
         )
 
     def test_json_put_model_with_auto_increment_and_enum(self):
@@ -4249,8 +4257,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestAutoIncrementController.json_put_model.name
         )
         self.assertEqual(
-            ['enum_field', 'key', 'optional_with_default'],
-            self.TestAutoIncrementController.json_put_model.field_names
+            {'enum_field': 'String', 'key': 'Integer', 'optional_with_default': 'String'},
+            self.TestAutoIncrementController.json_put_model.fields_flask_type
         )
 
     def test_get_response_model(self):
@@ -4258,21 +4266,21 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'TestModel',
             self.TestController.get_response_model.name)
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.get_response_model.field_names)
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.get_response_model.fields_flask_type)
 
     def test_get_response_model_with_enum(self):
         self.assertEqual(
             'TestAutoIncrementModel',
             self.TestAutoIncrementController.get_response_model.name)
         self.assertEqual(
-            ['enum_field', 'key', 'optional_with_default'],
-            self.TestAutoIncrementController.get_response_model.field_names)
+            {'enum_field': 'String', 'key': 'Integer', 'optional_with_default': 'String'},
+            self.TestAutoIncrementController.get_response_model.fields_flask_type)
         self.assertEqual(
             {'enum_field': 'Test Documentation', 'key': None, 'optional_with_default': None},
             self.TestAutoIncrementController.get_response_model.fields_description)
         self.assertEqual(
-            {'enum_field': ['Value1', 'Value2'], 'optional_with_default': None},
+            {'enum_field': ['Value1', 'Value2'], 'key': None, 'optional_with_default': None},
             self.TestAutoIncrementController.get_response_model.fields_enum)
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
@@ -4359,8 +4367,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'TestModelDescription',
             self.TestController.get_model_description_response_model.name)
         self.assertEqual(
-            ['collection', 'key', 'mandatory', 'optional'],
-            self.TestController.get_model_description_response_model.field_names)
+            {'collection': 'String',
+             'key': 'String',
+             'mandatory': 'String',
+             'optional': 'String'},
+            self.TestController.get_model_description_response_model.fields_flask_type)
 
 
 class MongoCRUDControllerFailuresTest(unittest.TestCase):
@@ -4549,32 +4560,20 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
 
     def test_post_model_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-            ],
-            self.TestController.json_post_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_post_model.fields_flask_type
         )
 
     def test_put_model_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-            ],
-            self.TestController.json_put_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.json_put_model.fields_flask_type
         )
 
     def test_get_response_model_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-            ],
-            self.TestController.get_response_model.field_names
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.get_response_model.fields_flask_type
         )
 
     def test_post_with_nothing_is_invalid(self):
@@ -5407,8 +5406,8 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'TestModel',
             self.TestController.get_response_model.name)
         self.assertEqual(
-            ['key', 'mandatory', 'optional'],
-            self.TestController.get_response_model.field_names)
+            {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
+            self.TestController.get_response_model.fields_flask_type)
         self._check_audit(self.TestController, [])
 
     def test_get_audit_response_model(self):
@@ -5416,15 +5415,13 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'AuditTestModel',
             self.TestController.get_audit_response_model.name)
         self.assertEqual(
-            [
-                'audit_action',
-                'audit_date_utc',
-                'audit_user',
-                'key',
-                'mandatory',
-                'optional'
-            ],
-            self.TestController.get_audit_response_model.field_names)
+            {'audit_action': 'String',
+             'audit_date_utc': 'DateTime',
+             'audit_user': 'String',
+             'key': 'String',
+             'mandatory': 'Integer',
+             'optional': 'String'},
+            self.TestController.get_audit_response_model.fields_flask_type)
         self._check_audit(self.TestController, [])
 
 
