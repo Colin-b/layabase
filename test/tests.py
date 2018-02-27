@@ -24,10 +24,17 @@ class TestAPI:
     @classmethod
     def model(cls, name, fields):
         def _fields_values(all_fields: dict, value_from_field) -> dict:
-            return {
-                field_name: _fields_values(field.model, value_from_field) if isinstance(field, flask_rest_plus_fields.Nested) else value_from_field(field)
-                for field_name, field in all_fields.items()
-            }
+            values = {}
+
+            for field_name, field in all_fields.items():
+                if isinstance(field, flask_rest_plus_fields.Nested):
+                    values[field_name] = (value_from_field(field), _fields_values(field.model, value_from_field))
+                elif isinstance(field, flask_rest_plus_fields.List):
+                    values[field_name] = (value_from_field(field), _fields_values({f'{field_name}_inner': field.container}, value_from_field))
+                else:
+                    values[field_name] = value_from_field(field)
+
+            return values
 
         from collections import OrderedDict
         property_list = []
@@ -4282,6 +4289,123 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             {'enum_field': ['Value1', 'Value2'], 'key': None, 'optional_with_default': None},
             self.TestAutoIncrementController.get_response_model.fields_enum)
+
+    def test_get_response_model_with_list_of_dict(self):
+        self.assertEqual(
+            'TestListModel',
+            self.TestListController.get_response_model.name)
+        self.assertEqual(
+            {
+                'bool_field': 'Boolean',
+                'key': 'String',
+                'list_field': (
+                    'List',
+                    {'list_field_inner': (
+                        'Nested',
+                        {
+                            'first_key': 'String',
+                            'second_key': 'Integer'
+                        })
+                    }
+                )
+            },
+            self.TestListController.get_response_model.fields_flask_type)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    None,
+                    {'list_field_inner': (
+                        None,
+                        {
+                            'first_key': None,
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.get_response_model.fields_description)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    None,
+                    {'list_field_inner': (
+                        None,
+                        {
+                            'first_key': ['Value1', 'Value2'],
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.get_response_model.fields_enum)
+        self.assertEqual(
+            {
+                'bool_field': 'true',
+                'key': 'sample_value',
+                'list_field': (
+                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    {'list_field_inner': (
+                        "{'field1': 'value1', 'fieldx': 'valuex'}",
+                        {
+                            'first_key': 'Value1',
+                            'second_key': '0'
+                        })
+                    }
+                )
+            },
+            self.TestListController.get_response_model.fields_example)
+        self.assertEqual(
+            {
+                'bool_field': None,
+                'key': None,
+                'list_field': (
+                    [],
+                    {'list_field_inner': (
+                        {},
+                        {
+                            'first_key': None,
+                            'second_key': None
+                        })
+                    }
+                )
+            },
+            self.TestListController.get_response_model.fields_default)
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': False,
+                'list_field': (
+                    False,
+                    {'list_field_inner': (
+                        False,
+                        {
+                            'first_key': False,
+                            'second_key': False
+                        })
+                    }
+                )
+            },
+            self.TestListController.get_response_model.fields_required)
+        self.assertEqual(
+            {
+                'bool_field': False,
+                'key': False,
+                'list_field': (
+                    False,
+                    {'list_field_inner': (
+                        False,
+                        {
+                            'first_key': False,
+                            'second_key': False
+                        })
+                    }
+                )
+            },
+            self.TestListController.get_response_model.fields_readonly)
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
         self.TestController.post({
