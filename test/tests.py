@@ -2336,91 +2336,6 @@ class SQLAlchemyFlaskRestPlusModelsTest(unittest.TestCase):
         self.assertEqual('sample_value', database_sqlalchemy._get_example(None))
 
 
-class MongoFlaskRestPlusModelsTest(unittest.TestCase):
-    def setUp(self):
-        logger.info(f'-------------------------------')
-        logger.info(f'Start of {self._testMethodName}')
-
-    def tearDown(self):
-        logger.info(f'End of {self._testMethodName}')
-        logger.info(f'-------------------------------')
-
-    def test_rest_plus_type_for_string_field_is_string(self):
-        field = database_mongo.Column(str)
-        self.assertEqual(flask_rest_plus_fields.String, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_int_field_is_integer(self):
-        field = database_mongo.Column(int)
-        self.assertEqual(flask_rest_plus_fields.Integer, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_bool_field_is_boolean(self):
-        field = database_mongo.Column(bool)
-        self.assertEqual(flask_rest_plus_fields.Boolean, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_date_field_is_date(self):
-        field = database_mongo.Column(datetime.date)
-        self.assertEqual(flask_rest_plus_fields.Date, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_datetime_field_is_datetime(self):
-        field = database_mongo.Column(datetime.datetime)
-        self.assertEqual(flask_rest_plus_fields.DateTime, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_float_field_is_float(self):
-        field = database_mongo.Column(float)
-        self.assertEqual(flask_rest_plus_fields.Float, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_enum_field_is_string(self):
-        field = database_mongo.Column(EnumTest)
-        self.assertEqual(flask_rest_plus_fields.String, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_dict_field_is_raw(self):
-        field = database_mongo.Column(dict)
-        self.assertEqual(flask_rest_plus_fields.Raw, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_list_field_is_list(self):
-        field = database_mongo.Column(list)
-        self.assertEqual(flask_rest_plus_fields.List, database_mongo._get_flask_restplus_type(field))
-
-    def test_rest_plus_type_for_none_field_cannot_be_guessed(self):
-        field = database_mongo.Column()
-        field.field_type = None
-        with self.assertRaises(Exception) as cm:
-            database_mongo._get_flask_restplus_type(field)
-        self.assertEqual('Flask RestPlus field type cannot be guessed for None field.', cm.exception.args[0])
-
-    def test_rest_plus_example_for_string_field(self):
-        field = database_mongo.Column(str)
-        self.assertEqual('sample_value', database_mongo._get_example(field))
-
-    def test_rest_plus_example_for_int_field_is_integer(self):
-        field = database_mongo.Column(int)
-        self.assertEqual('0', database_mongo._get_example(field))
-
-    def test_rest_plus_example_for_bool_field_is_true(self):
-        field = database_mongo.Column(bool)
-        self.assertEqual('true', database_mongo._get_example(field))
-
-    def test_rest_plus_example_for_date_field_is_YYYY_MM_DD(self):
-        field = database_mongo.Column(datetime.date)
-        self.assertEqual('2017-09-24', database_mongo._get_example(field))
-
-    def test_rest_plus_example_for_datetime_field_is_YYYY_MM_DDTHH_MM_SS(self):
-        field = database_mongo.Column(datetime.datetime)
-        self.assertEqual('2017-09-24T15:36:09', database_mongo._get_example(field))
-
-    def test_rest_plus_example_for_float_field_is_float(self):
-        field = database_mongo.Column(float)
-        self.assertEqual('0.0', database_mongo._get_example(field))
-
-    def test_rest_plus_example_for_dict_field_is_dict(self):
-        field = database_mongo.Column(dict)
-        self.assertEqual("{'field1': 'value1', 'fieldx': 'valuex'}", database_mongo._get_example(field))
-
-    def test_rest_plus_example_for_list_field_is_list(self):
-        field = database_mongo.Column(list)
-        self.assertEqual("[['field1', 'value1'], ['fieldx', 'valuex']]", database_mongo._get_example(field))
-
-
 class SQlAlchemyColumnsTest(unittest.TestCase):
     _model = None
 
@@ -2627,6 +2542,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestIdController(database.CRUDController):
         pass
 
+    class TestUnvalidatedListAndDictController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2641,6 +2559,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestDefaultPrimaryKeyController.namespace(TestAPI)
         cls.TestListController.namespace(TestAPI)
         cls.TestIdController.namespace(TestAPI)
+        cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -2729,6 +2648,14 @@ class MongoCRUDControllerTest(unittest.TestCase):
             list_field = database_mongo.ListColumn(MyDictColumn())
             bool_field = database_mongo.Column(bool)
 
+        class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel):
+            __tablename__ = 'list_and_dict_table_name'
+
+            float_key = database_mongo.Column(float, is_primary_key=True)
+            float_with_default = database_mongo.Column(float, default_value=34)
+            dict_field = database_mongo.Column(dict, is_required=True)
+            list_field = database_mongo.Column(list, is_required=True)
+
         class TestIdModel(database_mongo.CRUDModel):
             __tablename__ = 'id_table_name'
 
@@ -2744,7 +2671,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
         cls.TestListController.model(TestListModel)
         cls.TestIdController.model(TestIdModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel, TestIdModel]
+        cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel, TestIdModel, TestUnvalidatedListAndDictModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -4714,6 +4642,128 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 )
             },
             self.TestListController.get_response_model.fields_readonly)
+
+    def test_get_response_model_with_date(self):
+        self.assertEqual(
+            'TestDateModel',
+            self.TestDateController.get_response_model.name)
+        self.assertEqual(
+            {'date_str': 'Date', 'datetime_str': 'DateTime', 'key': 'String'},
+            self.TestDateController.get_response_model.fields_flask_type)
+        self.assertEqual(
+            {'date_str': None, 'datetime_str': None, 'key': None},
+            self.TestDateController.get_response_model.fields_description)
+        self.assertEqual(
+            {'date_str': None, 'datetime_str': None, 'key': None},
+            self.TestDateController.get_response_model.fields_enum)
+        self.assertEqual(
+            {'date_str': '2017-09-24', 'datetime_str': '2017-09-24T15:36:09', 'key': 'sample_value'},
+            self.TestDateController.get_response_model.fields_example)
+        self.assertEqual(
+            {'date_str': None, 'datetime_str': None, 'key': None},
+            self.TestDateController.get_response_model.fields_default)
+        self.assertEqual(
+            {'date_str': False, 'datetime_str': False, 'key': False},
+            self.TestDateController.get_response_model.fields_required)
+        self.assertEqual(
+            {'date_str': False, 'datetime_str': False, 'key': False},
+            self.TestDateController.get_response_model.fields_readonly)
+
+    def test_get_response_model_with_float_and_unvalidated_list_and_dict(self):
+        self.assertEqual(
+            'TestUnvalidatedListAndDictModel',
+            self.TestUnvalidatedListAndDictController.get_response_model.name)
+        self.assertEqual(
+            {
+                'dict_field': 'Raw',
+                'float_key': 'Float',
+                'float_with_default': 'Float',
+                'list_field': (
+                    'List',
+                    {
+                        'list_field_inner': 'String'
+                    }
+                )
+            },
+            self.TestUnvalidatedListAndDictController.get_response_model.fields_flask_type)
+        self.assertEqual(
+            {
+                'dict_field': None,
+                'float_key': None,
+                'float_with_default': None,
+                'list_field': (
+                    None,
+                    {
+                        'list_field_inner': None
+                    }
+                )
+            },
+            self.TestUnvalidatedListAndDictController.get_response_model.fields_description)
+        self.assertEqual(
+            {
+                'dict_field': None,
+                'float_key': None,
+                'float_with_default': None,
+                'list_field': (
+                    None,
+                    {
+                        'list_field_inner': None
+                    }
+                )
+            },
+            self.TestUnvalidatedListAndDictController.get_response_model.fields_enum)
+        self.assertEqual(
+            {
+                'dict_field': "{'field1': 'value1', 'fieldx': 'valuex'}",
+                'float_key': '0.0',
+                'float_with_default': '34',
+                'list_field': (
+                    "[['field1', 'value1'], ['fieldx', 'valuex']]",
+                    {
+                        'list_field_inner': None
+                    }
+                )
+            },
+            self.TestUnvalidatedListAndDictController.get_response_model.fields_example)
+        self.assertEqual(
+            {
+                'dict_field': {},
+                'float_key': None,
+                'float_with_default': 34,
+                'list_field': (
+                    [],
+                    {
+                        'list_field_inner': None
+                    }
+                )
+            },
+            self.TestUnvalidatedListAndDictController.get_response_model.fields_default)
+        self.assertEqual(
+            {
+                'dict_field': True,
+                'float_key': False,
+                'float_with_default': False,
+                'list_field': (
+                    True,
+                    {
+                        'list_field_inner': None
+                    }
+                )
+            },
+            self.TestUnvalidatedListAndDictController.get_response_model.fields_required)
+        self.assertEqual(
+            {
+                'dict_field': False,
+                'float_key': False,
+                'float_with_default': False,
+                'list_field': (
+                    False,
+                    {
+                        'list_field_inner': None
+                    }
+                )
+            },
+            self.TestUnvalidatedListAndDictController.get_response_model.fields_readonly)
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
         self.TestController.post({

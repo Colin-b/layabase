@@ -959,11 +959,8 @@ def _reset_collection(base, collection):
 def _get_flask_restplus_type(field: Column):
     """
     Return the Flask RestPlus field type (as a class) corresponding to this Mongo field.
-
-    :raises Exception if field type is not managed yet.
+    Default to String.
     """
-    if field.field_type == str:
-        return flask_restplus_fields.String
     if field.field_type == int:
         return flask_restplus_fields.Integer
     if field.field_type == float:
@@ -974,16 +971,12 @@ def _get_flask_restplus_type(field: Column):
         return flask_restplus_fields.Date
     if field.field_type == datetime.datetime:
         return flask_restplus_fields.DateTime
-    if field.field_type == ObjectId:
-        return flask_restplus_fields.String
-    if isinstance(field.field_type, enum.EnumMeta):
-        return flask_restplus_fields.String
     if field.field_type == list:
         return flask_restplus_fields.List
     if field.field_type == dict:
         return flask_restplus_fields.Raw
 
-    raise Exception(f'Flask RestPlus field type cannot be guessed for {field} field.')
+    return flask_restplus_fields.String
 
 
 def _get_example(field: Column) -> str:
