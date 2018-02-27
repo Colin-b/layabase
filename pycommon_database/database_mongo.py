@@ -11,6 +11,7 @@ from typing import List, Dict
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from bson.objectid import ObjectId
 from bson.errors import BSONError
+import json
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
@@ -858,15 +859,27 @@ class CRUDModel:
     @classmethod
     def _to_flask_restplus_field(cls, field: Column):
         if isinstance(field, DictColumn):
-            return flask_restplus_fields.Nested(
-                field._description_model().flask_restplus_fields(),
-                required=field.is_required,
-                example=_get_example(field),
-                description=field.description,
-                enum=field.choices,
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-            )
+            dict_fields = field._description_model().flask_restplus_fields()
+            if dict_fields:
+                # Nested field cannot contains nothing
+                return flask_restplus_fields.Nested(
+                    dict_fields,
+                    required=field.is_required,
+                    example=_get_example(field),
+                    description=field.description,
+                    enum=field.choices,
+                    default=field.default_value,
+                    readonly=field.should_auto_increment,
+                )
+            else:
+                return _get_flask_restplus_type(field)(
+                    required=field.is_required,
+                    example=_get_example(field),
+                    description=field.description,
+                    enum=field.choices,
+                    default=field.default_value,
+                    readonly=field.should_auto_increment,
+                )
         elif isinstance(field, ListColumn):
             return flask_restplus_fields.List(
                 cls._to_flask_restplus_field(field.list_item_column),
@@ -1024,6 +1037,12 @@ def _get_python_type(field: Column):
     if field.field_type == datetime.datetime:
         return inputs.datetime_from_iso8601
     if isinstance(field.field_type, enum.EnumMeta):
+        return str
+    if field.field_type == dict:
+        return json.loads
+    if field.field_type == list:
+        return json.loads
+    if field.field_type == ObjectId:
         return str
 
     return field.field_type

@@ -8,6 +8,7 @@ from flask_restplus import fields as flask_rest_plus_fields, inputs
 from threading import Thread
 import time
 import enum
+import json
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -4365,7 +4366,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             {
                 'bool_field': inputs.boolean,
                 'key': str,
-                'list_field': dict,
+                'list_field': json.loads,
                 'limit': inputs.positive,
                 'offset': inputs.natural,
             },
@@ -4414,7 +4415,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             {
                 'bool_field': inputs.boolean,
                 'key': str,
-                'list_field': dict,
+                'list_field': json.loads,
             },
             parser_types(self.TestListController.query_delete_parser))
         self.assertEqual(
