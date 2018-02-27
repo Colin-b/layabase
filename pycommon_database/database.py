@@ -118,12 +118,12 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        cls.json_post_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
-        cls.json_put_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
-        cls.get_response_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields())
+        cls.json_post_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields(namespace))
+        cls.json_put_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields(namespace))
+        cls.get_response_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields(namespace))
         if cls._model.audit_model:
             cls.get_audit_response_model = namespace.model('Audit' + cls._model.__name__,
-                                                           cls._model.audit_model.flask_restplus_fields())
+                                                           cls._model.audit_model.flask_restplus_fields(namespace))
         else:
             cls.get_audit_response_model = None
         cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),

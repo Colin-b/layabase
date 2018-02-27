@@ -29,7 +29,7 @@ class TestAPI:
 
             for field_name, field in all_fields.items():
                 if isinstance(field, flask_rest_plus_fields.Nested):
-                    values[field_name] = (value_from_field(field), _fields_values(field.model, value_from_field))
+                    values[field_name] = (value_from_field(field), _fields_values(field.nested.fields, value_from_field))
                 elif isinstance(field, flask_rest_plus_fields.List):
                     values[field_name] = (value_from_field(field), _fields_values({f'{field_name}_inner': field.container}, value_from_field))
                 else:

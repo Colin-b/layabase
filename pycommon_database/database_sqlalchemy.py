@@ -274,7 +274,7 @@ class CRUDModel:
         return description
 
     @classmethod
-    def flask_restplus_fields(cls):
+    def flask_restplus_fields(cls, namespace):
         return {
             marshmallow_field.name: _get_rest_plus_type(marshmallow_field)(
                 required=marshmallow_field.required,

@@ -853,17 +853,18 @@ class CRUDModel:
         return description
 
     @classmethod
-    def flask_restplus_fields(cls) -> dict:
-        return {field.name: cls._to_flask_restplus_field(field) for field in cls.__fields__}
+    def flask_restplus_fields(cls, namespace) -> dict:
+        return {field.name: cls._to_flask_restplus_field(namespace, field) for field in cls.__fields__}
 
     @classmethod
-    def _to_flask_restplus_field(cls, field: Column):
+    def _to_flask_restplus_field(cls, namespace, field: Column):
         if isinstance(field, DictColumn):
-            dict_fields = field._description_model().flask_restplus_fields()
+            dict_fields = field._description_model().flask_restplus_fields(namespace)
             if dict_fields:
+                dict_model = namespace.model('_'.join(dict_fields), dict_fields)
                 # Nested field cannot contains nothing
                 return flask_restplus_fields.Nested(
-                    dict_fields,
+                    dict_model,
                     required=field.is_required,
                     example=_get_example(field),
                     description=field.description,
@@ -882,7 +883,7 @@ class CRUDModel:
                 )
         elif isinstance(field, ListColumn):
             return flask_restplus_fields.List(
-                cls._to_flask_restplus_field(field.list_item_column),
+                cls._to_flask_restplus_field(namespace, field.list_item_column),
                 required=field.is_required,
                 example=_get_example(field),
                 description=field.description,
