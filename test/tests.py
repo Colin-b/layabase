@@ -1488,7 +1488,8 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             optional = sqlalchemy.Column(sqlalchemy.String)
 
         logger.info('Save model class...')
-        cls.TestController.model(TestModel, audit=True)
+        TestModel.audit()
+        cls.TestController.model(TestModel)
         return [TestModel]
 
     def setUp(self):
@@ -4986,8 +4987,8 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             enum_fld = database_mongo.Column(EnumTest)
 
         logger.info('Save model class...')
-        cls.TestController.model(TestModel, audit=True)
-        cls.TestEnumController.model(TestEnumModel, audit=True)
+        cls.TestController.model(TestModel)
+        cls.TestEnumController.model(TestEnumModel)
         return [TestModel, TestEnumModel]
 
     def setUp(self):

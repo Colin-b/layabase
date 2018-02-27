@@ -91,20 +91,18 @@ class CRUDController:
     _model_description_dictionary = None
 
     @classmethod
-    def model(cls, value, audit: bool = False):
+    def model(cls, value):
         """
         Initialize related model (should extends CRUDModel).
 
-        :param value: CRUDModel and SQLAlchemy model.
-        :param audit: True to add an extra model representing the audit table. No audit by default.
+        :param value: Mongo or SQLAlchemy CRUDModel.
         """
         cls._model = value
         if not cls._model:
             raise ControllerModelNotSet(cls)
         cls.query_get_parser = cls._model.query_get_parser()
         cls.query_delete_parser = cls._model.query_delete_parser()
-        if audit:
-            cls._model.create_audit()
+        if cls._model.audit_model:
             cls.query_get_audit_parser = cls._model.audit_model.query_get_parser()
         else:
             cls.query_get_audit_parser = None

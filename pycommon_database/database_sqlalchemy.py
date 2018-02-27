@@ -308,10 +308,12 @@ class CRUDModel:
         return exported_fields
 
     @classmethod
-    def create_audit(cls):
+    def audit(cls):
+        """
+        Call this method to add audit to a model.
+        """
         from pycommon_database.audit_sqlalchemy import _create_from
         cls.audit_model = _create_from(cls)
-        return cls.audit_model
 
 
 def _load(database_connection_url: str, create_models_func: callable, **kwargs):

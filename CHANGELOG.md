@@ -12,11 +12,13 @@ List all changes in various categories:
 
 - Optional dependencies should be chosen upon installation thanks to mongo and sqlalchemy extra requires.
 - CRUDModel class is now within database_sqlalchemy instead of database module.
+- SQLAlchemy audit is no longer created for a model using the extra "audit" Controller.model method parameter. Use CRUDModel.audit() instead.
 
 ### Enhancements ###
 
 - Add support for Mongo database.
 - All SQLAlchemy create_engine parameters can now be provided to database.load function
+- A single commit is now performed for the requested action and related audit.
 
 ### Bug fixes ###
 

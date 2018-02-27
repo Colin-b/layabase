@@ -900,10 +900,6 @@ class CRUDModel:
         })
         return exported_fields
 
-    @classmethod
-    def create_audit(cls):
-        return cls.audit_model
-
 
 def _load(database_connection_url: str, create_models_func: callable):
     """
