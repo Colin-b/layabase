@@ -803,7 +803,7 @@ class CRUDModel:
     def _update(cls, model_as_dict: dict) -> dict:
         model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
         model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys}
-        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
+        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})  # TODO Do we need a filtered dict as input ? as keys are of the same value anyway
         return cls.__collection__.find_one(model_as_dict_keys)
 
     @classmethod
