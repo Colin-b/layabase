@@ -555,7 +555,7 @@ class CRUDModel:
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
         if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
+            return {'': ['No data provided.']}
 
         new_model_as_dict = copy.deepcopy(model_as_dict)
 
@@ -581,7 +581,7 @@ class CRUDModel:
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
         if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
+            return {'': ['No data provided.']}
 
         new_model_as_dict = copy.deepcopy(model_as_dict)
 
@@ -711,7 +711,7 @@ class CRUDModel:
         :returns The inserted models formatted as a list of dictionaries.
         """
         if not models_as_list_of_dict:
-            raise ValidationFailed({}, message='No data provided.')
+            raise ValidationFailed([], message='No data provided.')
 
         new_models_as_list_of_dict = copy.deepcopy(models_as_list_of_dict)
 

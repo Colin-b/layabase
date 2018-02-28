@@ -2664,13 +2664,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             self.TestController.post(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual(None, cm.exception.received_data)
 
     def test_post_list_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual([], cm.exception.received_data)
 
     def test_post_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -2682,7 +2682,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([])
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual([], cm.exception.received_data)
 
     def test_put_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -5041,14 +5041,14 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             self.TestController.post(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual(None, cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_post_many_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual([], cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_post_with_empty_dict_is_invalid(self):
@@ -5062,7 +5062,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([])
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual([], cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_put_with_nothing_is_invalid(self):
