@@ -278,7 +278,10 @@ class DictColumn(Column):
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self._description_model().validate_insert(value))
+                errors.update({
+                    f'{self.name}.{field_name}': field_errors
+                    for field_name, field_errors in self._description_model().validate_insert(value).items()
+                })
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
@@ -294,7 +297,10 @@ class DictColumn(Column):
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self._description_model().validate_update(value))
+                errors.update({
+                    f'{self.name}.{field_name}': field_errors
+                    for field_name, field_errors in self._description_model().validate_update(value).items()
+                })
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
@@ -310,7 +316,10 @@ class DictColumn(Column):
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                errors.update(self._description_model().validate_query(value))
+                errors.update({
+                    f'{self.name}.{field_name}': field_errors
+                    for field_name, field_errors in self._description_model().validate_query(value).items()
+                })
         return errors
 
     def deserialize_query(self, model_as_dict: dict):
@@ -356,8 +365,11 @@ class ListColumn(Column):
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
             values = model_as_dict.get(self.name) or []
-            for value in values:
-                errors.update(self.list_item_column.validate_insert({self.name: value}))
+            for index, value in enumerate(values):
+                errors.update({
+                    f'{field_name}[{index}]': field_errors
+                    for field_name, field_errors in self.list_item_column.validate_insert({self.name: value}).items()
+                })
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
@@ -379,8 +391,11 @@ class ListColumn(Column):
         errors = Column.validate_update(self, model_as_dict)
         if not errors:
             values = model_as_dict[self.name]
-            for value in values:
-                errors.update(self.list_item_column.validate_update({self.name: value}))
+            for index, value in enumerate(values):
+                errors.update({
+                    f'{field_name}[{index}]': field_errors
+                    for field_name, field_errors in self.list_item_column.validate_update({self.name: value}).items()
+                })
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
@@ -402,8 +417,11 @@ class ListColumn(Column):
         errors = Column.validate_query(self, model_as_dict)
         if not errors:
             values = model_as_dict.get(self.name) or []
-            for value in values:
-                errors.update(self.list_item_column.validate_query({self.name: value}))
+            for index, value in enumerate(values):
+                errors.update({
+                    f'{field_name}[{index}]': field_errors
+                    for field_name, field_errors in self.list_item_column.validate_query({self.name: value}).items()
+                })
         return errors
 
     def deserialize_query(self, model_as_dict: dict):

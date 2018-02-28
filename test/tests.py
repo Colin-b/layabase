@@ -3602,7 +3602,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'my_key',
                 'dict_col.second_key': 'invalid integer',
             })
-        self.assertEqual({'second_key': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'dict_col.second_key': ['Not a valid int.']}, cm.exception.errors)
         self.assertEqual({'key': 'my_key', 'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
 
     def test_delete_with_dot_notation_invalid_value_is_invalid(self):
@@ -3620,7 +3620,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestDictController.delete({
                 'dict_col.second_key': 'invalid integer',
             })
-        self.assertEqual({'second_key': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'dict_col.second_key': ['Not a valid int.']}, cm.exception.errors)
         self.assertEqual({'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
 
     def test_delete_with_dot_notation_valid_value_is_valid(self):
@@ -3660,7 +3660,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_col.first_key': 'Value1',
                 'dict_col.second_key': 'invalid integer',
             })
-        self.assertEqual({'second_key': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'dict_col.second_key': ['Not a valid int.']}, cm.exception.errors)
         self.assertEqual({'key': 'my_key', 'dict_col.first_key': 'Value1', 'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
 
     def test_post_with_dot_notation_valid_value_is_valid(self):
@@ -3847,7 +3847,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'first_key': 'Value1',
                 },
             })
-        self.assertEqual({'second_key': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'dict_col.second_key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({'key': 'my_key', 'dict_col': {'first_key': 'Value1'}}, cm.exception.received_data)
 
     def test_post_many_with_optional_is_valid(self):
