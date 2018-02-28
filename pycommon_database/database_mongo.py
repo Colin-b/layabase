@@ -1032,12 +1032,18 @@ def _get_default_example(field: Column):
     if field.field_type == datetime.datetime:
         return '2017-09-24T15:36:09'
     if field.field_type == list:
-        return [['field1','value1'], ['fieldx','valuex']]
+        return [
+            f'1st {field.name} sample',
+            f'2nd {field.name} sample',
+        ]
     if field.field_type == dict:
-        return {'field1':'value1','fieldx':'valuex'}
+        return {
+            f'1st {field.name} key': f'1st {field.name} sample',
+            f'2nd {field.name} key': f'2nd {field.name} sample',
+        }
     if field.field_type == ObjectId:
         return '1234567890QBCDEF01234567'
-    return 'sample_value'
+    return f'sample {field.name}'
 
 
 def _get_python_type(field: Column):

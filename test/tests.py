@@ -2936,7 +2936,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             {
                 'bool_field': True,
-                'key': 'sample_value',
+                'key': 'sample key',
                 'list_field': (
                     [{'first_key': 'Value1', 'second_key': 1}],
                     {'list_field_inner': (
@@ -3053,7 +3053,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             {
                 'bool_field': True,
-                'key': 'sample_value',
+                'key': 'sample key',
                 'list_field': (
                     [{'first_key': 'Value1', 'second_key': 1}],
                     {'list_field_inner': (
@@ -4555,7 +4555,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             {
                 'bool_field': True,
-                'key': 'sample_value',
+                'key': 'sample key',
                 'list_field': (
                     [{'first_key': 'Value1', 'second_key': 1}],
                     {'list_field_inner': (
@@ -4631,7 +4631,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             {'date_str': None, 'datetime_str': None, 'key': None},
             self.TestDateController.get_response_model.fields_enum)
         self.assertEqual(
-            {'date_str': '2017-09-24', 'datetime_str': '2017-09-24T15:36:09', 'key': 'sample_value'},
+            {'date_str': '2017-09-24', 'datetime_str': '2017-09-24T15:36:09', 'key': 'sample key'},
             self.TestDateController.get_response_model.fields_example)
         self.assertEqual(
             {'date_str': None, 'datetime_str': None, 'key': None},
@@ -4688,11 +4688,17 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestUnvalidatedListAndDictController.get_response_model.fields_enum)
         self.assertEqual(
             {
-                'dict_field': {'field1': 'value1', 'fieldx': 'valuex'},
+                'dict_field': {
+                    '1st dict_field key': '1st dict_field sample',
+                    '2nd dict_field key': '2nd dict_field sample',
+                },
                 'float_key': 1.4,
                 'float_with_default': 34,
                 'list_field': (
-                    [['field1', 'value1'], ['fieldx', 'valuex']],
+                    [
+                        '1st list_field sample',
+                        '2nd list_field sample',
+                    ],
                     {
                         'list_field_inner': None
                     }
