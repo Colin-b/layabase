@@ -784,20 +784,31 @@ class CRUDModel:
 
         cls.deserialize_update(model_as_dict)
 
-        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
-        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
-        if not previous_model_as_dict:
-            raise ModelCouldNotBeFound(model_as_dict_keys)
+        previous_model_as_dict = cls._get_previous(model_as_dict)
+        new_model_as_dict = cls._update(model_as_dict)
 
-        model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys}
-        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
-        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
         if cls.audit_model:
             cls.audit_model.audit_update(new_model_as_dict)
         return cls.serialize(previous_model_as_dict), cls.serialize(new_model_as_dict)
 
     @classmethod
+    def _get_previous(cls, model_as_dict: dict) -> dict:
+        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
+        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        if not previous_model_as_dict:
+            raise ModelCouldNotBeFound(model_as_dict_keys)
+        return previous_model_as_dict
+
+    @classmethod
+    def _update(cls, model_as_dict: dict) -> dict:
+        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
+        model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys}
+        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})
+        return cls.__collection__.find_one(model_as_dict_keys)
+
+    @classmethod
     def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
+        # TODO Compute primary keys only once
         primary_key_field_names = [field.name for field in cls.__fields__ if field.is_primary_key]
         return {field_name: value for field_name, value in model_as_dict.items() if
                 field_name in primary_key_field_names}
