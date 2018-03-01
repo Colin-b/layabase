@@ -361,8 +361,11 @@ class CRUDModel:
             cls.__collection__.create_index(criteria, unique=unique)
 
     @classmethod
-    def find(cls, model_to_query: dict, skip=0, limit=0) -> List[dict]:
-        return cls.__collection__.find(model_to_query, skip=skip, limit=limit)
+    def find(cls, model_to_query: dict, skip=0, limit=0, projection={}) -> List[dict]:
+        if projection:
+            return cls.__collection__.find(model_to_query, skip=skip, limit=limit, projection=projection)
+        else:
+            return cls.__collection__.find(model_to_query, skip=skip, limit=limit)
 
     @classmethod
     def find_one(cls, model_to_query: dict, projection={}) -> dict:
