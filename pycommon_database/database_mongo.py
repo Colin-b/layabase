@@ -37,6 +37,7 @@ class Column:
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
+        :param allow_none_as_filter: bool value. Default to False.
         :param is_primary_key: bool value. Default to False.
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
@@ -52,6 +53,7 @@ class Column:
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
 
+        self.allow_none_as_filter = bool(kwargs.pop('allow_none_as_filter', False))
         self.is_primary_key = bool(kwargs.pop('is_primary_key', False))
         self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
         if self.should_auto_increment and self.field_type is not int:
@@ -161,7 +163,12 @@ class Column:
         to perform a different deserialization in case of insert and update
         :param model_as_dict: Dictionary containing this field value (or not).
         """
-        self._deserialize(model_as_dict)
+        value = model_as_dict.get(self.name)
+        if value is None:
+            if not self.allow_none_as_filter:
+                model_as_dict.pop(self.name, None)
+        else:
+            model_as_dict[self.name] = self._deserialize_value(value)
 
     def deserialize_insert(self, model_as_dict: dict):
         """
@@ -170,7 +177,12 @@ class Column:
         to perform a different deserialization in case of insert and update
         :param model_as_dict: Dictionary containing this field value (or not).
         """
-        self._deserialize(model_as_dict)
+        value = model_as_dict.get(self.name)
+        if value is None:
+            # Ensure that None value are not stored to save space
+            model_as_dict.pop(self.name, None)
+        else:
+            model_as_dict[self.name] = self._deserialize_value(value)
 
     def deserialize_update(self, model_as_dict: dict):
         """
@@ -179,18 +191,21 @@ class Column:
         to perform a different deserialization in case of insert and update
         :param model_as_dict: Dictionary containing this field value (or not).
         """
-        self._deserialize(model_as_dict)
-
-    def _deserialize(self, model_as_dict: dict):
-        """
-        Convert this field value to the proper value that can be inserted in Mongo.
-        :param model_as_dict: Dictionary containing this field value (or not).
-        """
         value = model_as_dict.get(self.name)
         if value is None:
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
-            return
+        else:
+            model_as_dict[self.name] = self._deserialize_value(value)
+
+    def _deserialize_value(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        if value is None:
+            return None
 
         if self.field_type == datetime.datetime:
             if isinstance(value, str):
@@ -215,7 +230,7 @@ class Column:
             if not isinstance(value, ObjectId):
                 value = ObjectId(value)
 
-        model_as_dict[self.name] = value
+        return value
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name)
@@ -246,6 +261,7 @@ class DictColumn(Column):
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
+        :param allow_none_as_filter: bool value. Default to False.
         :param is_primary_key: bool value. Default to False.
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
@@ -325,10 +341,10 @@ class DictColumn(Column):
     def deserialize_query(self, model_as_dict: dict):
         value = model_as_dict.get(self.name)
         if value is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
-            return
-        self._description_model().deserialize_query(value)
+            if not self.allow_none_as_filter:
+                model_as_dict.pop(self.name, None)
+        else:
+            self._description_model().deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name, {})
@@ -348,6 +364,7 @@ class ListColumn(Column):
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
+        :param allow_none_as_filter: bool value. Default to False.
         :param is_primary_key: bool value. Default to False.
         :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
         :param is_required: bool value. Default to False.
@@ -427,17 +444,17 @@ class ListColumn(Column):
     def deserialize_query(self, model_as_dict: dict):
         values = model_as_dict.get(self.name)
         if values is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
-            return
-        new_values = []
-        for value in values:
-            value_dict = {self.name: value}
-            self.list_item_column.deserialize_query(value_dict)
-            if self.name in value_dict:
-                new_values.append(value_dict[self.name])
+            if not self.allow_none_as_filter:
+                model_as_dict.pop(self.name, None)
+        else:
+            new_values = []
+            for value in values:
+                value_dict = {self.name: value}
+                self.list_item_column.deserialize_query(value_dict)
+                if self.name in value_dict:
+                    new_values.append(value_dict[self.name])
 
-        model_as_dict[self.name] = new_values
+            model_as_dict[self.name] = new_values
 
     def serialize(self, model_as_dict: dict):
         values = model_as_dict.get(self.name, [])
@@ -729,7 +746,7 @@ class CRUDModel:
             raise ValidationFailed(models_as_list_of_dict, errors)
 
         try:
-            cls.__collection__.insert_many(new_models_as_list_of_dict)
+            cls._insert_many(new_models_as_list_of_dict)
             if cls.audit_model:
                 for inserted_dict in new_models_as_list_of_dict:
                     cls.audit_model.audit_add(inserted_dict)
@@ -750,7 +767,7 @@ class CRUDModel:
 
         cls.deserialize_insert(model_as_dict)
         try:
-            cls.__collection__.insert_one(model_as_dict)
+            cls._insert_one(model_as_dict)
             if cls.audit_model:
                 cls.audit_model.audit_add(model_as_dict)
             return cls.serialize(model_as_dict)
@@ -784,34 +801,11 @@ class CRUDModel:
 
         cls.deserialize_update(model_as_dict)
 
-        previous_model_as_dict = cls._get_previous(model_as_dict)
-        new_model_as_dict = cls._update(model_as_dict)
+        previous_model_as_dict, new_model_as_dict = cls._update_one(model_as_dict)
 
         if cls.audit_model:
             cls.audit_model.audit_update(new_model_as_dict)
         return cls.serialize(previous_model_as_dict), cls.serialize(new_model_as_dict)
-
-    @classmethod
-    def _get_previous(cls, model_as_dict: dict) -> dict:
-        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
-        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
-        if not previous_model_as_dict:
-            raise ModelCouldNotBeFound(model_as_dict_keys)
-        return previous_model_as_dict
-
-    @classmethod
-    def _update(cls, model_as_dict: dict) -> dict:
-        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
-        model_as_dict_updates = {k: v for k, v in model_as_dict.items() if k not in model_as_dict_keys}
-        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict_updates})  # TODO Do we need a filtered dict as input ? as keys are of the same value anyway
-        return cls.__collection__.find_one(model_as_dict_keys)
-
-    @classmethod
-    def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
-        # TODO Compute primary keys only once
-        primary_key_field_names = [field.name for field in cls.__fields__ if field.is_primary_key]
-        return {field_name: value for field_name, value in model_as_dict.items() if
-                field_name in primary_key_field_names}
 
     @classmethod
     def remove(cls, **model_to_query) -> int:
@@ -827,8 +821,37 @@ class CRUDModel:
 
         if cls.audit_model:
             cls.audit_model.audit_remove(**model_to_query)
-        nb_removed = cls.__collection__.delete_many(model_to_query).deleted_count
-        return nb_removed
+        return cls._delete_many(model_to_query)
+
+    @classmethod
+    def _insert_many(cls, models_as_list_of_dict: List[dict]):
+        cls.__collection__.insert_many(models_as_list_of_dict)
+
+    @classmethod
+    def _insert_one(cls, model_as_dict: dict) -> dict:
+        cls.__collection__.insert_one(model_as_dict)
+        return model_as_dict
+
+    @classmethod
+    def _update_one(cls, model_as_dict: dict) -> (dict, dict):
+        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
+        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        if not previous_model_as_dict:
+            raise ModelCouldNotBeFound(model_as_dict_keys)
+
+        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict})
+        return previous_model_as_dict, cls.__collection__.find_one(model_as_dict_keys)
+
+    @classmethod
+    def _delete_many(cls, model_to_query: dict) -> int:
+        return cls.__collection__.delete_many(model_to_query).deleted_count
+
+    @classmethod
+    def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
+        # TODO Compute primary keys only once
+        primary_key_field_names = [field.name for field in cls.__fields__ if field.is_primary_key]
+        return {field_name: value for field_name, value in model_as_dict.items() if
+                field_name in primary_key_field_names}
 
     @classmethod
     def query_get_parser(cls):

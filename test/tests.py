@@ -16,7 +16,7 @@ logging.basicConfig(
     level=logging.DEBUG)
 logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
 
-from pycommon_database import database, flask_restplus_errors, database_sqlalchemy, database_mongo
+from pycommon_database import database, flask_restplus_errors, database_sqlalchemy, database_mongo, versioning_mongo
 
 logger = logging.getLogger(__name__)
 
@@ -2553,6 +2553,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestUnvalidatedListAndDictController(database.CRUDController):
         pass
 
+    class TestVersioningController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2568,6 +2571,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestListController.namespace(TestAPI)
         cls.TestIdController.namespace(TestAPI)
         cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
+        cls.TestVersioningController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -2635,6 +2639,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
         class TestIdModel(database_mongo.CRUDModel, base=base, table_name='id_table_name'):
             _id = database_mongo.Column(is_primary_key=True)
 
+        class TestVersioningModel(versioning_mongo.VersioningCRUDModel, base=base, table_name='versioning_table_name'):
+            key = database_mongo.Column(is_primary_key=True)
+            dict_field = database_mongo.DictColumn({
+                'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                'second_key': database_mongo.Column(int, is_nullable=False),
+            }, is_required=True)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
@@ -2646,7 +2657,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestListController.model(TestListModel)
         cls.TestIdController.model(TestIdModel)
         cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel, TestDefaultPrimaryKeyModel, TestListModel, TestIdModel, TestUnvalidatedListAndDictModel]
+        cls.TestVersioningController.model(TestVersioningModel)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
+                TestDefaultPrimaryKeyModel, TestListModel, TestIdModel, TestUnvalidatedListAndDictModel,
+                TestVersioningModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -2769,6 +2783,134 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {'non_unique_key': '2017-01-01', 'unique_key': 'test'},
             ],
             self.TestIndexController.get({})
+        )
+
+    def test_post_versioning_is_valid(self):
+        self.assertEqual(
+            {
+
+                'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                 'key': 'first',
+                 'rev_from': 1,
+                 'rev_to': None
+            },
+            self.TestVersioningController.post({
+                'key': 'first',
+                'dict_field.first_key': EnumTest.Value1,
+                'dict_field.second_key': 1,
+            })
+        )
+        self.assertEqual(
+            [
+                {
+
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 1,
+                    'rev_to': None
+                }
+            ],
+            self.TestVersioningController.get({})
+        )
+
+    def test_put_versioning_is_valid(self):
+        self.TestVersioningController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.assertEqual(
+            (
+                {
+
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 1,
+                    'rev_to': None
+                },
+                {
+
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 3,
+                    'rev_to': None
+                }
+            ),
+            self.TestVersioningController.put({
+                'key': 'first',
+                'dict_field.first_key': EnumTest.Value2,
+            })
+        )
+        self.assertEqual(
+            [
+                {
+
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 1,
+                    'rev_to': 2
+                },
+                {
+
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 3,
+                    'rev_to': None
+                }
+            ],
+            self.TestVersioningController.get({})
+        )
+        self.assertEqual(
+            [
+                {
+
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 3,
+                    'rev_to': None
+                }
+            ],
+            self.TestVersioningController.get({'rev_to': None})
+        )
+
+    def test_delete_versioning_is_valid(self):
+        self.TestVersioningController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersioningController.put({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value2,
+        })
+        self.assertEqual(
+            1,
+            self.TestVersioningController.delete({
+                'key': 'first',
+            })
+        )
+        self.assertEqual(
+            [
+                {
+
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 1,
+                    'rev_to': 2
+                },
+                {
+
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'key': 'first',
+                    'rev_from': 3,
+                    'rev_to': 4
+                }
+            ],
+            self.TestVersioningController.get({})
+        )
+        self.assertEqual(
+            [],
+            self.TestVersioningController.get({'rev_to': None})
         )
 
     def test_post_id_is_valid(self):
