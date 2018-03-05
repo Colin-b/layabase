@@ -6,7 +6,7 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 10.0.0 (2018-02-09) ##
+## Version 10.0.0 (2018-03-05) ##
 
 ### Release notes ###
 
@@ -19,6 +19,7 @@ List all changes in various categories:
 - Add support for Mongo database.
 - All SQLAlchemy create_engine parameters can now be provided to database.load function
 - A single commit is now performed for the requested action and related audit.
+- Audit is now containing user name (if a user was stored within flask.g.current_user) if authentication is activated thanks to pycommon_server
 
 ### Bug fixes ###
 

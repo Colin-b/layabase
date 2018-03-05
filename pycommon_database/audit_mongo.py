@@ -4,6 +4,7 @@ import enum
 import copy
 
 from pycommon_database.database_mongo import Column, IndexType
+from pycommon_database.audit import current_user_name
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def _create_from(model, base):
 
         @classmethod
         def _audit_action(cls, action: Action, model_as_dict: dict):
-            model_as_dict[cls.audit_user.name] = ''
+            model_as_dict[cls.audit_user.name] = current_user_name()
             model_as_dict[cls.audit_date_utc.name] = datetime.datetime.utcnow()
             model_as_dict[cls.audit_action.name] = action.value
             model_as_dict.pop('_id', None)

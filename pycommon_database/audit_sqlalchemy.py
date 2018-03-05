@@ -1,18 +1,15 @@
-import logging
-from sqlalchemy import Column, DateTime, Enum, String, inspect as inspect_sqla
+from sqlalchemy import Column, DateTime, Enum, String, inspect
 import datetime
 
 from pycommon_database.flask_restplus_errors import ValidationFailed
-
-logger = logging.getLogger(__name__)
+from pycommon_database.audit import current_user_name
 
 
 def _column(attribute):
     if len(attribute.columns) != 1:
         raise Exception(f'Recreating an attribute ({attribute}) based on more than one column is not handled for now.')
     column = attribute.columns[0]
-    column_copy = Column(column.name, column.type, primary_key=column.primary_key, nullable=column.nullable)
-    return column_copy
+    return Column(column.name, column.type, primary_key=column.primary_key, nullable=column.nullable)
 
 
 def _create_from(model):
@@ -51,15 +48,15 @@ def _create_from(model):
 
         @classmethod
         def _audit_action(cls, action: str, model_as_dict: dict):
-            model_as_dict['audit_user'] = ''
+            model_as_dict['audit_user'] = current_user_name()
             model_as_dict['audit_date_utc'] = datetime.datetime.utcnow().isoformat()
             model_as_dict['audit_action'] = action
             model, errors = cls.schema().load(model_as_dict, session=cls._session)
             if errors:
                 raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
-            cls._session.add(model)  # Let any error be handled by the caller (main model), sane for commit
+            cls._session.add(model)  # Let any error be handled by the caller (main model), same for commit
 
-    for attribute in inspect_sqla(model).attrs:
+    for attribute in inspect(model).attrs:
         setattr(AuditModel, attribute.key, _column(attribute))
 
     return AuditModel
