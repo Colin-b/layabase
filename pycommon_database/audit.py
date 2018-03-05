@@ -6,7 +6,7 @@ def current_user_name(anonymous_user_name: str='') -> str:
     """
     try:
         import flask
-        if hasattr(flask.g, 'current_user'):
+        if flask.has_request_context() and hasattr(flask.g, 'current_user'):
             return flask.g.current_user.name
         return anonymous_user_name
     except ImportError:
