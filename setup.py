@@ -1,9 +1,17 @@
+import os
 from setuptools import setup, find_packages
+
+this_dir = os.path.abspath(os.path.dirname(__file__))
+
+with open(os.path.join(this_dir, 'README.md'), 'r') as f:
+    long_description = f.read()
 
 from pycommon_database._version import __version__
 setup(
     name='pycommon_database',
     version=__version__,
+    description="Common Database handling",
+    long_description=long_description,
     packages=find_packages(exclude=[
         'test',
     ]),
