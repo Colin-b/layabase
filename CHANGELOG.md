@@ -6,7 +6,7 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 10.0.0 (2018-03-05) ##
+## Version 10.0.0 (2018-03-07) ##
 
 ### Release notes ###
 
