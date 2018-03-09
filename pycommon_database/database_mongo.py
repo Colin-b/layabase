@@ -268,35 +268,37 @@ class DictColumn(Column):
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
         """
         kwargs.pop('field_type', None)
-        self.get_fields = (lambda : fields) if (isinstance(fields, dict) and fields) else fields
+        self.get_fields = (lambda model_as_dict: fields) if (isinstance(fields, dict) and fields) else fields
         if not self.get_fields:
             raise Exception('fields is a mandatory parameter.')
         Column.__init__(self, field_type=dict, **kwargs)
 
-    def _description_model(self):
+    def _description_model(self, model_as_dict: dict):
         """
+        :param model_as_dict: Data provided by the user or empty in case this method is called in another context.
         :return: A CRUDModel describing every dictionary fields.
         """
         class FakeModel(CRUDModel):
             pass
         
-        for name, column in self.get_fields().items():
+        for name, column in self.get_fields(model_as_dict or {}).items():
             column._update_name(name)
             FakeModel.__fields__.append(column)
         
         return FakeModel
 
     def get_index_fields(self, index_type: IndexType) -> List[Column]:
-        return self._description_model().get_index_fields(index_type)
+        return self._description_model({}).get_index_fields(index_type)
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
+                description_model = self._description_model(model_as_dict)
                 errors.update({
                     f'{self.name}.{field_name}': field_errors
-                    for field_name, field_errors in self._description_model().validate_insert(value).items()
+                    for field_name, field_errors in description_model.validate_insert(value).items()
                 })
         return errors
 
@@ -306,16 +308,17 @@ class DictColumn(Column):
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
             return
-        self._description_model().deserialize_insert(value)
+        self._description_model(model_as_dict).deserialize_insert(value)
 
     def validate_update(self, model_as_dict: dict) -> dict:
         errors = Column.validate_update(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
+                description_model = self._description_model(model_as_dict)
                 errors.update({
                     f'{self.name}.{field_name}': field_errors
-                    for field_name, field_errors in self._description_model().validate_update(value).items()
+                    for field_name, field_errors in description_model.validate_update(value).items()
                 })
         return errors
 
@@ -324,17 +327,18 @@ class DictColumn(Column):
         if value is None:
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
-            return
-        self._description_model().deserialize_update(value)
+        else:
+            self._description_model(model_as_dict).deserialize_update(value)
 
     def validate_query(self, model_as_dict: dict) -> dict:
         errors = Column.validate_query(self, model_as_dict)
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
+                description_model = self._description_model(model_as_dict)
                 errors.update({
                     f'{self.name}.{field_name}': field_errors
-                    for field_name, field_errors in self._description_model().validate_query(value).items()
+                    for field_name, field_errors in description_model.validate_query(value).items()
                 })
         return errors
 
@@ -344,11 +348,11 @@ class DictColumn(Column):
             if not self.allow_none_as_filter:
                 model_as_dict.pop(self.name, None)
         else:
-            self._description_model().deserialize_query(value)
+            self._description_model(model_as_dict).deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
         value = model_as_dict.get(self.name, {})
-        self._description_model().serialize(value)
+        self._description_model(model_as_dict).serialize(value)
 
 
 class ListColumn(Column):
@@ -394,15 +398,15 @@ class ListColumn(Column):
         if values is None:
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
-            return
-        new_values = []
-        for value in values:
-            value_dict = {self.name: value}
-            self.list_item_column.deserialize_insert(value_dict)
-            if self.name in value_dict:
-                new_values.append(value_dict[self.name])
+        else:
+            new_values = []
+            for value in values:
+                value_dict = {self.name: value}
+                self.list_item_column.deserialize_insert(value_dict)
+                if self.name in value_dict:
+                    new_values.append(value_dict[self.name])
 
-        model_as_dict[self.name] = new_values
+            model_as_dict[self.name] = new_values
 
     def validate_update(self, model_as_dict: dict) -> dict:
         errors = Column.validate_update(self, model_as_dict)
@@ -420,15 +424,15 @@ class ListColumn(Column):
         if values is None:
             # Ensure that None value are not stored to save space
             model_as_dict.pop(self.name, None)
-            return
-        new_values = []
-        for value in values:
-            value_dict = {self.name: value}
-            self.list_item_column.deserialize_update(value_dict)
-            if self.name in value_dict:
-                new_values.append(value_dict[self.name])
+        else:
+            new_values = []
+            for value in values:
+                value_dict = {self.name: value}
+                self.list_item_column.deserialize_update(value_dict)
+                if self.name in value_dict:
+                    new_values.append(value_dict[self.name])
 
-        model_as_dict[self.name] = new_values
+            model_as_dict[self.name] = new_values
 
     def validate_query(self, model_as_dict: dict) -> dict:
         errors = Column.validate_query(self, model_as_dict)
@@ -875,7 +879,7 @@ class CRUDModel:
     def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=''):
         if isinstance(field, DictColumn):
             # Describe every dict column field as dot notation
-            for inner_field in field._description_model().__fields__:
+            for inner_field in field._description_model({}).__fields__:
                 cls._add_field_to_query_parser(query_parser, inner_field, f'{field.name}.')
         elif isinstance(field, ListColumn):
             # Note that List of dict or list of list might be wrongly parsed
@@ -915,7 +919,7 @@ class CRUDModel:
     @classmethod
     def _to_flask_restplus_field(cls, namespace, field: Column):
         if isinstance(field, DictColumn):
-            dict_fields = field._description_model().flask_restplus_fields(namespace)
+            dict_fields = field._description_model({}).flask_restplus_fields(namespace)
             if dict_fields:
                 dict_model = namespace.model('_'.join(dict_fields), dict_fields)
                 # Nested field cannot contains nothing
@@ -1059,7 +1063,7 @@ def _get_example(field: Column):
         return (
             {
                 dict_key.name: _get_example(dict_key)
-                for dict_key in field._description_model().__fields__
+                for dict_key in field._description_model({}).__fields__
             }
         )
 

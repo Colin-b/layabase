@@ -2568,7 +2568,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         class TestOptionalDictModel(database_mongo.CRUDModel, base=base, table_name='optional_dict_table_name'):
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = database_mongo.DictColumn(
-                lambda: {
+                lambda model_as_dict: {
                     'first_key': database_mongo.Column(EnumTest, is_nullable=False),
                     'second_key': database_mongo.Column(int, is_nullable=False),
                 }
