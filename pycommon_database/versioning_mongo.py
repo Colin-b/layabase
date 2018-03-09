@@ -103,7 +103,7 @@ class VersioningCRUDModel(CRUDModel):
 
         now = datetime.datetime.utcnow()
 
-        # Update currently valid as non valid anymore
+        # Update currently valid as non valid anymore (new version since this validity)
         for expired_model in previously_expired_models:
             expired_model_keys = cls._to_primary_keys_model(expired_model)
             expired_model_keys[cls.valid_until_utc.name] = None
@@ -113,6 +113,13 @@ class VersioningCRUDModel(CRUDModel):
                 expired_model_keys.pop(cls.valid_until_utc.name)
                 cls.__collection__.update_many(expired_model_keys, {'$set': {cls.valid_until_utc.name: now}})
 
+        # Update currently valid as non valid anymore (they were not existing at the time)
+        new_still_valid = {
+            cls.valid_since_utc.name: {'$gt': validity},
+            cls.valid_until_utc.name: None,
+        }
+        nb_removed = cls.__collection__.update_many({**model_to_query, **new_still_valid}, {'$set': {cls.valid_until_utc.name: now}}).modified_count
+
         # Insert expired as valid
         for expired_model in previously_expired_models:
             expired_model[cls.valid_since_utc.name] = now
@@ -121,4 +128,4 @@ class VersioningCRUDModel(CRUDModel):
         if previously_expired_models:
             cls.__collection__.insert_many(previously_expired_models)
 
-        return len(previously_expired_models)
+        return len(previously_expired_models) + nb_removed
