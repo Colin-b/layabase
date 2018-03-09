@@ -44,10 +44,10 @@ class Column:
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
         TODO Introduce min and max length, regex
         """
-        self.name = kwargs.pop('name', None)
         self.field_type = field_type or str
-        if '_id' == self.name:
-            self.field_type = ObjectId
+        name = kwargs.pop('name', None)
+        if name:
+            self._update_name(name)
         self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else kwargs.pop('choices', None)
         self.default_value = kwargs.pop('default_value', None)
         self.description = kwargs.pop('description', None)
@@ -70,6 +70,8 @@ class Column:
         self.is_required = bool(kwargs.pop('is_required', False))
 
     def _update_name(self, name):
+        if '.' in name:
+            raise Exception(f'{name} is not a valid name. Dots are not allowed in Mongo field names.')
         self.name = name
         if '_id' == self.name:
             self.field_type = ObjectId
