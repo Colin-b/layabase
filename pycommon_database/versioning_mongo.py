@@ -54,3 +54,36 @@ class VersioningCRUDModel(CRUDModel):
         model_to_query[cls.valid_until_utc.name] = None
         now = datetime.datetime.utcnow()
         return cls.__collection__.update_many(model_to_query, {'$set': {cls.valid_until_utc.name: now}}).modified_count
+
+    @classmethod
+    def rollback_to(cls, validity: datetime.datetime, model_to_query: dict) -> int:
+        """
+        All records matching the query and valid at specified validity will be considered as valid.
+        :return Number of records updated.
+        """
+        previously_expired = {
+            cls.valid_since_utc.name: {'$lte': validity},
+            cls.valid_until_utc: {'$gt': validity},
+        }
+        previously_expired_models = cls.__collection__.find({**model_to_query, **previously_expired})
+
+        now = datetime.datetime.utcnow()
+
+        # Update currently valid as non valid anymore
+        for expired_model in previously_expired_models:
+            expired_model_keys = cls._to_primary_keys_model(expired_model)
+            expired_model_keys[cls.valid_until_utc.name] = None
+
+            actual_model_as_dict = cls.__collection__.find_one(expired_model_keys)
+            if actual_model_as_dict:
+                expired_model_keys.pop(cls.valid_until_utc.name)
+                cls.__collection__.update_many(expired_model_keys, {'$set': {cls.valid_until_utc.name: now}})
+
+        # Insert expired as valid
+        for expired_model in previously_expired_models:
+            expired_model[cls.valid_since_utc.name] = now
+            expired_model[cls.valid_until_utc.name] = None
+
+        cls.__collection__.insert_many(previously_expired_models)
+
+        return len(previously_expired_models)
