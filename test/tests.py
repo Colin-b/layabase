@@ -2890,8 +2890,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
             1,
             self.TestVersioningController.rollback_to({'validity': before_delete})
         )
-        self.assertEqual(
-            [],
+        self._assert_regex(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'valid_until_utc': None
+                }
+            ],
             self.TestVersioningController.get({'valid_until_utc': None})
         )
 

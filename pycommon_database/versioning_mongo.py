@@ -95,7 +95,7 @@ class VersioningCRUDModel(CRUDModel):
             cls.valid_since_utc.name: {'$lte': validity},
             cls.valid_until_utc.name: {'$gt': validity},
         }
-        previously_expired_models = cls.__collection__.find({**model_to_query, **previously_expired})
+        previously_expired_models = cls.__collection__.find({**model_to_query, **previously_expired}, projection={'_id': False})
         previously_expired_models = list(previously_expired_models)  # Convert Cursor to list
 
         now = datetime.datetime.utcnow()
