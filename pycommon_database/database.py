@@ -76,6 +76,7 @@ class CRUDController:
     # CRUD request parsers
     query_get_parser = None
     query_delete_parser = None
+    query_rollback_parser = None
     query_get_audit_parser = None
 
     # CRUD model definition (instead of request parsers)
@@ -102,6 +103,7 @@ class CRUDController:
             raise ControllerModelNotSet(cls)
         cls.query_get_parser = cls._model.query_get_parser()
         cls.query_delete_parser = cls._model.query_delete_parser()
+        cls.query_rollback_parser = cls._model.query_rollback_parser()
         if cls._model.audit_model:
             cls.query_get_audit_parser = cls._model.audit_model.query_get_parser()
         else:
@@ -205,3 +207,13 @@ class CRUDController:
         if not cls._model_description_dictionary:
             raise ControllerModelNotSet(cls)
         return cls._model_description_dictionary
+
+    @classmethod
+    def rollback_to(cls, request_arguments: dict) -> List[dict]:
+        """
+        Rollback to the model(s) matching those criterion.
+        :returns Number of affected rows.
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+        return cls._model.rollback_to(**request_arguments)

@@ -547,6 +547,14 @@ class CRUDModel:
         return [cls.serialize(model) for model in models]  # Convert Cursor to dict
 
     @classmethod
+    def rollback_to(cls, model_to_query: dict) -> int:
+        """
+        All records matching the query and valid at specified validity will be considered as valid.
+        :return Number of records updated.
+        """
+        return 0
+
+    @classmethod
     def validate_query(cls, model_as_dict: dict) -> dict:
         """
         Validate data queried.
@@ -867,6 +875,10 @@ class CRUDModel:
     @classmethod
     def query_delete_parser(cls):
         return cls._query_parser()
+
+    @classmethod
+    def query_rollback_parser(cls):
+        return  # Only VersioningCRUDModel allows rollback
 
     @classmethod
     def _query_parser(cls):

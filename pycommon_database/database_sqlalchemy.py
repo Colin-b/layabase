@@ -39,6 +39,14 @@ class CRUDModel:
         return cls.schema().dump(all_models, many=True).data
 
     @classmethod
+    def rollback_to(cls, model_to_query: dict) -> int:
+        """
+        All records matching the query and valid at specified validity will be considered as valid.
+        :return Number of records updated.
+        """
+        return 0
+
+    @classmethod
     def get_all_models(cls, **kwargs) -> list:
         """
         Return all SQLAlchemy models.
@@ -246,6 +254,10 @@ class CRUDModel:
     @classmethod
     def query_delete_parser(cls):
         return cls._query_parser()
+
+    @classmethod
+    def query_rollback_parser(cls):
+        return  # Only VersioningCRUDModel allows rollback
 
     @classmethod
     def _query_parser(cls):

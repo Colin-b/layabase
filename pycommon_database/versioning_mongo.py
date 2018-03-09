@@ -1,9 +1,11 @@
 import copy
 import datetime
+import dateutil.parser
+from flask_restplus import inputs
 from typing import List
 
 from pycommon_database.database_mongo import CRUDModel, Column, IndexType
-from pycommon_database.flask_restplus_errors import ModelCouldNotBeFound
+from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
 
 class VersioningCRUDModel(CRUDModel):
@@ -56,11 +58,39 @@ class VersioningCRUDModel(CRUDModel):
         return cls.__collection__.update_many(model_to_query, {'$set': {cls.valid_until_utc.name: now}}).modified_count
 
     @classmethod
-    def rollback_to(cls, validity: datetime.datetime, model_to_query: dict) -> int:
-        """
-        All records matching the query and valid at specified validity will be considered as valid.
-        :return Number of records updated.
-        """
+    def query_rollback_parser(cls):
+        query_rollback_parser = cls._query_parser()
+        query_rollback_parser.add_argument('validity', type=inputs.datetime_from_iso8601, required=True)
+        return query_rollback_parser
+
+    @classmethod
+    def _get_validity(cls, model_to_query: dict) -> datetime.datetime:
+        validity = model_to_query.pop('validity', None)
+        if not validity:
+            raise ValidationFailed(model_to_query, {'validity': ['Missing data for required field.']})
+
+        if isinstance(validity, str):
+            try:
+                validity = dateutil.parser.parse(validity)
+            except:
+
+                raise ValidationFailed(model_to_query, {'validity': ['Not a valid datetime.']})
+
+        if not isinstance(validity, datetime.datetime):
+            raise ValidationFailed(model_to_query, {'validity': [f'Not a valid datetime.']})
+
+        return validity
+
+    @classmethod
+    def rollback_to(cls, model_to_query: dict) -> int:
+        validity = cls._get_validity(model_to_query)
+
+        errors = cls.validate_query(model_to_query)
+        if errors:
+            raise ValidationFailed(model_to_query, errors)
+
+        cls.deserialize_query(model_to_query)
+
         previously_expired = {
             cls.valid_since_utc.name: {'$lte': validity},
             cls.valid_until_utc: {'$gt': validity},
