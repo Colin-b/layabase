@@ -60,12 +60,14 @@ class VersioningCRUDModel(CRUDModel):
     @classmethod
     def query_rollback_parser(cls):
         query_rollback_parser = cls._query_parser()
+        query_rollback_parser.remove_argument(cls.valid_since_utc.name)
+        query_rollback_parser.remove_argument(cls.valid_until_utc.name)
         query_rollback_parser.add_argument('validity', type=inputs.datetime_from_iso8601, required=True)
         return query_rollback_parser
 
     @classmethod
     def _get_validity(cls, model_to_query: dict) -> datetime.datetime:
-        validity = model_to_query.pop('validity', None)
+        validity = model_to_query.get('validity')
         if not validity:
             raise ValidationFailed(model_to_query, {'validity': ['Missing data for required field.']})
 
@@ -79,6 +81,7 @@ class VersioningCRUDModel(CRUDModel):
         if not isinstance(validity, datetime.datetime):
             raise ValidationFailed(model_to_query, {'validity': [f'Not a valid datetime.']})
 
+        del model_to_query['validity']
         return validity
 
     @classmethod

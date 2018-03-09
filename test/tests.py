@@ -2902,6 +2902,135 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestVersioningController.get({'valid_until_utc': None})
         )
 
+    def test_rollback_before_update_deleted_versioning_is_valid(self):
+        self.TestVersioningController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+
+        before_update = datetime.datetime.utcnow()
+        time.sleep(1)
+        self.TestVersioningController.put({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value2,
+        })
+
+        time.sleep(1)
+        self.TestVersioningController.delete({
+            'key': 'first',
+        })
+        self.assertEqual(
+            1,
+            self.TestVersioningController.rollback_to({'validity': before_update})
+        )
+        self._assert_regex(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'valid_until_utc': None
+                }
+            ],
+            self.TestVersioningController.get({'valid_until_utc': None})
+        )
+
+    def test_rollback_already_valid_versioning_is_valid(self):
+        self.TestVersioningController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+
+        time.sleep(1)
+        self.TestVersioningController.put({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value2,
+        })
+
+        self.assertEqual(
+            0,
+            self.TestVersioningController.rollback_to({'validity': datetime.datetime.utcnow()})
+        )
+        self._assert_regex(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'valid_until_utc': None
+                }
+            ],
+            self.TestVersioningController.get({'valid_until_utc': None})
+        )
+
+    def test_rollback_unknown_criteria_is_valid(self):
+        self.TestVersioningController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+
+        before_update = datetime.datetime.utcnow()
+        time.sleep(1)
+        self.TestVersioningController.put({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value2,
+        })
+
+        self.assertEqual(
+            0,
+            self.TestVersioningController.rollback_to({'validity': before_update, 'key': 'unknown'})
+        )
+        self._assert_regex(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'valid_until_utc': None
+                }
+            ],
+            self.TestVersioningController.get({'valid_until_utc': None})
+        )
+
+    def test_rollback_without_validity_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestVersioningController.rollback_to({'key': 'unknown'})
+        self.assertEqual({'validity': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'key': 'unknown'}, cm.exception.received_data)
+
+    def test_rollback_with_non_date_validity_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestVersioningController.rollback_to({'validity': 'invalid date'})
+        self.assertEqual({'validity': ['Not a valid datetime.']}, cm.exception.errors)
+        self.assertEqual({'validity': 'invalid date'}, cm.exception.received_data)
+
+    def test_rollback_without_versioning_is_valid(self):
+        self.assertEqual(0, self.TestController.rollback_to({'validity': 'invalid date'}))
+
+    def test_rollback_with_date_str_validity_is_valid(self):
+        self.assertEqual(0, self.TestVersioningController.rollback_to({'validity': '2017-03-23'}))
+
+    def test_rollback_before_existing_is_valid(self):
+        before_insert = datetime.datetime.utcnow()
+        time.sleep(1)
+        self.TestVersioningController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.assertEqual(
+            1,
+            self.TestVersioningController.rollback_to({'validity': before_insert})
+        )
+        self._assert_regex(
+            [
+            ],
+            self.TestVersioningController.get({'valid_until_utc': None})
+        )
+
     def test_post_id_is_valid(self):
         self.assertEqual(
             {'_id': '123456789abcdef012345678'},
@@ -4548,6 +4677,24 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'list_field': 'append',
             },
             parser_actions(self.TestListController.query_delete_parser))
+
+    def test_query_rollback_parser(self):
+        self.assertEqual(
+            {
+                'dict_field.first_key': str,
+                'dict_field.second_key': int,
+                'key': str,
+                'validity': inputs.datetime_from_iso8601
+             },
+            parser_types(self.TestVersioningController.query_rollback_parser))
+        self.assertEqual(
+            {
+                'dict_field.first_key': 'store',
+                'dict_field.second_key': 'store',
+                'key': 'store',
+                'validity': 'store'
+            },
+            parser_actions(self.TestVersioningController.query_rollback_parser))
 
     def test_query_delete_parser_with_dict(self):
         self.assertEqual(
