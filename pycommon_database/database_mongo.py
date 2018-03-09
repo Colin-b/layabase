@@ -34,6 +34,7 @@ class Column:
 
         :param field_type: Python field type. Default to str.
 
+        :param choices: Restrict valid values. Default to None or the content of the enum if field is an Enum.
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
@@ -49,6 +50,8 @@ class Column:
         if name:
             self._update_name(name)
         self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else kwargs.pop('choices', None)
+        if not isinstance(self.choices, list):
+            raise Exception('Choices parameter must contains a list of values.')
         self.default_value = kwargs.pop('default_value', None)
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
