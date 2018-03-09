@@ -39,7 +39,7 @@ class CRUDModel:
         return cls.schema().dump(all_models, many=True).data
 
     @classmethod
-    def rollback_to(cls, model_to_query: dict) -> int:
+    def rollback_to(cls, **model_to_query) -> int:
         """
         All records matching the query and valid at specified validity will be considered as valid.
         :return Number of records updated.

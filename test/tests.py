@@ -2868,6 +2868,33 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestVersioningController.get({'valid_until_utc': None})
         )
 
+    def test_rollback_deleted_versioning_is_valid(self):
+        self.TestVersioningController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+
+        time.sleep(1)
+        self.TestVersioningController.put({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value2,
+        })
+
+        before_delete = datetime.datetime.utcnow()
+        time.sleep(1)
+        self.TestVersioningController.delete({
+            'key': 'first',
+        })
+        self.assertEqual(
+            1,
+            self.TestVersioningController.rollback_to({'validity': before_delete})
+        )
+        self.assertEqual(
+            [],
+            self.TestVersioningController.get({'valid_until_utc': None})
+        )
+
     def test_post_id_is_valid(self):
         self.assertEqual(
             {'_id': '123456789abcdef012345678'},

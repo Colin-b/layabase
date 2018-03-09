@@ -82,7 +82,7 @@ class VersioningCRUDModel(CRUDModel):
         return validity
 
     @classmethod
-    def rollback_to(cls, model_to_query: dict) -> int:
+    def rollback_to(cls, **model_to_query) -> int:
         validity = cls._get_validity(model_to_query)
 
         errors = cls.validate_query(model_to_query)
@@ -93,9 +93,10 @@ class VersioningCRUDModel(CRUDModel):
 
         previously_expired = {
             cls.valid_since_utc.name: {'$lte': validity},
-            cls.valid_until_utc: {'$gt': validity},
+            cls.valid_until_utc.name: {'$gt': validity},
         }
         previously_expired_models = cls.__collection__.find({**model_to_query, **previously_expired})
+        previously_expired_models = list(previously_expired_models)  # Convert Cursor to list
 
         now = datetime.datetime.utcnow()
 
@@ -114,6 +115,7 @@ class VersioningCRUDModel(CRUDModel):
             expired_model[cls.valid_since_utc.name] = now
             expired_model[cls.valid_until_utc.name] = None
 
-        cls.__collection__.insert_many(previously_expired_models)
+        if previously_expired_models:
+            cls.__collection__.insert_many(previously_expired_models)
 
         return len(previously_expired_models)
