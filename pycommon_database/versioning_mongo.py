@@ -18,14 +18,14 @@ class VersioningCRUDModel(CRUDModel):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_utc.name]
         del all_fields[cls.valid_until_utc.name]
-        return namespace.model(cls.__name__, all_fields)
+        return namespace.model(f'{cls.__name__}_Versioning', all_fields)
 
     @classmethod
     def json_put_model(cls, namespace):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_utc.name]
         del all_fields[cls.valid_until_utc.name]
-        return namespace.model(cls.__name__, all_fields)
+        return namespace.model(f'{cls.__name__}_Versioning', all_fields)
 
     @classmethod
     def _insert_one(cls, model_as_dict: dict) -> dict:

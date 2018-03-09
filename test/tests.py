@@ -3141,6 +3141,95 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
         self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
 
+    def test_json_post_model_versioning(self):
+        self.assertEqual(
+            'TestVersioningModel_Versioning',
+            self.TestVersioningController.json_post_model.name)
+        self.assertEqual(
+            {
+                'dict_field': (
+                    'Nested',
+                    {
+                        'first_key': 'String',
+                        'second_key': 'Integer'
+                    }
+                ),
+                'key': 'String'
+            },
+            self.TestVersioningController.json_post_model.fields_flask_type)
+        self.assertEqual(
+            {
+                'dict_field': (
+                    None,
+                    {
+                        'first_key': None,
+                        'second_key': None
+                    }
+                ),
+                'key': None
+            },
+            self.TestVersioningController.json_post_model.fields_description)
+        self.assertEqual(
+            {
+                'dict_field': (
+                    None,
+                    {
+                        'first_key': ['Value1', 'Value2'],
+                        'second_key': None
+                    }
+                ),
+                'key': None
+            },
+            self.TestVersioningController.json_post_model.fields_enum)
+        self.assertEqual(
+            {
+                'dict_field': (
+                    {'first_key': 'Value1', 'second_key': 1},
+                    {
+                        'first_key': 'Value1',
+                        'second_key': 1
+                    }
+                ),
+                'key': 'sample key'
+            },
+            self.TestVersioningController.json_post_model.fields_example)
+        self.assertEqual(
+            {
+                'dict_field': (
+                    None,
+                    {
+                        'first_key': None,
+                        'second_key': None
+                    }
+                ),
+                'key': None
+            },
+            self.TestVersioningController.json_post_model.fields_default)
+        self.assertEqual(
+            {
+                'dict_field': (
+                    True,
+                    {
+                        'first_key': False,
+                        'second_key': False
+                    }
+                ),
+                'key': False
+            },
+            self.TestVersioningController.json_post_model.fields_required)
+        self.assertEqual(
+            {
+                'dict_field': (
+                    False,
+                    {
+                        'first_key': False,
+                        'second_key': False
+                    }
+                ),
+                'key': False
+            },
+            self.TestVersioningController.json_post_model.fields_readonly)
+
     def test_json_post_model_with_list_of_dict(self):
         self.assertEqual(
             'TestListModel',
