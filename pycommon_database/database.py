@@ -134,6 +134,15 @@ class CRUDController:
         return cls._model.get_all(**request_arguments)
 
     @classmethod
+    def get_one(cls, request_arguments: dict) -> dict:
+        """
+        Return a model formatted as a dictionary.
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+        return cls._model.get(**request_arguments)
+
+    @classmethod
     def post(cls, new_dict: dict) -> dict:
         """
         Add a model formatted as a dictionary.

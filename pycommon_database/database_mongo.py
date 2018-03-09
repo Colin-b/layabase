@@ -536,6 +536,23 @@ class CRUDModel:
         return index_fields
 
     @classmethod
+    def get(cls, **model_to_query) -> dict:
+        """
+        Return a model formatted as a dictionary.
+        """
+        errors = cls.validate_query(model_to_query)
+        if errors:
+            raise ValidationFailed(model_to_query, errors)
+
+        cls.deserialize_query(model_to_query)
+
+        if cls.__collection__.count(model_to_query) > 1:
+            raise ValidationFailed(model_to_query, message='More than one result: Consider another filtering.')
+
+        model = cls.__collection__.find_one(model_to_query)
+        return cls.serialize(model)  # Convert Cursor to dict
+
+    @classmethod
     def get_all(cls, **model_to_query) -> List[dict]:
         """
         Return all models formatted as a list of dictionaries.
@@ -583,61 +600,6 @@ class CRUDModel:
         return errors
 
     @classmethod
-    def validate_insert(cls, model_as_dict: dict) -> dict:
-        """
-        Validate data on insert.
-        :return: Validation errors that might have occurred. Empty if no error occurred.
-        """
-        if not model_as_dict:
-            return {'': ['No data provided.']}
-
-        new_model_as_dict = copy.deepcopy(model_as_dict)
-
-        field_names = [field.name for field in cls.__fields__]
-        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
-        for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
-            if known_field:
-                previous_dict = new_model_as_dict.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
-
-        errors = {}
-
-        for field in cls.__fields__:
-            errors.update(field.validate_insert(new_model_as_dict))
-
-        return errors
-
-    @classmethod
-    def validate_update(cls, model_as_dict: dict) -> dict:
-        """
-        Validate data on update.
-        :return: Validation errors that might have occurred. Empty if no error occurred.
-        """
-        if not model_as_dict:
-            return {'': ['No data provided.']}
-
-        new_model_as_dict = copy.deepcopy(model_as_dict)
-
-        updated_field_names = [field.name for field in cls.__fields__ if field.name in new_model_as_dict]
-        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
-        for unknown_field in unknown_fields:
-            # Convert dot notation fields into known fields to be able to validate them
-            known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
-            if known_field:
-                previous_dict = new_model_as_dict.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
-
-        errors = {}
-
-        # Also ensure that Primary keys will contain a valid value
-        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict or field.is_primary_key]
-        for field in updated_fields:
-            errors.update(field.validate_update(new_model_as_dict))
-
-        return errors
-
-    @classmethod
     def deserialize_query(cls, model_as_dict: dict):
         queried_fields_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
         unknown_fields = [field_name for field_name in model_as_dict if field_name not in queried_fields_names]
@@ -663,56 +625,6 @@ class CRUDModel:
             field.deserialize_query(model_as_dict)
 
     @classmethod
-    def deserialize_insert(cls, model_as_dict: dict):
-        """
-        Update this model dictionary by ensuring that it contains only valid Mongo values.
-        """
-        field_names = [field.name for field in cls.__fields__]
-        unknown_fields = [field_name for field_name in model_as_dict if field_name not in field_names]
-        for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
-            del model_as_dict[unknown_field]
-            if known_field:
-                previous_dict = model_as_dict.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
-            else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
-
-        for field in cls.__fields__:
-            field.deserialize_insert(model_as_dict)
-            if field.should_auto_increment:
-                model_as_dict[field.name] = cls._increment(field.name)
-
-    @classmethod
-    def deserialize_update(cls, model_as_dict: dict):
-        """
-        Update this model dictionary by ensuring that it contains only valid Mongo values.
-        """
-        updated_field_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
-        unknown_fields = [field_name for field_name in model_as_dict if field_name not in updated_field_names]
-        dot_model_as_dict = {}
-
-        for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
-            del model_as_dict[unknown_field]
-            if known_field:
-                previous_dict = dot_model_as_dict.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
-            else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
-
-        # Deserialize dot notation values
-        for field in [field for field in cls.__fields__ if field.name in dot_model_as_dict]:
-            field.deserialize_update(dot_model_as_dict)
-            # Put back deserialized values as dot notation fields
-            for inner_field_name, value in dot_model_as_dict[field.name].items():
-                model_as_dict[f'{field.name}.{inner_field_name}'] = value
-
-        updated_fields = [field for field in cls.__fields__ if field.name in model_as_dict or field.is_primary_key]
-        for field in updated_fields:
-            field.deserialize_update(model_as_dict)
-
-    @classmethod
     def _handle_dot_notation(cls, field_name: str, value) -> (Column, dict):
         parent_field = field_name.split('.', maxsplit=1)
         if len(parent_field) == 2:
@@ -736,6 +648,26 @@ class CRUDModel:
             logger.debug(f'Skipping removed fields {removed_fields}.')
 
         return model_as_dict
+
+    @classmethod
+    def add(cls, model_as_dict: dict) -> dict:
+        """
+        Add a model formatted as a dictionary.
+        :raises ValidationFailed in case validation fail.
+        :returns The inserted model formatted as a dictionary.
+        """
+        errors = cls.validate_insert(model_as_dict)
+        if errors:
+            raise ValidationFailed(model_as_dict, errors)
+
+        cls.deserialize_insert(model_as_dict)
+        try:
+            cls._insert_one(model_as_dict)
+            if cls.audit_model:
+                cls.audit_model.audit_add(model_as_dict)
+            return cls.serialize(model_as_dict)
+        except pymongo.errors.DuplicateKeyError:
+            raise ValidationFailed(cls.serialize(model_as_dict), message='This item already exists.')
 
     @classmethod
     def add_all(cls, models_as_list_of_dict: List[dict]) -> List[dict]:
@@ -772,24 +704,51 @@ class CRUDModel:
             raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
 
     @classmethod
-    def add(cls, model_as_dict: dict) -> dict:
+    def validate_insert(cls, model_as_dict: dict) -> dict:
         """
-        Add a model formatted as a dictionary.
-        :raises ValidationFailed in case validation fail.
-        :returns The inserted model formatted as a dictionary.
+        Validate data on insert.
+        :return: Validation errors that might have occurred. Empty if no error occurred.
         """
-        errors = cls.validate_insert(model_as_dict)
-        if errors:
-            raise ValidationFailed(model_as_dict, errors)
+        if not model_as_dict:
+            return {'': ['No data provided.']}
 
-        cls.deserialize_insert(model_as_dict)
-        try:
-            cls._insert_one(model_as_dict)
-            if cls.audit_model:
-                cls.audit_model.audit_add(model_as_dict)
-            return cls.serialize(model_as_dict)
-        except pymongo.errors.DuplicateKeyError:
-            raise ValidationFailed(cls.serialize(model_as_dict), message='This item already exists.')
+        new_model_as_dict = copy.deepcopy(model_as_dict)
+
+        field_names = [field.name for field in cls.__fields__]
+        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
+        for unknown_field in unknown_fields:
+            known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+            if known_field:
+                previous_dict = new_model_as_dict.setdefault(known_field.name, {})
+                previous_dict.update(field_value)
+
+        errors = {}
+
+        for field in cls.__fields__:
+            errors.update(field.validate_insert(new_model_as_dict))
+
+        return errors
+
+    @classmethod
+    def deserialize_insert(cls, model_as_dict: dict):
+        """
+        Update this model dictionary by ensuring that it contains only valid Mongo values.
+        """
+        field_names = [field.name for field in cls.__fields__]
+        unknown_fields = [field_name for field_name in model_as_dict if field_name not in field_names]
+        for unknown_field in unknown_fields:
+            known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
+            del model_as_dict[unknown_field]
+            if known_field:
+                previous_dict = model_as_dict.setdefault(known_field.name, {})
+                previous_dict.update(field_value)
+            else:
+                logger.warning(f'Skipping unknown field {unknown_field}.')
+
+        for field in cls.__fields__:
+            field.deserialize_insert(model_as_dict)
+            if field.should_auto_increment:
+                model_as_dict[field.name] = cls._increment(field.name)
 
     @classmethod
     def _increment(cls, field_name: str):
@@ -823,6 +782,64 @@ class CRUDModel:
         if cls.audit_model:
             cls.audit_model.audit_update(new_model_as_dict)
         return cls.serialize(previous_model_as_dict), cls.serialize(new_model_as_dict)
+
+    @classmethod
+    def validate_update(cls, model_as_dict: dict) -> dict:
+        """
+        Validate data on update.
+        :return: Validation errors that might have occurred. Empty if no error occurred.
+        """
+        if not model_as_dict:
+            return {'': ['No data provided.']}
+
+        new_model_as_dict = copy.deepcopy(model_as_dict)
+
+        updated_field_names = [field.name for field in cls.__fields__ if field.name in new_model_as_dict]
+        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
+        for unknown_field in unknown_fields:
+            # Convert dot notation fields into known fields to be able to validate them
+            known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+            if known_field:
+                previous_dict = new_model_as_dict.setdefault(known_field.name, {})
+                previous_dict.update(field_value)
+
+        errors = {}
+
+        # Also ensure that Primary keys will contain a valid value
+        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict or field.is_primary_key]
+        for field in updated_fields:
+            errors.update(field.validate_update(new_model_as_dict))
+
+        return errors
+
+    @classmethod
+    def deserialize_update(cls, model_as_dict: dict):
+        """
+        Update this model dictionary by ensuring that it contains only valid Mongo values.
+        """
+        updated_field_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
+        unknown_fields = [field_name for field_name in model_as_dict if field_name not in updated_field_names]
+        dot_model_as_dict = {}
+
+        for unknown_field in unknown_fields:
+            known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
+            del model_as_dict[unknown_field]
+            if known_field:
+                previous_dict = dot_model_as_dict.setdefault(known_field.name, {})
+                previous_dict.update(field_value)
+            else:
+                logger.warning(f'Skipping unknown field {unknown_field}.')
+
+        # Deserialize dot notation values
+        for field in [field for field in cls.__fields__ if field.name in dot_model_as_dict]:
+            field.deserialize_update(dot_model_as_dict)
+            # Put back deserialized values as dot notation fields
+            for inner_field_name, value in dot_model_as_dict[field.name].items():
+                model_as_dict[f'{field.name}.{inner_field_name}'] = value
+
+        updated_fields = [field for field in cls.__fields__ if field.name in model_as_dict or field.is_primary_key]
+        for field in updated_fields:
+            field.deserialize_update(model_as_dict)
 
     @classmethod
     def remove(cls, **model_to_query) -> int:
