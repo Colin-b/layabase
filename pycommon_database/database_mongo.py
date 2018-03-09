@@ -50,7 +50,7 @@ class Column:
         if name:
             self._update_name(name)
         self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else kwargs.pop('choices', None)
-        if not isinstance(self.choices, list):
+        if self.choices and not isinstance(self.choices, list):
             raise Exception('Choices parameter must contains a list of values.')
         self.default_value = kwargs.pop('default_value', None)
         self.description = kwargs.pop('description', None)
@@ -635,6 +635,9 @@ class CRUDModel:
 
     @classmethod
     def serialize(cls, model_as_dict: dict) -> dict:
+        if not model_as_dict:
+            return {}
+
         for field in cls.__fields__:
             field.serialize(model_as_dict)
 

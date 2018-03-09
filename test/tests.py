@@ -2745,6 +2745,51 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestIndexController.get({})
         )
 
+    def test_get_one_and_multiple_results_is_invalid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestIndexController.get_one({})
+        self.assertEqual({'': ['More than one result: Consider another filtering.']}, cm.exception.errors)
+        self.assertEqual({}, cm.exception.received_data)
+
+    def test_get_one_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(
+            {
+                'unique_key': 'test2',
+                'non_unique_key': '2017-01-01',
+            },
+            self.TestIndexController.get_one({'unique_key': 'test2'})
+        )
+
+    def test_get_one_without_result_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(
+            {},
+            self.TestIndexController.get_one({'unique_key': 'test3'})
+        )
+
     def _assert_regex(self, expected, actual):
         self.assertRegex(f'{actual}',
                          f'{expected}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
