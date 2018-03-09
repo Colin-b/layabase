@@ -286,7 +286,28 @@ class CRUDModel:
         return description
 
     @classmethod
-    def flask_restplus_fields(cls, namespace):
+    def json_post_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def json_put_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def get_response_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def _model_with_all_fields(cls, namespace):
+        return namespace.model(cls.__name__, cls._flask_restplus_fields())
+
+    @classmethod
+    def get_audit_response_model(cls, namespace):
+        if cls.audit_model:
+            return namespace.model('Audit' + cls.__name__, cls.audit_model._flask_restplus_fields())
+
+    @classmethod
+    def _flask_restplus_fields(cls):
         return {
             marshmallow_field.name: _get_rest_plus_type(marshmallow_field)(
                 required=marshmallow_field.required,

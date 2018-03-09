@@ -14,6 +14,20 @@ class VersioningCRUDModel(CRUDModel):
     valid_until_utc = Column(datetime.datetime, is_nullable=True, allow_none_as_filter=True, index_type=IndexType.Unique, description='Record is valid until this date time (UTC).')
 
     @classmethod
+    def json_post_model(cls, namespace):
+        all_fields = cls._flask_restplus_fields(namespace)
+        del all_fields[cls.valid_since_utc.name]
+        del all_fields[cls.valid_until_utc.name]
+        return namespace.model(cls.__name__, all_fields)
+
+    @classmethod
+    def json_put_model(cls, namespace):
+        all_fields = cls._flask_restplus_fields(namespace)
+        del all_fields[cls.valid_since_utc.name]
+        del all_fields[cls.valid_until_utc.name]
+        return namespace.model(cls.__name__, all_fields)
+
+    @classmethod
     def _insert_one(cls, model_as_dict: dict) -> dict:
         model_as_dict[cls.valid_since_utc.name] = datetime.datetime.utcnow()
         model_as_dict[cls.valid_until_utc.name] = None

@@ -927,13 +927,34 @@ class CRUDModel:
         return description
 
     @classmethod
-    def flask_restplus_fields(cls, namespace) -> dict:
+    def json_post_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def json_put_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def get_response_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def _model_with_all_fields(cls, namespace):
+        return namespace.model(cls.__name__, cls._flask_restplus_fields(namespace))
+
+    @classmethod
+    def get_audit_response_model(cls, namespace):
+        if cls.audit_model:
+            return namespace.model('Audit' + cls.__name__, cls.audit_model._flask_restplus_fields(namespace))
+
+    @classmethod
+    def _flask_restplus_fields(cls, namespace) -> dict:
         return {field.name: cls._to_flask_restplus_field(namespace, field) for field in cls.__fields__}
 
     @classmethod
     def _to_flask_restplus_field(cls, namespace, field: Column):
         if isinstance(field, DictColumn):
-            dict_fields = field._description_model({}).flask_restplus_fields(namespace)
+            dict_fields = field._description_model({})._flask_restplus_fields(namespace)
             if dict_fields:
                 dict_model = namespace.model('_'.join(dict_fields), dict_fields)
                 # Nested field cannot contains nothing

@@ -104,10 +104,7 @@ class CRUDController:
         cls.query_get_parser = cls._model.query_get_parser()
         cls.query_delete_parser = cls._model.query_delete_parser()
         cls.query_rollback_parser = cls._model.query_rollback_parser()
-        if cls._model.audit_model:
-            cls.query_get_audit_parser = cls._model.audit_model.query_get_parser()
-        else:
-            cls.query_get_audit_parser = None
+        cls.query_get_audit_parser = cls._model.audit_model.query_get_parser() if cls._model.audit_model else None
         cls._model_description_dictionary = cls._model.description_dictionary()
 
     @classmethod
@@ -120,14 +117,10 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        cls.json_post_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields(namespace))
-        cls.json_put_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields(namespace))
-        cls.get_response_model = namespace.model(cls._model.__name__, cls._model.flask_restplus_fields(namespace))
-        if cls._model.audit_model:
-            cls.get_audit_response_model = namespace.model('Audit' + cls._model.__name__,
-                                                           cls._model.audit_model.flask_restplus_fields(namespace))
-        else:
-            cls.get_audit_response_model = None
+        cls.json_post_model = cls._model.json_post_model(namespace)
+        cls.json_put_model = cls._model.json_put_model(namespace)
+        cls.get_response_model = cls._model.get_response_model(namespace)
+        cls.get_audit_response_model = cls._model.get_audit_response_model(namespace)
         cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),
                                                                    cls._model.flask_restplus_description_fields())
 
