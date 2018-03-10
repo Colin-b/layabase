@@ -537,6 +537,8 @@ class CRUDModel:
         cls._create_indexes(IndexType.Unique, model_as_dict)
         cls._create_indexes(IndexType.Other, model_as_dict)
         logger.info('Indexes updated.')
+        if cls.audit_model:
+            cls.audit_model.update_indexes(model_as_dict)
 
     @classmethod
     def _create_indexes(cls, index_type: IndexType, model_as_dict: dict):
