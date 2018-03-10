@@ -257,7 +257,7 @@ class CRUDModel:
 
     @classmethod
     def query_rollback_parser(cls):
-        return  # Only VersioningCRUDModel allows rollback
+        return  # Only VersionedCRUDModel allows rollback
 
     @classmethod
     def _query_parser(cls):

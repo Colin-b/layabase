@@ -8,24 +8,25 @@ from pycommon_database.database_mongo import CRUDModel, Column, IndexType
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
 
-class VersioningCRUDModel(CRUDModel):
+class VersionedCRUDModel(CRUDModel):
 
     valid_since_utc = Column(datetime.datetime, description='Record is valid since this date time (UTC).')
-    valid_until_utc = Column(datetime.datetime, is_nullable=True, allow_none_as_filter=True, index_type=IndexType.Unique, description='Record is valid until this date time (UTC).')
+    valid_until_utc = Column(datetime.datetime, is_nullable=True, allow_none_as_filter=True,
+                             index_type=IndexType.Unique, description='Record is valid until this date time (UTC).')
 
     @classmethod
     def json_post_model(cls, namespace):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_utc.name]
         del all_fields[cls.valid_until_utc.name]
-        return namespace.model(f'{cls.__name__}_Versioning', all_fields)
+        return namespace.model(f'{cls.__name__}_Versioned', all_fields)
 
     @classmethod
     def json_put_model(cls, namespace):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_utc.name]
         del all_fields[cls.valid_until_utc.name]
-        return namespace.model(f'{cls.__name__}_Versioning', all_fields)
+        return namespace.model(f'{cls.__name__}_Versioned', all_fields)
 
     @classmethod
     def _insert_one(cls, model_as_dict: dict) -> dict:
@@ -58,7 +59,8 @@ class VersioningCRUDModel(CRUDModel):
 
         # Insert new row
         current_model_as_dict = copy.deepcopy(previous_model_as_dict)
-        model_as_dict = {**current_model_as_dict, **model_as_dict, cls.valid_since_utc.name: now, cls.valid_until_utc.name: None}
+        model_as_dict = {**current_model_as_dict, **model_as_dict, cls.valid_since_utc.name: now,
+                         cls.valid_until_utc.name: None}
         cls.deserialize_insert(model_as_dict)
         cls.__collection__.insert_one(model_as_dict)
 
@@ -88,8 +90,7 @@ class VersioningCRUDModel(CRUDModel):
         if isinstance(validity, str):
             try:
                 validity = dateutil.parser.parse(validity)
-            except:
-
+            except ValueError or OverflowError:
                 raise ValidationFailed(model_to_query, {'validity': ['Not a valid datetime.']})
 
         if not isinstance(validity, datetime.datetime):
@@ -112,7 +113,8 @@ class VersioningCRUDModel(CRUDModel):
             cls.valid_since_utc.name: {'$lte': validity},
             cls.valid_until_utc.name: {'$gt': validity},
         }
-        previously_expired_models = cls.__collection__.find({**model_to_query, **previously_expired}, projection={'_id': False})
+        previously_expired_models = cls.__collection__.find({**model_to_query, **previously_expired},
+                                                            projection={'_id': False})
         previously_expired_models = list(previously_expired_models)  # Convert Cursor to list
 
         now = datetime.datetime.utcnow()
@@ -132,7 +134,8 @@ class VersioningCRUDModel(CRUDModel):
             cls.valid_since_utc.name: {'$gt': validity},
             cls.valid_until_utc.name: None,
         }
-        nb_removed = cls.__collection__.update_many({**model_to_query, **new_still_valid}, {'$set': {cls.valid_until_utc.name: now}}).modified_count
+        nb_removed = cls.__collection__.update_many({**model_to_query, **new_still_valid},
+                                                    {'$set': {cls.valid_until_utc.name: now}}).modified_count
 
         # Insert expired as valid
         for expired_model in previously_expired_models:

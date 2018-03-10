@@ -273,7 +273,8 @@ class DictColumn(Column):
     def __init__(self, fields: Dict[str, Column], index_fields: Dict[str, Column]=None, **kwargs):
         """
         :param fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
-        :param index_fields: Fields (or function providing fields) representing dictionary as a dict(str, Column). Default to fields.
+        :param index_fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
+        Default to fields.
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
@@ -290,7 +291,8 @@ class DictColumn(Column):
             raise Exception('fields is a mandatory parameter.')
 
         if index_fields:
-            self.get_index_fields = (lambda model_as_dict: index_fields) if isinstance(index_fields, dict) else index_fields
+            self.get_index_fields = (lambda model_as_dict: index_fields) if isinstance(index_fields,
+                                                                                       dict) else index_fields
         else:
             self.get_index_fields = self.get_fields
 
@@ -325,7 +327,8 @@ class DictColumn(Column):
         return FakeModel
 
     def _get_index_fields(self, index_type: IndexType, model_as_dict: dict, prefix: str) -> List[str]:
-        return self._index_description_model(model_as_dict)._get_index_fields(index_type, model_as_dict, f'{prefix}{self.name}.')
+        return self._index_description_model(model_as_dict)._get_index_fields(index_type, model_as_dict,
+                                                                              f'{prefix}{self.name}.')
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
@@ -539,7 +542,8 @@ class CRUDModel:
     def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
-        cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if isinstance(attribute[1], Column)]
+        cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if
+                          isinstance(attribute[1], Column)]
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
@@ -571,7 +575,10 @@ class CRUDModel:
         :param model_as_dict: Data specified by the user at the time of the index creation.
         """
         try:
-            criteria = [(field_name, pymongo.ASCENDING) for field_name in cls._get_index_fields(index_type, model_as_dict, '')]
+            criteria = [
+                (field_name, pymongo.ASCENDING)
+                for field_name in cls._get_index_fields(index_type, model_as_dict, '')
+            ]
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
@@ -960,7 +967,7 @@ class CRUDModel:
 
     @classmethod
     def query_rollback_parser(cls):
-        return  # Only VersioningCRUDModel allows rollback
+        return  # Only VersionedCRUDModel allows rollback
 
     @classmethod
     def _query_parser(cls):
