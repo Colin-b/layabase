@@ -29,7 +29,7 @@ class Column:
     Definition of a Mondo Database field.
     """
 
-    def __init__(self, field_type=str, **kwargs):
+    def __init__(self, field_type=None, **kwargs):
         """
 
         :param field_type: Python field type. Default to str.
@@ -294,7 +294,7 @@ class DictColumn(Column):
         else:
             self.get_index_fields = self.get_fields
 
-        Column.__init__(self, field_type=dict, **kwargs)
+        Column.__init__(self, dict, **kwargs)
 
     def _description_model(self, model_as_dict: dict):
         """
@@ -422,7 +422,7 @@ class ListColumn(Column):
         """
         kwargs.pop('field_type', None)
         self.list_item_column = list_item_type
-        Column.__init__(self, field_type=list, **kwargs)
+        Column.__init__(self, list, **kwargs)
 
     def _update_name(self, name):
         Column._update_name(self, name)
