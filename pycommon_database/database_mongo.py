@@ -34,7 +34,8 @@ class Column:
 
         :param field_type: Python field type. Default to str.
 
-        :param choices: Restrict valid values. Default to None or the content of the enum if field is an Enum.
+        :param choices: Restrict valid values to this list of value (or a function providing those values).
+        Default to None or the content of the enum if field is an Enum.
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
@@ -49,9 +50,7 @@ class Column:
         name = kwargs.pop('name', None)
         if name:
             self._update_name(name)
-        self.choices = list(self.field_type.__members__.keys()) if isinstance(self.field_type, enum.EnumMeta) else kwargs.pop('choices', None)
-        if self.choices and not isinstance(self.choices, list):
-            raise Exception('Choices parameter must contains a list of values.')
+        self.get_choices = self._to_get_choices(kwargs.pop('choices', None))
         self.default_value = kwargs.pop('default_value', None)
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
@@ -78,6 +77,17 @@ class Column:
         self.name = name
         if '_id' == self.name:
             self.field_type = ObjectId
+
+    def _to_get_choices(self, choices):
+        """
+        Return a function without arguments returning the choices.
+        :param choices: A list of choices or a function providing choices (or None).
+        """
+        if choices:
+            return (lambda: choices) if isinstance(choices, list) else choices
+        elif isinstance(self.field_type, enum.EnumMeta):
+            return lambda: list(self.field_type.__members__.keys())
+        return lambda: None
 
     def __str__(self):
         return f'{self.name}'
@@ -138,8 +148,8 @@ class Column:
                     return {self.name: ['Not a valid date.']}
         elif isinstance(self.field_type, enum.EnumMeta):
             if isinstance(value, str):
-                if value not in self.choices:
-                    return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+                if value not in self.get_choices():
+                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
                 return {}  # Consider string values valid for Enum type
         elif self.field_type == ObjectId:
             if not isinstance(value, ObjectId):
@@ -149,12 +159,12 @@ class Column:
                     return {self.name: [e.args[0]]}
         elif self.field_type == str:
             if isinstance(value, str):
-                if self.choices and value not in self.choices:
-                    return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+                if self.get_choices() and value not in self.get_choices():
+                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
         elif self.field_type == int:
             if isinstance(value, int):
-                if self.choices and value not in self.choices:
-                    return {self.name: [f'Value "{value}" is not within {self.choices}.']}
+                if self.get_choices() and value not in self.get_choices():
+                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
 
         if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
@@ -986,7 +996,7 @@ class CRUDModel:
                     required=field.is_required,
                     example=_get_example(field),
                     description=field.description,
-                    enum=field.choices,
+                    enum=field.get_choices(),
                     default=field.default_value,
                     readonly=field.should_auto_increment,
                 )
@@ -995,7 +1005,7 @@ class CRUDModel:
                     required=field.is_required,
                     example=_get_example(field),
                     description=field.description,
-                    enum=field.choices,
+                    enum=field.get_choices(),
                     default=field.default_value,
                     readonly=field.should_auto_increment,
                 )
@@ -1005,7 +1015,7 @@ class CRUDModel:
                 required=field.is_required,
                 example=_get_example(field),
                 description=field.description,
-                enum=field.choices,
+                enum=field.get_choices(),
                 default=field.default_value,
                 readonly=field.should_auto_increment,
             )
@@ -1015,7 +1025,7 @@ class CRUDModel:
                 required=field.is_required,
                 example=_get_example(field),
                 description=field.description,
-                enum=field.choices,
+                enum=field.get_choices(),
                 default=field.default_value,
                 readonly=field.should_auto_increment,
             )
@@ -1024,7 +1034,7 @@ class CRUDModel:
                 required=field.is_required,
                 example=_get_example(field),
                 description=field.description,
-                enum=field.choices,
+                enum=field.get_choices(),
                 default=field.default_value,
                 readonly=field.should_auto_increment,
             )
@@ -1128,7 +1138,7 @@ def _get_example(field: Column):
     if isinstance(field, ListColumn):
         return [_get_example(field.list_item_column)]
 
-    return field.choices[0] if field.choices else _get_default_example(field)
+    return field.get_choices()[0] if field.get_choices() else _get_default_example(field)
 
 
 def _get_default_example(field: Column):
