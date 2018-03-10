@@ -310,11 +310,14 @@ class DictColumn(Column):
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                description_model = self._description_model(model_as_dict)
-                errors.update({
-                    f'{self.name}.{field_name}': field_errors
-                    for field_name, field_errors in description_model.validate_insert(value).items()
-                })
+                try:
+                    description_model = self._description_model(model_as_dict)
+                    errors.update({
+                        f'{self.name}.{field_name}': field_errors
+                        for field_name, field_errors in description_model.validate_insert(value).items()
+                    })
+                except Exception as e:
+                    errors[self.name] = [str(e)]
         return errors
 
     def deserialize_insert(self, model_as_dict: dict):
@@ -330,11 +333,14 @@ class DictColumn(Column):
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                description_model = self._description_model(model_as_dict)
-                errors.update({
-                    f'{self.name}.{field_name}': field_errors
-                    for field_name, field_errors in description_model.validate_update(value).items()
-                })
+                try:
+                    description_model = self._description_model(model_as_dict)
+                    errors.update({
+                        f'{self.name}.{field_name}': field_errors
+                        for field_name, field_errors in description_model.validate_update(value).items()
+                    })
+                except Exception as e:
+                    errors[self.name] = [str(e)]
         return errors
 
     def deserialize_update(self, model_as_dict: dict):
@@ -350,11 +356,14 @@ class DictColumn(Column):
         if not errors:
             value = model_as_dict.get(self.name)
             if value is not None:
-                description_model = self._description_model(model_as_dict)
-                errors.update({
-                    f'{self.name}.{field_name}': field_errors
-                    for field_name, field_errors in description_model.validate_query(value).items()
-                })
+                try:
+                    description_model = self._description_model(model_as_dict)
+                    errors.update({
+                        f'{self.name}.{field_name}': field_errors
+                        for field_name, field_errors in description_model.validate_query(value).items()
+                    })
+                except Exception as e:
+                    errors[self.name] = [str(e)]
         return errors
 
     def deserialize_query(self, model_as_dict: dict):
