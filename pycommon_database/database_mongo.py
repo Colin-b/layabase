@@ -270,9 +270,10 @@ class DictColumn(Column):
     Definition of a Mongo database dictionary field.
     If you do not want to validate the content of this dict, just use a Column(dict) instead.
     """
-    def __init__(self, fields: Dict[str, Column], **kwargs):
+    def __init__(self, fields: Dict[str, Column], index_fields: Dict[str, Column]=None, **kwargs):
         """
         :param fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
+        :param index_fields: Fields (or function providing fields) representing dictionary as a dict(str, Column). Default to fields.
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
@@ -283,9 +284,16 @@ class DictColumn(Column):
         :param should_auto_increment: bool value. Default to False. Only valid for int fields.
         """
         kwargs.pop('field_type', None)
+
         self.get_fields = (lambda model_as_dict: fields) if (isinstance(fields, dict) and fields) else fields
         if not self.get_fields:
             raise Exception('fields is a mandatory parameter.')
+
+        if index_fields:
+            self.get_index_fields = (lambda model_as_dict: index_fields) if isinstance(index_fields, dict) else index_fields
+        else:
+            self.get_index_fields = self.get_fields
+
         Column.__init__(self, field_type=dict, **kwargs)
 
     def _description_model(self, model_as_dict: dict):
@@ -302,8 +310,22 @@ class DictColumn(Column):
         
         return FakeModel
 
+    def _index_description_model(self, model_as_dict: dict):
+        """
+        :param model_as_dict: Data provided by the user or empty in case this method is called in another context.
+        :return: A CRUDModel describing every index fields.
+        """
+        class FakeModel(CRUDModel):
+            pass
+
+        for name, column in self.get_index_fields(model_as_dict or {}).items():
+            column._update_name(name)
+            FakeModel.__fields__.append(column)
+
+        return FakeModel
+
     def _get_index_fields(self, index_type: IndexType, model_as_dict: dict, prefix: str) -> List[str]:
-        return self._description_model(model_as_dict)._get_index_fields(index_type, model_as_dict, f'{prefix}{self.name}.')
+        return self._index_description_model(model_as_dict)._get_index_fields(index_type, model_as_dict, f'{prefix}{self.name}.')
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
@@ -525,6 +547,8 @@ class CRUDModel:
         if audit:
             from pycommon_database.audit_mongo import _create_from
             cls.audit_model = _create_from(cls, base)
+        else:
+            cls.audit_model = None  # Ensure no circular reference when creating the audit
 
     @classmethod
     def update_indexes(cls, model_as_dict: dict):

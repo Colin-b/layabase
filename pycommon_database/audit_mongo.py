@@ -17,7 +17,7 @@ class Action(enum.IntEnum):
 
 
 def _create_from(model, base):
-    class AuditModel(model, base=base, table_name=f'audit_{model.__tablename__}'):
+    class AuditModel(model, base=base, table_name=f'audit_{model.__tablename__}', audit=False):
         """
         Class providing Audit fields for a MONGODB model.
         """
