@@ -302,8 +302,8 @@ class DictColumn(Column):
         
         return FakeModel
 
-    def get_index_fields(self, index_type: IndexType) -> List[Column]:
-        return self._description_model({}).get_index_fields(index_type)
+    def _get_index_fields(self, index_type: IndexType, model_as_dict: dict) -> List[Column]:
+        return self._description_model(model_as_dict)._get_index_fields(index_type, model_as_dict)
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
@@ -521,19 +521,31 @@ class CRUDModel:
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
-            cls._create_indexes(IndexType.Unique)
-            cls._create_indexes(IndexType.Other)
+            cls.update_indexes({})
         if audit:
             from pycommon_database.audit_mongo import _create_from
             cls.audit_model = _create_from(cls, base)
 
     @classmethod
-    def _create_indexes(cls, index_type: IndexType):
+    def update_indexes(cls, model_as_dict: dict):
+        """
+        Drop all indexes and recreate them.
+        As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
+        """
+        logger.info('Updating indexes...')
+        cls.__collection__.drop_indexes()
+        cls._create_indexes(IndexType.Unique, model_as_dict)
+        cls._create_indexes(IndexType.Other, model_as_dict)
+        logger.info('Indexes updated.')
+
+    @classmethod
+    def _create_indexes(cls, index_type: IndexType, model_as_dict: dict):
         """
         Create indexes of specified type.
+        :param model_as_dict: Data specified by the user at the time of the index creation.
         """
         try:
-            criteria = [(field.name, pymongo.ASCENDING) for field in cls.get_index_fields(index_type)]
+            criteria = [(field.name, pymongo.ASCENDING) for field in cls._get_index_fields(index_type, model_as_dict)]
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
@@ -544,14 +556,14 @@ class CRUDModel:
             raise
 
     @classmethod
-    def get_index_fields(cls, index_type: IndexType) -> List[Column]:
+    def _get_index_fields(cls, index_type: IndexType, model_as_dict: dict) -> List[Column]:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
         index_fields = [field for field in cls.__fields__ if field.index_type == index_type]
         for field in cls.__fields__:
             if isinstance(field, DictColumn):
-                index_fields.extend(field.get_index_fields(index_type))
+                index_fields.extend(field._get_index_fields(index_type, model_as_dict))
         return index_fields
 
     @classmethod
