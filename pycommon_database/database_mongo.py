@@ -302,8 +302,8 @@ class DictColumn(Column):
         
         return FakeModel
 
-    def _get_index_fields(self, index_type: IndexType, model_as_dict: dict) -> List[Column]:
-        return self._description_model(model_as_dict)._get_index_fields(index_type, model_as_dict)
+    def _get_index_fields(self, index_type: IndexType, model_as_dict: dict, prefix: str) -> List[str]:
+        return self._description_model(model_as_dict)._get_index_fields(index_type, model_as_dict, f'{prefix}{self.name}.')
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
@@ -545,7 +545,7 @@ class CRUDModel:
         :param model_as_dict: Data specified by the user at the time of the index creation.
         """
         try:
-            criteria = [(field.name, pymongo.ASCENDING) for field in cls._get_index_fields(index_type, model_as_dict)]
+            criteria = [(field_name, pymongo.ASCENDING) for field_name in cls._get_index_fields(index_type, model_as_dict, '')]
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
@@ -556,14 +556,14 @@ class CRUDModel:
             raise
 
     @classmethod
-    def _get_index_fields(cls, index_type: IndexType, model_as_dict: dict) -> List[Column]:
+    def _get_index_fields(cls, index_type: IndexType, model_as_dict: dict, prefix: str) -> List[str]:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
-        index_fields = [field for field in cls.__fields__ if field.index_type == index_type]
+        index_fields = [f'{prefix}{field.name}' for field in cls.__fields__ if field.index_type == index_type]
         for field in cls.__fields__:
             if isinstance(field, DictColumn):
-                index_fields.extend(field._get_index_fields(index_type, model_as_dict))
+                index_fields.extend(field._get_index_fields(index_type, model_as_dict, prefix))
         return index_fields
 
     @classmethod
