@@ -92,13 +92,13 @@ class CRUDController:
     _model_description_dictionary = None
 
     @classmethod
-    def model(cls, value):
+    def model(cls, model_class):
         """
-        Initialize related model (should extends CRUDModel).
+        Initialize related model (should extends (Version)CRUDModel).
 
-        :param value: Mongo or SQLAlchemy CRUDModel.
+        :param model_class: Mongo or SQLAlchemy (Version)CRUDModel.
         """
-        cls._model = value
+        cls._model = model_class
         if not cls._model:
             raise ControllerModelNotSet(cls)
         cls.query_get_parser = cls._model.query_get_parser()
