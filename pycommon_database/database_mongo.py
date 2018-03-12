@@ -36,6 +36,8 @@ class Column:
 
         :param choices: Restrict valid values to this list of value (or a function providing those values).
         Default to None or the content of the enum if field is an Enum.
+        :param counter_name: Counter name in case of auto incremented field (or a function providing the name).
+        Default to field name.
         :param default_value: Default value matching type. Default to None.
         :param description: Field description.
         :param index_type: Type of index amongst IndexType enum. Default to None.
@@ -51,6 +53,7 @@ class Column:
         if name:
             self._update_name(name)
         self.get_choices = self._to_get_choices(kwargs.pop('choices', None))
+        self.get_counter_name = self._to_get_counter_name(kwargs.pop('counter_name', None))
         self.default_value = kwargs.pop('default_value', None)
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
@@ -77,6 +80,11 @@ class Column:
         self.name = name
         if '_id' == self.name:
             self.field_type = ObjectId
+
+    def _to_get_counter_name(self, counter_name):
+        if counter_name:
+            return (lambda model_as_dict: counter_name) if isinstance(counter_name, str) else counter_name
+        return lambda model_as_dict: self.name
 
     def _to_get_choices(self, choices):
         """
@@ -815,17 +823,17 @@ class CRUDModel:
         for field in cls.__fields__:
             field.deserialize_insert(model_as_dict)
             if field.should_auto_increment:
-                model_as_dict[field.name] = cls._increment(field.name)
+                model_as_dict[field.name] = cls._increment(field.get_counter_name(model_as_dict))
 
     @classmethod
-    def _increment(cls, field_name: str):
+    def _increment(cls, counter_name: str):
         counter_key = {'_id': cls.__collection__.name}
-        counter_update = {'$inc': {'%s.counter' % field_name: 1},
-                          '$set': {'%s.timestamp' % field_name: datetime.datetime.utcnow().isoformat()}}
+        counter_update = {'$inc': {'%s.counter' % counter_name: 1},
+                          '$set': {'%s.timestamp' % counter_name: datetime.datetime.utcnow().isoformat()}}
         counter_element = cls.__counters__.find_one_and_update(counter_key, counter_update,
                                                                return_document=pymongo.ReturnDocument.AFTER,
                                                                upsert=True)
-        return counter_element[field_name]['counter']
+        return counter_element[counter_name]['counter']
 
     @classmethod
     def update(cls, model_as_dict: dict) -> (dict, dict):
