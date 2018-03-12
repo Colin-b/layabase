@@ -3241,7 +3241,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             {
                 'dict_field': (
-                    None,
+                    {'first_key': None, 'second_key': None},
                     {
                         'first_key': None,
                         'second_key': None
@@ -3350,7 +3350,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'list_field': (
                     None,
                     {'list_field_inner': (
-                        None,
+                        {'first_key': None, 'second_key': None},
                         {
                             'first_key': None,
                             'second_key': None
@@ -3467,7 +3467,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'list_field': (
                     None,
                     {'list_field_inner': (
-                        None,
+                        {'first_key': None, 'second_key': None},
                         {
                             'first_key': None,
                             'second_key': None
@@ -3824,7 +3824,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_post_missing_optional_dict_is_valid(self):
         self.assertEqual(
-            {'key': 'my_key'},
+            {
+                'dict_col': {
+                    'first_key': None,
+                    'second_key': None
+                },
+                'key': 'my_key'
+            },
             self.TestOptionalDictController.post({
                 'key': 'my_key',
             })
@@ -3832,7 +3838,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_post_optional_dict_as_None_is_valid(self):
         self.assertEqual(
-            {'key': 'my_key'},
+            {
+                'dict_col': {
+                    'first_key': None,
+                    'second_key': None
+                },
+                'key': 'my_key'
+            },
             self.TestOptionalDictController.post({
                 'key': 'my_key',
                 'dict_col': None,
@@ -4987,7 +4999,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'list_field': (
                     None,
                     {'list_field_inner': (
-                        None,
+                        {'first_key': None, 'second_key': None},
                         {
                             'first_key': None,
                             'second_key': None

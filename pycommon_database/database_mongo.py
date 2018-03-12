@@ -54,7 +54,7 @@ class Column:
             self._update_name(name)
         self.get_choices = self._to_get_choices(kwargs.pop('choices', None))
         self.get_counter_name = self._to_get_counter_name(kwargs.pop('counter_name', None))
-        self.default_value = kwargs.pop('default_value', None)
+        self.get_default_value = self._to_get_default_value(kwargs.pop('default_value', None))
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
 
@@ -67,11 +67,11 @@ class Column:
         if not self.is_nullable:
             if self.should_auto_increment:
                 raise Exception('A field cannot be mandatory and auto incremented at the same time.')
-            if self.default_value:
+            if self.get_default_value({}):
                 raise Exception('A field cannot be mandatory and having a default value at the same time.')
         else:
             # Field will be optional only if it is not a primary key without default value and not auto incremented
-            self.is_nullable = not self.is_primary_key or self.default_value or self.should_auto_increment
+            self.is_nullable = not self.is_primary_key or self.get_default_value({}) or self.should_auto_increment
         self.is_required = bool(kwargs.pop('is_required', False))
 
     def _update_name(self, name):
@@ -83,7 +83,7 @@ class Column:
 
     def _to_get_counter_name(self, counter_name):
         if counter_name:
-            return (lambda model_as_dict: counter_name) if isinstance(counter_name, str) else counter_name
+            return counter_name if callable(counter_name) else lambda model_as_dict: counter_name
         return lambda model_as_dict: self.name
 
     def _to_get_choices(self, choices):
@@ -92,10 +92,15 @@ class Column:
         :param choices: A list of choices or a function providing choices (or None).
         """
         if choices:
-            return (lambda: choices) if isinstance(choices, list) else choices
+            return choices if callable(choices) else lambda: choices
         elif isinstance(self.field_type, enum.EnumMeta):
             return lambda: list(self.field_type.__members__.keys())
         return lambda: None
+
+    def _to_get_default_value(self, default_value):
+        if default_value:
+            return default_value if callable(default_value) else (lambda model_as_dict: default_value)
+        return lambda model_as_dict: None
 
     def __str__(self):
         return f'{self.name}'
@@ -260,7 +265,7 @@ class Column:
 
         if value is None:
             if self.is_nullable:
-                model_as_dict[self.name] = self.default_value  # Make sure value is set in any case
+                model_as_dict[self.name] = self.get_default_value(model_as_dict)  # Make sure value is set in any case
             return
 
         if self.field_type == datetime.datetime:
@@ -294,15 +299,21 @@ class DictColumn(Column):
         """
         kwargs.pop('field_type', None)
 
-        self.get_fields = (lambda model_as_dict: fields) if (isinstance(fields, dict) and fields) else fields
-        if not self.get_fields:
+        if not fields:
             raise Exception('fields is a mandatory parameter.')
 
+        self.get_fields = fields if callable(fields) else lambda model_as_dict: fields
+
         if index_fields:
-            self.get_index_fields = (lambda model_as_dict: index_fields) if isinstance(index_fields,
-                                                                                       dict) else index_fields
+            self.get_index_fields = index_fields if callable(index_fields) else lambda model_as_dict: index_fields
         else:
             self.get_index_fields = self.get_fields
+
+        if bool(kwargs.get('is_nullable', True)):  # Ensure that there will be a default value if field is nullable
+            kwargs['default_value'] = lambda model_as_dict: {
+                field_name: field.get_default_value(model_as_dict)
+                for field_name, field in self.get_fields(model_as_dict or {}).items()
+            }
 
         Column.__init__(self, dict, **kwargs)
 
@@ -408,8 +419,12 @@ class DictColumn(Column):
             self._description_model(model_as_dict).deserialize_query(value)
 
     def serialize(self, model_as_dict: dict):
-        value = model_as_dict.get(self.name, {})
-        self._description_model(model_as_dict).serialize(value)
+        value = model_as_dict.get(self.name)
+        if value is None:
+            if self.is_nullable:
+                model_as_dict[self.name] = self.get_default_value(model_as_dict)  # Make sure value is set in any case
+        else:
+            self._description_model(model_as_dict).serialize(value)
 
 
 class ListColumn(Column):
@@ -1059,7 +1074,7 @@ class CRUDModel:
                     example=_get_example(field),
                     description=field.description,
                     enum=field.get_choices(),
-                    default=field.default_value,
+                    default=field.get_default_value({}),
                     readonly=field.should_auto_increment,
                 )
             else:
@@ -1068,7 +1083,7 @@ class CRUDModel:
                     example=_get_example(field),
                     description=field.description,
                     enum=field.get_choices(),
-                    default=field.default_value,
+                    default=field.get_default_value({}),
                     readonly=field.should_auto_increment,
                 )
         elif isinstance(field, ListColumn):
@@ -1078,7 +1093,7 @@ class CRUDModel:
                 example=_get_example(field),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.default_value,
+                default=field.get_default_value({}),
                 readonly=field.should_auto_increment,
             )
         elif field.field_type == list:
@@ -1088,7 +1103,7 @@ class CRUDModel:
                 example=_get_example(field),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.default_value,
+                default=field.get_default_value({}),
                 readonly=field.should_auto_increment,
             )
         else:
@@ -1097,7 +1112,7 @@ class CRUDModel:
                 example=_get_example(field),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.default_value,
+                default=field.get_default_value({}),
                 readonly=field.should_auto_increment,
             )
 
@@ -1186,19 +1201,19 @@ def _get_flask_restplus_type(field: Column):
 
 
 def _get_example(field: Column):
-    if field.default_value is not None:
-        return field.default_value
-
     if isinstance(field, DictColumn):
         return (
             {
-                dict_key.name: _get_example(dict_key)
-                for dict_key in field._description_model({}).__fields__
+                field_name: _get_example(dict_field)
+                for field_name, dict_field in field.get_fields({}).items()
             }
         )
 
     if isinstance(field, ListColumn):
         return [_get_example(field.list_item_column)]
+
+    if field.get_default_value({}) is not None:
+        return field.get_default_value({})
 
     return field.get_choices()[0] if field.get_choices() else _get_default_example(field)
 
