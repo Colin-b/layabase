@@ -211,7 +211,7 @@ class CRUDController:
         return cls._model_description_dictionary
 
     @classmethod
-    def rollback_to(cls, request_arguments: dict) -> List[dict]:
+    def rollback_to(cls, request_arguments: dict) -> int:
         """
         Rollback to the model(s) matching those criterion.
         :returns Number of affected rows.
