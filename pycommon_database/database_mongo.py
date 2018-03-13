@@ -753,8 +753,6 @@ class CRUDModel:
         cls.deserialize_insert(model_as_dict)
         try:
             cls._insert_one(model_as_dict)
-            if cls.audit_model:
-                cls.audit_model.audit_add(model_as_dict)
             return cls.serialize(model_as_dict)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(model_as_dict), message='This item already exists.')
@@ -786,9 +784,6 @@ class CRUDModel:
 
         try:
             cls._insert_many(new_models_as_list_of_dict)
-            if cls.audit_model:
-                for inserted_dict in new_models_as_list_of_dict:
-                    cls.audit_model.audit_add(inserted_dict)
             return [cls.serialize(model) for model in new_models_as_list_of_dict]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
@@ -876,8 +871,6 @@ class CRUDModel:
 
         previous_model_as_dict, new_model_as_dict = cls._update_one(model_as_dict)
 
-        if cls.audit_model:
-            cls.audit_model.audit_update(new_model_as_dict)
         return cls.serialize(previous_model_as_dict), cls.serialize(new_model_as_dict)
 
     @classmethod
@@ -952,17 +945,20 @@ class CRUDModel:
 
         cls.deserialize_query(model_to_query)
 
-        if cls.audit_model:
-            cls.audit_model.audit_remove(**model_to_query)
         return cls._delete_many(model_to_query)
 
     @classmethod
     def _insert_many(cls, models_as_list_of_dict: List[dict]):
         cls.__collection__.insert_many(models_as_list_of_dict)
+        if cls.audit_model:
+            for inserted_dict in models_as_list_of_dict:
+                cls.audit_model.audit_add(inserted_dict)
 
     @classmethod
     def _insert_one(cls, model_as_dict: dict) -> dict:
         cls.__collection__.insert_one(model_as_dict)
+        if cls.audit_model:
+            cls.audit_model.audit_add(model_as_dict)
         return model_as_dict
 
     @classmethod
@@ -973,10 +969,15 @@ class CRUDModel:
             raise ModelCouldNotBeFound(model_as_dict_keys)
 
         cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict})
-        return previous_model_as_dict, cls.__collection__.find_one(model_as_dict_keys)
+        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        if cls.audit_model:
+            cls.audit_model.audit_update(new_model_as_dict)
+        return previous_model_as_dict, new_model_as_dict
 
     @classmethod
     def _delete_many(cls, model_to_query: dict) -> int:
+        if cls.audit_model:
+            cls.audit_model.audit_remove(**model_to_query)
         return cls.__collection__.delete_many(model_to_query).deleted_count
 
     @classmethod
