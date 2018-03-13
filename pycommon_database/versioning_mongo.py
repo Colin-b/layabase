@@ -30,11 +30,12 @@ class VersionedCRUDModel(CRUDModel):
 
     @classmethod
     def _insert_one(cls, model_as_dict: dict) -> dict:
-        model_as_dict[cls.valid_since_utc.name] = datetime.datetime.utcnow()
+        now = datetime.datetime.utcnow()
+        model_as_dict[cls.valid_since_utc.name] = now
         model_as_dict[cls.valid_until_utc.name] = None
         cls.__collection__.insert_one(model_as_dict)
         if cls.audit_model:
-            cls.audit_model.audit_add(model_as_dict)
+            cls.audit_model.audit_add(now)
         return model_as_dict
 
     @classmethod
@@ -45,8 +46,7 @@ class VersionedCRUDModel(CRUDModel):
             model_as_dict[cls.valid_until_utc.name] = None
         cls.__collection__.insert_many(models_as_list_of_dict)
         if cls.audit_model:
-            for inserted_dict in models_as_list_of_dict:
-                cls.audit_model.audit_add(inserted_dict)
+            cls.audit_model.audit_add(now)
 
     @classmethod
     def _update_one(cls, model_as_dict: dict) -> (dict, dict):
@@ -70,15 +70,15 @@ class VersionedCRUDModel(CRUDModel):
 
         new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
         if cls.audit_model:
-            cls.audit_model.audit_update(new_model_as_dict)
+            cls.audit_model.audit_update(now)
         return previous_model_as_dict, new_model_as_dict
 
     @classmethod
     def _delete_many(cls, model_to_query: dict) -> int:
-        if cls.audit_model:
-            cls.audit_model.audit_remove(**model_to_query)
-        model_to_query[cls.valid_until_utc.name] = None
         now = datetime.datetime.utcnow()
+        if cls.audit_model:
+            cls.audit_model.audit_remove(now)
+        model_to_query[cls.valid_until_utc.name] = None
         return cls.__collection__.update_many(model_to_query, {'$set': {cls.valid_until_utc.name: now}}).modified_count
 
     @classmethod
