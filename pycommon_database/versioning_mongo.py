@@ -61,7 +61,7 @@ class VersionedCRUDModel(CRUDModel):
         current_model_as_dict = copy.deepcopy(previous_model_as_dict)
         model_as_dict = {**current_model_as_dict, **model_as_dict, cls.valid_since_utc.name: now,
                          cls.valid_until_utc.name: None}
-        cls.deserialize_insert(model_as_dict)
+        cls.deserialize_insert(model_as_dict, should_increment=False)  # TODO Only to remove dot notation
         cls.__collection__.insert_one(model_as_dict)
 
         model_as_dict_keys[cls.valid_until_utc.name] = None

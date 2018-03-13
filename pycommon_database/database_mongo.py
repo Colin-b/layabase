@@ -820,9 +820,9 @@ class CRUDModel:
         return errors
 
     @classmethod
-    def deserialize_insert(cls, model_as_dict: dict):
+    def _remove_dot_notation(cls, model_as_dict: dict):
         """
-        Update this model dictionary by ensuring that it contains only valid Mongo values.
+        Update model_as_dict so that it does not contains dot notation fields.
         """
         field_names = [field.name for field in cls.__fields__]
         unknown_fields = [field_name for field_name in model_as_dict if field_name not in field_names]
@@ -835,9 +835,16 @@ class CRUDModel:
             else:
                 logger.warning(f'Skipping unknown field {unknown_field}.')
 
+    @classmethod
+    def deserialize_insert(cls, model_as_dict: dict, should_increment: bool=True):
+        """
+        Update this model dictionary by ensuring that it contains only valid Mongo values.
+        """
+        cls._remove_dot_notation(model_as_dict)
+
         for field in cls.__fields__:
             field.deserialize_insert(model_as_dict)
-            if field.should_auto_increment:
+            if should_increment and field.should_auto_increment:
                 model_as_dict[field.name] = cls._increment(field.get_counter_name(model_as_dict))
 
     @classmethod
@@ -920,11 +927,13 @@ class CRUDModel:
             else:
                 logger.warning(f'Skipping unknown field {unknown_field}.')
 
+        model_as_dict_without_dot_notation = {**model_as_dict, **dot_model_as_dict}
         # Deserialize dot notation values
         for field in [field for field in cls.__fields__ if field.name in dot_model_as_dict]:
-            field.deserialize_update(dot_model_as_dict)
+            # Ensure that every provided field will be provided as deserialization might rely on another field
+            field.deserialize_update(model_as_dict_without_dot_notation)
             # Put back deserialized values as dot notation fields
-            for inner_field_name, value in dot_model_as_dict[field.name].items():
+            for inner_field_name, value in model_as_dict_without_dot_notation[field.name].items():
                 model_as_dict[f'{field.name}.{inner_field_name}'] = value
 
         updated_fields = [field for field in cls.__fields__ if field.name in model_as_dict or field.is_primary_key]
