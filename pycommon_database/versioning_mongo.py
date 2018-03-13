@@ -54,7 +54,6 @@ class VersionedCRUDModel(CRUDModel):
         now = datetime.datetime.utcnow()
 
         # Update rev_to
-        model_as_dict_keys.pop(cls.valid_until_utc.name)
         cls.__collection__.update_one(model_as_dict_keys, {'$set': {cls.valid_until_utc.name: now}})
 
         # Insert new row
@@ -64,7 +63,6 @@ class VersionedCRUDModel(CRUDModel):
         cls.deserialize_insert(model_as_dict, should_increment=False)  # TODO Only to remove dot notation
         cls.__collection__.insert_one(model_as_dict)
 
-        model_as_dict_keys[cls.valid_until_utc.name] = None
         return previous_model_as_dict, cls.__collection__.find_one(model_as_dict_keys)
 
     @classmethod
