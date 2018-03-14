@@ -1081,11 +1081,6 @@ class CRUDModel:
         return namespace.model(cls.__name__, cls._flask_restplus_fields(namespace))
 
     @classmethod
-    def get_audit_response_model(cls, namespace):
-        if cls.audit_model:
-            return namespace.model('Audit' + cls.__name__, cls.audit_model._flask_restplus_fields(namespace))
-
-    @classmethod
     def _flask_restplus_fields(cls, namespace) -> dict:
         return {field.name: cls._to_flask_restplus_field(namespace, field) for field in cls.__fields__}
 

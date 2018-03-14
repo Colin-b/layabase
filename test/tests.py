@@ -2930,15 +2930,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.first_key': EnumTest.Value1,
             'dict_field.second_key': 1,
         })
-
-        time.sleep(1)
         self.TestVersionedController.put({
             'key': 'first',
             'dict_field.first_key': EnumTest.Value2,
         })
-
         before_delete = 2
-        time.sleep(1)
         self.TestVersionedController.delete({
             'key': 'first',
         })
@@ -2987,15 +2983,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.first_key': EnumTest.Value1,
             'dict_field.second_key': 1,
         })
-
         before_update = 1
-        time.sleep(1)
         self.TestVersionedController.put({
             'key': 'first',
             'dict_field.first_key': EnumTest.Value2,
         })
-
-        time.sleep(1)
         self.TestVersionedController.delete({
             'key': 'first',
         })
@@ -3044,8 +3036,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.first_key': EnumTest.Value1,
             'dict_field.second_key': 1,
         })
-
-        time.sleep(1)
         self.TestVersionedController.put({
             'key': 'first',
             'dict_field.first_key': EnumTest.Value2,
@@ -3090,9 +3080,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.first_key': EnumTest.Value1,
             'dict_field.second_key': 1,
         })
-
         before_update = 1
-        time.sleep(1)
         self.TestVersionedController.put({
             'key': 'first',
             'dict_field.first_key': EnumTest.Value2,
@@ -3156,7 +3144,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.second_key': 1,
         })
         before_insert = 1
-        time.sleep(1)
         self.TestVersionedController.post({
             'key': 'second',
             'dict_field.first_key': EnumTest.Value1,
@@ -3201,7 +3188,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.second_key': 1,
         })
         before_insert = 6
-        time.sleep(1)
         self.TestVersionedController.post({
             'key': '5',
             'dict_field.first_key': EnumTest.Value1,
@@ -5595,6 +5581,9 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     class TestEnumController(database.CRUDController):
         pass
 
+    class TestVersionedController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -5602,6 +5591,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         cls._db = database.load('mongomock', cls._create_models)
         cls.TestController.namespace(TestAPI)
         cls.TestEnumController.namespace(TestAPI)
+        cls.TestVersionedController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -5620,10 +5610,15 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
             enum_fld = database_mongo.Column(EnumTest)
 
+        class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name', audit=True):
+            key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            enum_fld = database_mongo.Column(EnumTest)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestEnumController.model(TestEnumModel)
-        return [TestModel, TestEnumModel]
+        cls.TestVersionedController.model(TestVersionedModel)
+        return [TestModel, TestEnumModel, TestVersionedModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -5640,30 +5635,52 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
 
     def test_get_parser_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-                'limit',
-                'offset',
-            ],
-            [arg.name for arg in self.TestController.query_get_parser.args]
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
+            },
+            parser_types(self.TestController.query_get_parser)
+        )
+
+    def test_get_versioned_audit_parser_fields(self):
+        self.assertEqual(
+            {
+                'audit_action': str,
+                'audit_date_utc': inputs.datetime_from_iso8601,
+                'audit_user': str,
+                'limit': inputs.positive,
+                'offset': inputs.natural,
+                'revision': int,
+            },
+            parser_types(self.TestVersionedController.query_get_audit_parser)
         )
 
     def test_delete_parser_fields_order(self):
         self.assertEqual(
-            [
-                'key',
-                'mandatory',
-                'optional',
-            ],
-            [arg.name for arg in self.TestController.query_delete_parser.args]
+            {
+                'key': str,
+                'mandatory': int,
+                'optional': str,
+            },
+            parser_types(self.TestController.query_delete_parser)
         )
 
     def test_post_model_fields_order(self):
         self.assertEqual(
             {'key': 'String', 'mandatory': 'Integer', 'optional': 'String'},
             self.TestController.json_post_model.fields_flask_type
+        )
+
+    def test_versioned_audit_get_response_model_fields(self):
+        self.assertEqual(
+            {'audit_action': 'String',
+             'audit_date_utc': 'DateTime',
+             'audit_user': 'String',
+             'revision': 'Integer'},
+            self.TestVersionedController.get_audit_response_model.fields_flask_type
         )
 
     def test_put_model_fields_order(self):
@@ -5801,6 +5818,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'value1',
                     'mandatory': 1,
                     'optional': None,
+                    'revision': 1,
                 },
             ]
         )
@@ -5822,6 +5840,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
+                    'revision': 1,
                 },
             ]
         )
@@ -5842,6 +5861,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
+                    'revision': 1,
                 },
             ]
         )
@@ -5854,7 +5874,6 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'enum_fld': EnumTest.Value1,
             })
         )
-        time.sleep(1)
         self.assertEqual(
             (
                 {'enum_fld': 'Value1', 'key': 'my_key'},
@@ -5873,6 +5892,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Update',
@@ -5880,6 +5900,55 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'audit_user': '',
                     'enum_fld': 'Value2',
                     'key': 'my_key',
+                    'revision': 2,
+                },
+            ]
+        )
+
+    def test_versioned_audit_after_post_put_delete_rollback(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.TestVersionedController.put({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value2,
+        })
+        self.TestVersionedController.delete({
+            'key': 'my_key',
+        })
+        self.TestVersionedController.rollback_to({
+            'revision': 1
+        })
+        self._check_audit(self.TestVersionedController,
+            [
+                {
+                    'audit_action': 'Insert',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'revision': 1,
+                    'table_name': 'versioned_table_name',
+                },
+                {
+                    'audit_action': 'Update',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'revision': 2,
+                    'table_name': 'versioned_table_name',
+                },
+                {
+                    'audit_action': 'Delete',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'revision': 3,
+                    'table_name': 'versioned_table_name',
+                },
+                {
+                    'audit_action': 'Rollback',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'revision': 4,
+                    'table_name': 'versioned_table_name',
                 },
             ]
         )
@@ -5892,7 +5961,6 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'enum_fld': EnumTest.Value1,
             })
         )
-        time.sleep(1)
         self.assertEqual(1,
             self.TestEnumController.delete({
                 'enum_fld': EnumTest.Value1,
@@ -5906,6 +5974,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Delete',
@@ -5913,6 +5982,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
+                    'revision': 2,
                 },
             ]
         )
@@ -5934,6 +6004,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
+                    'revision': 1,
                 },
             ]
         )
@@ -5965,6 +6036,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 }
             ]
         )
@@ -5987,6 +6059,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 }
             ]
         )
@@ -6011,6 +6084,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 },
             ]
         )
@@ -6035,6 +6109,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 },
             ]
         )
@@ -6061,6 +6136,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
             ]
         )
@@ -6091,6 +6167,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Insert',
@@ -6099,6 +6176,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
             ]
         )
@@ -6131,6 +6209,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Insert',
@@ -6139,6 +6218,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
             ]
         )
@@ -6149,13 +6229,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        time.sleep(1)
         self.assertEqual(
             [
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
@@ -6170,6 +6248,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Insert',
@@ -6178,6 +6257,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
             ]
         )
@@ -6188,7 +6268,6 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.assertEqual(
             (
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
@@ -6210,6 +6289,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Update',
@@ -6218,6 +6298,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 2,
                 },
             ]
         )
@@ -6228,7 +6309,6 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'optional': 'my_value',
@@ -6243,6 +6323,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Update',
@@ -6251,6 +6332,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 2,
                 },
             ]
         )
@@ -6261,13 +6343,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        time.sleep(1)
         self.assertEqual(1, self.TestController.delete({'key': 'my_key1'}))
         self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
                          self.TestController.get({}))
@@ -6280,6 +6360,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Insert',
@@ -6288,6 +6369,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
                 {
                     'audit_action': 'Delete',
@@ -6296,6 +6378,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 3,
                 },
             ]
         )
@@ -6306,12 +6389,10 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 2,
         })
-        time.sleep(1)
         self.TestController.delete({'key': 'my_key1'})
         self._check_audit(self.TestController,
             [
@@ -6322,6 +6403,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Update',
@@ -6330,6 +6412,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 2,
                     'optional': 'my_value1',
+                    'revision': 2,
                 },
                 {
                     'audit_action': 'Delete',
@@ -6338,6 +6421,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 2,
                     'optional': 'my_value1',
+                    'revision': 3,
                 },
             ],
             filter_audit={'key': 'my_key1'}
@@ -6349,12 +6433,10 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 2,
         })
-        time.sleep(1)
         self.TestController.delete({'key': 'my_key1'})
         self._check_audit(self.TestController,
             [
@@ -6365,6 +6447,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 2,
                     'optional': 'my_value1',
+                    'revision': 2,
                 },
             ],
             filter_audit={'audit_action': 'Update'}
@@ -6376,12 +6459,10 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 2,
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 1,  # Put back initial value
@@ -6395,6 +6476,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Update',
@@ -6403,6 +6485,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 2,
                     'optional': 'my_value1',
+                    'revision': 2,
                 },
                 {
                     'audit_action': 'Update',
@@ -6411,6 +6494,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 3,
                 },
             ]
         )
@@ -6426,7 +6510,6 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        time.sleep(1)
         self.assertEqual(2, self.TestController.delete({}))
         self.assertEqual([], self.TestController.get({}))
         self._check_audit(self.TestController,
@@ -6438,6 +6521,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'Insert',
@@ -6446,6 +6530,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
                 {
                     'audit_action': 'Delete',
@@ -6454,6 +6539,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 3,
                 },
                 {
                     'audit_action': 'Delete',
@@ -6462,6 +6548,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 4,
                 },
             ]
         )
@@ -6489,6 +6576,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 'optional': str,
                 'limit': inputs.positive,
                 'offset': inputs.natural,
+                'revision': int,
             },
             parser_types(self.TestController.query_get_audit_parser))
         self._check_audit(self.TestController, [])
@@ -6522,7 +6610,8 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
              'audit_user': 'String',
              'key': 'String',
              'mandatory': 'Integer',
-             'optional': 'String'},
+             'optional': 'String',
+             'revision': 'Integer'},
             self.TestController.get_audit_response_model.fields_flask_type)
         self._check_audit(self.TestController, [])
 

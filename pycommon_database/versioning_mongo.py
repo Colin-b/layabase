@@ -200,4 +200,6 @@ class VersionedCRUDModel(CRUDModel):
         if previously_expired_models:
             cls.__collection__.insert_many(previously_expired_models)
 
+        if cls.audit_model:
+            cls.audit_model.audit_rollback(new_revision)
         return len(previously_expired_models) + nb_removed

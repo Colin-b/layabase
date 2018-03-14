@@ -124,7 +124,7 @@ class CRUDController:
         cls.json_put_model = cls._model.json_put_model(namespace)
         cls.get_response_model = cls._model.get_response_model(namespace)
         cls.get_history_response_model = cls._model.get_history_response_model(namespace)
-        cls.get_audit_response_model = cls._model.get_audit_response_model(namespace)
+        cls.get_audit_response_model = cls._model.audit_model.get_response_model(namespace) if cls._model.audit_model else None
         cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),
                                                                    cls._model.flask_restplus_description_fields())
 

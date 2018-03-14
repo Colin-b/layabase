@@ -25,6 +25,10 @@ def _create_from(model):
         audit_action = Column(Enum('I', 'U', 'D', name='action_type'))
 
         @classmethod
+        def get_response_model(cls, namespace):
+            return namespace.model('Audit' + cls._model.__name__, cls._flask_restplus_fields())
+
+        @classmethod
         def audit_add(cls, model_as_dict: dict):
             """
             :param model_as_dict: Dictionary that was properly inserted.
