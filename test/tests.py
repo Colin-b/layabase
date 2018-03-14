@@ -2870,16 +2870,16 @@ class MongoCRUDControllerTest(unittest.TestCase):
             [
                 {
                     'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                },
+                {
+                    'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'valid_since_revision': 1,
                     'valid_until_revision': 2
                 },
-                {
-                    'key': 'first',
-                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_revision': 2,
-                    'valid_until_revision': None
-                }
             ],
             self.TestVersionedController.get_history({})
         )
@@ -2890,7 +2890,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
                     'valid_since_revision': 2,
                     'valid_until_revision': None
-                }
+                },
             ],
             self.TestVersionedController.get({})
         )
@@ -2915,16 +2915,16 @@ class MongoCRUDControllerTest(unittest.TestCase):
             [
                 {
                     'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': 3
+                },
+                {
+                    'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'valid_since_revision': 1,
                     'valid_until_revision': 2
                 },
-                {
-                    'key': 'first',
-                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_revision': 2,
-                    'valid_until_revision': 3
-                }
             ],
             self.TestVersionedController.get_history({})
         )
@@ -2955,6 +2955,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
             [
                 {
                     'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': 3
+                },
+                {
+                    'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'valid_since_revision': 1,
                     'valid_until_revision': 2
@@ -2962,15 +2968,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_revision': 2,
-                    'valid_until_revision': 3
-                },
-                {
-                    'key': 'first',
-                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
                     'valid_since_revision': 4,
                     'valid_until_revision': None
-                }
+                },
             ],
             self.TestVersionedController.get_history({})
         )
@@ -2981,7 +2981,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
                     'valid_since_revision': 4,
                     'valid_until_revision': None
-                }
+                },
             ],
             self.TestVersionedController.get({})
         )
@@ -3008,12 +3008,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
             [
                 {
                     'key': 'first',
-                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
-                    'valid_since_revision': 1,
-                    'valid_until_revision': 2
-                },
-                {
-                    'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
                     'valid_since_revision': 2,
                     'valid_until_revision': 3
@@ -3021,9 +3015,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'valid_since_revision': 4,
                     'valid_until_revision': None
-                }
+                },
             ],
             self.TestVersionedController.get_history({})
         )
@@ -3034,7 +3034,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'valid_since_revision': 4,
                     'valid_until_revision': None
-                }
+                },
             ],
             self.TestVersionedController.get({})
         )
@@ -3058,16 +3058,16 @@ class MongoCRUDControllerTest(unittest.TestCase):
             [
                 {
                     'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                },
+                {
+                    'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'valid_since_revision': 1,
                     'valid_until_revision': 2
                 },
-                {
-                    'key': 'first',
-                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_revision': 2,
-                    'valid_until_revision': None
-                }
             ],
             self.TestVersionedController.get_history({})
         )
@@ -3103,16 +3103,16 @@ class MongoCRUDControllerTest(unittest.TestCase):
             [
                 {
                     'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                },
+                {
+                    'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'valid_since_revision': 1,
                     'valid_until_revision': 2
                 },
-                {
-                    'key': 'first',
-                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_revision': 2,
-                    'valid_until_revision': None
-                }
             ],
             self.TestVersionedController.get_history({})
         )
@@ -3123,7 +3123,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
                     'valid_since_revision': 2,
                     'valid_until_revision': None
-                }
+                },
             ],
             self.TestVersionedController.get({})
         )
@@ -3237,10 +3237,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             [
                 {
-                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'dict_field': {'first_key': 'Value2', 'second_key': 2},
                     'key': '1',
-                    'valid_since_revision': 1,
-                    'valid_until_revision': 3
+                    'valid_since_revision': 8,
+                    'valid_until_revision': 9
                 },
                 {
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
@@ -3249,10 +3249,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'valid_until_revision': 4
                 },
                 {
-                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
                     'key': '1',
-                    'valid_since_revision': 3,
-                    'valid_until_revision': 8
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 3
                 },
                 {
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
@@ -3273,10 +3273,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'valid_until_revision': 9
                 },
                 {
-                    'dict_field': {'first_key': 'Value2', 'second_key': 2},
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
                     'key': '1',
-                    'valid_since_revision': 8,
-                    'valid_until_revision': 9
+                    'valid_since_revision': 3,
+                    'valid_until_revision': 8
                 },
                 {
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},

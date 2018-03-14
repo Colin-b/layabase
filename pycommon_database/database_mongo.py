@@ -972,8 +972,8 @@ class CRUDModel:
         if not previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict_keys)
 
-        cls.__collection__.update_one(model_as_dict_keys, {'$set': model_as_dict})
-        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        new_model_as_dict = cls.__collection__.find_one_and_update(model_as_dict_keys, {'$set': model_as_dict},
+                                                                   return_document=pymongo.ReturnDocument.AFTER)
         if cls.audit_model:
             cls.audit_model.audit_update(new_model_as_dict)
         return previous_model_as_dict, new_model_as_dict

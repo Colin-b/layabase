@@ -1,5 +1,6 @@
 import copy
 from flask_restplus import inputs
+import pymongo
 from typing import List
 
 from pycommon_database.database_mongo import CRUDModel, Column, IndexType
@@ -54,23 +55,20 @@ class VersionedCRUDModel(CRUDModel):
     def _update_one(cls, model_as_dict: dict) -> (dict, dict):
         model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
         model_as_dict_keys[cls.valid_until_revision.name] = None
-        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
         if not previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict_keys)
 
         revision = cls._increment(cls.valid_since_revision.name)
 
-        # Update rev_to
-        cls.__collection__.update_one(model_as_dict_keys, {'$set': {cls.valid_until_revision.name: revision}})
+        # Set previous version as expired (insert previous as expired)
+        cls.__collection__.insert_one({**previous_model_as_dict, cls.valid_until_revision.name: revision})
 
-        # Insert new row
-        current_model_as_dict = copy.deepcopy(previous_model_as_dict)
-        model_as_dict = {**current_model_as_dict, **model_as_dict, cls.valid_since_revision.name: revision,
-                         cls.valid_until_revision.name: None}
-        cls.deserialize_insert(model_as_dict, should_increment=False)  # TODO Only to remove dot notation
-        cls.__collection__.insert_one(model_as_dict)
-
-        new_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
+        # Update valid version (update previous)
+        model_as_dict[cls.valid_since_revision.name] = revision
+        model_as_dict[cls.valid_until_revision.name] = None
+        new_model_as_dict = cls.__collection__.find_one_and_update(model_as_dict_keys, {'$set': model_as_dict},
+                                                                   return_document=pymongo.ReturnDocument.AFTER)
         if cls.audit_model:
             cls.audit_model.audit_update(revision)
         return previous_model_as_dict, new_model_as_dict
