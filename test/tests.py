@@ -2516,6 +2516,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestVersionedController(database.CRUDController):
         pass
 
+    class TestVersionedUniqueNonPrimaryController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2532,6 +2535,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIdController.namespace(TestAPI)
         cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
+        cls.TestVersionedUniqueNonPrimaryController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -2606,6 +2610,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }, is_required=True)
 
+        class TestVersionedUniqueNonPrimaryModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_uni_table_name'):
+            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
@@ -2618,9 +2626,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIdController.model(TestIdModel)
         cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
         cls.TestVersionedController.model(TestVersionedModel)
+        cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
         return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestIdModel, TestUnvalidatedListAndDictModel,
-                TestVersionedModel]
+                TestVersionedModel, TestVersionedUniqueNonPrimaryModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -3278,6 +3287,17 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ],
             self.TestVersionedController.get_history({})
         )
+
+    def test_versioning_handles_unique_non_primary(self):
+        self.TestVersionedUniqueNonPrimaryController.post({
+            'unique': 1,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestVersionedUniqueNonPrimaryController.post({
+                'unique': 1,
+            })
+        self.assertEqual({'': ['This item already exists.']}, cm.exception.errors)
+        self.assertEqual({'key': 2, 'unique': 1, 'valid_since_revision': 2, 'valid_until_revision': None}, cm.exception.received_data)
 
     def test_post_id_is_valid(self):
         self.assertEqual(
