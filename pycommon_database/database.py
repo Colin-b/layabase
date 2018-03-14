@@ -77,6 +77,7 @@ class CRUDController:
     query_get_parser = None
     query_delete_parser = None
     query_rollback_parser = None
+    query_get_history_parser = None
     query_get_audit_parser = None
 
     # CRUD model definition (instead of request parsers)
@@ -85,6 +86,7 @@ class CRUDController:
 
     # CRUD response marshallers
     get_response_model = None
+    get_history_response_model = None
     get_audit_response_model = None
     get_model_description_response_model = None
 
@@ -104,6 +106,7 @@ class CRUDController:
         cls.query_get_parser = cls._model.query_get_parser()
         cls.query_delete_parser = cls._model.query_delete_parser()
         cls.query_rollback_parser = cls._model.query_rollback_parser()
+        cls.query_get_history_parser = cls._model.query_get_history_parser()
         cls.query_get_audit_parser = cls._model.audit_model.query_get_parser() if cls._model.audit_model else None
         cls._model_description_dictionary = cls._model.description_dictionary()
 
@@ -120,6 +123,7 @@ class CRUDController:
         cls.json_post_model = cls._model.json_post_model(namespace)
         cls.json_put_model = cls._model.json_put_model(namespace)
         cls.get_response_model = cls._model.get_response_model(namespace)
+        cls.get_history_response_model = cls._model.get_history_response_model(namespace)
         cls.get_audit_response_model = cls._model.get_audit_response_model(namespace)
         cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),
                                                                    cls._model.flask_restplus_description_fields())
@@ -219,3 +223,12 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         return cls._model.rollback_to(**request_arguments)
+
+    @classmethod
+    def get_history(cls, request_arguments: dict) -> List[dict]:
+        """
+        Return all models formatted as a list of dictionaries.
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+        return cls._model.get_history(**request_arguments)

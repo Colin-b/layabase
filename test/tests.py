@@ -2861,7 +2861,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'valid_until_utc': None
                 }
             ],
-            self.TestVersionedController.get({})
+            self.TestVersionedController.get_history({})
         )
         self._assert_regex(
             [
@@ -2872,7 +2872,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'valid_until_utc': None
                 }
             ],
-            self.TestVersionedController.get({'valid_until_utc': None})
+            self.TestVersionedController.get({})
         )
 
     def test_delete_versioning_is_valid(self):
@@ -2906,11 +2906,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'valid_until_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d'
                 }
             ],
-            self.TestVersionedController.get({})
+            self.TestVersionedController.get_history({})
         )
         self.assertEqual(
             [],
-            self.TestVersionedController.get({'valid_until_utc': None})
+            self.TestVersionedController.get({})
         )
 
     def test_rollback_deleted_versioning_is_valid(self):

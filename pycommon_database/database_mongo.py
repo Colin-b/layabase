@@ -656,6 +656,10 @@ class CRUDModel:
         return [cls.serialize(model) for model in models]  # Convert Cursor to dict
 
     @classmethod
+    def get_history(cls, **model_to_query) -> List[dict]:
+        return cls.get_all(**model_to_query)
+
+    @classmethod
     def rollback_to(cls, **model_to_query) -> int:
         """
         All records matching the query and valid at specified validity will be considered as valid.
@@ -995,6 +999,13 @@ class CRUDModel:
         return query_get_parser
 
     @classmethod
+    def query_get_history_parser(cls):
+        query_get_parser = cls._query_parser()
+        query_get_parser.add_argument('limit', type=inputs.positive)
+        query_get_parser.add_argument('offset', type=inputs.natural)
+        return query_get_parser
+
+    @classmethod
     def query_delete_parser(cls):
         return cls._query_parser()
 
@@ -1021,20 +1032,23 @@ class CRUDModel:
                 f'{prefix}{field.name}',
                 required=field.is_required,
                 type=_get_python_type(field.list_item_column),
-                action='append'
+                action='append',
+                store_missing=not field.allow_none_as_filter
             )
         elif field.field_type == list:
             query_parser.add_argument(
                 f'{prefix}{field.name}',
                 required=field.is_required,
                 type=str,  # Consider anything as valid, thus consider as str in query
-                action='append'
+                action='append',
+                store_missing=not field.allow_none_as_filter
             )
         else:
             query_parser.add_argument(
                 f'{prefix}{field.name}',
                 required=field.is_required,
-                type=_get_python_type(field)
+                type=_get_python_type(field),
+                store_missing=not field.allow_none_as_filter
             )
 
     @classmethod
@@ -1056,6 +1070,10 @@ class CRUDModel:
 
     @classmethod
     def get_response_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def get_history_response_model(cls, namespace):
         return cls._model_with_all_fields(namespace)
 
     @classmethod

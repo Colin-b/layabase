@@ -39,6 +39,10 @@ class CRUDModel:
         return cls.schema().dump(all_models, many=True).data
 
     @classmethod
+    def get_history(cls, **model_to_query) -> List[dict]:
+        return cls.get_all(**model_to_query)
+
+    @classmethod
     def rollback_to(cls, **model_to_query) -> int:
         """
         All records matching the query and valid at specified validity will be considered as valid.
@@ -252,6 +256,14 @@ class CRUDModel:
         return query_get_parser
 
     @classmethod
+    def query_get_history_parser(cls):
+        query_get_parser = cls._query_parser()
+        query_get_parser.add_argument('limit', type=inputs.positive)
+        if _supports_offset(cls.metadata.bind.url.drivername):
+            query_get_parser.add_argument('offset', type=inputs.natural)
+        return query_get_parser
+
+    @classmethod
     def query_delete_parser(cls):
         return cls._query_parser()
 
@@ -295,6 +307,10 @@ class CRUDModel:
 
     @classmethod
     def get_response_model(cls, namespace):
+        return cls._model_with_all_fields(namespace)
+
+    @classmethod
+    def get_history_response_model(cls, namespace):
         return cls._model_with_all_fields(namespace)
 
     @classmethod

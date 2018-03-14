@@ -22,13 +22,6 @@ class VersionedCRUDModel(CRUDModel):
         return namespace.model(f'{cls.__name__}_Versioned', all_fields)
 
     @classmethod
-    def json_put_model(cls, namespace):
-        all_fields = cls._flask_restplus_fields(namespace)
-        del all_fields[cls.valid_since_utc.name]
-        del all_fields[cls.valid_until_utc.name]
-        return namespace.model(f'{cls.__name__}_Versioned', all_fields)
-
-    @classmethod
     def _insert_one(cls, model_as_dict: dict) -> dict:
         now = datetime.datetime.utcnow()
         model_as_dict[cls.valid_since_utc.name] = now
@@ -47,6 +40,13 @@ class VersionedCRUDModel(CRUDModel):
         cls.__collection__.insert_many(models_as_list_of_dict)
         if cls.audit_model:
             cls.audit_model.audit_add(now)
+
+    @classmethod
+    def json_put_model(cls, namespace):
+        all_fields = cls._flask_restplus_fields(namespace)
+        del all_fields[cls.valid_since_utc.name]
+        del all_fields[cls.valid_until_utc.name]
+        return namespace.model(f'{cls.__name__}_Versioned', all_fields)
 
     @classmethod
     def _update_one(cls, model_as_dict: dict) -> (dict, dict):
@@ -74,11 +74,23 @@ class VersionedCRUDModel(CRUDModel):
         return previous_model_as_dict, new_model_as_dict
 
     @classmethod
+    def query_delete_parser(cls):
+        query_delete_parser = super().query_delete_parser()
+        query_delete_parser.remove_argument(cls.valid_since_utc.name)
+        query_delete_parser.remove_argument(cls.valid_until_utc.name)
+        return query_delete_parser
+
+    @classmethod
+    def remove(cls, **model_to_query) -> int:
+        model_to_query.pop(cls.valid_since_utc.name, None)
+        model_to_query[cls.valid_until_utc.name] = None
+        return super().remove(**model_to_query)
+
+    @classmethod
     def _delete_many(cls, model_to_query: dict) -> int:
         now = datetime.datetime.utcnow()
         if cls.audit_model:
             cls.audit_model.audit_remove(now)
-        model_to_query[cls.valid_until_utc.name] = None
         return cls.__collection__.update_many(model_to_query, {'$set': {cls.valid_until_utc.name: now}}).modified_count
 
     @classmethod
@@ -106,6 +118,45 @@ class VersionedCRUDModel(CRUDModel):
 
         del model_to_query['validity']
         return validity
+
+    @classmethod
+    def query_get_parser(cls):
+        query_get_parser = super().query_get_parser()
+        query_get_parser.remove_argument(cls.valid_since_utc.name)
+        query_get_parser.remove_argument(cls.valid_until_utc.name)
+        return query_get_parser
+
+    @classmethod
+    def get_response_model(cls, namespace):
+        all_fields = cls._flask_restplus_fields(namespace)
+        del all_fields[cls.valid_since_utc.name]
+        del all_fields[cls.valid_until_utc.name]
+        return namespace.model(f'{cls.__name__}_Versioned', all_fields)
+
+    @classmethod
+    def get(cls, **model_to_query) -> dict:
+        """
+        Return valid model corresponding to query.
+        """
+        model_to_query.pop(cls.valid_since_utc.name, None)
+        model_to_query[cls.valid_until_utc.name] = None
+        return super().get(**model_to_query)
+
+    @classmethod
+    def get_all(cls, **model_to_query) -> List[dict]:
+        """
+        Return all valid models corresponding to query.
+        """
+        model_to_query.pop(cls.valid_since_utc.name, None)
+        model_to_query[cls.valid_until_utc.name] = None
+        return super().get_all(**model_to_query)
+
+    @classmethod
+    def get_history(cls, **model_to_query) -> List[dict]:
+        """
+        Return all models corresponding to query.
+        """
+        return super().get_all(**model_to_query)
 
     @classmethod
     def rollback_to(cls, **model_to_query) -> int:
