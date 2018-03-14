@@ -2600,7 +2600,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             _id = database_mongo.Column(is_primary_key=True)
 
         class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name'):
-            key = database_mongo.Column(is_primary_key=True)
+            key = database_mongo.Column(is_primary_key=True, index_type=database_mongo.IndexType.Unique)
             dict_field = database_mongo.DictColumn({
                 'first_key': database_mongo.Column(EnumTest, is_nullable=False),
                 'second_key': database_mongo.Column(int, is_nullable=False),
@@ -2795,12 +2795,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
                          f'{expected}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
 
     def test_post_versioning_is_valid(self):
-        self._assert_regex(
+        self.assertEqual(
             {
                 'key': 'first',
                 'dict_field': {'first_key': 'Value1', 'second_key': 1},
-                'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                'valid_until_utc': None
+                'valid_since_revision': 1,
+                'valid_until_revision': None
             },
             self.TestVersionedController.post({
                 'key': 'first',
@@ -2808,13 +2808,24 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_field.second_key': 1,
             })
         )
-        self._assert_regex(
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 1,
+                    'valid_until_revision': None
+                }
+            ],
+            self.TestVersionedController.get_history({})
+        )
+        self.assertEqual(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': None
                 }
             ],
             self.TestVersionedController.get({})
@@ -2826,19 +2837,19 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.first_key': EnumTest.Value1,
             'dict_field.second_key': 1,
         })
-        self._assert_regex(
+        self.assertEqual(
             (
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 1,
+                    'valid_until_revision': None
                 },
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
                 }
             ),
             self.TestVersionedController.put({
@@ -2846,30 +2857,30 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_field.first_key': EnumTest.Value2,
             })
         )
-        self._assert_regex(
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d'
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
                 },
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
                 }
             ],
             self.TestVersionedController.get_history({})
         )
-        self._assert_regex(
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
                 }
             ],
             self.TestVersionedController.get({})
@@ -2891,19 +2902,19 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'first',
             })
         )
-        self._assert_regex(
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d'
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
                 },
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d'
+                    'valid_since_revision': 2,
+                    'valid_until_revision': 3
                 }
             ],
             self.TestVersionedController.get_history({})
@@ -2926,25 +2937,48 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.first_key': EnumTest.Value2,
         })
 
-        before_delete = datetime.datetime.utcnow()
+        before_delete = 2
         time.sleep(1)
         self.TestVersionedController.delete({
             'key': 'first',
         })
         self.assertEqual(
             1,
-            self.TestVersionedController.rollback_to({'validity': before_delete})
+            self.TestVersionedController.rollback_to({'revision': before_delete})
         )
-        self._assert_regex(
+        self.assertEqual(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': 3
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 4,
+                    'valid_until_revision': None
+                }
+            ],
+            self.TestVersionedController.get_history({})
+        )
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 4,
+                    'valid_until_revision': None
                 }
             ],
-            self.TestVersionedController.get({'valid_until_utc': None})
+            self.TestVersionedController.get({})
         )
 
     def test_rollback_before_update_deleted_versioning_is_valid(self):
@@ -2954,7 +2988,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.second_key': 1,
         })
 
-        before_update = datetime.datetime.utcnow()
+        before_update = 1
         time.sleep(1)
         self.TestVersionedController.put({
             'key': 'first',
@@ -2967,18 +3001,41 @@ class MongoCRUDControllerTest(unittest.TestCase):
         })
         self.assertEqual(
             1,
-            self.TestVersionedController.rollback_to({'validity': before_update})
+            self.TestVersionedController.rollback_to({'revision': before_update})
         )
-        self._assert_regex(
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value1', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': 3
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 4,
+                    'valid_until_revision': None
                 }
             ],
-            self.TestVersionedController.get({'valid_until_utc': None})
+            self.TestVersionedController.get_history({})
+        )
+        self.assertEqual(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 4,
+                    'valid_until_revision': None
+                }
+            ],
+            self.TestVersionedController.get({})
         )
 
     def test_rollback_already_valid_versioning_is_valid(self):
@@ -2996,18 +3053,35 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         self.assertEqual(
             0,
-            self.TestVersionedController.rollback_to({'validity': datetime.datetime.utcnow()})
+            self.TestVersionedController.rollback_to({'revision': 2})
         )
-        self._assert_regex(
+        self.assertEqual(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                }
+            ],
+            self.TestVersionedController.get_history({})
+        )
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
                 }
             ],
-            self.TestVersionedController.get({'valid_until_utc': None})
+            self.TestVersionedController.get({})
         )
 
     def test_rollback_unknown_criteria_is_valid(self):
@@ -3017,7 +3091,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.second_key': 1,
         })
 
-        before_update = datetime.datetime.utcnow()
+        before_update = 1
         time.sleep(1)
         self.TestVersionedController.put({
             'key': 'first',
@@ -3026,54 +3100,197 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         self.assertEqual(
             0,
-            self.TestVersionedController.rollback_to({'validity': before_update, 'key': 'unknown'})
+            self.TestVersionedController.rollback_to({'revision': before_update, 'key': 'unknown'})
         )
-        self._assert_regex(
+        self.assertEqual(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                }
+            ],
+            self.TestVersionedController.get_history({})
+        )
+        self.assertEqual(
             [
                 {
                     'key': 'first',
                     'dict_field': {'first_key': 'Value2', 'second_key': 1},
-                    'valid_since_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
-                    'valid_until_utc': None
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
                 }
             ],
-            self.TestVersionedController.get({'valid_until_utc': None})
+            self.TestVersionedController.get({})
         )
 
-    def test_rollback_without_validity_is_invalid(self):
+    def test_rollback_without_revision_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestVersionedController.rollback_to({'key': 'unknown'})
-        self.assertEqual({'validity': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'revision': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({'key': 'unknown'}, cm.exception.received_data)
 
-    def test_rollback_with_non_date_validity_is_invalid(self):
+    def test_rollback_with_non_int_revision_is_invalid(self):
         with self.assertRaises(Exception) as cm:
-            self.TestVersionedController.rollback_to({'validity': 'invalid date'})
-        self.assertEqual({'validity': ['Not a valid datetime.']}, cm.exception.errors)
-        self.assertEqual({'validity': 'invalid date'}, cm.exception.received_data)
+            self.TestVersionedController.rollback_to({'revision': 'invalid revision'})
+        self.assertEqual({'revision': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'revision': 'invalid revision'}, cm.exception.received_data)
 
     def test_rollback_without_versioning_is_valid(self):
-        self.assertEqual(0, self.TestController.rollback_to({'validity': 'invalid date'}))
+        self.assertEqual(0, self.TestController.rollback_to({'revision': 'invalid revision'}))
 
-    def test_rollback_with_date_str_validity_is_valid(self):
-        self.assertEqual(0, self.TestVersionedController.rollback_to({'validity': '2017-03-23'}))
+    def test_rollback_with_negative_revision_is_valid(self):
+        self.assertEqual(0, self.TestVersionedController.rollback_to({'revision': -1}))
 
     def test_rollback_before_existing_is_valid(self):
-        before_insert = datetime.datetime.utcnow()
-        time.sleep(1)
         self.TestVersionedController.post({
             'key': 'first',
             'dict_field.first_key': EnumTest.Value1,
             'dict_field.second_key': 1,
         })
+        before_insert = 1
+        time.sleep(1)
+        self.TestVersionedController.post({
+            'key': 'second',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
         self.assertEqual(
             1,
-            self.TestVersionedController.rollback_to({'validity': before_insert})
+            self.TestVersionedController.rollback_to({'revision': before_insert})
         )
-        self._assert_regex(
+        self.assertEqual(
             [
             ],
-            self.TestVersionedController.get({'valid_until_utc': None})
+            self.TestVersionedController.get({'key': 'second'})
+        )
+
+    def test_rollback_multiple_rows_is_valid(self):
+        self.TestVersionedController.post({
+            'key': '1',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersionedController.post({
+            'key': '2',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersionedController.put({
+            'key': '1',
+            'dict_field.first_key': EnumTest.Value2,
+        })
+        self.TestVersionedController.delete({
+            'key': '2',
+        })
+        self.TestVersionedController.post({
+            'key': '3',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersionedController.post({
+            'key': '4',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        before_insert = 6
+        time.sleep(1)
+        self.TestVersionedController.post({
+            'key': '5',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersionedController.put({
+            'key': '1',
+            'dict_field.second_key': 2,
+        })
+        self.assertEqual(
+            2,  # Remove key 5 and Update key 1 (Key 3 and Key 4 unchanged)
+            self.TestVersionedController.rollback_to({'revision': before_insert})
+        )
+        self.assertEqual(
+            [
+                {
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': '3',
+                    'valid_since_revision': 5,
+                    'valid_until_revision': None
+                },
+                {
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': '4',
+                    'valid_since_revision': 6,
+                    'valid_until_revision': None
+                },
+                {
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'key': '1',
+                    'valid_since_revision': 9,
+                    'valid_until_revision': None
+                },
+            ],
+            self.TestVersionedController.get({})
+        )
+        self.maxDiff = None
+        self.assertEqual(
+            [
+                {
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': '1',
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 3
+                },
+                {
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': '2',
+                    'valid_since_revision': 2,
+                    'valid_until_revision': 4
+                },
+                {
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'key': '1',
+                    'valid_since_revision': 3,
+                    'valid_until_revision': 8
+                },
+                {
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': '3',
+                    'valid_since_revision': 5,
+                    'valid_until_revision': None
+                },
+                {
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': '4',
+                    'valid_since_revision': 6,
+                    'valid_until_revision': None
+                },
+                {
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'key': '5',
+                    'valid_since_revision': 7,
+                    'valid_until_revision': 9
+                },
+                {
+                    'dict_field': {'first_key': 'Value2', 'second_key': 2},
+                    'key': '1',
+                    'valid_since_revision': 8,
+                    'valid_until_revision': 9
+                },
+                {
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'key': '1',
+                    'valid_since_revision': 9,
+                    'valid_until_revision': None
+                },
+            ],
+            self.TestVersionedController.get_history({})
         )
 
     def test_post_id_is_valid(self):
@@ -4830,7 +5047,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_field.first_key': str,
                 'dict_field.second_key': int,
                 'key': str,
-                'validity': inputs.datetime_from_iso8601
+                'revision': inputs.positive
              },
             parser_types(self.TestVersionedController.query_rollback_parser))
         self.assertEqual(
@@ -4838,7 +5055,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_field.first_key': 'store',
                 'dict_field.second_key': 'store',
                 'key': 'store',
-                'validity': 'store'
+                'revision': 'store'
             },
             parser_actions(self.TestVersionedController.query_rollback_parser))
 

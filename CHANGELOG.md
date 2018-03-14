@@ -6,7 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 10.0.0 (2018-03-13) ##
+## Version 10.1.0 (2018-03-14) ##
+
+### Enhancements ###
+
+- Mongo versioning now use revision int instead of date-time.
+- Mongo versioning audit is now a single collection referencing table and revision for each audit record.
+
+## Version 10.0.0 (2018-03-14) ##
 
 ### Release notes ###
 
