@@ -34,18 +34,36 @@ class Column:
 
         :param field_type: Python field type. Default to str.
 
-        :param choices: Restrict valid values to this list of value (or a function providing those values).
-        Default to None or the content of the enum if field is an Enum.
-        :param counter_name: Counter name in case of auto incremented field (or a function providing the name).
-        Default to field name.
-        :param default_value: Default value matching type. Default to None.
-        :param description: Field description.
-        :param index_type: Type of index amongst IndexType enum. Default to None.
-        :param allow_none_as_filter: bool value. Default to False.
-        :param is_primary_key: bool value. Default to False.
-        :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
-        :param is_required: bool value. Default to False.
-        :param should_auto_increment: bool value. Default to False. Only valid for int fields.
+        :param choices: Restrict valid values.
+        Should be a list or a function (without parameters) returning a list.
+        Each list item should be of field type.
+        None by default, or in enum values in case of an Enum field.
+        :param counter: Custom counter definition. Only for auto incremented fields.
+        Should be a tuple or a function (without parameters) returning a tuple. Content should be:
+         - Counter name (field name by default), string value.
+         - Counter category (table name by default), string value.
+        :param default_value: Default field value returned to the client if field is not set.
+        Should be of field type or a function (with dictionary as parameter) returning a value of field type.
+        None by default.
+        :param description: Field description used in Swagger and in error messages.
+        Should be a string value. Default to None.
+        :param index_type: If and how this field should be indexed.
+        Value should be one of IndexType enum. Default to None (not indexed).
+        :param allow_none_as_filter: If None value should be kept in queries (GET/DELETE).
+        Should be a boolean value. Default to False.
+        :param is_primary_key: If this field value is not allowed to be modified after insert.
+        Should be a boolean value. Default to False (field value can always be modified).
+        :param is_nullable: If field value is optional.
+        Should be a boolean value.
+        Default to True if field is not a primary key.
+        Default to True if field has a default value.
+        Default to True if field value should auto increment.
+        Otherwise default to False.
+        Note that it is not allowed to force False if field has a default value or if value should auto increment.
+        :param is_required: If field value must be specified in client requests.
+        Should be a boolean value. Default to False.
+        :param should_auto_increment: If field should be auto incremented. Only for integer fields.
+        Should be a boolean value. Default to False.
         TODO Introduce min and max length, regex
         """
         self.field_type = field_type or str
@@ -53,7 +71,7 @@ class Column:
         if name:
             self._update_name(name)
         self.get_choices = self._to_get_choices(kwargs.pop('choices', None))
-        self.get_counter_name = self._to_get_counter_name(kwargs.pop('counter_name', None))
+        self.get_counter = self._to_get_counter(kwargs.pop('counter', None))
         self.get_default_value = self._to_get_default_value(kwargs.pop('default_value', None))
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
@@ -81,10 +99,10 @@ class Column:
         if '_id' == self.name:
             self.field_type = ObjectId
 
-    def _to_get_counter_name(self, counter_name):
-        if counter_name:
-            return counter_name if callable(counter_name) else lambda model_as_dict: counter_name
-        return lambda model_as_dict: self.name
+    def _to_get_counter(self, counter):
+        if counter:
+            return counter if callable(counter) else lambda model_as_dict: counter
+        return lambda model_as_dict: (self.name,)
 
     def _to_get_choices(self, choices):
         """
@@ -283,7 +301,8 @@ class DictColumn(Column):
     Definition of a Mongo database dictionary field.
     If you do not want to validate the content of this dict, just use a Column(dict) instead.
     """
-    def __init__(self, fields: Dict[str, Column], index_fields: Dict[str, Column]=None, **kwargs):
+
+    def __init__(self, fields: Dict[str, Column], index_fields: Dict[str, Column] = None, **kwargs):
         """
         :param fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
         :param index_fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
@@ -322,13 +341,14 @@ class DictColumn(Column):
         :param model_as_dict: Data provided by the user or empty in case this method is called in another context.
         :return: A CRUDModel describing every dictionary fields.
         """
+
         class FakeModel(CRUDModel):
             pass
-        
+
         for name, column in self.get_fields(model_as_dict or {}).items():
             column._update_name(name)
             FakeModel.__fields__.append(column)
-        
+
         return FakeModel
 
     def _index_description_model(self, model_as_dict: dict):
@@ -336,6 +356,7 @@ class DictColumn(Column):
         :param model_as_dict: Data provided by the user or empty in case this method is called in another context.
         :return: A CRUDModel describing every index fields.
         """
+
         class FakeModel(CRUDModel):
             pass
 
@@ -433,6 +454,7 @@ class ListColumn(Column):
     This list should only contains items of a specified type.
     If you do not want to validate the content of this list, just use a Column(list) instead.
     """
+
     def __init__(self, list_item_type: Column, **kwargs):
         """
         :param list_item_type: Column describing an element of this list.
@@ -605,7 +627,8 @@ class CRUDModel:
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
-                logger.info(f"Create {index_name} {index_type.name} index on {cls.__collection__.name} using {criteria} criteria.")
+                logger.info(
+                    f"Create {index_name} {index_type.name} index on {cls.__collection__.name} using {criteria} criteria.")
                 cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
@@ -844,13 +867,20 @@ class CRUDModel:
         for field in cls.__fields__:
             field.deserialize_insert(model_as_dict)
             if should_increment and field.should_auto_increment:
-                model_as_dict[field.name] = cls._increment(field.get_counter_name(model_as_dict))
+                model_as_dict[field.name] = cls._increment(*field.get_counter(model_as_dict))
 
     @classmethod
-    def _increment(cls, counter_name: str):
-        counter_key = {'_id': cls.__collection__.name}
-        counter_update = {'$inc': {'%s.counter' % counter_name: 1},
-                          '$set': {'%s.timestamp' % counter_name: datetime.datetime.utcnow().isoformat()}}
+    def _increment(cls, counter_name: str, counter_category: str=None):
+        """
+        Increment a counter by one.
+
+        :param counter_name: Name of the counter to increment. Will be created at 0 if not existing yet.
+        :param counter_category: Category storing those counters. Default to model table name.
+        :return: New counter value.
+        """
+        counter_key = {'_id': counter_category if counter_category else cls.__collection__.name}
+        counter_update = {'$inc': {f'{counter_name}.counter': 1},
+                          '$set': {f'{counter_name}.last_update_time': datetime.datetime.utcnow()}}
         counter_element = cls.__counters__.find_one_and_update(counter_key, counter_update,
                                                                return_document=pymongo.ReturnDocument.AFTER,
                                                                upsert=True)

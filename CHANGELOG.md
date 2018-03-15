@@ -6,18 +6,16 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 10.1.0 (2018-03-14) ##
+## Version 10.1.0 (2018-03-15) ##
 
 ### Enhancements ###
 
-- Mongo versioning audit is now a single collection referencing table and revision for each audit record.
+- [Mongo] In case of a versioned model, audit is now performed in a single collection referencing table name and revision for each record.
 
 ### Bug fixes ###
 
-- Mongo versioning now use revision int instead of date-time.
-- Mongo audit models now contains revision as the only primary key and unique index (in addition to those of the model).
-- Mongo Versioning rollback action is now audited.
-
+- [Mongo] Versioned models now store a shared (across all models) revision (as an integer) instead of the modification date time for each action.
+- [Mongo] Rollback action is now audited.
 
 ## Version 10.0.0 (2018-03-14) ##
 

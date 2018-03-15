@@ -5,7 +5,7 @@ import copy
 
 from pycommon_database.database_mongo import Column, IndexType, CRUDModel
 from pycommon_database.audit import current_user_name
-from pycommon_database.versioning_mongo import VersionedCRUDModel
+from pycommon_database.versioning_mongo import VersionedCRUDModel, REVISION_COUNTER
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def _common_audit(model, base):
 
         @classmethod
         def _audit_action(cls, action: Action, model_as_dict: dict):
-            model_as_dict[cls.revision.name] = cls._increment(cls.revision.name)
+            model_as_dict[cls.revision.name] = cls._increment(*REVISION_COUNTER)
             model_as_dict[cls.audit_user.name] = current_user_name()
             model_as_dict[cls.audit_date_utc.name] = datetime.datetime.utcnow()
             model_as_dict[cls.audit_action.name] = action.value

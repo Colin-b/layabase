@@ -1,10 +1,12 @@
-import copy
 from flask_restplus import inputs
 import pymongo
 from typing import List
 
 from pycommon_database.database_mongo import CRUDModel, Column, IndexType
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
+
+
+REVISION_COUNTER = ('revision', 'shared')
 
 
 class VersionedCRUDModel(CRUDModel):
@@ -26,7 +28,7 @@ class VersionedCRUDModel(CRUDModel):
 
     @classmethod
     def _insert_one(cls, model_as_dict: dict) -> dict:
-        revision = cls._increment(cls.valid_since_revision.name)
+        revision = cls._increment(*REVISION_COUNTER)
         model_as_dict[cls.valid_since_revision.name] = revision
         model_as_dict[cls.valid_until_revision.name] = None
         cls.__collection__.insert_one(model_as_dict)
@@ -36,7 +38,7 @@ class VersionedCRUDModel(CRUDModel):
 
     @classmethod
     def _insert_many(cls, models_as_list_of_dict: List[dict]):
-        revision = cls._increment(cls.valid_since_revision.name)
+        revision = cls._increment(*REVISION_COUNTER)
         for model_as_dict in models_as_list_of_dict:
             model_as_dict[cls.valid_since_revision.name] = revision
             model_as_dict[cls.valid_until_revision.name] = None
@@ -59,7 +61,7 @@ class VersionedCRUDModel(CRUDModel):
         if not previous_model_as_dict:
             raise ModelCouldNotBeFound(model_as_dict_keys)
 
-        revision = cls._increment(cls.valid_since_revision.name)
+        revision = cls._increment(*REVISION_COUNTER)
 
         # Set previous version as expired (insert previous as expired)
         cls.__collection__.insert_one({**previous_model_as_dict, cls.valid_until_revision.name: revision})
@@ -88,7 +90,7 @@ class VersionedCRUDModel(CRUDModel):
 
     @classmethod
     def _delete_many(cls, model_to_query: dict) -> int:
-        revision = cls._increment(cls.valid_since_revision.name)
+        revision = cls._increment(*REVISION_COUNTER)
         if cls.audit_model:
             cls.audit_model.audit_remove(revision)
         return cls.__collection__.update_many(model_to_query, {'$set': {cls.valid_until_revision.name: revision}}).modified_count
@@ -171,7 +173,7 @@ class VersionedCRUDModel(CRUDModel):
                                                             projection={'_id': False})
         previously_expired_models = list(previously_expired_models)  # Convert Cursor to list
 
-        new_revision = cls._increment(cls.valid_since_revision.name)
+        new_revision = cls._increment(*REVISION_COUNTER)
 
         # Update currently valid as non valid anymore (new version since this validity)
         for expired_model in previously_expired_models:

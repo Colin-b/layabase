@@ -2840,6 +2840,60 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestVersionedController.get({})
         )
 
+    def test_revison_is_shared(self):
+        self.TestVersionedController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersionedUniqueNonPrimaryController.post({
+            'unique': 1,
+        })
+        self.TestVersionedController.put({
+            'key': 'first',
+            'dict_field.second_key': 2,
+        })
+        self.TestVersionedController.delete({
+            'key': 'first',
+        })
+        self.TestVersionedController.rollback_to({
+            'revision': 2,
+        })
+        self.assertEqual(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 2},
+                    'valid_since_revision': 3,
+                    'valid_until_revision': 4
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 3
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 5,
+                    'valid_until_revision': None
+                },
+            ],
+            self.TestVersionedController.get_history({})
+        )
+        self.assertEqual(
+            [
+                {
+                    'key': 1,
+                    'unique': 1,
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                },
+            ],
+            self.TestVersionedUniqueNonPrimaryController.get_history({})
+        )
+
     def test_put_versioning_is_valid(self):
         self.TestVersionedController.post({
             'key': 'first',
