@@ -23,6 +23,14 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
+    Here are some sample connection urls:
+     - Mongo (in memory): mongomock
+     - Mongo: mongodb://host:port/server_name
+
+     - SQL Lite (in memory): sqlite:///:memory:
+     - Postgre SQL: postgresql://user_name:user_password@host:port/server_name
+     - Oracle: oracle://user_name:user_password@host:port/server_name
+     - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
      (Mandatory).
     :param kwargs: Additional custom parameters:
