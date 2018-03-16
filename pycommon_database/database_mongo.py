@@ -856,13 +856,13 @@ class CRUDModel:
             cls.deserialize_insert(document)
 
         if errors:
-            raise ValidationFailed(new_documents, errors)
+            raise ValidationFailed(documents, errors)
 
         try:
             cls._insert_many(new_documents)
             return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
-            raise ValidationFailed([cls.serialize(document) for document in new_documents], message=str(e.details))
+            raise ValidationFailed(documents, message=str(e.details))
 
     @classmethod
     def validate_insert(cls, document: dict) -> dict:
