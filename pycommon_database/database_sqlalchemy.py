@@ -31,40 +31,42 @@ class CRUDModel:
             cls.audit_model._post_init(session)
 
     @classmethod
-    def get_all(cls, **kwargs) -> List[dict]:
+    def get_all(cls, **filters) -> List[dict]:
         """
         Return all models formatted as a list of dictionaries.
         """
-        all_models = cls.get_all_models(**kwargs)
-        return cls.schema().dump(all_models, many=True).data
+        rows = cls.get_all_models(**filters)
+        return cls.schema().dump(rows, many=True).data
 
     @classmethod
-    def get_history(cls, **model_to_query) -> List[dict]:
-        return cls.get_all(**model_to_query)
+    def get_history(cls, **filters) -> List[dict]:
+        return cls.get_all(**filters)
 
     @classmethod
-    def rollback_to(cls, **model_to_query) -> int:
+    def rollback_to(cls, **filters) -> int:
         """
         All records matching the query and valid at specified validity will be considered as valid.
+
         :return Number of records updated.
         """
         return 0
 
     @classmethod
-    def get_all_models(cls, **kwargs) -> list:
+    def get_all_models(cls, **filters) -> list:
         """
         Return all SQLAlchemy models.
         """
         query = cls._session.query(cls)
-        if 'order_by' in kwargs:
-            query = query.order_by(*kwargs.pop('order_by'))
-        for key, value in kwargs.items():
-            if key == 'limit':
-                query = query.limit(value)
-            elif key == 'offset':
-                query = query.offset(value)
-            elif value is not None:
-                query = query.filter(getattr(cls, key) == value)
+        if 'order_by' in filters:
+            query = query.order_by(*filters.pop('order_by'))
+        if 'limit' in filters:
+            query = query.limit(filters.pop('limit'))
+        if 'offset' in filters:
+            query = query.offset(filters.pop('offset'))
+
+        for column_name, value in filters.items():
+            if value is not None:
+                query = query.filter(getattr(cls, column_name) == value)
         try:
             return query.all()
         except exc.sa_exc.DBAPIError:
@@ -80,43 +82,44 @@ class CRUDModel:
         raise Exception('Database could not be reached.')
 
     @classmethod
-    def get(cls, **kwargs) -> dict:
+    def get(cls, **filters) -> dict:
         """
         Return the model formatted as a dictionary.
         """
         query = cls._session.query(cls)
-        for key, value in kwargs.items():
+        for column_name, value in filters.items():
             if value is not None:
-                query = query.filter(getattr(cls, key) == value)
+                query = query.filter(getattr(cls, column_name) == value)
         try:
             model = query.one_or_none()
             return cls.schema().dump(model).data
         except exc.MultipleResultsFound:
             cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
-            raise ValidationFailed(kwargs, message='More than one result: Consider another filtering.')
+            raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
 
     @classmethod
-    def add_all(cls, models_as_list_of_dict: list) -> List[dict]:
+    def add_all(cls, rows: List[dict]) -> List[dict]:
         """
         Add models formatted as a list of dictionaries.
+
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted models formatted as a list of dictionaries.
         """
-        if not models_as_list_of_dict:
+        if not rows:
             raise ValidationFailed({}, message='No data provided.')
         try:
-            models, errors = cls.schema().load(models_as_list_of_dict, many=True, session=cls._session)
+            models, errors = cls.schema().load(rows, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
         if errors:
-            raise ValidationFailed(models_as_list_of_dict, marshmallow_errors=errors)
+            raise ValidationFailed(rows, marshmallow_errors=errors)
         try:
             cls._session.add_all(models)
             if cls.audit_model:
-                for inserted_dict in models_as_list_of_dict:
-                    cls.audit_model.audit_add(inserted_dict)
+                for row in rows:
+                    cls.audit_model.audit_add(row)
             cls._session.commit()
             return _models_field_values(models)
         except exc.sa_exc.DBAPIError:
@@ -127,25 +130,26 @@ class CRUDModel:
             raise
 
     @classmethod
-    def add(cls, model_as_dict: dict) -> dict:
+    def add(cls, row: dict) -> dict:
         """
         Add a model formatted as a dictionary.
+
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted model formatted as a dictionary.
         """
-        if not model_as_dict:
+        if not row:
             raise ValidationFailed({}, message='No data provided.')
         try:
-            model, errors = cls.schema().load(model_as_dict, session=cls._session)
+            model, errors = cls.schema().load(row, session=cls._session)
         except exc.sa_exc.DBAPIError:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
         if errors:
-            raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
+            raise ValidationFailed(row, marshmallow_errors=errors)
         try:
             cls._session.add(model)
             if cls.audit_model:
-                cls.audit_model.audit_add(model_as_dict)
+                cls.audit_model.audit_add(row)
             ret = cls._session.commit()
             return _model_field_values(model)
         except exc.sa_exc.DBAPIError:
@@ -156,33 +160,33 @@ class CRUDModel:
             raise
 
     @classmethod
-    def update(cls, model_as_dict: dict) -> (dict, dict):
+    def update(cls, row: dict) -> (dict, dict):
         """
         Update a model formatted as a dictionary.
+
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns A tuple containing previous model formatted as a dictionary (first item)
         and new model formatted as a dictionary (second item).
         """
-        if not model_as_dict:
+        if not row:
             raise ValidationFailed({}, message='No data provided.')
         try:
-            previous_model = cls.schema().get_instance(model_as_dict)
+            previous_model = cls.schema().get_instance(row)
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
         if not previous_model:
-            raise ModelCouldNotBeFound(model_as_dict)
-        previous_model_as_dict = _model_field_values(previous_model)
-        new_model, errors = cls.schema().load(model_as_dict, instance=previous_model, partial=True,
-                                              session=cls._session)
+            raise ModelCouldNotBeFound(row)
+        previous_row = _model_field_values(previous_model)
+        new_model, errors = cls.schema().load(row, instance=previous_model, partial=True, session=cls._session)
         if errors:
-            raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
-        new_model_as_dict = _model_field_values(new_model)
+            raise ValidationFailed(row, marshmallow_errors=errors)
+        new_row = _model_field_values(new_model)
         try:
             cls._session.add(new_model)
             if cls.audit_model:
-                cls.audit_model.audit_update(new_model_as_dict)
+                cls.audit_model.audit_update(new_row)
             cls._session.commit()
-            return previous_model_as_dict, new_model_as_dict
+            return previous_row, new_row
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
             cls._handle_connection_failure()
@@ -191,18 +195,19 @@ class CRUDModel:
             raise
 
     @classmethod
-    def remove(cls, **kwargs) -> int:
+    def remove(cls, **filters) -> int:
         """
         Remove the model(s) matching those criterion.
+
         :returns Number of removed rows.
         """
         try:
             query = cls._session.query(cls)
-            for key, value in kwargs.items():
+            for column_name, value in filters.items():
                 if value is not None:
-                    query = query.filter(getattr(cls, key) == value)
+                    query = query.filter(getattr(cls, column_name) == value)
             if cls.audit_model:
-                cls.audit_model.audit_remove(**kwargs)
+                cls.audit_model.audit_remove(**filters)
             nb_removed = query.delete()
             cls._session.commit()
             return nb_removed

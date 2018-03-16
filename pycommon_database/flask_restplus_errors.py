@@ -9,6 +9,9 @@ class ValidationFailed(Exception):
         self.received_data = received_data
         self.errors = marshmallow_errors if marshmallow_errors else {'': [message]}
 
+    def __str__(self):
+        return f'Errors: {self.errors}\nReceived: {self.received_data}'
+
 
 class ModelCouldNotBeFound(Exception):
     def __init__(self, requested_data):

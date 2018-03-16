@@ -1,8 +1,16 @@
-from sqlalchemy import Column, DateTime, Enum, String, inspect
 import datetime
+import enum
+from sqlalchemy import Column, DateTime, Enum, String, inspect
 
 from pycommon_database.flask_restplus_errors import ValidationFailed
 from pycommon_database.audit import current_user_name
+
+
+@enum.unique
+class Action(enum.Enum):
+    Insert = 'I'
+    Update = 'U'
+    Delete = 'D'
 
 
 def _column(attribute):
@@ -22,43 +30,43 @@ def _create_from(model):
 
         audit_user = Column(String, primary_key=True)
         audit_date_utc = Column(DateTime, primary_key=True)
-        audit_action = Column(Enum('I', 'U', 'D', name='action_type'))
+        audit_action = Column(Enum(*[action.value for action in Action], name='action_type'))
 
         @classmethod
         def get_response_model(cls, namespace):
             return namespace.model('Audit' + cls._model.__name__, cls._flask_restplus_fields())
 
         @classmethod
-        def audit_add(cls, model_as_dict: dict):
+        def audit_add(cls, row: dict):
             """
-            :param model_as_dict: Dictionary that was properly inserted.
+            :param row: Dictionary that was properly inserted.
             """
-            cls._audit_action(action='I', model_as_dict=dict(model_as_dict))
+            cls._audit_action(Action.Insert, dict(row))
 
         @classmethod
-        def audit_update(cls, model_as_dict: dict):
+        def audit_update(cls, row: dict):
             """
-            :param model_as_dict: Dictionary that was properly inserted.
+            :param row: Dictionary that was properly inserted.
             """
-            cls._audit_action(action='U', model_as_dict=dict(model_as_dict))
+            cls._audit_action(Action.Update, dict(row))
 
         @classmethod
-        def audit_remove(cls, **kwargs):
+        def audit_remove(cls, **filters):
             """
-            :param kwargs: Filters as requested.
+            :param filters: Filters as requested.
             """
-            for removed_dict_model in cls._model.get_all(**kwargs):
-                cls._audit_action(action='D', model_as_dict=removed_dict_model)
+            for removed_row in cls._model.get_all(**filters):
+                cls._audit_action(Action.Delete, removed_row)
 
         @classmethod
-        def _audit_action(cls, action: str, model_as_dict: dict):
-            model_as_dict['audit_user'] = current_user_name()
-            model_as_dict['audit_date_utc'] = datetime.datetime.utcnow().isoformat()
-            model_as_dict['audit_action'] = action
-            model, errors = cls.schema().load(model_as_dict, session=cls._session)
+        def _audit_action(cls, action: Action, row: dict):
+            row['audit_user'] = current_user_name()
+            row['audit_date_utc'] = datetime.datetime.utcnow().isoformat()
+            row['audit_action'] = action.value
+            row_model, errors = cls.schema().load(row, session=cls._session)
             if errors:
-                raise ValidationFailed(model_as_dict, marshmallow_errors=errors)
-            cls._session.add(model)  # Let any error be handled by the caller (main model), same for commit
+                raise ValidationFailed(row, marshmallow_errors=errors)
+            cls._session.add(row_model)  # Let any error be handled by the caller (main model), same for commit
 
     for attribute in inspect(model).attrs:
         setattr(AuditModel, attribute.key, _column(attribute))
