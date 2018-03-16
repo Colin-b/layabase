@@ -29,8 +29,8 @@ class Column:
     Definition of a Mongo document field.
     This field is used to:
     - Validate a value.
-    - Deserialize a value to a valid Mongo one.
-    - Serialize a value to a valid JSON one.
+    - Deserialize a value to a valid Mongo (BSON) one.
+    - Serialize a Mongo (BSON) value to a valid JSON one.
     """
 
     def __init__(self, field_type=None, **kwargs):
@@ -64,7 +64,7 @@ class Column:
         Default to True if field value should auto increment.
         Otherwise default to False.
         Note that it is not allowed to force False if field has a default value or if value should auto increment.
-        :param is_required: If field value must be specified in client requests.
+        :param is_required: If field value must be specified in client requests. Use it to avoid heavy requests.
         Should be a boolean value. Default to False.
         :param should_auto_increment: If field should be auto incremented. Only for integer fields.
         Should be a boolean value. Default to False.
@@ -119,7 +119,8 @@ class Column:
             return lambda: list(self.field_type.__members__.keys())
         return lambda: None
 
-    def _to_get_default_value(self, default_value):
+    @staticmethod
+    def _to_get_default_value(default_value):
         if default_value:
             return default_value if callable(default_value) else (lambda model_as_dict: default_value)
         return lambda model_as_dict: None
@@ -146,11 +147,13 @@ class Column:
 
     def validate_insert(self, document: dict) -> dict:
         """
-        Validate data on insert.
-        Even if this method is the same one as validate_update, users with a custom field type might want
-        to perform a different validation in case of insert and update (typically checking for missing fields)
+        Validate this field for a document insertion request.
 
-        :return: Validation errors that might have occurred. Empty if no error occurred.
+        :param document: Mongo to be document.
+        Each entry if composed of a field name associated to a value.
+        This field might not be in it.
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
         """
         value = document.get(self.name)
         if value is None:
@@ -161,11 +164,13 @@ class Column:
 
     def validate_update(self, document: dict) -> dict:
         """
-        Validate data on update.
-        Even if this method is the same one as validate_insert, users with a custom field type might want
-        to perform a different validation in case of insert and update (typically not checking for missing fields)
+        Validate this field for a document update request.
 
-        :return: Validation errors that might have occurred. Empty if no error occurred.
+        :param document: Updated version (partial) of a Mongo document.
+        Each entry if composed of a field name associated to a value.
+        This field might not be in it.
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
         """
         value = document.get(self.name)
         if value is None:
@@ -176,19 +181,22 @@ class Column:
 
     def _validate_value(self, value) -> dict:
         """
-        :return: Validation errors that might have occurred. Empty if no error occurred.
+        Validate this value for this field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
         """
         if self.field_type == datetime.datetime:
             if isinstance(value, str):
                 try:
                     value = dateutil.parser.parse(value)
-                except:
+                except ValueError or OverflowError:
                     return {self.name: ['Not a valid datetime.']}
         elif self.field_type == datetime.date:
             if isinstance(value, str):
                 try:
                     value = dateutil.parser.parse(value).date()
-                except:
+                except ValueError or OverflowError:
                     return {self.name: ['Not a valid date.']}
         elif isinstance(self.field_type, enum.EnumMeta):
             if isinstance(value, str):
@@ -225,7 +233,9 @@ class Column:
         """
         Update this field value within provided filters to a value that can be queried in Mongo.
 
-        :param filters: Fields that should be queried.
+        :param filters: Provided filters.
+        Each entry if composed of a field name associated to a value.
+        This field might not be in it.
         """
         value = filters.get(self.name)
         if value is None:
@@ -239,6 +249,8 @@ class Column:
         Update this field value within the document to a value that can be inserted in Mongo.
 
         :param document: Document that should be inserted.
+        Each entry if composed of a field name associated to a value.
+        This field might not be in it.
         """
         value = document.get(self.name)
         if value is None:
@@ -251,7 +263,9 @@ class Column:
         """
         Update this field value within the document to a value that can be inserted (updated) in Mongo.
 
-        :param document: Updated version of an already inserted document (can be partial).
+        :param document: Updated version (partial) of a Mongo document.
+        Each entry if composed of a field name associated to a value.
+        This field might not be in it.
         """
         value = document.get(self.name)
         if value is None:
@@ -348,7 +362,7 @@ class DictColumn(Column):
         Default to True if field has a default value.
         Otherwise default to False.
         Note that it is not allowed to force False if field has a default value.
-        :param is_required: If field value must be specified in client requests.
+        :param is_required: If field value must be specified in client requests. Use it to avoid heavy requests.
         Should be a boolean value. Default to False.
         """
         kwargs.pop('field_type', None)
@@ -510,7 +524,7 @@ class ListColumn(Column):
         Default to True if field has a default value.
         Otherwise default to False.
         Note that it is not allowed to force False if field has a default value.
-        :param is_required: If field value must be specified in client requests.
+        :param is_required: If field value must be specified in client requests. Use it to avoid heavy requests.
         Should be a boolean value. Default to False.        """
         kwargs.pop('field_type', None)
         self.list_item_column = list_item_type
@@ -526,9 +540,10 @@ class ListColumn(Column):
             values = document.get(self.name) or []
             for index, value in enumerate(values):
                 document_with_list_item = {**document, self.name: value}
+                list_item_errors = self.list_item_column.validate_insert(document_with_list_item)
                 errors.update({
                     f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in self.list_item_column.validate_insert(document_with_list_item).items()
+                    for field_name, field_errors in list_item_errors.items()
                 })
         return errors
 
@@ -553,9 +568,10 @@ class ListColumn(Column):
             values = document[self.name]
             for index, value in enumerate(values):
                 document_with_list_item = {**document, self.name: value}
+                list_item_errors = self.list_item_column.validate_update(document_with_list_item)
                 errors.update({
                     f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in self.list_item_column.validate_update(document_with_list_item).items()
+                    for field_name, field_errors in list_item_errors.items()
                 })
         return errors
 
@@ -580,9 +596,10 @@ class ListColumn(Column):
             values = filters.get(self.name) or []
             for index, value in enumerate(values):
                 filters_with_list_item = {**filters, self.name: value}
+                list_item_errors = self.list_item_column.validate_query(filters_with_list_item)
                 errors.update({
                     f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in self.list_item_column.validate_query(filters_with_list_item).items()
+                    for field_name, field_errors in list_item_errors.items()
                 })
         return errors
 
@@ -676,9 +693,9 @@ class CRUDModel:
             ]
             if criteria:
                 # Avoid using auto generated index name that might be too long
-                index_name = f'uidx{cls.__collection__.name}' if index_type == IndexType.Unique else f'idx{cls.__collection__.name}'
+                index_name = f'uidx{cls.__tablename__}' if index_type == IndexType.Unique else f'idx{cls.__tablename__}'
                 logger.info(
-                    f"Create {index_name} {index_type.name} index on {cls.__collection__.name} using {criteria} criteria.")
+                    f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria.")
                 cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
@@ -753,55 +770,72 @@ class CRUDModel:
         :return: Validation errors that might have occurred. Empty if no error occurred.
         Each entry if composed of a field name associated to a list of error messages.
         """
-        queried_fields_names = [field.name for field in cls.__fields__ if field.name in filters]
-        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields_names]
-        filters_without_dot_notation = copy.deepcopy(filters)
+        queried_fields = [field.name for field in cls.__fields__ if field.name in filters]
+        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields]
+        known_filters = copy.deepcopy(filters)
         for unknown_field in unknown_fields:
-            # Convert dot notation fields into known fields to be able to validate them
-            known_field, field_value = cls._handle_dot_notation(unknown_field, filters_without_dot_notation[unknown_field])
+            known_field, field_value = cls._to_known_field(unknown_field, known_filters[unknown_field])
             if known_field:
-                previous_dict = filters_without_dot_notation.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
+                known_filters.setdefault(known_field.name, {}).update(field_value)
 
         errors = {}
 
-        for field in [field for field in cls.__fields__ if field.name in filters_without_dot_notation]:
-            errors.update(field.validate_query(filters_without_dot_notation))
+        for field in [field for field in cls.__fields__ if field.name in known_filters]:
+            errors.update(field.validate_query(known_filters))
 
         return errors
 
     @classmethod
     def deserialize_query(cls, filters: dict):
-        queried_fields_names = [field.name for field in cls.__fields__ if field.name in filters]
-        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields_names]
-        dot_model_as_dict = {}
+        """
+        Update values within provided filters to values that can be queried in Mongo.
+        Remove entries for unknown fields.
+
+        :param filters: Provided filters.
+        Each entry if composed of a field name associated to a value.
+        """
+        queried_fields = [field.name for field in cls.__fields__ if field.name in filters]
+        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields]
+        known_fields = {}  # Contains converted known dot notation fields
 
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, filters[unknown_field])
+            known_field, field_value = cls._to_known_field(unknown_field, filters[unknown_field])
             del filters[unknown_field]
             if known_field:
-                previous_dict = dot_model_as_dict.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
+                known_fields.setdefault(known_field.name, {}).update(field_value)
             else:
                 logger.warning(f'Skipping unknown field {unknown_field}.')
 
         # Deserialize dot notation values
-        for field in [field for field in cls.__fields__ if field.name in dot_model_as_dict]:
-            field.deserialize_query(dot_model_as_dict)
+        for field in [field for field in cls.__fields__ if field.name in known_fields]:
+            field.deserialize_query(known_fields)
             # Put back deserialized values as dot notation fields
-            for inner_field_name, value in dot_model_as_dict[field.name].items():
+            for inner_field_name, value in known_fields[field.name].items():
                 filters[f'{field.name}.{inner_field_name}'] = value
 
         for field in [field for field in cls.__fields__ if field.name in filters]:
             field.deserialize_query(filters)
 
     @classmethod
-    def _handle_dot_notation(cls, field_name: str, value) -> (Column, dict):
-        parent_field = field_name.split('.', maxsplit=1)
-        if len(parent_field) == 2:
+    def _to_known_field(cls, field_name: str, value) -> (Column, dict):
+        """
+        Convert a dot notation field and its value to a known field and its dictionary value.
+        eg:
+            field_name = "dict_field.first_key_field"
+            value = 3
+
+        Return will be:
+            (dict_field_column, {'first_key_field': 3})
+
+        :param field_name: Field name including dot notation. Such as "dict_field.first_key_field".
+        :return: Tuple containing dictionary field (first item) and dictionary containing the sub field and its value.
+        (None, None) if not found.
+        """
+        field_names = field_name.split('.', maxsplit=1)
+        if len(field_names) == 2:
             for field in cls.__fields__:
-                if field.name == parent_field[0] and field.field_type == dict:
-                    return field, {parent_field[1]: value}
+                if field.name == field_names[0] and field.field_type == dict:
+                    return field, {field_names[1]: value}
         return None, None
 
     @classmethod
@@ -880,9 +914,12 @@ class CRUDModel:
     @classmethod
     def validate_insert(cls, document: dict) -> dict:
         """
-        Validate data on insert.
+        Validate a document insertion request.
 
+        :param document: Mongo to be document.
+        Each entry if composed of a field name associated to a value.
         :return: Validation errors that might have occurred. Empty if no error occurred.
+        Entry would be composed of a field name associated to a list of error messages.
         """
         if not document:
             return {'': ['No data provided.']}
@@ -892,10 +929,9 @@ class CRUDModel:
         field_names = [field.name for field in cls.__fields__]
         unknown_fields = [field_name for field_name in new_document if field_name not in field_names]
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, new_document[unknown_field])
+            known_field, field_value = cls._to_known_field(unknown_field, new_document[unknown_field])
             if known_field:
-                previous_dict = new_document.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
+                new_document.setdefault(known_field.name, {}).update(field_value)
 
         errors = {}
 
@@ -908,22 +944,27 @@ class CRUDModel:
     def _remove_dot_notation(cls, document: dict):
         """
         Update document so that it does not contains dot notation fields.
+        Remove entries for unknown fields.
         """
         field_names = [field.name for field in cls.__fields__]
         unknown_fields = [field_name for field_name in document if field_name not in field_names]
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, document[unknown_field])
+            known_field, field_value = cls._to_known_field(unknown_field, document[unknown_field])
             del document[unknown_field]
             if known_field:
-                previous_dict = document.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
+                document.setdefault(known_field.name, {}).update(field_value)
             else:
                 logger.warning(f'Skipping unknown field {unknown_field}.')
 
     @classmethod
     def deserialize_insert(cls, document: dict):
         """
-        Update this model dictionary by ensuring that it contains only valid Mongo values.
+        Update this document values to values that can be inserted in Mongo.
+        Remove entries for unknown fields.
+        Convert dot notation fields to corresponding dictionary as dot notation is not allowed on insert.
+
+        :param document: Document that should be inserted.
+        Each entry if composed of a field name associated to a value.
         """
         cls._remove_dot_notation(document)
 
@@ -933,7 +974,7 @@ class CRUDModel:
                 document[field.name] = cls._increment(*field.get_counter(document))
 
     @classmethod
-    def _increment(cls, counter_name: str, counter_category: str=None):
+    def _increment(cls, counter_name: str, counter_category: str=None) -> int:
         """
         Increment a counter by one.
 
@@ -972,9 +1013,12 @@ class CRUDModel:
     @classmethod
     def validate_update(cls, document: dict) -> dict:
         """
-        Validate data on update.
+        Validate a document update request.
 
+        :param document: Updated version (partial) of a Mongo document.
+        Each entry if composed of a field name associated to a value.
         :return: Validation errors that might have occurred. Empty if no error occurred.
+        Entry would be composed of a field name associated to a list of error messages.
         """
         if not document:
             return {'': ['No data provided.']}
@@ -984,11 +1028,9 @@ class CRUDModel:
         updated_field_names = [field.name for field in cls.__fields__ if field.name in new_document]
         unknown_fields = [field_name for field_name in new_document if field_name not in updated_field_names]
         for unknown_field in unknown_fields:
-            # Convert dot notation fields into known fields to be able to validate them
-            known_field, field_value = cls._handle_dot_notation(unknown_field, new_document[unknown_field])
+            known_field, field_value = cls._to_known_field(unknown_field, new_document[unknown_field])
             if known_field:
-                previous_dict = new_document.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
+                new_document.setdefault(known_field.name, {}).update(field_value)
 
         errors = {}
 
@@ -1002,24 +1044,27 @@ class CRUDModel:
     @classmethod
     def deserialize_update(cls, document: dict):
         """
-        Update this model dictionary by ensuring that it contains only valid Mongo values.
+        Update this document values to values that can be inserted (updated) in Mongo.
+        Remove unknown fields.
+
+        :param document: Updated version (partial) of a Mongo document.
+        Each entry if composed of a field name associated to a value.
         """
         updated_field_names = [field.name for field in cls.__fields__ if field.name in document]
         unknown_fields = [field_name for field_name in document if field_name not in updated_field_names]
-        dot_model_as_dict = {}
+        known_fields = {}
 
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, document[unknown_field])
+            known_field, field_value = cls._to_known_field(unknown_field, document[unknown_field])
             del document[unknown_field]
             if known_field:
-                previous_dict = dot_model_as_dict.setdefault(known_field.name, {})
-                previous_dict.update(field_value)
+                known_fields.setdefault(known_field.name, {}).update(field_value)
             else:
                 logger.warning(f'Skipping unknown field {unknown_field}.')
 
-        document_without_dot_notation = {**document, **dot_model_as_dict}
+        document_without_dot_notation = {**document, **known_fields}
         # Deserialize dot notation values
-        for field in [field for field in cls.__fields__ if field.name in dot_model_as_dict]:
+        for field in [field for field in cls.__fields__ if field.name in known_fields]:
             # Ensure that every provided field will be provided as deserialization might rely on another field
             field.deserialize_update(document_without_dot_notation)
             # Put back deserialized values as dot notation fields
@@ -1033,8 +1078,10 @@ class CRUDModel:
     @classmethod
     def remove(cls, **filters) -> int:
         """
-        Remove the model(s) matching those criterion.
+        Remove the document(s) matching those criteria.
 
+        :param filters: Provided filters.
+        Each entry if composed of a field name associated to a value.
         :returns Number of removed documents.
         """
         errors = cls.validate_query(filters)
