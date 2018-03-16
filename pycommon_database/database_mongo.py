@@ -38,10 +38,10 @@ class Column:
 
         :param field_type: Python field type. Default to str.
 
-        :param choices: Restrict valid values.
+        :param choices: Restrict valid values. Only for int, float, str and Enum fields.
         Should be a list or a function (without parameters) returning a list.
         Each list item should be of field type.
-        None by default, or in enum values in case of an Enum field.
+        None by default, or all enum values in case of an Enum field.
         :param counter: Custom counter definition. Only for auto incremented fields.
         Should be a tuple or a function (without parameters) returning a tuple. Content should be:
          - Counter name (field name by default), string value.
@@ -204,6 +204,12 @@ class Column:
                     return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
         elif self.field_type == int:
             if isinstance(value, int):
+                if self.get_choices() and value not in self.get_choices():
+                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+        elif self.field_type == float:
+            if isinstance(value, int):
+                value = float(value)
+            if isinstance(value, float):
                 if self.get_choices() and value not in self.get_choices():
                     return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
 

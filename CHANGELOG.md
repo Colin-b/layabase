@@ -11,6 +11,7 @@ List all changes in various categories:
 ### Enhancements ###
 
 - [Mongo] In case of a versioned model, audit is now performed in a single collection referencing table name and revision for each record.
+- [Mongo] Choices are now available for float fields.
 
 ### Bug fixes ###
 
@@ -20,6 +21,7 @@ List all changes in various categories:
 - [Mongo] The whole document was not provided back to the list item serialization and deserialization, avoiding user custom action in some cases.
 - [Mongo] Non nullable field values that were not set in database were not provided back to the controller.
 - [Mongo] Update failure because of already existing index was not handled properly.
+- [Mongo] Float fields were not considered as valid in case an int value was sent.
 
 ### Known issues ###
 

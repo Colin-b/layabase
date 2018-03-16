@@ -5504,6 +5504,67 @@ class MongoCRUDControllerTest(unittest.TestCase):
             },
             self.TestUnvalidatedListAndDictController.get_response_model.fields_readonly)
 
+    def test_post_float_as_int(self):
+        self.assertEqual(
+            {
+                'dict_field': {'any_key': 5},
+                'float_key': 1,
+                'float_with_default': 34,
+                'list_field': [22, '33', 44.55, True]
+            },
+            self.TestUnvalidatedListAndDictController.post({
+                'dict_field': {'any_key': 5},
+                'float_key': 1,
+                'list_field': [22, '33', 44.55, True]
+            })
+        )
+
+    def test_get_float_as_int(self):
+        self.TestUnvalidatedListAndDictController.post({
+            'dict_field': {'any_key': 5},
+            'float_key': 1,
+            'list_field': [22, '33', 44.55, True]
+        })
+        self.assertEqual(
+            {
+                'dict_field': {'any_key': 5},
+                'float_key': 1,
+                'float_with_default': 34,
+                'list_field': [22, '33', 44.55, True]
+            },
+            self.TestUnvalidatedListAndDictController.get_one({
+                'float_key': 1,
+            })
+        )
+
+    def test_put_float_as_int(self):
+        self.TestUnvalidatedListAndDictController.post({
+            'dict_field': {'any_key': 5},
+            'float_key': 1,
+            'list_field': [22, '33', 44.55, True]
+        })
+        self.assertEqual(
+            (
+                {
+                    'dict_field': {'any_key': 5},
+                    'float_key': 1,
+                    'float_with_default': 34,
+                    'list_field': [22, '33', 44.55, True]
+                },
+                {
+                    'dict_field': {'any_key': 6},
+                    'float_key': 1,
+                    'float_with_default': 35,
+                    'list_field': [22, '33', 44.55, True]
+                }
+            ),
+            self.TestUnvalidatedListAndDictController.put({
+                'dict_field.any_key': 6,
+                'float_key': 1,
+                'float_with_default': 35,
+            })
+        )
+
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
         self.TestController.post({
             'key': 'my_key1',
