@@ -22,6 +22,7 @@ List all changes in various categories:
 - [Mongo] Non nullable field values that were not set in database were not provided back to the controller.
 - [Mongo] Update failure because of already existing index was not handled properly.
 - [Mongo] Float fields were not considered as valid in case an int value was sent.
+- [Mongo] Missing required fields on queries were still considered as valid.
 
 ### Known issues ###
 

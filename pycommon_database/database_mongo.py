@@ -129,15 +129,18 @@ class Column:
 
     def validate_query(self, filters: dict) -> dict:
         """
-        Validate a get or delete request.
+        Validate this field for a get or delete request.
 
         :param filters: Provided filters.
-        Each entry if composed of the field name associated to a value.
-        :return: Validation errors that might have occurred. Empty if no error occurred.
-        Each entry if composed of the field name associated to a list of error messages.
+        Each entry if composed of a field name associated to a value.
+        This field might not be in it.
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
         """
         value = filters.get(self.name)
         if value is None:
+            if self.is_required:
+                return {self.name: ['Missing data for required field.']}
             return {}
         return self._validate_value(value)
 
@@ -743,8 +746,12 @@ class CRUDModel:
     @classmethod
     def validate_query(cls, filters: dict) -> dict:
         """
-        Validate data queried.
+        Validate a get or delete request.
+
+        :param filters: Provided filters.
+        Each entry if composed of a field name associated to a value.
         :return: Validation errors that might have occurred. Empty if no error occurred.
+        Each entry if composed of a field name associated to a list of error messages.
         """
         queried_fields_names = [field.name for field in cls.__fields__ if field.name in filters]
         unknown_fields = [field_name for field_name in filters if field_name not in queried_fields_names]
