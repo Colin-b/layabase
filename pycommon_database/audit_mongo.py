@@ -38,35 +38,35 @@ def _common_audit(model, base):
             return namespace.model('Audit' + model.__name__, cls._flask_restplus_fields(namespace))
 
         @classmethod
-        def audit_add(cls, model_as_dict: dict):
+        def audit_add(cls, document: dict):
             """
-            :param model_as_dict: Model as inserted into Mongo.
+            :param document: Document as inserted in Mongo.
             """
-            cls._audit_action(action=Action.Insert, model_as_dict=copy.deepcopy(model_as_dict))
+            cls._audit_action(Action.Insert, copy.deepcopy(document))
 
         @classmethod
-        def audit_update(cls, model_as_dict: dict):
+        def audit_update(cls, document: dict):
             """
-            :param model_as_dict: Model (updated version) as inserted into Mongo.
+            :param document: Document as updated in Mongo.
             """
-            cls._audit_action(action=Action.Update, model_as_dict=copy.deepcopy(model_as_dict))
+            cls._audit_action(Action.Update, copy.deepcopy(document))
 
         @classmethod
-        def audit_remove(cls, **model_to_query):
+        def audit_remove(cls, **filters):
             """
-            :param model_to_query: Arguments that can directly be provided to Mongo.
+            :param filters: Arguments that can directly be provided to Mongo.
             """
-            for removed_dict_model in model.__collection__.find(model_to_query):
-                cls._audit_action(action=Action.Delete, model_as_dict=removed_dict_model)
+            for removed_document in model.__collection__.find(filters):
+                cls._audit_action(Action.Delete, removed_document)
 
         @classmethod
-        def _audit_action(cls, action: Action, model_as_dict: dict):
-            model_as_dict[cls.revision.name] = cls._increment(*REVISION_COUNTER)
-            model_as_dict[cls.audit_user.name] = current_user_name()
-            model_as_dict[cls.audit_date_utc.name] = datetime.datetime.utcnow()
-            model_as_dict[cls.audit_action.name] = action.value
-            model_as_dict.pop('_id', None)
-            cls.__collection__.insert_one(model_as_dict)
+        def _audit_action(cls, action: Action, document: dict):
+            document.pop('_id', None)
+            document[cls.revision.name] = cls._increment(*REVISION_COUNTER)
+            document[cls.audit_user.name] = current_user_name()
+            document[cls.audit_date_utc.name] = datetime.datetime.utcnow()
+            document[cls.audit_action.name] = action.value
+            cls.__collection__.insert_one(document)
 
     return AuditModel
 
@@ -96,25 +96,25 @@ def _versioning_audit(model, base):
             return namespace.model('AuditModel', all_fields)
 
         @classmethod
-        def get_all(cls, **model_to_query):
-            model_to_query[cls.table_name.name] = model.__tablename__
-            return super().get_all(**model_to_query)
+        def get_all(cls, **filters):
+            filters[cls.table_name.name] = model.__tablename__
+            return super().get_all(**filters)
 
         @classmethod
         def audit_add(cls, revision: int):
-            cls._audit_action(action=Action.Insert, revision=revision)
+            cls._audit_action(Action.Insert, revision)
 
         @classmethod
         def audit_update(cls, revision: int):
-            cls._audit_action(action=Action.Update, revision=revision)
+            cls._audit_action(Action.Update, revision)
 
         @classmethod
         def audit_remove(cls, revision: int):
-            cls._audit_action(action=Action.Delete, revision=revision)
+            cls._audit_action(Action.Delete, revision)
 
         @classmethod
         def audit_rollback(cls, revision: int):
-            cls._audit_action(action=Action.Rollback, revision=revision)
+            cls._audit_action(Action.Rollback, revision)
 
         @classmethod
         def _audit_action(cls, action: Action, revision: int):

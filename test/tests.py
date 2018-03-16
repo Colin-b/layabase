@@ -2519,6 +2519,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestVersionedUniqueNonPrimaryController(database.CRUDController):
         pass
 
+    class TestUniqueNonPrimaryController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2536,6 +2539,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
         cls.TestVersionedUniqueNonPrimaryController.namespace(TestAPI)
+        cls.TestUniqueNonPrimaryController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -2614,6 +2618,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
             unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
 
+        class TestUniqueNonPrimaryModel(database_mongo.CRUDModel, base=base, table_name='uni_table_name'):
+            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
@@ -2627,9 +2635,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
         cls.TestVersionedController.model(TestVersionedModel)
         cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
+        cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
         return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestIdModel, TestUnvalidatedListAndDictModel,
-                TestVersionedModel, TestVersionedUniqueNonPrimaryModel]
+                TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -2671,7 +2680,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             self.TestController.put(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual(None, cm.exception.received_data)
 
     def test_put_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -2736,7 +2745,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'unique_key': 'test',
                 'non_unique_key': '2017-01-02',
             })
-        self.assertEqual({'': ['This item already exists.']}, cm.exception.errors)
+        self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
         self.assertEqual({'non_unique_key': '2017-01-02', 'unique_key': 'test'}, cm.exception.received_data)
 
     def test_get_all_without_primary_key_is_valid(self):
@@ -3350,8 +3359,57 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestVersionedUniqueNonPrimaryController.post({
                 'unique': 1,
             })
-        self.assertEqual({'': ['This item already exists.']}, cm.exception.errors)
+        self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
         self.assertEqual({'key': 2, 'unique': 1, 'valid_since_revision': 2, 'valid_until_revision': None}, cm.exception.received_data)
+
+    def test_insert_to_non_unique_after_update(self):
+        self.TestVersionedUniqueNonPrimaryController.post({
+            'unique': 1,
+        })
+        self.TestVersionedUniqueNonPrimaryController.put({
+            'key': 1,
+            'unique': 2,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestVersionedUniqueNonPrimaryController.post({
+                'unique': 2,
+            })
+        self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
+        self.assertEqual({'key': 2, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': None}, cm.exception.received_data)
+
+    @unittest.expectedFailure
+    def test_update_to_non_unique_versioned(self):
+        # TODO CHeck behavior with pymongo instead of Mongo mock
+        self.TestVersionedUniqueNonPrimaryController.post({
+            'unique': 1,
+        })
+        self.TestVersionedUniqueNonPrimaryController.post({
+            'unique': 2,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestVersionedUniqueNonPrimaryController.put({
+                'key': 1,
+                'unique': 2,
+            })
+        self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
+        self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': None}, cm.exception.received_data)
+
+    @unittest.expectedFailure
+    def test_update_to_non_unique(self):
+        # TODO CHeck behavior with pymongo instead of Mongo mock
+        self.TestUniqueNonPrimaryController.post({
+            'unique': 1,
+        })
+        self.TestUniqueNonPrimaryController.post({
+            'unique': 2,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestUniqueNonPrimaryController.put({
+                'unique': 2,
+                'key': 1,
+            })
+        self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
+        self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': None}, cm.exception.received_data)
 
     def test_post_id_is_valid(self):
         self.assertEqual(
@@ -3905,7 +3963,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             {
                 'bool_field': False,
                 'key': 'my_key',
-                'list_field': [],
+                'list_field': None,
             },
             self.TestListController.post({
                 'key': 'my_key',
@@ -3918,7 +3976,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             {
                 'bool_field': False,
                 'key': 'my_key',
-                'list_field': [],
+                'list_field': None,
             },
             self.TestListController.post({
                 'key': 'my_key',
@@ -5801,7 +5859,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             self.TestController.put(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
-        self.assertEqual({}, cm.exception.received_data)
+        self.assertEqual(None, cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_put_with_empty_dict_is_invalid(self):

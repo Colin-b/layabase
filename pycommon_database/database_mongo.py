@@ -26,7 +26,11 @@ class IndexType(enum.IntEnum):
 
 class Column:
     """
-    Definition of a Mondo Database field.
+    Definition of a Mongo document field.
+    This field is used to:
+    - Validate a value.
+    - Deserialize a value to a valid Mongo one.
+    - Serialize a value to a valid JSON one.
     """
 
     def __init__(self, field_type=None, **kwargs):
@@ -123,38 +127,44 @@ class Column:
     def __str__(self):
         return f'{self.name}'
 
-    def validate_query(self, model_as_dict: dict) -> dict:
+    def validate_query(self, filters: dict) -> dict:
         """
-        Validate data queried.
+        Validate a get or delete request.
+
+        :param filters: Provided filters.
+        Each entry if composed of the field name associated to a value.
         :return: Validation errors that might have occurred. Empty if no error occurred.
+        Each entry if composed of the field name associated to a list of error messages.
         """
-        value = model_as_dict.get(self.name)
+        value = filters.get(self.name)
         if value is None:
             return {}
         return self._validate_value(value)
 
-    def validate_insert(self, model_as_dict: dict) -> dict:
+    def validate_insert(self, document: dict) -> dict:
         """
         Validate data on insert.
         Even if this method is the same one as validate_update, users with a custom field type might want
         to perform a different validation in case of insert and update (typically checking for missing fields)
+
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
-        value = model_as_dict.get(self.name)
+        value = document.get(self.name)
         if value is None:
             if not self.is_nullable:
                 return {self.name: ['Missing data for required field.']}
             return {}
         return self._validate_value(value)
 
-    def validate_update(self, model_as_dict: dict) -> dict:
+    def validate_update(self, document: dict) -> dict:
         """
         Validate data on update.
         Even if this method is the same one as validate_insert, users with a custom field type might want
         to perform a different validation in case of insert and update (typically not checking for missing fields)
+
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
-        value = model_as_dict.get(self.name)
+        value = document.get(self.name)
         if value is None:
             if not self.is_nullable:
                 return {self.name: ['Missing data for required field.']}
@@ -202,51 +212,49 @@ class Column:
 
         return {}
 
-    def deserialize_query(self, model_as_dict: dict):
+    def deserialize_query(self, filters: dict):
         """
-        Convert this field value to the proper value that can be inserted in Mongo.
-        Even if this method is the same one as deserialize_insert, users with a custom field type might want
-        to perform a different deserialization in case of insert and update
-        :param model_as_dict: Dictionary containing this field value (or not).
+        Update this field value within provided filters to a value that can be queried in Mongo.
+
+        :param filters: Fields that should be queried.
         """
-        value = model_as_dict.get(self.name)
+        value = filters.get(self.name)
         if value is None:
             if not self.allow_none_as_filter:
-                model_as_dict.pop(self.name, None)
+                filters.pop(self.name, None)
         else:
-            model_as_dict[self.name] = self._deserialize_value(value)
+            filters[self.name] = self._deserialize_value(value)
 
-    def deserialize_insert(self, model_as_dict: dict):
+    def deserialize_insert(self, document: dict):
         """
-        Convert this field value to the proper value that can be inserted in Mongo.
-        Even if this method is the same one as deserialize_query, users with a custom field type might want
-        to perform a different deserialization in case of insert and update
-        :param model_as_dict: Dictionary containing this field value (or not).
-        """
-        value = model_as_dict.get(self.name)
-        if value is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
-        else:
-            model_as_dict[self.name] = self._deserialize_value(value)
+        Update this field value within the document to a value that can be inserted in Mongo.
 
-    def deserialize_update(self, model_as_dict: dict):
+        :param document: Document that should be inserted.
         """
-        Convert this field value to the proper value that can be inserted in Mongo.
-        Even if this method is the same one as deserialize_insert, users with a custom field type might want
-        to perform a different deserialization in case of insert and update
-        :param model_as_dict: Dictionary containing this field value (or not).
-        """
-        value = model_as_dict.get(self.name)
+        value = document.get(self.name)
         if value is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
+            # Ensure that None value are not stored to save space and allow to change default value.
+            document.pop(self.name, None)
         else:
-            model_as_dict[self.name] = self._deserialize_value(value)
+            document[self.name] = self._deserialize_value(value)
+
+    def deserialize_update(self, document: dict):
+        """
+        Update this field value within the document to a value that can be inserted (updated) in Mongo.
+
+        :param document: Updated version of an already inserted document (can be partial).
+        """
+        value = document.get(self.name)
+        if value is None:
+            # Ensure that None value are not stored to save space and allow to change default value.
+            document.pop(self.name, None)
+        else:
+            document[self.name] = self._deserialize_value(value)
 
     def _deserialize_value(self, value):
         """
         Convert this field value to the proper value that can be inserted in Mongo.
+
         :param value: Received field value.
         :return Mongo valid value.
         """
@@ -278,43 +286,61 @@ class Column:
 
         return value
 
-    def serialize(self, model_as_dict: dict):
-        value = model_as_dict.get(self.name)
+    def serialize(self, document: dict):
+        """
+        Update Mongo field value within this document to a valid JSON one.
+
+        :param document: Document (as stored within database).
+        """
+        value = document.get(self.name)
 
         if value is None:
-            if self.is_nullable:
-                model_as_dict[self.name] = self.get_default_value(model_as_dict)  # Make sure value is set in any case
-            return
-
-        if self.field_type == datetime.datetime:
-            model_as_dict[self.name] = value.isoformat()  # TODO Time Offset is missing to be fully compliant with RFC
+            document[self.name] = self.get_default_value(document)
+        elif self.field_type == datetime.datetime:
+            document[self.name] = value.isoformat()  # TODO Time Offset is missing to be fully compliant with RFC
         elif self.field_type == datetime.date:
-            model_as_dict[self.name] = value.date().isoformat()
+            document[self.name] = value.date().isoformat()
         elif isinstance(self.field_type, enum.EnumMeta):
-            model_as_dict[self.name] = self.field_type(value).name
+            document[self.name] = self.field_type(value).name
         elif self.field_type == ObjectId:
-            model_as_dict[self.name] = str(value)
+            document[self.name] = str(value)
 
 
 class DictColumn(Column):
     """
-    Definition of a Mongo database dictionary field.
-    If you do not want to validate the content of this dict, just use a Column(dict) instead.
+    Definition of a Mongo document dictionary field.
+    If you do not want to validate the content of this dictionary use a Column(dict) instead.
     """
 
     def __init__(self, fields: Dict[str, Column], index_fields: Dict[str, Column] = None, **kwargs):
         """
-        :param fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
-        :param index_fields: Fields (or function providing fields) representing dictionary as a dict(str, Column).
+        :param fields: Definition of this dictionary.
+        Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
+        Keys are field names and associated values are Column.
+        :param index_fields: Definition of all possible dictionary fields.
+        This is used to identify every possible index fields.
+        Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
+        Keys are field names and associated values are Column.
         Default to fields.
-        :param default_value: Default value matching type. Default to None.
-        :param description: Field description.
-        :param index_type: Type of index amongst IndexType enum. Default to None.
-        :param allow_none_as_filter: bool value. Default to False.
-        :param is_primary_key: bool value. Default to False.
-        :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
-        :param is_required: bool value. Default to False.
-        :param should_auto_increment: bool value. Default to False. Only valid for int fields.
+        :param default_value: Default field value returned to the client if field is not set.
+        Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
+        None by default.
+        :param description: Field description used in Swagger and in error messages.
+        Should be a string value. Default to None.
+        :param index_type: If and how this field should be indexed.
+        Value should be one of IndexType enum. Default to None (not indexed).
+        :param allow_none_as_filter: If None value should be kept in queries (GET/DELETE).
+        Should be a boolean value. Default to False.
+        :param is_primary_key: If this field value is not allowed to be modified after insert.
+        Should be a boolean value. Default to False (field value can always be modified).
+        :param is_nullable: If field value is optional.
+        Should be a boolean value.
+        Default to True if field is not a primary key.
+        Default to True if field has a default value.
+        Otherwise default to False.
+        Note that it is not allowed to force False if field has a default value.
+        :param is_required: If field value must be specified in client requests.
+        Should be a boolean value. Default to False.
         """
         kwargs.pop('field_type', None)
 
@@ -385,21 +411,21 @@ class DictColumn(Column):
                     errors[self.name] = [str(e)]
         return errors
 
-    def deserialize_insert(self, model_as_dict: dict):
-        value = model_as_dict.get(self.name)
+    def deserialize_insert(self, document: dict):
+        value = document.get(self.name)
         if value is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
-            return
-        self._description_model(model_as_dict).deserialize_insert(value)
+            # Ensure that None value are not stored to save space and allow to change default value.
+            document.pop(self.name, None)
+        else:
+            self._description_model(document).deserialize_insert(value)
 
-    def validate_update(self, model_as_dict: dict) -> dict:
-        errors = Column.validate_update(self, model_as_dict)
+    def validate_update(self, document: dict) -> dict:
+        errors = Column.validate_update(self, document)
         if not errors:
-            value = model_as_dict.get(self.name)
+            value = document.get(self.name)
             if value is not None:
                 try:
-                    description_model = self._description_model(model_as_dict)
+                    description_model = self._description_model(document)
                     errors.update({
                         f'{self.name}.{field_name}': field_errors
                         for field_name, field_errors in description_model.validate_update(value).items()
@@ -408,21 +434,21 @@ class DictColumn(Column):
                     errors[self.name] = [str(e)]
         return errors
 
-    def deserialize_update(self, model_as_dict: dict):
-        value = model_as_dict.get(self.name)
+    def deserialize_update(self, document: dict):
+        value = document.get(self.name)
         if value is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
+            # Ensure that None value are not stored to save space and allow to change default value.
+            document.pop(self.name, None)
         else:
-            self._description_model(model_as_dict).deserialize_update(value)
+            self._description_model(document).deserialize_update(value)
 
-    def validate_query(self, model_as_dict: dict) -> dict:
-        errors = Column.validate_query(self, model_as_dict)
+    def validate_query(self, filters: dict) -> dict:
+        errors = Column.validate_query(self, filters)
         if not errors:
-            value = model_as_dict.get(self.name)
+            value = filters.get(self.name)
             if value is not None:
                 try:
-                    description_model = self._description_model(model_as_dict)
+                    description_model = self._description_model(filters)
                     errors.update({
                         f'{self.name}.{field_name}': field_errors
                         for field_name, field_errors in description_model.validate_query(value).items()
@@ -431,43 +457,52 @@ class DictColumn(Column):
                     errors[self.name] = [str(e)]
         return errors
 
-    def deserialize_query(self, model_as_dict: dict):
-        value = model_as_dict.get(self.name)
+    def deserialize_query(self, filters: dict):
+        value = filters.get(self.name)
         if value is None:
             if not self.allow_none_as_filter:
-                model_as_dict.pop(self.name, None)
+                filters.pop(self.name, None)
         else:
-            self._description_model(model_as_dict).deserialize_query(value)
+            self._description_model(filters).deserialize_query(value)
 
-    def serialize(self, model_as_dict: dict):
-        value = model_as_dict.get(self.name)
+    def serialize(self, document: dict):
+        value = document.get(self.name)
         if value is None:
-            if self.is_nullable:
-                model_as_dict[self.name] = self.get_default_value(model_as_dict)  # Make sure value is set in any case
+            document[self.name] = self.get_default_value(document)
         else:
-            self._description_model(model_as_dict).serialize(value)
+            self._description_model(document).serialize(value)
 
 
 class ListColumn(Column):
     """
-    Definition of a Mongo database list field.
+    Definition of a Mongo document list field.
     This list should only contains items of a specified type.
-    If you do not want to validate the content of this list, just use a Column(list) instead.
+    If you do not want to validate the content of this list use a Column(list) instead.
     """
 
     def __init__(self, list_item_type: Column, **kwargs):
         """
         :param list_item_type: Column describing an element of this list.
 
-        :param default_value: Default value matching type. Default to None.
-        :param description: Field description.
-        :param index_type: Type of index amongst IndexType enum. Default to None.
-        :param allow_none_as_filter: bool value. Default to False.
-        :param is_primary_key: bool value. Default to False.
-        :param is_nullable: bool value. Default to opposite of is_primary_key, except if it auto increment
-        :param is_required: bool value. Default to False.
-        :param should_auto_increment: bool value. Default to False. Only valid for int fields.
-        """
+        :param default_value: Default field value returned to the client if field is not set.
+        Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
+        None by default.
+        :param description: Field description used in Swagger and in error messages.
+        Should be a string value. Default to None.
+        :param index_type: If and how this field should be indexed.
+        Value should be one of IndexType enum. Default to None (not indexed).
+        :param allow_none_as_filter: If None value should be kept in queries (GET/DELETE).
+        Should be a boolean value. Default to False.
+        :param is_primary_key: If this field value is not allowed to be modified after insert.
+        Should be a boolean value. Default to False (field value can always be modified).
+        :param is_nullable: If field value is optional.
+        Should be a boolean value.
+        Default to True if field is not a primary key.
+        Default to True if field has a default value.
+        Otherwise default to False.
+        Note that it is not allowed to force False if field has a default value.
+        :param is_required: If field value must be specified in client requests.
+        Should be a boolean value. Default to False.        """
         kwargs.pop('field_type', None)
         self.list_item_column = list_item_type
         Column.__init__(self, list, **kwargs)
@@ -476,94 +511,100 @@ class ListColumn(Column):
         Column._update_name(self, name)
         self.list_item_column._update_name(name)
 
-    def validate_insert(self, model_as_dict: dict) -> dict:
-        errors = Column.validate_insert(self, model_as_dict)
+    def validate_insert(self, document: dict) -> dict:
+        errors = Column.validate_insert(self, document)
         if not errors:
-            values = model_as_dict.get(self.name) or []
+            values = document.get(self.name) or []
             for index, value in enumerate(values):
+                document_with_list_item = {**document, self.name: value}
                 errors.update({
                     f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in self.list_item_column.validate_insert({self.name: value}).items()
+                    for field_name, field_errors in self.list_item_column.validate_insert(document_with_list_item).items()
                 })
         return errors
 
-    def deserialize_insert(self, model_as_dict: dict):
-        values = model_as_dict.get(self.name)
+    def deserialize_insert(self, document: dict):
+        values = document.get(self.name)
         if values is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
+            # Ensure that None value are not stored to save space and allow to change default value.
+            document.pop(self.name, None)
         else:
             new_values = []
             for value in values:
-                value_dict = {self.name: value}
-                self.list_item_column.deserialize_insert(value_dict)
-                if self.name in value_dict:
-                    new_values.append(value_dict[self.name])
+                document_with_list_item = {**document, self.name: value}
+                self.list_item_column.deserialize_insert(document_with_list_item)
+                if self.name in document_with_list_item:
+                    new_values.append(document_with_list_item[self.name])
 
-            model_as_dict[self.name] = new_values
+            document[self.name] = new_values
 
-    def validate_update(self, model_as_dict: dict) -> dict:
-        errors = Column.validate_update(self, model_as_dict)
+    def validate_update(self, document: dict) -> dict:
+        errors = Column.validate_update(self, document)
         if not errors:
-            values = model_as_dict[self.name]
+            values = document[self.name]
             for index, value in enumerate(values):
+                document_with_list_item = {**document, self.name: value}
                 errors.update({
                     f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in self.list_item_column.validate_update({self.name: value}).items()
+                    for field_name, field_errors in self.list_item_column.validate_update(document_with_list_item).items()
                 })
         return errors
 
-    def deserialize_update(self, model_as_dict: dict):
-        values = model_as_dict.get(self.name)
+    def deserialize_update(self, document: dict):
+        values = document.get(self.name)
         if values is None:
-            # Ensure that None value are not stored to save space
-            model_as_dict.pop(self.name, None)
+            # Ensure that None value are not stored to save space and allow to change default value.
+            document.pop(self.name, None)
         else:
             new_values = []
             for value in values:
-                value_dict = {self.name: value}
-                self.list_item_column.deserialize_update(value_dict)
-                if self.name in value_dict:
-                    new_values.append(value_dict[self.name])
+                document_with_list_item = {**document, self.name: value}
+                self.list_item_column.deserialize_update(document_with_list_item)
+                if self.name in document_with_list_item:
+                    new_values.append(document_with_list_item[self.name])
 
-            model_as_dict[self.name] = new_values
+            document[self.name] = new_values
 
-    def validate_query(self, model_as_dict: dict) -> dict:
-        errors = Column.validate_query(self, model_as_dict)
+    def validate_query(self, filters: dict) -> dict:
+        errors = Column.validate_query(self, filters)
         if not errors:
-            values = model_as_dict.get(self.name) or []
+            values = filters.get(self.name) or []
             for index, value in enumerate(values):
+                filters_with_list_item = {**filters, self.name: value}
                 errors.update({
                     f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in self.list_item_column.validate_query({self.name: value}).items()
+                    for field_name, field_errors in self.list_item_column.validate_query(filters_with_list_item).items()
                 })
         return errors
 
-    def deserialize_query(self, model_as_dict: dict):
-        values = model_as_dict.get(self.name)
+    def deserialize_query(self, filters: dict):
+        values = filters.get(self.name)
         if values is None:
             if not self.allow_none_as_filter:
-                model_as_dict.pop(self.name, None)
+                filters.pop(self.name, None)
         else:
             new_values = []
             for value in values:
-                value_dict = {self.name: value}
-                self.list_item_column.deserialize_query(value_dict)
-                if self.name in value_dict:
-                    new_values.append(value_dict[self.name])
+                filters_with_list_item = {**filters, self.name: value}
+                self.list_item_column.deserialize_query(filters_with_list_item)
+                if self.name in filters_with_list_item:
+                    new_values.append(filters_with_list_item[self.name])
 
-            model_as_dict[self.name] = new_values
+            filters[self.name] = new_values
 
-    def serialize(self, model_as_dict: dict):
-        values = model_as_dict.get(self.name, [])
-        new_values = []
-        for value in values:
-            value_dict = {self.name: value}
-            self.list_item_column.serialize(value_dict)
-            if self.name in value_dict:
-                new_values.append(value_dict[self.name])
+    def serialize(self, document: dict):
+        values = document.get(self.name)
+        if values is None:
+            document[self.name] = self.get_default_value(document)
+        else:
+            # TODO use list comprehension
+            new_values = []
+            for value in values:
+                document_with_list_item = {**document, self.name: value}
+                self.list_item_column.serialize(document_with_list_item)
+                new_values.append(document_with_list_item[self.name])
 
-        model_as_dict[self.name] = new_values
+            document[self.name] = new_values
 
 
 def to_mongo_field(attribute):
@@ -600,29 +641,29 @@ class CRUDModel:
             cls.audit_model = None  # Ensure no circular reference when creating the audit
 
     @classmethod
-    def update_indexes(cls, model_as_dict: dict):
+    def update_indexes(cls, document: dict):
         """
         Drop all indexes and recreate them.
         As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
         """
         logger.info('Updating indexes...')
         cls.__collection__.drop_indexes()
-        cls._create_indexes(IndexType.Unique, model_as_dict)
-        cls._create_indexes(IndexType.Other, model_as_dict)
+        cls._create_indexes(IndexType.Unique, document)
+        cls._create_indexes(IndexType.Other, document)
         logger.info('Indexes updated.')
         if cls.audit_model:
-            cls.audit_model.update_indexes(model_as_dict)
+            cls.audit_model.update_indexes(document)
 
     @classmethod
-    def _create_indexes(cls, index_type: IndexType, model_as_dict: dict):
+    def _create_indexes(cls, index_type: IndexType, document: dict):
         """
         Create indexes of specified type.
-        :param model_as_dict: Data specified by the user at the time of the index creation.
+        :param document: Data specified by the user at the time of the index creation.
         """
         try:
             criteria = [
                 (field_name, pymongo.ASCENDING)
-                for field_name in cls._get_index_fields(index_type, model_as_dict, '')
+                for field_name in cls._get_index_fields(index_type, document, '')
             ]
             if criteria:
                 # Avoid using auto generated index name that might be too long
@@ -635,55 +676,58 @@ class CRUDModel:
             raise
 
     @classmethod
-    def _get_index_fields(cls, index_type: IndexType, model_as_dict: dict, prefix: str) -> List[str]:
+    def _get_index_fields(cls, index_type: IndexType, document: dict, prefix: str) -> List[str]:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
         index_fields = [f'{prefix}{field.name}' for field in cls.__fields__ if field.index_type == index_type]
         for field in cls.__fields__:
             if isinstance(field, DictColumn):
-                index_fields.extend(field._get_index_fields(index_type, model_as_dict, prefix))
+                index_fields.extend(field._get_index_fields(index_type, document, prefix))
         return index_fields
 
     @classmethod
-    def get(cls, **model_to_query) -> dict:
+    def get(cls, **filters) -> dict:
         """
-        Return a model formatted as a dictionary.
+        Return the document matching provided filters.
         """
-        errors = cls.validate_query(model_to_query)
+        errors = cls.validate_query(filters)
         if errors:
-            raise ValidationFailed(model_to_query, errors)
+            raise ValidationFailed(filters, errors)
 
-        cls.deserialize_query(model_to_query)
+        cls.deserialize_query(filters)
 
-        if cls.__collection__.count(model_to_query) > 1:
-            raise ValidationFailed(model_to_query, message='More than one result: Consider another filtering.')
+        if cls.__collection__.count(filters) > 1:
+            raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
 
-        model = cls.__collection__.find_one(model_to_query)
-        return cls.serialize(model)  # Convert Cursor to dict
+        document = cls.__collection__.find_one(filters)
+        return cls.serialize(document)
 
     @classmethod
-    def get_all(cls, **model_to_query) -> List[dict]:
+    def get_all(cls, **filters) -> List[dict]:
         """
-        Return all models formatted as a list of dictionaries.
+        Return all documents matching provided filters.
         """
-        limit = model_to_query.pop('limit', 0) or 0
-        offset = model_to_query.pop('offset', 0) or 0
-        errors = cls.validate_query(model_to_query)
+        limit = filters.pop('limit', 0) or 0
+        offset = filters.pop('offset', 0) or 0
+        errors = cls.validate_query(filters)
         if errors:
-            raise ValidationFailed(model_to_query, errors)
+            raise ValidationFailed(filters, errors)
 
-        cls.deserialize_query(model_to_query)
+        cls.deserialize_query(filters)
 
-        models = cls.__collection__.find(model_to_query, skip=offset, limit=limit)
-        return [cls.serialize(model) for model in models]  # Convert Cursor to dict
-
-    @classmethod
-    def get_history(cls, **model_to_query) -> List[dict]:
-        return cls.get_all(**model_to_query)
+        documents = cls.__collection__.find(filters, skip=offset, limit=limit)
+        return [cls.serialize(document) for document in documents]
 
     @classmethod
-    def rollback_to(cls, **model_to_query) -> int:
+    def get_history(cls, **filters) -> List[dict]:
+        """
+        Return all documents matching filters.
+        """
+        return cls.get_all(**filters)
+
+    @classmethod
+    def rollback_to(cls, **filters) -> int:
         """
         All records matching the query and valid at specified validity will be considered as valid.
         :return Number of records updated.
@@ -691,37 +735,37 @@ class CRUDModel:
         return 0
 
     @classmethod
-    def validate_query(cls, model_as_dict: dict) -> dict:
+    def validate_query(cls, filters: dict) -> dict:
         """
         Validate data queried.
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
-        queried_fields_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
-        unknown_fields = [field_name for field_name in model_as_dict if field_name not in queried_fields_names]
-        new_model_as_dict = copy.deepcopy(model_as_dict)  # Is there really a need for a deep copy here?
+        queried_fields_names = [field.name for field in cls.__fields__ if field.name in filters]
+        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields_names]
+        filters_without_dot_notation = copy.deepcopy(filters)
         for unknown_field in unknown_fields:
             # Convert dot notation fields into known fields to be able to validate them
-            known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+            known_field, field_value = cls._handle_dot_notation(unknown_field, filters_without_dot_notation[unknown_field])
             if known_field:
-                previous_dict = new_model_as_dict.setdefault(known_field.name, {})
+                previous_dict = filters_without_dot_notation.setdefault(known_field.name, {})
                 previous_dict.update(field_value)
 
         errors = {}
 
-        for field in [field for field in cls.__fields__ if field.name in new_model_as_dict]:
-            errors.update(field.validate_query(new_model_as_dict))
+        for field in [field for field in cls.__fields__ if field.name in filters_without_dot_notation]:
+            errors.update(field.validate_query(filters_without_dot_notation))
 
         return errors
 
     @classmethod
-    def deserialize_query(cls, model_as_dict: dict):
-        queried_fields_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
-        unknown_fields = [field_name for field_name in model_as_dict if field_name not in queried_fields_names]
+    def deserialize_query(cls, filters: dict):
+        queried_fields_names = [field.name for field in cls.__fields__ if field.name in filters]
+        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields_names]
         dot_model_as_dict = {}
 
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
-            del model_as_dict[unknown_field]
+            known_field, field_value = cls._handle_dot_notation(unknown_field, filters[unknown_field])
+            del filters[unknown_field]
             if known_field:
                 previous_dict = dot_model_as_dict.setdefault(known_field.name, {})
                 previous_dict.update(field_value)
@@ -733,10 +777,10 @@ class CRUDModel:
             field.deserialize_query(dot_model_as_dict)
             # Put back deserialized values as dot notation fields
             for inner_field_name, value in dot_model_as_dict[field.name].items():
-                model_as_dict[f'{field.name}.{inner_field_name}'] = value
+                filters[f'{field.name}.{inner_field_name}'] = value
 
-        for field in [field for field in cls.__fields__ if field.name in model_as_dict]:
-            field.deserialize_query(model_as_dict)
+        for field in [field for field in cls.__fields__ if field.name in filters]:
+            field.deserialize_query(filters)
 
     @classmethod
     def _handle_dot_notation(cls, field_name: str, value) -> (Column, dict):
@@ -748,126 +792,132 @@ class CRUDModel:
         return None, None
 
     @classmethod
-    def serialize(cls, model_as_dict: dict) -> dict:
-        if not model_as_dict:
+    def serialize(cls, document: dict) -> dict:
+        if not document:
             return {}
 
         for field in cls.__fields__:
-            field.serialize(model_as_dict)
+            field.serialize(document)
 
         # Make sure fields that were stored in a previous version of a model are not returned if removed since then
         # It also ensure _id can be skipped unless specified otherwise in the model
         known_fields = [field.name for field in cls.__fields__]
-        removed_fields = [field_name for field_name in model_as_dict if field_name not in known_fields]
+        removed_fields = [field_name for field_name in document if field_name not in known_fields]
         if removed_fields:
             for removed_field in removed_fields:
-                del model_as_dict[removed_field]
-            logger.debug(f'Skipping removed fields {removed_fields}.')
+                del document[removed_field]
+            # Do not log the fact that _id is removed as it is a Mongo specific field
+            removed_fields.remove('_id')
+            if removed_fields:
+                logger.debug(f'Skipping removed fields {removed_fields}.')
 
-        return model_as_dict
+        return document
 
     @classmethod
-    def add(cls, model_as_dict: dict) -> dict:
+    def add(cls, document: dict) -> dict:
         """
         Add a model formatted as a dictionary.
+
         :raises ValidationFailed in case validation fail.
         :returns The inserted model formatted as a dictionary.
         """
-        errors = cls.validate_insert(model_as_dict)
+        errors = cls.validate_insert(document)
         if errors:
-            raise ValidationFailed(model_as_dict, errors)
+            raise ValidationFailed(document, errors)
 
-        cls.deserialize_insert(model_as_dict)
+        cls.deserialize_insert(document)
         try:
-            cls._insert_one(model_as_dict)
-            return cls.serialize(model_as_dict)
+            cls._insert_one(document)
+            return cls.serialize(document)
         except pymongo.errors.DuplicateKeyError:
-            raise ValidationFailed(cls.serialize(model_as_dict), message='This item already exists.')
+            raise ValidationFailed(cls.serialize(document), message='This document already exists.')
 
     @classmethod
-    def add_all(cls, models_as_list_of_dict: List[dict]) -> List[dict]:
+    def add_all(cls, documents: List[dict]) -> List[dict]:
         """
         Add models formatted as a list of dictionaries.
+
         :raises ValidationFailed in case validation fail.
         :returns The inserted models formatted as a list of dictionaries.
         """
-        if not models_as_list_of_dict:
+        if not documents:
             raise ValidationFailed([], message='No data provided.')
 
-        new_models_as_list_of_dict = copy.deepcopy(models_as_list_of_dict)
+        new_documents = copy.deepcopy(documents)
 
         errors = {}
 
-        for index, model_as_dict in enumerate(new_models_as_list_of_dict):
-            model_errors = cls.validate_insert(model_as_dict)
-            if model_errors:
-                errors[index] = model_errors
+        for index, document in enumerate(new_documents):
+            document_errors = cls.validate_insert(document)
+            if document_errors:
+                errors[index] = document_errors
                 continue
 
-            cls.deserialize_insert(model_as_dict)
+            cls.deserialize_insert(document)
 
         if errors:
-            raise ValidationFailed(models_as_list_of_dict, errors)
+            raise ValidationFailed(new_documents, errors)
 
         try:
-            cls._insert_many(new_models_as_list_of_dict)
-            return [cls.serialize(model) for model in new_models_as_list_of_dict]
+            cls._insert_many(new_documents)
+            return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
-            raise ValidationFailed(models_as_list_of_dict, message=str(e.details))
+            raise ValidationFailed([cls.serialize(document) for document in new_documents], message=str(e.details))
 
     @classmethod
-    def validate_insert(cls, model_as_dict: dict) -> dict:
+    def validate_insert(cls, document: dict) -> dict:
         """
         Validate data on insert.
+
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
-        if not model_as_dict:
+        if not document:
             return {'': ['No data provided.']}
 
-        new_model_as_dict = copy.deepcopy(model_as_dict)
+        new_document = copy.deepcopy(document)
 
         field_names = [field.name for field in cls.__fields__]
-        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in field_names]
+        unknown_fields = [field_name for field_name in new_document if field_name not in field_names]
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+            known_field, field_value = cls._handle_dot_notation(unknown_field, new_document[unknown_field])
             if known_field:
-                previous_dict = new_model_as_dict.setdefault(known_field.name, {})
+                previous_dict = new_document.setdefault(known_field.name, {})
                 previous_dict.update(field_value)
 
         errors = {}
 
         for field in cls.__fields__:
-            errors.update(field.validate_insert(new_model_as_dict))
+            errors.update(field.validate_insert(new_document))
 
         return errors
 
     @classmethod
-    def _remove_dot_notation(cls, model_as_dict: dict):
+    def _remove_dot_notation(cls, document: dict):
         """
-        Update model_as_dict so that it does not contains dot notation fields.
+        Update document so that it does not contains dot notation fields.
         """
         field_names = [field.name for field in cls.__fields__]
-        unknown_fields = [field_name for field_name in model_as_dict if field_name not in field_names]
+        unknown_fields = [field_name for field_name in document if field_name not in field_names]
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
-            del model_as_dict[unknown_field]
+            known_field, field_value = cls._handle_dot_notation(unknown_field, document[unknown_field])
+            del document[unknown_field]
             if known_field:
-                previous_dict = model_as_dict.setdefault(known_field.name, {})
+                previous_dict = document.setdefault(known_field.name, {})
                 previous_dict.update(field_value)
             else:
                 logger.warning(f'Skipping unknown field {unknown_field}.')
 
     @classmethod
-    def deserialize_insert(cls, model_as_dict: dict, should_increment: bool=True):
+    def deserialize_insert(cls, document: dict):
         """
         Update this model dictionary by ensuring that it contains only valid Mongo values.
         """
-        cls._remove_dot_notation(model_as_dict)
+        cls._remove_dot_notation(document)
 
         for field in cls.__fields__:
-            field.deserialize_insert(model_as_dict)
-            if should_increment and field.should_auto_increment:
-                model_as_dict[field.name] = cls._increment(*field.get_counter(model_as_dict))
+            field.deserialize_insert(document)
+            if field.should_auto_increment:
+                document[field.name] = cls._increment(*field.get_counter(document))
 
     @classmethod
     def _increment(cls, counter_name: str, counter_category: str=None):
@@ -887,138 +937,139 @@ class CRUDModel:
         return counter_element[counter_name]['counter']
 
     @classmethod
-    def update(cls, model_as_dict: dict) -> (dict, dict):
+    def update(cls, document: dict) -> (dict, dict):
         """
         Update a model formatted as a dictionary.
+
         :raises ValidationFailed in case validation fail.
-        :returns A tuple containing previous model formatted as a dictionary (first item)
-        and new model formatted as a dictionary (second item).
+        :returns A tuple containing previous document (first item) and new document (second item).
         """
-        if not model_as_dict:
-            raise ValidationFailed({}, message='No data provided.')
-
-        errors = cls.validate_update(model_as_dict)
+        errors = cls.validate_update(document)
         if errors:
-            raise ValidationFailed(model_as_dict, errors)
+            raise ValidationFailed(document, errors)
 
-        cls.deserialize_update(model_as_dict)
+        cls.deserialize_update(document)
 
-        previous_model_as_dict, new_model_as_dict = cls._update_one(model_as_dict)
-
-        return cls.serialize(previous_model_as_dict), cls.serialize(new_model_as_dict)
+        try:
+            previous_document, new_document = cls._update_one(document)
+            return cls.serialize(previous_document), cls.serialize(new_document)
+        except pymongo.errors.DuplicateKeyError:
+            raise ValidationFailed(cls.serialize(document), message='This document already exists.')
 
     @classmethod
-    def validate_update(cls, model_as_dict: dict) -> dict:
+    def validate_update(cls, document: dict) -> dict:
         """
         Validate data on update.
+
         :return: Validation errors that might have occurred. Empty if no error occurred.
         """
-        if not model_as_dict:
+        if not document:
             return {'': ['No data provided.']}
 
-        new_model_as_dict = copy.deepcopy(model_as_dict)
+        new_document = copy.deepcopy(document)
 
-        updated_field_names = [field.name for field in cls.__fields__ if field.name in new_model_as_dict]
-        unknown_fields = [field_name for field_name in new_model_as_dict if field_name not in updated_field_names]
+        updated_field_names = [field.name for field in cls.__fields__ if field.name in new_document]
+        unknown_fields = [field_name for field_name in new_document if field_name not in updated_field_names]
         for unknown_field in unknown_fields:
             # Convert dot notation fields into known fields to be able to validate them
-            known_field, field_value = cls._handle_dot_notation(unknown_field, new_model_as_dict[unknown_field])
+            known_field, field_value = cls._handle_dot_notation(unknown_field, new_document[unknown_field])
             if known_field:
-                previous_dict = new_model_as_dict.setdefault(known_field.name, {})
+                previous_dict = new_document.setdefault(known_field.name, {})
                 previous_dict.update(field_value)
 
         errors = {}
 
-        # Also ensure that Primary keys will contain a valid value
-        updated_fields = [field for field in cls.__fields__ if field.name in new_model_as_dict or field.is_primary_key]
+        # Also ensure that primary keys will contain a valid value
+        updated_fields = [field for field in cls.__fields__ if field.name in new_document or field.is_primary_key]
         for field in updated_fields:
-            errors.update(field.validate_update(new_model_as_dict))
+            errors.update(field.validate_update(new_document))
 
         return errors
 
     @classmethod
-    def deserialize_update(cls, model_as_dict: dict):
+    def deserialize_update(cls, document: dict):
         """
         Update this model dictionary by ensuring that it contains only valid Mongo values.
         """
-        updated_field_names = [field.name for field in cls.__fields__ if field.name in model_as_dict]
-        unknown_fields = [field_name for field_name in model_as_dict if field_name not in updated_field_names]
+        updated_field_names = [field.name for field in cls.__fields__ if field.name in document]
+        unknown_fields = [field_name for field_name in document if field_name not in updated_field_names]
         dot_model_as_dict = {}
 
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._handle_dot_notation(unknown_field, model_as_dict[unknown_field])
-            del model_as_dict[unknown_field]
+            known_field, field_value = cls._handle_dot_notation(unknown_field, document[unknown_field])
+            del document[unknown_field]
             if known_field:
                 previous_dict = dot_model_as_dict.setdefault(known_field.name, {})
                 previous_dict.update(field_value)
             else:
                 logger.warning(f'Skipping unknown field {unknown_field}.')
 
-        model_as_dict_without_dot_notation = {**model_as_dict, **dot_model_as_dict}
+        document_without_dot_notation = {**document, **dot_model_as_dict}
         # Deserialize dot notation values
         for field in [field for field in cls.__fields__ if field.name in dot_model_as_dict]:
             # Ensure that every provided field will be provided as deserialization might rely on another field
-            field.deserialize_update(model_as_dict_without_dot_notation)
+            field.deserialize_update(document_without_dot_notation)
             # Put back deserialized values as dot notation fields
-            for inner_field_name, value in model_as_dict_without_dot_notation[field.name].items():
-                model_as_dict[f'{field.name}.{inner_field_name}'] = value
+            for inner_field_name, value in document_without_dot_notation[field.name].items():
+                document[f'{field.name}.{inner_field_name}'] = value
 
-        updated_fields = [field for field in cls.__fields__ if field.name in model_as_dict or field.is_primary_key]
+        updated_fields = [field for field in cls.__fields__ if field.name in document or field.is_primary_key]
         for field in updated_fields:
-            field.deserialize_update(model_as_dict)
+            field.deserialize_update(document)
 
     @classmethod
-    def remove(cls, **model_to_query) -> int:
+    def remove(cls, **filters) -> int:
         """
         Remove the model(s) matching those criterion.
-        :returns Number of removed rows.
+
+        :returns Number of removed documents.
         """
-        errors = cls.validate_query(model_to_query)
+        errors = cls.validate_query(filters)
         if errors:
-            raise ValidationFailed(model_to_query, errors)
+            raise ValidationFailed(filters, errors)
 
-        cls.deserialize_query(model_to_query)
+        cls.deserialize_query(filters)
 
-        return cls._delete_many(model_to_query)
+        return cls._delete_many(filters)
 
     @classmethod
-    def _insert_many(cls, models_as_list_of_dict: List[dict]):
-        cls.__collection__.insert_many(models_as_list_of_dict)
+    def _insert_many(cls, documents: List[dict]):
+        cls.__collection__.insert_many(documents)
         if cls.audit_model:
-            for inserted_dict in models_as_list_of_dict:
-                cls.audit_model.audit_add(inserted_dict)
+            for document in documents:
+                cls.audit_model.audit_add(document)
 
     @classmethod
-    def _insert_one(cls, model_as_dict: dict) -> dict:
-        cls.__collection__.insert_one(model_as_dict)
+    def _insert_one(cls, document: dict) -> dict:
+        cls.__collection__.insert_one(document)
         if cls.audit_model:
-            cls.audit_model.audit_add(model_as_dict)
-        return model_as_dict
+            cls.audit_model.audit_add(document)
+        return document
 
     @classmethod
-    def _update_one(cls, model_as_dict: dict) -> (dict, dict):
-        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
-        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys)
-        if not previous_model_as_dict:
-            raise ModelCouldNotBeFound(model_as_dict_keys)
+    def _update_one(cls, document: dict) -> (dict, dict):
+        document_keys = cls._to_primary_keys_model(document)
+        previous_document = cls.__collection__.find_one(document_keys)
+        if not previous_document:
+            raise ModelCouldNotBeFound(document_keys)
 
-        new_model_as_dict = cls.__collection__.find_one_and_update(model_as_dict_keys, {'$set': model_as_dict},
-                                                                   return_document=pymongo.ReturnDocument.AFTER)
+        new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
+                                                              return_document=pymongo.ReturnDocument.AFTER)
         if cls.audit_model:
-            cls.audit_model.audit_update(new_model_as_dict)
-        return previous_model_as_dict, new_model_as_dict
+            cls.audit_model.audit_update(new_document)
+        return previous_document, new_document
 
     @classmethod
-    def _delete_many(cls, model_to_query: dict) -> int:
+    def _delete_many(cls, filters: dict) -> int:
         if cls.audit_model:
-            cls.audit_model.audit_remove(**model_to_query)
-        return cls.__collection__.delete_many(model_to_query).deleted_count
+            cls.audit_model.audit_remove(**filters)
+        return cls.__collection__.delete_many(filters).deleted_count
 
     @classmethod
-    def _to_primary_keys_model(cls, model_as_dict: dict) -> dict:
-        # TODO Compute primary keys only once
+    def _to_primary_keys_model(cls, document: dict) -> dict:
+        # TODO Compute primary key field names only once
         primary_key_field_names = [field.name for field in cls.__fields__ if field.is_primary_key]
-        return {field_name: value for field_name, value in model_as_dict.items() if
+        return {field_name: value for field_name, value in document.items() if
                 field_name in primary_key_field_names}
 
     @classmethod

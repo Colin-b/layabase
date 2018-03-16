@@ -16,6 +16,14 @@ List all changes in various categories:
 
 - [Mongo] Versioned models now store a shared (across all models) revision (as an integer) instead of the modification date time for each action.
 - [Mongo] Rollback action is now audited.
+- [Mongo] Default value was not sent back to the user on ListColumn (always an empty list).
+- [Mongo] The whole document was not provided back to the list item serialization and deserialization, avoiding user custom action in some cases.
+- [Mongo] Non nullable field values that were not set in database were not provided back to the controller.
+- [Mongo] Update failure because of already existing index was not handled properly.
+
+### Known issues ###
+
+- [Mongo] Update can violate unique index constraint and still succeed (at least with mongomock).
 
 ## Version 10.0.0 (2018-03-14) ##
 

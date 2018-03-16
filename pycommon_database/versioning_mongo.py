@@ -27,22 +27,22 @@ class VersionedCRUDModel(CRUDModel):
         return namespace.model(f'{cls.__name__}_Versioned', all_fields)
 
     @classmethod
-    def _insert_one(cls, model_as_dict: dict) -> dict:
+    def _insert_one(cls, document: dict) -> dict:
         revision = cls._increment(*REVISION_COUNTER)
-        model_as_dict[cls.valid_since_revision.name] = revision
-        model_as_dict[cls.valid_until_revision.name] = None
-        cls.__collection__.insert_one(model_as_dict)
+        document[cls.valid_since_revision.name] = revision
+        document[cls.valid_until_revision.name] = None
+        cls.__collection__.insert_one(document)
         if cls.audit_model:
             cls.audit_model.audit_add(revision)
-        return model_as_dict
+        return document
 
     @classmethod
-    def _insert_many(cls, models_as_list_of_dict: List[dict]):
+    def _insert_many(cls, documents: List[dict]):
         revision = cls._increment(*REVISION_COUNTER)
-        for model_as_dict in models_as_list_of_dict:
-            model_as_dict[cls.valid_since_revision.name] = revision
-            model_as_dict[cls.valid_until_revision.name] = None
-        cls.__collection__.insert_many(models_as_list_of_dict)
+        for document in documents:
+            document[cls.valid_since_revision.name] = revision
+            document[cls.valid_until_revision.name] = None
+        cls.__collection__.insert_many(documents)
         if cls.audit_model:
             cls.audit_model.audit_add(revision)
 
@@ -54,26 +54,26 @@ class VersionedCRUDModel(CRUDModel):
         return namespace.model(f'{cls.__name__}_Versioned', all_fields)
 
     @classmethod
-    def _update_one(cls, model_as_dict: dict) -> (dict, dict):
-        model_as_dict_keys = cls._to_primary_keys_model(model_as_dict)
-        model_as_dict_keys[cls.valid_until_revision.name] = None
-        previous_model_as_dict = cls.__collection__.find_one(model_as_dict_keys, projection={'_id': False})
-        if not previous_model_as_dict:
-            raise ModelCouldNotBeFound(model_as_dict_keys)
+    def _update_one(cls, document: dict) -> (dict, dict):
+        document_keys = cls._to_primary_keys_model(document)
+        document_keys[cls.valid_until_revision.name] = None
+        previous_document = cls.__collection__.find_one(document_keys, projection={'_id': False})
+        if not previous_document:
+            raise ModelCouldNotBeFound(document_keys)
 
         revision = cls._increment(*REVISION_COUNTER)
 
         # Set previous version as expired (insert previous as expired)
-        cls.__collection__.insert_one({**previous_model_as_dict, cls.valid_until_revision.name: revision})
+        cls.__collection__.insert_one({**previous_document, cls.valid_until_revision.name: revision})
 
         # Update valid version (update previous)
-        model_as_dict[cls.valid_since_revision.name] = revision
-        model_as_dict[cls.valid_until_revision.name] = None
-        new_model_as_dict = cls.__collection__.find_one_and_update(model_as_dict_keys, {'$set': model_as_dict},
-                                                                   return_document=pymongo.ReturnDocument.AFTER)
+        document[cls.valid_since_revision.name] = revision
+        document[cls.valid_until_revision.name] = None
+        new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
+                                                              return_document=pymongo.ReturnDocument.AFTER)
         if cls.audit_model:
             cls.audit_model.audit_update(revision)
-        return previous_model_as_dict, new_model_as_dict
+        return previous_document, new_document
 
     @classmethod
     def query_delete_parser(cls):
@@ -83,17 +83,17 @@ class VersionedCRUDModel(CRUDModel):
         return query_delete_parser
 
     @classmethod
-    def remove(cls, **model_to_query) -> int:
-        model_to_query.pop(cls.valid_since_revision.name, None)
-        model_to_query[cls.valid_until_revision.name] = None
-        return super().remove(**model_to_query)
+    def remove(cls, **filters) -> int:
+        filters.pop(cls.valid_since_revision.name, None)
+        filters[cls.valid_until_revision.name] = None
+        return super().remove(**filters)
 
     @classmethod
-    def _delete_many(cls, model_to_query: dict) -> int:
+    def _delete_many(cls, filters: dict) -> int:
         revision = cls._increment(*REVISION_COUNTER)
         if cls.audit_model:
             cls.audit_model.audit_remove(revision)
-        return cls.__collection__.update_many(model_to_query, {'$set': {cls.valid_until_revision.name: revision}}).modified_count
+        return cls.__collection__.update_many(filters, {'$set': {cls.valid_until_revision.name: revision}}).modified_count
 
     @classmethod
     def query_rollback_parser(cls):
@@ -104,15 +104,16 @@ class VersionedCRUDModel(CRUDModel):
         return query_rollback_parser
 
     @classmethod
-    def _get_revision(cls, model_to_query: dict) -> int:
-        revision = model_to_query.get('revision')
+    def _get_revision(cls, filters: dict) -> int:
+        # TODO Use an int Column validate + deserializa
+        revision = filters.get('revision')
         if not revision:
-            raise ValidationFailed(model_to_query, {'revision': ['Missing data for required field.']})
+            raise ValidationFailed(filters, {'revision': ['Missing data for required field.']})
 
         if not isinstance(revision, int):
-            raise ValidationFailed(model_to_query, {'revision': [f'Not a valid int.']})
+            raise ValidationFailed(filters, {'revision': [f'Not a valid int.']})
 
-        del model_to_query['revision']
+        del filters['revision']
         return revision
 
     @classmethod
@@ -130,76 +131,71 @@ class VersionedCRUDModel(CRUDModel):
         return namespace.model(f'{cls.__name__}_Versioned', all_fields)
 
     @classmethod
-    def get(cls, **model_to_query) -> dict:
+    def get(cls, **filters) -> dict:
         """
-        Return valid model corresponding to query.
+        Return valid document corresponding to query.
         """
-        model_to_query.pop(cls.valid_since_revision.name, None)
-        model_to_query[cls.valid_until_revision.name] = None
-        return super().get(**model_to_query)
+        filters.pop(cls.valid_since_revision.name, None)
+        filters[cls.valid_until_revision.name] = None
+        return super().get(**filters)
 
     @classmethod
-    def get_all(cls, **model_to_query) -> List[dict]:
+    def get_all(cls, **filters) -> List[dict]:
         """
-        Return all valid models corresponding to query.
+        Return all valid documents corresponding to query.
         """
-        model_to_query.pop(cls.valid_since_revision.name, None)
-        model_to_query[cls.valid_until_revision.name] = None
-        return super().get_all(**model_to_query)
+        filters.pop(cls.valid_since_revision.name, None)
+        filters[cls.valid_until_revision.name] = None
+        return super().get_all(**filters)
 
     @classmethod
-    def get_history(cls, **model_to_query) -> List[dict]:
-        """
-        Return all models corresponding to query.
-        """
-        return super().get_all(**model_to_query)
+    def get_history(cls, **filters) -> List[dict]:
+        return super().get_all(**filters)
 
     @classmethod
-    def rollback_to(cls, **model_to_query) -> int:
-        revision = cls._get_revision(model_to_query)
+    def rollback_to(cls, **filters) -> int:
+        revision = cls._get_revision(filters)
 
-        errors = cls.validate_query(model_to_query)
+        errors = cls.validate_query(filters)
         if errors:
-            raise ValidationFailed(model_to_query, errors)
+            raise ValidationFailed(filters, errors)
 
-        cls.deserialize_query(model_to_query)
+        cls.deserialize_query(filters)
 
         # Select those who were valid at the time of the revision
         previously_expired = {
             cls.valid_since_revision.name: {'$lte': revision},
             cls.valid_until_revision.name: {'$exists': True, '$ne': None, '$gt': revision},
         }
-        previously_expired_models = cls.__collection__.find({**model_to_query, **previously_expired},
-                                                            projection={'_id': False})
-        previously_expired_models = list(previously_expired_models)  # Convert Cursor to list
+        expired_documents = cls.__collection__.find({**filters, **previously_expired}, projection={'_id': False})
+        expired_documents = list(expired_documents)  # Convert Cursor to list
 
         new_revision = cls._increment(*REVISION_COUNTER)
 
         # Update currently valid as non valid anymore (new version since this validity)
-        for expired_model in previously_expired_models:
-            expired_model_keys = cls._to_primary_keys_model(expired_model)
-            expired_model_keys[cls.valid_until_revision.name] = None
+        for expired_document in expired_documents:
+            expired_document_keys = cls._to_primary_keys_model(expired_document)
+            expired_document_keys[cls.valid_until_revision.name] = None
 
-            actual_model_as_dict = cls.__collection__.find_one(expired_model_keys)
-            if actual_model_as_dict:
-                cls.__collection__.update_many(expired_model_keys, {'$set': {cls.valid_until_revision.name: new_revision}})
+            cls.__collection__.find_one_and_update(expired_document_keys,
+                                                   {'$set': {cls.valid_until_revision.name: new_revision}})
 
         # Update currently valid as non valid anymore (they were not existing at the time)
         new_still_valid = {
             cls.valid_since_revision.name: {'$gt': revision},
             cls.valid_until_revision.name: None,
         }
-        nb_removed = cls.__collection__.update_many({**model_to_query, **new_still_valid},
+        nb_removed = cls.__collection__.update_many({**filters, **new_still_valid},
                                                     {'$set': {cls.valid_until_revision.name: new_revision}}).modified_count
 
         # Insert expired as valid
-        for expired_model in previously_expired_models:
-            expired_model[cls.valid_since_revision.name] = new_revision
-            expired_model[cls.valid_until_revision.name] = None
+        for expired_document in expired_documents:
+            expired_document[cls.valid_since_revision.name] = new_revision
+            expired_document[cls.valid_until_revision.name] = None
 
-        if previously_expired_models:
-            cls.__collection__.insert_many(previously_expired_models)
+        if expired_documents:
+            cls.__collection__.insert_many(expired_documents)
 
         if cls.audit_model:
             cls.audit_model.audit_rollback(new_revision)
-        return len(previously_expired_models) + nb_removed
+        return len(expired_documents) + nb_removed
