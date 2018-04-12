@@ -2577,8 +2577,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             dict_col = database_mongo.DictColumn(
                 lambda model_as_dict: {
-                    'first_key': database_mongo.Column(EnumTest, is_nullable=False),
-                    'second_key': database_mongo.Column(int, is_nullable=False),
+                    'first_key': database_mongo.Column(EnumTest, is_nullable=True),
+                    'second_key': database_mongo.Column(int, is_nullable=True),
                 }
             )
 
@@ -4304,6 +4304,46 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ),
             self.TestOptionalDictController.put({
                 'key': 'my_key',
+            })
+        )
+
+    def test_post_empty_optional_dict_is_valid(self):
+        self.assertEqual(
+            {
+                'key': 'my_key',
+                'dict_col': {},
+            },
+            self.TestOptionalDictController.post({
+                'key': 'my_key',
+                'dict_col': {},
+            })
+        )
+
+    def test_put_empty_optional_dict_is_valid(self):
+        self.TestOptionalDictController.post({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': 'Value1',
+                'second_key': 3,
+            },
+        })
+        self.assertEqual(
+            (
+                {
+                    'key': 'my_key',
+                    'dict_col': {
+                        'first_key': 'Value1',
+                        'second_key': 3,
+                    },
+                },
+                {
+                    'key': 'my_key',
+                    'dict_col': {},
+                }
+            ),
+            self.TestOptionalDictController.put({
+                'key': 'my_key',
+                'dict_col': {},
             })
         )
 
