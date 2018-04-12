@@ -921,7 +921,7 @@ class CRUDModel:
         :return: Validation errors that might have occurred. Empty if no error occurred.
         Entry would be composed of a field name associated to a list of error messages.
         """
-        if not document:
+        if document is None:
             return {'': ['No data provided.']}
 
         new_document = copy.deepcopy(document)
@@ -1020,7 +1020,7 @@ class CRUDModel:
         :return: Validation errors that might have occurred. Empty if no error occurred.
         Entry would be composed of a field name associated to a list of error messages.
         """
-        if not document:
+        if document is None:
             return {'': ['No data provided.']}
 
         new_document = copy.deepcopy(document)

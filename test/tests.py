@@ -2667,7 +2667,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def test_post_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post({})
-        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({
+            'key': ['Missing data for required field.'],
+            'mandatory': ['Missing data for required field.']
+        }, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
     def test_post_many_with_empty_list_is_invalid(self):
@@ -2685,7 +2688,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def test_put_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.put({})
-        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
     def test_delete_without_nothing_do_not_fail(self):
@@ -5905,7 +5908,10 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     def test_post_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post({})
-        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({
+            'key': ['Missing data for required field.'],
+            'mandatory': ['Missing data for required field.']
+        }, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
@@ -5926,7 +5932,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     def test_put_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.put({})
-        self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
+        self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
         self._check_audit(self.TestController, [])
 

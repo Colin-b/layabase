@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.1.1 (2018-04-12) ##
+
+### Bug fixes ###
+
+- [Mongo] Allow empty dictionary on insert and update if it should be allowed.
+
 ## Version 10.1.0 (2018-03-15) ##
 
 ### Enhancements ###
