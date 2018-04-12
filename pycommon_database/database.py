@@ -196,6 +196,18 @@ class CRUDController:
         return cls._model.update(updated_dict)
 
     @classmethod
+    def put_many(cls, updated_dicts: List[dict]) -> (List[dict], List[dict]):
+        """
+        Update models formatted as a list of dictionaries.
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns A tuple containing previous models formatted as a list of dictionaries (first item)
+        and new models formatted as a list of dictionaries (second item).
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+        return cls._model.update_all(updated_dicts)
+
+    @classmethod
     def delete(cls, request_arguments: dict) -> int:
         """
         Remove the model(s) matching those criterion.

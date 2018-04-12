@@ -76,6 +76,34 @@ class VersionedCRUDModel(CRUDModel):
         return previous_document, new_document
 
     @classmethod
+    def _update_many(cls, documents: List[dict]) -> (List[dict], List[dict]):
+        previous_documents = []
+        new_documents = []
+        revision = cls._increment(*REVISION_COUNTER)
+        for document in documents:
+            document_keys = cls._to_primary_keys_model(document)
+            document_keys[cls.valid_until_revision.name] = None
+            previous_document = cls.__collection__.find_one(document_keys, projection={'_id': False})
+            if not previous_document:
+                raise ModelCouldNotBeFound(document_keys)
+
+            # Set previous version as expired (insert previous as expired)
+            cls.__collection__.insert_one({**previous_document, cls.valid_until_revision.name: revision})
+
+            # Update valid version (update previous)
+            document[cls.valid_since_revision.name] = revision
+            document[cls.valid_until_revision.name] = None
+            new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
+                                                                  return_document=pymongo.ReturnDocument.AFTER)
+
+            previous_documents.append(previous_document)
+            new_documents.append(new_document)
+
+        if cls.audit_model:
+            cls.audit_model.audit_update(revision)
+        return previous_documents, new_documents
+
+    @classmethod
     def query_delete_parser(cls):
         query_delete_parser = super().query_delete_parser()
         query_delete_parser.remove_argument(cls.valid_since_revision.name)

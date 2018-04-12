@@ -160,6 +160,51 @@ class CRUDModel:
             raise
 
     @classmethod
+    def update_all(cls, rows: List[dict]) -> (List[dict], List[dict]):
+        """
+        Update models formatted as a list of dictionaries.
+
+        :raises ValidationFailed in case Marshmallow validation fail.
+        :returns A tuple containing previous models formatted as a list of dictionaries (first item)
+        and new models formatted as a list of dictionaries (second item).
+        """
+        if not rows:
+            raise ValidationFailed({}, message='No data provided.')
+        previous_rows = []
+        new_rows = []
+        new_models = []
+        for row in rows:
+            try:
+                previous_model = cls.schema().get_instance(row)
+            except exc.sa_exc.DBAPIError:
+                cls._handle_connection_failure()
+            if not previous_model:
+                raise ModelCouldNotBeFound(row)
+            previous_row = _model_field_values(previous_model)
+            new_model, errors = cls.schema().load(row, instance=previous_model, partial=True, session=cls._session)
+            if errors:
+                raise ValidationFailed(row, marshmallow_errors=errors)
+            new_row = _model_field_values(new_model)
+
+            previous_rows.append(previous_row)
+            new_rows.append(new_row)
+            new_models.append(new_model)
+
+        try:
+            cls._session.add_all(new_models)
+            if cls.audit_model:
+                for new_row in new_rows:
+                    cls.audit_model.audit_update(new_row)
+            cls._session.commit()
+            return previous_rows, new_rows
+        except exc.sa_exc.DBAPIError:
+            cls._session.rollback()
+            cls._handle_connection_failure()
+        except Exception:
+            cls._session.rollback()
+            raise
+
+    @classmethod
     def update(cls, row: dict) -> (dict, dict):
         """
         Update a model formatted as a dictionary.

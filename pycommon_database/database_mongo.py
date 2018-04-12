@@ -882,10 +882,10 @@ class CRUDModel:
     @classmethod
     def add_all(cls, documents: List[dict]) -> List[dict]:
         """
-        Add models formatted as a list of dictionaries.
+        Add documents formatted as a list of dictionaries.
 
         :raises ValidationFailed in case validation fail.
-        :returns The inserted models formatted as a list of dictionaries.
+        :returns The inserted documents formatted as a list of dictionaries.
         """
         if not documents:
             raise ValidationFailed([], message='No data provided.')
@@ -1011,6 +1011,40 @@ class CRUDModel:
             raise ValidationFailed(cls.serialize(document), message='This document already exists.')
 
     @classmethod
+    def update_all(cls, documents: List[dict]) -> (List[dict], List[dict]):
+        """
+        Update documents formatted as a list of dictionary.
+
+        :raises ValidationFailed in case validation fail.
+        :returns A tuple containing previous documents (first item) and new documents (second item).
+        """
+        if not documents:
+            raise ValidationFailed([], message='No data provided.')
+
+        new_documents = copy.deepcopy(documents)
+
+        errors = {}
+
+        for index, document in enumerate(new_documents):
+            document_errors = cls.validate_update(document)
+            if document_errors:
+                errors[index] = document_errors
+                continue
+
+            cls.deserialize_update(document)
+
+        if errors:
+            raise ValidationFailed(documents, errors)
+
+        try:
+            previous_documents, updated_documents = cls._update_many(new_documents)
+            return [cls.serialize(document) for document in previous_documents], [cls.serialize(document) for document in updated_documents]
+        except pymongo.errors.BulkWriteError as e:
+            raise ValidationFailed(documents, message=str(e.details))
+        except pymongo.errors.DuplicateKeyError:
+            raise ValidationFailed([cls.serialize(document) for document in documents], message='One document already exists.')
+
+    @classmethod
     def validate_update(cls, document: dict) -> dict:
         """
         Validate a document update request.
@@ -1118,6 +1152,24 @@ class CRUDModel:
         if cls.audit_model:
             cls.audit_model.audit_update(new_document)
         return previous_document, new_document
+
+    @classmethod
+    def _update_many(cls, documents: List[dict]) -> (List[dict], List[dict]):
+        previous_documents = []
+        new_documents = []
+        for document in documents:
+            document_keys = cls._to_primary_keys_model(document)
+            previous_document = cls.__collection__.find_one(document_keys)
+            if not previous_document:
+                raise ModelCouldNotBeFound(document_keys)
+
+            new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
+                                                                  return_document=pymongo.ReturnDocument.AFTER)
+            previous_documents.append(previous_document)
+            new_documents.append(new_document)
+            if cls.audit_model:
+                cls.audit_model.audit_update(new_document)
+        return previous_documents, new_documents
 
     @classmethod
     def _delete_many(cls, filters: dict) -> int:

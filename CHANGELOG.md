@@ -6,7 +6,11 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 10.1.1 (2018-04-12) ##
+## Version 10.2.0 (2018-04-12) ##
+
+### Enhancements ###
+
+- Controller.update_many method is now available
 
 ### Bug fixes ###
 
