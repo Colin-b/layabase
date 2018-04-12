@@ -3194,6 +3194,60 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestVersionedController.get({})
         )
 
+    def test_versioned_many(self):
+        self.TestVersionedController.post_many([
+            {
+                'key': 'first',
+                'dict_field.first_key': EnumTest.Value1,
+                'dict_field.second_key': 1,
+            },
+            {
+                'key': 'second',
+                'dict_field.first_key': EnumTest.Value2,
+                'dict_field.second_key': 2,
+            },
+        ])
+        self.TestVersionedController.put_many([
+            {
+                'key': 'first',
+                'dict_field.first_key': EnumTest.Value2,
+            },
+            {
+                'key': 'second',
+                'dict_field.second_key': 3,
+            },
+        ])
+
+        self.assertEqual(
+            [
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 1},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                },
+                {
+                    'key': 'second',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 3},
+                    'valid_since_revision': 2,
+                    'valid_until_revision': None
+                },
+                {
+                    'key': 'first',
+                    'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
+                },
+                {
+                    'key': 'second',
+                    'dict_field': {'first_key': 'Value2', 'second_key': 2},
+                    'valid_since_revision': 1,
+                    'valid_until_revision': 2
+                },
+            ],
+            self.TestVersionedController.get_history({})
+        )
+
     def test_rollback_without_revision_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestVersionedController.rollback_to({'key': 'unknown'})
@@ -3927,6 +3981,40 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {
                     'key': 'my_key2',
                     'mandatory': 2,
+                }
+            ])
+        )
+
+    def test_put_many_is_valid(self):
+        self.TestController.post_many([
+            {
+                'key': 'my_key',
+                'mandatory': 1,
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+            }
+        ])
+        self.assertEqual(
+            (
+                [
+                    {'mandatory': 1, 'key': 'my_key', 'optional': None},
+                    {'mandatory': 2, 'key': 'my_key2', 'optional': None},
+                ],
+                [
+                    {'mandatory': 1, 'key': 'my_key', 'optional': 'test'},
+                    {'mandatory': 3, 'key': 'my_key2', 'optional': None},
+                ]
+            ),
+            self.TestController.put_many([
+                {
+                    'key': 'my_key',
+                    'optional': 'test',
+                },
+                {
+                    'key': 'my_key2',
+                    'mandatory': 3,
                 }
             ])
         )
@@ -6204,6 +6292,68 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                     'mandatory': 1,
                     'optional': None,
                     'revision': 1,
+                },
+            ]
+        )
+
+    def test_put_many_is_valid(self):
+        self.TestController.post_many([
+            {
+                'key': 'my_key',
+                'mandatory': 1,
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 2,
+            }
+        ])
+        self.TestController.put_many([
+            {
+                'key': 'my_key',
+                'optional': 'test',
+            },
+            {
+                'key': 'my_key2',
+                'mandatory': 3,
+            }
+        ])
+        self._check_audit(self.TestController,
+            [
+                {
+                    'audit_action': 'Insert',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': None,
+                    'revision': 1,
+                },
+                {
+                    'audit_action': 'Insert',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 2,
+                    'optional': None,
+                    'revision': 2,
+                },
+                {
+                    'audit_action': 'Update',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'key': 'my_key',
+                    'mandatory': 1,
+                    'optional': 'test',
+                    'revision': 3,
+                },
+                {
+                    'audit_action': 'Update',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_user': '',
+                    'key': 'my_key2',
+                    'mandatory': 3,
+                    'optional': None,
+                    'revision': 4,
                 },
             ]
         )
