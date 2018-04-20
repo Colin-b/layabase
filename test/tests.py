@@ -1421,7 +1421,7 @@ class SQLAlchemyCRUDControllerFailuresTest(unittest.TestCase):
             "Model was not attached to TestController. "
             "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
 
-
+"""
 class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
     class TestController(database.CRUDController):
         pass
@@ -2208,7 +2208,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
              'optional': 'String'},
             self.TestController.get_audit_response_model.fields_flask_type)
         self._check_audit([])
-
+"""
 
 class SQLAlchemyFlaskRestPlusModelsTest(unittest.TestCase):
     def setUp(self):

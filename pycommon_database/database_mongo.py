@@ -854,7 +854,8 @@ class CRUDModel:
             for removed_field in removed_fields:
                 del document[removed_field]
             # Do not log the fact that _id is removed as it is a Mongo specific field
-            removed_fields.pop('_id', None)
+            if '_id' in removed_fields:
+                removed_fields.remove('_id')
             if removed_fields:
                 logger.debug(f'Skipping removed fields {removed_fields}.')
 
