@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.2.1 (2018-04-20) ##
+
+### Bug fixes ###
+
+- [Mongo] Increase robustness to allow columns not present in the column list to be present in the database
+
 ## Version 10.2.0 (2018-04-12) ##
 
 ### Enhancements ###
