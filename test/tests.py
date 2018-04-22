@@ -4572,6 +4572,51 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_get_with_dot_notation_as_list_is_valid(self):
+        self.TestDictController.post({
+            'key': 'my_key',
+            'dict_col': {
+                'first_key': EnumTest.Value1,
+                'second_key': 3,
+            },
+        })
+        self.assertEqual(
+            [
+                {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
+            ],
+            self.TestDictController.get({
+                'dict_col.first_key': [EnumTest.Value1],
+            })
+        )
+
+    def test_get_with_multiple_results_dot_notation_as_list_is_valid(self):
+        self.TestDictController.post_many([
+                {
+                    'key': 'my_key',
+                    'dict_col': {
+                        'first_key': EnumTest.Value1,
+                        'second_key': 3,
+                    },
+                },
+                {
+                    'key': 'my_key2',
+                    'dict_col': {
+                        'first_key': EnumTest.Value2,
+                        'second_key': 4,
+                    },
+                }
+            ]
+        )
+        self.assertEqual(
+            [
+                {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
+                {'dict_col': {'first_key': 'Value2', 'second_key': 4}, 'key': 'my_key2'},
+            ],
+            self.TestDictController.get({
+                'dict_col.first_key': [EnumTest.Value1, EnumTest.Value2],
+            })
+        )
+
     def test_update_with_dot_notation_is_valid(self):
         self.assertEqual(
             {'dict_col': {'first_key': 'Value1', 'second_key': 3}, 'key': 'my_key'},
@@ -5373,8 +5418,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             parser_types(self.TestListController.query_get_parser))
         self.assertEqual(
             {
-                'bool_field': 'store',
-                'key': 'store',
+                'bool_field': 'append',
+                'key': 'append',
                 'list_field': 'append',
                 'limit': 'store',
                 'offset': 'store',
@@ -5393,9 +5438,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
             parser_types(self.TestDictController.query_get_parser))
         self.assertEqual(
             {
-                'dict_col.first_key': 'store',
-                'dict_col.second_key': 'store',
-                'key': 'store',
+                'dict_col.first_key': 'append',
+                'dict_col.second_key': 'append',
+                'key': 'append',
                 'limit': 'store',
                 'offset': 'store',
             },
@@ -5420,8 +5465,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             parser_types(self.TestListController.query_delete_parser))
         self.assertEqual(
             {
-                'bool_field': 'store',
-                'key': 'store',
+                'bool_field': 'append',
+                'key': 'append',
                 'list_field': 'append',
             },
             parser_actions(self.TestListController.query_delete_parser))
@@ -5437,9 +5482,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
             parser_types(self.TestVersionedController.query_rollback_parser))
         self.assertEqual(
             {
-                'dict_field.first_key': 'store',
-                'dict_field.second_key': 'store',
-                'key': 'store',
+                'dict_field.first_key': 'append',
+                'dict_field.second_key': 'append',
+                'key': 'append',
                 'revision': 'store'
             },
             parser_actions(self.TestVersionedController.query_rollback_parser))
@@ -5454,9 +5499,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
             parser_types(self.TestDictController.query_delete_parser))
         self.assertEqual(
             {
-                'dict_col.first_key': 'store',
-                'dict_col.second_key': 'store',
-                'key': 'store',
+                'dict_col.first_key': 'append',
+                'dict_col.second_key': 'append',
+                'key': 'append',
             },
             parser_actions(self.TestDictController.query_delete_parser))
 

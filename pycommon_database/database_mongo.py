@@ -1207,10 +1207,10 @@ class CRUDModel:
 
     @classmethod
     def query_get_history_parser(cls):
-        query_get_parser = cls._query_parser()
-        query_get_parser.add_argument('limit', type=inputs.positive)
-        query_get_parser.add_argument('offset', type=inputs.natural)
-        return query_get_parser
+        query_get_hist_parser = cls._query_parser()
+        query_get_hist_parser.add_argument('limit', type=inputs.positive)
+        query_get_hist_parser.add_argument('offset', type=inputs.natural)
+        return query_get_hist_parser
 
     @classmethod
     def query_delete_parser(cls):
@@ -1255,6 +1255,7 @@ class CRUDModel:
                 f'{prefix}{field.name}',
                 required=field.is_required,
                 type=_get_python_type(field),
+                action='append',  # Allow to provide multiple values in queries
                 store_missing=not field.allow_none_as_filter
             )
 
