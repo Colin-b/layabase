@@ -971,6 +971,128 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             ],
             self.TestController.get({'optional': 'my_value1'}))
 
+    def test_get_with_list_filter_matching_one_is_retrieving_subset(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+            ],
+            self.TestController.get({'optional': ['my_value1']}))
+
+    def test_get_with_list_filter_matching_many_is_retrieving_subset(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+            ],
+            self.TestController.get({'optional': ['my_value1', 'my_value2']}))
+
+    def test_get_with_list_filter_matching_partial_is_retrieving_subset(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+            ],
+            self.TestController.get({'optional': ['non existing', 'my_value1', 'not existing']}))
+
+    def test_get_with_empty_list_filter_is_retrieving_everything(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+            ],
+            self.TestController.get({'optional': []}))
+
+    def test_delete_with_list_filter_matching_one_is_retrieving_subset(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(1, self.TestController.delete({'optional': ['my_value1']}))
+
+    def test_delete_with_list_filter_matching_many_is_retrieving_subset(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(2, self.TestController.delete({'optional': ['my_value1', 'my_value2']}))
+
+    def test_delete_with_list_filter_matching_partial_is_retrieving_subset(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(1, self.TestController.delete({'optional': ['non existing', 'my_value1', 'not existing']}))
+
+    def test_delete_with_empty_list_filter_is_retrieving_everything(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(2, self.TestController.delete({'optional': []}))
+
     def test_get_with_filter_is_retrieving_subset(self):
         self.TestController.post_many([
             {
@@ -1420,6 +1542,7 @@ class SQLAlchemyCRUDControllerFailuresTest(unittest.TestCase):
             cm.exception.args[0],
             "Model was not attached to TestController. "
             "Call <bound method CRUDController.model of <class '.*CRUDControllerFailuresTest.TestController'>>.")
+
 
 class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
     class TestController(database.CRUDController):

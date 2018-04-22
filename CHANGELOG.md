@@ -8,9 +8,13 @@ List all changes in various categories:
 
 ## Version 10.3.0 (2018-04-23) ##
 
+### Release notes ###
+
+- SQLAlchemy delete are now slower as a SELECT is performed before sending the actual DELETE.
+
 ### Enhancements ###
 
-- [Mongo] Allow to send multiple values when sending a query (GET or DELETE requests usually)
+- Allow to send multiple values when sending a query (GET or DELETE requests usually).
 
 ## Version 10.2.1 (2018-04-20) ##
 

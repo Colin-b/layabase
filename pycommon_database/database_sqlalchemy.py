@@ -66,7 +66,11 @@ class CRUDModel:
 
         for column_name, value in filters.items():
             if value is not None:
-                query = query.filter(getattr(cls, column_name) == value)
+                if isinstance(value, list):
+                    if value:
+                        query = query.filter(getattr(cls, column_name).in_(value))
+                else:
+                    query = query.filter(getattr(cls, column_name) == value)
         try:
             return query.all()
         except exc.sa_exc.DBAPIError:
@@ -89,6 +93,12 @@ class CRUDModel:
         query = cls._session.query(cls)
         for column_name, value in filters.items():
             if value is not None:
+                if isinstance(value, list):
+                    if not value:
+                        continue
+                    if len(value) > 1:
+                        raise ValidationFailed(filters, {column_name: ['Only one value must be queried.']})
+                    value = value[0]
                 query = query.filter(getattr(cls, column_name) == value)
         try:
             model = query.one_or_none()
@@ -250,10 +260,14 @@ class CRUDModel:
             query = cls._session.query(cls)
             for column_name, value in filters.items():
                 if value is not None:
-                    query = query.filter(getattr(cls, column_name) == value)
+                    if isinstance(value, list):
+                        if value:
+                            query = query.filter(getattr(cls, column_name).in_(value))
+                    else:
+                        query = query.filter(getattr(cls, column_name) == value)
             if cls.audit_model:
                 cls.audit_model.audit_remove(**filters)
-            nb_removed = query.delete()
+            nb_removed = query.delete(synchronize_session='fetch')
             cls._session.commit()
             return nb_removed
         except exc.sa_exc.DBAPIError:
@@ -307,11 +321,11 @@ class CRUDModel:
 
     @classmethod
     def query_get_history_parser(cls):
-        query_get_parser = cls._query_parser()
-        query_get_parser.add_argument('limit', type=inputs.positive)
+        query_get_hist_parser = cls._query_parser()
+        query_get_hist_parser.add_argument('limit', type=inputs.positive)
         if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_parser.add_argument('offset', type=inputs.natural)
-        return query_get_parser
+            query_get_hist_parser.add_argument('offset', type=inputs.natural)
+        return query_get_hist_parser
 
     @classmethod
     def query_delete_parser(cls):
@@ -329,6 +343,7 @@ class CRUDModel:
                 marshmallow_field.name,
                 required=False,
                 type=_get_python_type(marshmallow_field),
+                action='append'
             )
         return query_parser
 
