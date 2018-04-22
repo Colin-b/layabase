@@ -2805,6 +2805,134 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestIndexController.get_one({'unique_key': 'test2'})
         )
 
+    def test_get_with_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(
+            [
+                {
+                    'unique_key': 'test',
+                    'non_unique_key': '2017-01-01',
+                },
+                {
+                    'unique_key': 'test2',
+                    'non_unique_key': '2017-01-01',
+                }
+            ],
+            self.TestIndexController.get({'unique_key': ['test', 'test2']})
+        )
+
+    def test_get_with_partial_matching_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(
+            [
+                {
+                    'unique_key': 'test2',
+                    'non_unique_key': '2017-01-01',
+                }
+            ],
+            self.TestIndexController.get({'unique_key': ['test2']})
+        )
+
+    def test_get_with_empty_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(
+            [
+                {
+                    'unique_key': 'test',
+                    'non_unique_key': '2017-01-01',
+                },
+                {
+                    'unique_key': 'test2',
+                    'non_unique_key': '2017-01-01',
+                }
+            ],
+            self.TestIndexController.get({'unique_key': []})
+        )
+
+    def test_get_with_partialy_matching_and_not_matching_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(
+            [
+                {
+                    'unique_key': 'test',
+                    'non_unique_key': '2017-01-01',
+                },
+            ],
+            self.TestIndexController.get({'unique_key': ['not existing', 'test', 'another non existing']})
+        )
+
+    def test_delete_with_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(2, self.TestIndexController.delete({'unique_key': ['test', 'test2']}))
+
+    def test_delete_with_partial_matching_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(1, self.TestIndexController.delete({'unique_key': ['test2']}))
+
+    def test_delete_with_empty_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(2, self.TestIndexController.delete({'unique_key': []}))
+
+    def test_delete_with_partialy_matching_and_not_matching_list_is_valid(self):
+        self.TestIndexController.post({
+            'unique_key': 'test',
+            'non_unique_key': '2017-01-01',
+        })
+        self.TestIndexController.post({
+            'unique_key': 'test2',
+            'non_unique_key': '2017-01-01',
+        })
+        self.assertEqual(1, self.TestIndexController.delete({'unique_key': ['not existing', 'test', 'another non existing']}))
+
     def test_get_one_without_result_is_valid(self):
         self.TestIndexController.post({
             'unique_key': 'test',

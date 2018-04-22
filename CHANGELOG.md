@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.3.0 (2018-04-23) ##
+
+### Enhancements ###
+
+- [Mongo] Allow to send multiple values when sending a query (GET or DELETE requests usually)
+
 ## Version 10.2.1 (2018-04-20) ##
 
 ### Bug fixes ###

@@ -143,7 +143,14 @@ class Column:
             if self.is_required:
                 return {self.name: ['Missing data for required field.']}
             return {}
-        return self._validate_value(value)
+        # Allow to specify a list of values when querying a field
+        if isinstance(value, list) and self.field_type != list:
+            errors = {}
+            for value_in_list in value:
+                errors.update(self._validate_value(value_in_list))
+            return errors
+        else:
+            return self._validate_value(value)
 
     def validate_insert(self, document: dict) -> dict:
         """
@@ -241,6 +248,12 @@ class Column:
         if value is None:
             if not self.allow_none_as_filter:
                 filters.pop(self.name, None)
+        # Allow to specify a list of values to query
+        elif isinstance(value, list) and self.field_type != list:
+            if not value:
+                filters.pop(self.name, None)
+            else:
+                filters[self.name] = {'$in': [self._deserialize_value(value_in_list) for value_in_list in value]}
         else:
             filters[self.name] = self._deserialize_value(value)
 
