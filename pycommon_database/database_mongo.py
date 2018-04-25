@@ -685,16 +685,36 @@ class CRUDModel:
         Drop all indexes and recreate them.
         As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
         """
-        logger.info('Updating indexes...')
-        cls.__collection__.drop_indexes()
-        cls._create_indexes(IndexType.Unique, document)
-        cls._create_indexes(IndexType.Other, document)
-        logger.info('Indexes updated.')
-        if cls.audit_model:
-            cls.audit_model.update_indexes(document)
+        if cls._check_indexes(document):
+            logger.info('Updating indexes...')
+            cls.__collection__.drop_indexes()
+            cls._create_indexes(IndexType.Unique, document)
+            cls._create_indexes(IndexType.Other, document)
+            logger.info('Indexes updated.')
+            if cls.audit_model:
+                cls.audit_model.update_indexes(document)
 
     @classmethod
-    def _create_indexes(cls, index_type: IndexType, document: dict):
+    def _check_indexes(cls, document: dict) -> bool:
+        """
+        Check if indexes are present and if criteria have been modified
+        :param document: Data specified by the user at the time of the index creation.
+        """
+        index_modified = False
+        criteria = [field_name for field_name in cls._get_index_fields(IndexType.Other, document, '')]
+        unique_criteria = [field_name for field_name in cls._get_index_fields(IndexType.Unique, document, '')]
+        index_name = f'idx{cls.__tablename__}'
+        unique_index_name = f'uidx{cls.__tablename__}'
+        indexes = {index['name']: index['key'].keys() for index in cls.__collection__.list_indexes()}
+        if (criteria and index_name not in indexes) or (not criteria and index_name in indexes) or (criteria and index_name in indexes and criteria != indexes[index_name]):
+            index_modified = True
+        elif (unique_criteria and unique_index_name not in indexes) or (not unique_criteria and unique_index_name in indexes) or\
+                (unique_criteria and unique_index_name in indexes and unique_criteria != indexes[unique_index_name]):
+            index_modified = True
+        return index_modified
+
+    @classmethod
+    def _create_indexes(cls, index_type: IndexType, document: dict, condition = None):
         """
         Create indexes of specified type.
         :param document: Data specified by the user at the time of the index creation.
@@ -709,7 +729,10 @@ class CRUDModel:
                 index_name = f'uidx{cls.__tablename__}' if index_type == IndexType.Unique else f'idx{cls.__tablename__}'
                 logger.info(
                     f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria.")
-                cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
+                if condition is None:
+                    cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
+                else:
+                    cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
         except pymongo.errors.DuplicateKeyError:
             logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
             raise

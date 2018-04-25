@@ -6,6 +6,16 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.4.0 (2018-04-26) ##
+
+### Release notes ###
+
+- Mongo collections indexes are now created only when missing or when update is needed.
+
+### Bug fixes ###
+
+- Versioning use negative value for valid fields instead of None value. Collection indexes for Versionned collections focus only on valid records using partial indexes.
+
 ## Version 10.3.0 (2018-04-23) ##
 
 ### Release notes ###

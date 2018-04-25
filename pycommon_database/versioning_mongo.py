@@ -1,10 +1,12 @@
 from flask_restplus import inputs
 import pymongo
 from typing import List
+import logging
 
 from pycommon_database.database_mongo import CRUDModel, Column, IndexType
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
+logger = logging.getLogger(__name__)
 
 REVISION_COUNTER = ('revision', 'shared')
 
@@ -20,6 +22,22 @@ class VersionedCRUDModel(CRUDModel):
                                   description='Record is valid until this revision (excluded).')
 
     @classmethod
+    def update_indexes(cls, document: dict):
+        """
+        Drop all indexes and recreate them.
+        As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
+        """
+        if cls._check_indexes(document):
+            logger.info('Updating indexes Versioning...')
+            cls.__collection__.drop_indexes()
+            condition = {'valid_until_revision': {'$lt': 0}}
+            cls._create_indexes(IndexType.Unique, document, condition)
+            cls._create_indexes(IndexType.Other, document, condition)
+            logger.info('Indexes updated.')
+            if cls.audit_model:
+                cls.audit_model.update_indexes(document)
+
+    @classmethod
     def json_post_model(cls, namespace):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
@@ -30,7 +48,7 @@ class VersionedCRUDModel(CRUDModel):
     def _insert_one(cls, document: dict) -> dict:
         revision = cls._increment(*REVISION_COUNTER)
         document[cls.valid_since_revision.name] = revision
-        document[cls.valid_until_revision.name] = None
+        document[cls.valid_until_revision.name] = -1
         cls.__collection__.insert_one(document)
         if cls.audit_model:
             cls.audit_model.audit_add(revision)
@@ -41,7 +59,7 @@ class VersionedCRUDModel(CRUDModel):
         revision = cls._increment(*REVISION_COUNTER)
         for document in documents:
             document[cls.valid_since_revision.name] = revision
-            document[cls.valid_until_revision.name] = None
+            document[cls.valid_until_revision.name] = -1
         cls.__collection__.insert_many(documents)
         if cls.audit_model:
             cls.audit_model.audit_add(revision)
@@ -56,7 +74,7 @@ class VersionedCRUDModel(CRUDModel):
     @classmethod
     def _update_one(cls, document: dict) -> (dict, dict):
         document_keys = cls._to_primary_keys_model(document)
-        document_keys[cls.valid_until_revision.name] = None
+        document_keys[cls.valid_until_revision.name] = -1
         previous_document = cls.__collection__.find_one(document_keys, projection={'_id': False})
         if not previous_document:
             raise ModelCouldNotBeFound(document_keys)
@@ -68,7 +86,7 @@ class VersionedCRUDModel(CRUDModel):
 
         # Update valid version (update previous)
         document[cls.valid_since_revision.name] = revision
-        document[cls.valid_until_revision.name] = None
+        document[cls.valid_until_revision.name] = -1
         new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
                                                               return_document=pymongo.ReturnDocument.AFTER)
         if cls.audit_model:
@@ -82,7 +100,7 @@ class VersionedCRUDModel(CRUDModel):
         revision = cls._increment(*REVISION_COUNTER)
         for document in documents:
             document_keys = cls._to_primary_keys_model(document)
-            document_keys[cls.valid_until_revision.name] = None
+            document_keys[cls.valid_until_revision.name] = -1
             previous_document = cls.__collection__.find_one(document_keys, projection={'_id': False})
             if not previous_document:
                 raise ModelCouldNotBeFound(document_keys)
@@ -92,7 +110,7 @@ class VersionedCRUDModel(CRUDModel):
 
             # Update valid version (update previous)
             document[cls.valid_since_revision.name] = revision
-            document[cls.valid_until_revision.name] = None
+            document[cls.valid_until_revision.name] = -1
             new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
                                                                   return_document=pymongo.ReturnDocument.AFTER)
 
@@ -113,7 +131,7 @@ class VersionedCRUDModel(CRUDModel):
     @classmethod
     def remove(cls, **filters) -> int:
         filters.pop(cls.valid_since_revision.name, None)
-        filters[cls.valid_until_revision.name] = None
+        filters[cls.valid_until_revision.name] = -1
         return super().remove(**filters)
 
     @classmethod
@@ -164,7 +182,7 @@ class VersionedCRUDModel(CRUDModel):
         Return valid document corresponding to query.
         """
         filters.pop(cls.valid_since_revision.name, None)
-        filters[cls.valid_until_revision.name] = None
+        filters[cls.valid_until_revision.name] = -1
         return super().get(**filters)
 
     @classmethod
@@ -173,7 +191,7 @@ class VersionedCRUDModel(CRUDModel):
         Return all valid documents corresponding to query.
         """
         filters.pop(cls.valid_since_revision.name, None)
-        filters[cls.valid_until_revision.name] = None
+        filters[cls.valid_until_revision.name] = -1
         return super().get_all(**filters)
 
     @classmethod
@@ -193,7 +211,7 @@ class VersionedCRUDModel(CRUDModel):
         # Select those who were valid at the time of the revision
         previously_expired = {
             cls.valid_since_revision.name: {'$lte': revision},
-            cls.valid_until_revision.name: {'$exists': True, '$ne': None, '$gt': revision},
+            cls.valid_until_revision.name: {'$exists': True, '$ne': -1, '$gt': revision},
         }
         expired_documents = cls.__collection__.find({**filters, **previously_expired}, projection={'_id': False})
         expired_documents = list(expired_documents)  # Convert Cursor to list
@@ -203,7 +221,7 @@ class VersionedCRUDModel(CRUDModel):
         # Update currently valid as non valid anymore (new version since this validity)
         for expired_document in expired_documents:
             expired_document_keys = cls._to_primary_keys_model(expired_document)
-            expired_document_keys[cls.valid_until_revision.name] = None
+            expired_document_keys[cls.valid_until_revision.name] = -1
 
             cls.__collection__.find_one_and_update(expired_document_keys,
                                                    {'$set': {cls.valid_until_revision.name: new_revision}})
@@ -211,7 +229,7 @@ class VersionedCRUDModel(CRUDModel):
         # Update currently valid as non valid anymore (they were not existing at the time)
         new_still_valid = {
             cls.valid_since_revision.name: {'$gt': revision},
-            cls.valid_until_revision.name: None,
+            cls.valid_until_revision.name: -1,
         }
         nb_removed = cls.__collection__.update_many({**filters, **new_still_valid},
                                                     {'$set': {cls.valid_until_revision.name: new_revision}}).modified_count
@@ -219,7 +237,7 @@ class VersionedCRUDModel(CRUDModel):
         # Insert expired as valid
         for expired_document in expired_documents:
             expired_document[cls.valid_since_revision.name] = new_revision
-            expired_document[cls.valid_until_revision.name] = None
+            expired_document[cls.valid_until_revision.name] = -1
 
         if expired_documents:
             cls.__collection__.insert_many(expired_documents)
