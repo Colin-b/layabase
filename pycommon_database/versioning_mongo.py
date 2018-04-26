@@ -138,6 +138,8 @@ class VersionedCRUDModel(CRUDModel):
         revision = cls._increment(*REVISION_COUNTER)
         if cls.audit_model:
             cls.audit_model.audit_remove(revision)
+        if filters == {'valid_until_revision': -1}:
+            cls.reset_counters()
         return cls.__collection__.update_many(filters, {'$set': {cls.valid_until_revision.name: revision}}).modified_count
 
     @classmethod

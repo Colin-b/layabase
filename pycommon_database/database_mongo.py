@@ -1028,6 +1028,28 @@ class CRUDModel:
         return counter_element[counter_name]['counter']
 
     @classmethod
+    def reset_counters(cls):
+        """
+        reset the class related counters
+
+        """
+        for field in cls.__fields__:
+            if field.should_auto_increment:
+                cls._reset_counter(*field.get_counter({}))
+
+    @classmethod
+    def _reset_counter(cls, counter_name: str):
+        """
+        Reset a counter.
+
+        :param counter_name: Name of the counter to reset. Will be created at 0 if not existing yet.
+        """
+        counter_key = {'_id': cls.__collection__.name}
+        counter_update = {'$set': {f'{counter_name}.counter': 0, f'{counter_name}.last_update_time': datetime.datetime.utcnow()}}
+        cls.__counters__.find_one_and_update(counter_key, counter_update, upsert=True)
+        return
+
+    @classmethod
     def update(cls, document: dict) -> (dict, dict):
         """
         Update a model formatted as a dictionary.
@@ -1212,6 +1234,8 @@ class CRUDModel:
     def _delete_many(cls, filters: dict) -> int:
         if cls.audit_model:
             cls.audit_model.audit_remove(**filters)
+        if filters == {}:
+            cls.reset_counters()
         return cls.__collection__.delete_many(filters).deleted_count
 
     @classmethod

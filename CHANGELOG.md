@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.5.0 (2018-04-26) ##
+
+### Release notes ###
+
+- Mongo collection related counters are reset when delete_all is called on that collection
+
 ## Version 10.4.0 (2018-04-26) ##
 
 ### Release notes ###
