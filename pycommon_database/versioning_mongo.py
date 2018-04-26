@@ -18,8 +18,7 @@ class VersionedCRUDModel(CRUDModel):
     """
 
     valid_since_revision = Column(int, description='Record is valid since this revision (included).')
-    valid_until_revision = Column(int, allow_none_as_filter=True, index_type=IndexType.Unique,
-                                  description='Record is valid until this revision (excluded).')
+    valid_until_revision = Column(int, index_type=IndexType.Unique, description='Record is valid until this revision (excluded).')
 
     @classmethod
     def update_indexes(cls, document: dict):
