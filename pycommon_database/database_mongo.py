@@ -102,7 +102,13 @@ class Column:
             self.is_nullable = not self.is_primary_key or self.get_default_value({}) or self.should_auto_increment
         self.is_required = bool(kwargs.pop('is_required', False))
         self.min_value = kwargs.pop('min_value', None)
+        if self.min_value is not None:
+            if not isinstance(self.min_value, self.field_type):
+                raise Exception(f'Minimum value should be of {self.field_type} type.')
         self.max_value = kwargs.pop('max_value', None)
+        if self.max_value is not None:
+            if not isinstance(self.max_value, self.field_type):
+                raise Exception(f'Maximum value should be of {self.field_type} type.')
         self.min_length = kwargs.pop('min_length', None)
         if self.min_length is not None:
             self.min_length = int(self.min_length)
