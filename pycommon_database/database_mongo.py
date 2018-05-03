@@ -104,7 +104,11 @@ class Column:
         self.min_value = kwargs.pop('min_value', None)
         self.max_value = kwargs.pop('max_value', None)
         self.min_length = kwargs.pop('min_length', None)
+        if self.min_length is not None:
+            self.min_length = int(self.min_length)
         self.max_length = kwargs.pop('max_length', None)
+        if self.max_length is not None:
+            self.max_length = int(self.max_length)
 
     def _update_name(self, name):
         if '.' in name:
@@ -1594,7 +1598,8 @@ def _get_default_example(field: Column):
         }
     if field.field_type == ObjectId:
         return '1234567890QBCDEF01234567'
-    return 'X' * int(field.min_length) if field.min_length else f'sample {field.name}'[:int(field.max_length) if field.max_length else 1000]
+    return 'X' * field.min_length if field.min_length else f'sample {field.name}'[:int(field.max_length) if field.max_length else 1000]
+
 
 def _get_python_type(field: Column):
     """
