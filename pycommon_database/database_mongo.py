@@ -100,9 +100,25 @@ class Column:
             self.is_nullable = not self.is_primary_key or self.get_default_value({}) or self.should_auto_increment
         self.is_required = bool(kwargs.pop('is_required', False))
         self.min_value = kwargs.pop('min_value', None)
+        if self.min_value is not None:
+            if not isinstance(self.min_value, self.field_type):
+                raise Exception(f'Minimum value should be of {self.field_type} type.')
         self.max_value = kwargs.pop('max_value', None)
+        if self.max_value is not None:
+            if not isinstance(self.max_value, self.field_type):
+                raise Exception(f'Maximum value should be of {self.field_type} type.')
         self.min_length = kwargs.pop('min_length', None)
+        if self.min_length is not None:
+            self.min_length = int(self.min_length)
+            if self.min_length < 0:
+                raise Exception('Minimum length should be positive')
         self.max_length = kwargs.pop('max_length', None)
+        if self.max_length is not None:
+            self.max_length = int(self.max_length)
+            if self.max_length < 0:
+                raise Exception('Maximum length should be positive')
+            if self.min_length and self.max_length < self.min_length:
+                raise Exception('Maximum length should be superior or equals to minimum length')
 
     def _update_name(self, name):
         if '.' in name:
@@ -1592,7 +1608,8 @@ def _get_default_example(field: Column):
         }
     if field.field_type == ObjectId:
         return '1234567890QBCDEF01234567'
-    return 'X' * int(field.min_length) if field.min_length else f'sample {field.name}'[:int(field.max_length) if field.max_length else 1000]
+    return 'X' * field.min_length if field.min_length else f'sample {field.name}'[:int(field.max_length) if field.max_length else 1000]
+
 
 def _get_python_type(field: Column):
     """

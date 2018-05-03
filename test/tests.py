@@ -5849,6 +5849,65 @@ class MongoCRUDControllerTest(unittest.TestCase):
             },
             self.TestListController.get_response_model.fields_readonly)
 
+    def test_get_response_model_with_limits(self):
+        self.assertEqual(
+            'TestLimitsModel',
+            self.TestLimitsController.get_response_model.name)
+        self.assertEqual(
+            {
+                'int_field': 'Integer',
+                'key': 'String',
+                'list_field': ('List', {'list_field_inner': 'String'})
+            },
+            self.TestLimitsController.get_response_model.fields_flask_type)
+        self.assertEqual(
+            {
+                'int_field': None,
+                'key': None,
+                'list_field': (None, {'list_field_inner': None})
+            },
+            self.TestLimitsController.get_response_model.fields_description)
+        self.assertEqual(
+            {
+                'int_field': None,
+                'key': None,
+                'list_field': (None, {'list_field_inner': None})
+            },
+            self.TestLimitsController.get_response_model.fields_enum)
+        self.assertEqual(
+            {
+                'int_field': 100,
+                'key': 'XXX',
+                'list_field': (
+                    ['sample list_field'],
+                    {
+                        'list_field_inner': 'sample list_field'
+                    }
+                )
+            },
+            self.TestLimitsController.get_response_model.fields_example)
+        self.assertEqual(
+            {
+                'int_field': None,
+                'key': None,
+                'list_field': (None, {'list_field_inner': None})
+            },
+            self.TestLimitsController.get_response_model.fields_default)
+        self.assertEqual(
+            {
+                'int_field': False,
+                'key': False,
+                'list_field': (False, {'list_field_inner': False})
+            },
+            self.TestLimitsController.get_response_model.fields_required)
+        self.assertEqual(
+            {
+                'int_field': False,
+                'key': False,
+                'list_field': (False, {'list_field_inner': False})
+            },
+            self.TestLimitsController.get_response_model.fields_readonly)
+
     def test_get_response_model_with_date(self):
         self.assertEqual(
             'TestDateModel',
