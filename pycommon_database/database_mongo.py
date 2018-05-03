@@ -1602,7 +1602,7 @@ def _get_default_example(field: Column):
         return [f'Sample {i}' for i in range(field.min_length)] if field.min_length else [
             f'1st {field.name} sample',
             f'2nd {field.name} sample',
-        ][:field.max_length if field.max_length else 2]
+        ][:field.max_length or 2]
     if field.field_type == dict:
         return {
             f'1st {field.name} key': f'1st {field.name} sample',
@@ -1610,7 +1610,7 @@ def _get_default_example(field: Column):
         }
     if field.field_type == ObjectId:
         return '1234567890QBCDEF01234567'
-    return 'X' * field.min_length if field.min_length else f'sample {field.name}'[:int(field.max_length) if field.max_length else 1000]
+    return 'X' * field.min_length if field.min_length else f'sample {field.name}'[:field.max_length or 1000]
 
 
 def _get_python_type(field: Column):
