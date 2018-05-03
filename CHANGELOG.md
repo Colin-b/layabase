@@ -8,7 +8,7 @@ List all changes in various categories:
 
 ## Version 10.6.1 (2018-05-03) ##
 
-### Enhancements ###
+### Bug fixes ###
 
 - [Mongo] Setting the example values taking into account the min_value and max_value and min_length and max_length.
 
