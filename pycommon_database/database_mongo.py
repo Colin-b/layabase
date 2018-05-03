@@ -112,9 +112,15 @@ class Column:
         self.min_length = kwargs.pop('min_length', None)
         if self.min_length is not None:
             self.min_length = int(self.min_length)
+            if self.min_length < 0:
+                raise Exception('Minimum length should be positive')
         self.max_length = kwargs.pop('max_length', None)
         if self.max_length is not None:
             self.max_length = int(self.max_length)
+            if self.max_length < 0:
+                raise Exception('Maximum length should be positive')
+            if self.min_length and self.max_length < self.min_length:
+                raise Exception('Maximum length should be superior or equals to minimum length')
 
     def _update_name(self, name):
         if '.' in name:
