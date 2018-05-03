@@ -6,17 +6,24 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.6.0 (2018-05-03) ##
+
+### Enhancements ###
+
+- [Mongo] Introduce min_value and max_value for int and float Column.
+- [Mongo] Introduce min_length and max_length for str and list Column and ListColumn.
+
 ## Version 10.5.0 (2018-04-26) ##
 
 ### Release notes ###
 
-- Mongo collection related counters are reset when delete_all is called on that collection
+- [Mongo] Collection related counters are reset when delete_all is called on that collection.
 
 ## Version 10.4.0 (2018-04-26) ##
 
 ### Release notes ###
 
-- Mongo collections indexes are now created only when missing or when update is needed.
+- [Mongo] Collections indexes are now created only when missing or when update is needed.
 
 ### Bug fixes ###
 

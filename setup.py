@@ -28,9 +28,9 @@ setup(
         ],
         # Used to Manage Mongo Database
         'mongo': [
-            'pymongo==3.6.0',
+            'pymongo==3.6.1',
             # Used to manage date and datetime deserialization
-            'python-dateutil==2.6.1',
+            'python-dateutil==2.7.2',
         ],
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [

@@ -2638,6 +2638,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestListController(database.CRUDController):
         pass
 
+    class TestLimitsController(database.CRUDController):
+        pass
+
     class TestIdController(database.CRUDController):
         pass
 
@@ -2666,6 +2669,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIndexController.namespace(TestAPI)
         cls.TestDefaultPrimaryKeyController.namespace(TestAPI)
         cls.TestListController.namespace(TestAPI)
+        cls.TestLimitsController.namespace(TestAPI)
         cls.TestIdController.namespace(TestAPI)
         cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
@@ -2729,6 +2733,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     }))
             bool_field = database_mongo.Column(bool)
 
+        class TestLimitsModel(database_mongo.CRUDModel, base=base, table_name='limits_table_name'):
+            key = database_mongo.Column(is_primary_key=True, min_length=3, max_length=4)
+            list_field = database_mongo.ListColumn(database_mongo.Column(), min_length=2, max_length=3)
+            int_field = database_mongo.Column(int, min_value=100, max_value=999)
+
         class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel, base=base, table_name='list_and_dict_table_name'):
             float_key = database_mongo.Column(float, is_primary_key=True)
             float_with_default = database_mongo.Column(float, default_value=34)
@@ -2762,13 +2771,14 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIndexController.model(TestIndexModel)
         cls.TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
         cls.TestListController.model(TestListModel)
+        cls.TestLimitsController.model(TestLimitsModel)
         cls.TestIdController.model(TestIdModel)
         cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
         cls.TestVersionedController.model(TestVersionedModel)
         cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
         return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
-                TestDefaultPrimaryKeyModel, TestListModel, TestIdModel, TestUnvalidatedListAndDictModel,
+                TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel, TestUnvalidatedListAndDictModel,
                 TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel]
 
     def setUp(self):
@@ -4307,6 +4317,34 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'bool_field': False,
             })
         )
+
+    def test_within_limits_is_valid(self):
+        self.assertEqual(
+            {
+                'int_field': 100,
+                'key': '111',
+                'list_field': ['1', '2', '3'],
+            },
+            self.TestLimitsController.post({
+                'key': '111',
+                'list_field': ['1', '2', '3'],
+                'int_field': 100,
+            })
+        )
+
+    def test_outside_limits_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestLimitsController.post({
+                'key': '11',
+                'list_field': ['1', '2', '3', '4', '5'],
+                'int_field': 1000,
+            })
+        self.assertEqual({
+            'int_field': ['Value "1000" is too big. Maximum value is 999.'],
+            'key': ['Value "11" is too small. Minimum length is 3.'],
+            'list_field': ["['1', '2', '3', '4', '5'] contains too many values. Maximum length is 3."]
+        }, cm.exception.errors)
+        self.assertEqual({'int_field': 1000, 'key': '11', 'list_field': ['1', '2', '3', '4', '5']}, cm.exception.received_data)
 
     def test_post_optional_missing_list_of_dict_is_valid(self):
         self.assertEqual(

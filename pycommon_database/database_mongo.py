@@ -68,7 +68,10 @@ class Column:
         Should be a boolean value. Default to False.
         :param should_auto_increment: If field should be auto incremented. Only for integer fields.
         Should be a boolean value. Default to False.
-        TODO Introduce min and max length, regex
+        :param min_value: Minimum value for a number field.
+        :param max_value: Maximum value for a number field.
+        :param min_length: Minimum length for a str or list field.
+        :param max_length: Maximum length for a str or list field.
         """
         self.field_type = field_type or str
         name = kwargs.pop('name', None)
@@ -95,6 +98,10 @@ class Column:
             # Field will be optional only if it is not a primary key without default value and not auto incremented
             self.is_nullable = not self.is_primary_key or self.get_default_value({}) or self.should_auto_increment
         self.is_required = bool(kwargs.pop('is_required', False))
+        self.min_value = kwargs.pop('min_value', None)
+        self.max_value = kwargs.pop('max_value', None)
+        self.min_length = kwargs.pop('min_length', None)
+        self.max_length = kwargs.pop('max_length', None)
 
     def _update_name(self, name):
         if '.' in name:
@@ -220,16 +227,34 @@ class Column:
             if isinstance(value, str):
                 if self.get_choices() and value not in self.get_choices():
                     return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+                if self.min_length and len(value) < self.min_length:
+                    return {self.name: [f'Value "{value}" is too small. Minimum length is {self.min_length}.']}
+                if self.max_length and len(value) > self.max_length:
+                    return {self.name: [f'Value "{value}" is too big. Maximum length is {self.max_length}.']}
+        elif self.field_type == list:
+            if isinstance(value, list):
+                if self.min_length and len(value) < self.min_length:
+                    return {self.name: [f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
+                if self.max_length and len(value) > self.max_length:
+                    return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
         elif self.field_type == int:
             if isinstance(value, int):
                 if self.get_choices() and value not in self.get_choices():
                     return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+                if self.min_value is not None and value < self.min_value:
+                    return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
+                if self.max_value is not None and value > self.max_value:
+                    return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
         elif self.field_type == float:
             if isinstance(value, int):
                 value = float(value)
             if isinstance(value, float):
                 if self.get_choices() and value not in self.get_choices():
                     return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+                if self.min_value is not None and value < self.min_value:
+                    return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
+                if self.max_value is not None and value > self.max_value:
+                    return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
 
         if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
@@ -538,7 +563,10 @@ class ListColumn(Column):
         Otherwise default to False.
         Note that it is not allowed to force False if field has a default value.
         :param is_required: If field value must be specified in client requests. Use it to avoid heavy requests.
-        Should be a boolean value. Default to False.        """
+        Should be a boolean value. Default to False.
+        :param min_length: Minimum number of items.
+        :param max_length: Maximum number of items.
+        """
         kwargs.pop('field_type', None)
         self.list_item_column = list_item_type
         Column.__init__(self, list, **kwargs)
@@ -1356,7 +1384,7 @@ class CRUDModel:
                     readonly=field.should_auto_increment,
                 )
             else:
-                return _get_flask_restplus_type(field)(
+                return flask_restplus_fields.Raw(
                     required=field.is_required,
                     example=_get_example(field),
                     description=field.description,
@@ -1373,6 +1401,8 @@ class CRUDModel:
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
                 readonly=field.should_auto_increment,
+                min_items=field.min_length,
+                max_items=field.max_length,
             )
         elif field.field_type == list:
             return flask_restplus_fields.List(
@@ -1383,15 +1413,77 @@ class CRUDModel:
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
                 readonly=field.should_auto_increment,
+                min_items=field.min_length,
+                max_items=field.max_length,
             )
-        else:
-            return _get_flask_restplus_type(field)(
+        elif field.field_type == int:
+            return flask_restplus_fields.Integer(
                 required=field.is_required,
                 example=_get_example(field),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
                 readonly=field.should_auto_increment,
+                min=field.min_value,
+                max=field.max_value,
+            )
+        elif field.field_type == float:
+            return flask_restplus_fields.Float(
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.get_default_value({}),
+                readonly=field.should_auto_increment,
+                min=field.min_value,
+                max=field.max_value,
+            )
+        elif field.field_type == bool:
+            return flask_restplus_fields.Boolean(
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.get_default_value({}),
+                readonly=field.should_auto_increment,
+            )
+        elif field.field_type == datetime.date:
+            return flask_restplus_fields.Date(
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.get_default_value({}),
+                readonly=field.should_auto_increment,
+            )
+        elif field.field_type == datetime.datetime:
+            return flask_restplus_fields.DateTime(
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.get_default_value({}),
+                readonly=field.should_auto_increment,
+            )
+        elif field.field_type == dict:
+            return flask_restplus_fields.Raw(
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.get_default_value({}),
+                readonly=field.should_auto_increment,
+            )
+        else:
+            return flask_restplus_fields.String(
+                required=field.is_required,
+                example=_get_example(field),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.get_default_value({}),
+                readonly=field.should_auto_increment,
+                min_length=field.min_length,
+                max_length=field.max_length,
             )
 
     @classmethod
@@ -1453,29 +1545,6 @@ def _reset_collection(base, collection):
     logger.info(f'Resetting counters."{collection.name}".')
     nb_removed = base['counters'].delete_many({'_id': collection.name}).deleted_count
     logger.info(f'{nb_removed} counter records deleted')
-
-
-def _get_flask_restplus_type(field: Column):
-    """
-    Return the Flask RestPlus field type (as a class) corresponding to this Mongo field.
-    Default to String.
-    """
-    if field.field_type == int:
-        return flask_restplus_fields.Integer
-    if field.field_type == float:
-        return flask_restplus_fields.Float
-    if field.field_type == bool:
-        return flask_restplus_fields.Boolean
-    if field.field_type == datetime.date:
-        return flask_restplus_fields.Date
-    if field.field_type == datetime.datetime:
-        return flask_restplus_fields.DateTime
-    if field.field_type == list:
-        return flask_restplus_fields.List
-    if field.field_type == dict:
-        return flask_restplus_fields.Raw
-
-    return flask_restplus_fields.String
 
 
 def _get_example(field: Column):
