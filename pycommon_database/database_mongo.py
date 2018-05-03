@@ -109,6 +109,8 @@ class Column:
         if self.max_value is not None:
             if not isinstance(self.max_value, self.field_type):
                 raise Exception(f'Maximum value should be of {self.field_type} type.')
+            if self.min_value is not None and self.max_value < self.min_value:
+                raise Exception('Maximum value should be superior or equals to minimum value')
         self.min_length = kwargs.pop('min_length', None)
         if self.min_length is not None:
             self.min_length = int(self.min_length)
