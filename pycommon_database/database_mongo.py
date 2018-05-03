@@ -3,8 +3,6 @@ import datetime
 import enum
 import os.path
 import inspect
-import random
-import string
 
 import dateutil.parser
 import copy
@@ -1583,10 +1581,10 @@ def _get_default_example(field: Column):
     if field.field_type == datetime.datetime:
         return '2017-09-24T15:36:09'
     if field.field_type == list:
-        return [
+        return [f'Sample {i}' for i in range(field.min_length)] if field.min_length else [
             f'1st {field.name} sample',
             f'2nd {field.name} sample',
-        ]
+        ][:field.max_length if field.max_length else 2]
     if field.field_type == dict:
         return {
             f'1st {field.name} key': f'1st {field.name} sample',
