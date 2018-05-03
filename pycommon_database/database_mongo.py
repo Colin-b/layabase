@@ -1573,7 +1573,7 @@ def _get_default_example(field: Column):
     Return an Example value corresponding to this Mongodb field.
     """
     if field.field_type == int:
-        return field.min_value if field.min_length else 1
+        return field.min_value if field.min_value else 1
     if field.field_type == float:
         return 1.4
     if field.field_type == bool:
@@ -1594,10 +1594,7 @@ def _get_default_example(field: Column):
         }
     if field.field_type == ObjectId:
         return '1234567890QBCDEF01234567'
-    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(
-        random.randint(int(field.min_length) if field.min_length else 1,
-                       int(field.max_length) if field.max_length else field.min_length + 1))) if field.min_length or field.max_length else f'sample {field.name}'
-
+    return 'X' * int(field.min_length) if field.min_length else f'sample {field.name}'[:int(field.max_length) if field.max_length else 1000]
 
 def _get_python_type(field: Column):
     """
