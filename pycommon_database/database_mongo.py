@@ -844,6 +844,10 @@ class CRUDModel:
         return 0
 
     @classmethod
+    def get_field_names(cls) -> List[str]:
+        return [field.name for field in cls.__fields__]
+
+    @classmethod
     def validate_query(cls, filters: dict) -> dict:
         """
         Validate a get or delete request.

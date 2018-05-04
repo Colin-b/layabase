@@ -252,3 +252,12 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         return cls._model.get_history(**request_arguments)
+
+    @classmethod
+    def get_field_names(cls) -> List[str]:
+        """
+        Return all model field names formatted as a str list.
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+        return cls._model.get_field_names()
