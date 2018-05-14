@@ -397,6 +397,10 @@ class CRUDModel:
         }
 
     @classmethod
+    def get_field_names(cls) -> List[str]:
+        return [field.name for field in cls.schema().fields.values()]
+
+    @classmethod
     def flask_restplus_description_fields(cls):
         exported_fields = {
             'table': flask_restplus_fields.String(required=True, example='table', description='Table name'),

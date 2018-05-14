@@ -6,6 +6,18 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.8.0 (2018-05-14) ##
+
+### Enhancements ###
+
+- New dump and restore features to handle mongodb backups
+
+## Version 10.7.0 (2018-05-04) ##
+
+### Enhancements ###
+
+- Expose field names via the Controller.get_field_names() method.
+
 ## Version 10.6.1 (2018-05-03) ##
 
 ### Bug fixes ###

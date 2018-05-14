@@ -2,6 +2,7 @@ import logging
 import datetime
 import enum
 import os.path
+import pathlib
 import inspect
 
 import dateutil.parser
@@ -12,6 +13,7 @@ from typing import List, Dict
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from bson.objectid import ObjectId
 from bson.errors import BSONError
+from bson.json_util import dumps, loads
 import json
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
@@ -844,6 +846,10 @@ class CRUDModel:
         return 0
 
     @classmethod
+    def get_field_names(cls) -> List[str]:
+        return [field.name for field in cls.__fields__]
+
+    @classmethod
     def validate_query(cls, filters: dict) -> dict:
         """
         Validate a get or delete request.
@@ -1564,6 +1570,70 @@ def _reset_collection(base, collection):
     logger.info(f'Resetting counters."{collection.name}".')
     nb_removed = base['counters'].delete_many({'_id': collection.name}).deleted_count
     logger.info(f'{nb_removed} counter records deleted')
+
+
+def _dump(database_connection_url: str, dump_path: str):
+    """
+    Dump the content of all the collections of provided database as bson files in the provided directory
+
+    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
+    :param dump_path: directory name of where to store all the collections dumps (Mandatory).
+    """
+    logger.info(f'Connecting to {database_connection_url}...')
+    try:
+        database_name = os.path.basename(database_connection_url)
+        if database_connection_url.startswith('mongomock'):
+            import mongomock  # This is a test dependency only
+            client = mongomock.MongoClient()
+        else:
+            client = pymongo.MongoClient(database_connection_url)
+        base = client[database_name]
+        logger.debug(f'dumping collections as bson...')
+        pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
+        for collection in base.collection_names():
+            dump_file = os.path.join(dump_path, f'{collection}.bson')
+            logger.debug(f'dumping collection {collection} in {dump_file}')
+            documents = base[collection].find({})
+            if documents.count() > 0:
+                with open(dump_file, "w") as output:
+                    output.write(dumps(documents))
+    except Exception as e:
+        logger.debug(e)
+        raise e
+    return
+
+
+def _restore(database_connection_url: str, restore_path: str):
+    """
+    Restore in the provided database the content of all the collections dumped in the provided path as bson.
+
+    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
+    :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
+    """
+    logger.info(f'Connecting to {database_connection_url}...')
+    try:
+        database_name = os.path.basename(database_connection_url)
+        if database_connection_url.startswith('mongomock'):
+            import mongomock  # This is a test dependency only
+            client = mongomock.MongoClient()
+        else:
+            client = pymongo.MongoClient(database_connection_url)
+        base = client[database_name]
+        logger.debug(f'restoring collections dumped as bson...')
+        collections = [os.path.splitext(collection)[0] for collection in os.listdir(restore_path) if os.path.isfile(os.path.join(restore_path,collection)) and os.path.splitext(collection)[1] == '.bson']
+        for collection in collections:
+            restore_file = os.path.join(restore_path, f'{collection}.bson')
+            with open(restore_file, "r") as input:
+                documents = loads(input.read())
+                if len(documents) > 0:
+                    logger.debug(f'drop all records from collection {collection} if any')
+                    base[collection].delete_many({})
+                    logger.debug(f'import {restore_file} into collection {collection}')
+                    base[collection].insert_many(documents)
+    except Exception as e:
+        logger.debug(e)
+        raise e
+    return
 
 
 def _get_example(field: Column):

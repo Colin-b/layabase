@@ -3080,6 +3080,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestIndexController.get_one({'unique_key': 'test3'})
         )
 
+    def test_get_field_names_valid(self):
+        self.assertEqual(
+            ['non_unique_key', 'unique_key'],
+            self.TestIndexController.get_field_names()
+        )
+
     def _assert_regex(self, expected, actual):
         self.assertRegex(f'{actual}',
                          f'{expected}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
