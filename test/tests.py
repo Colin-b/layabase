@@ -7,7 +7,6 @@ from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from flask_restplus import fields as flask_rest_plus_fields, inputs
 from pycommon_test.flask_restplus_mock import TestAPI
 from threading import Thread
-import time
 import enum
 import json
 import tempfile
@@ -1752,6 +1751,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'value1',
                     'mandatory': 1,
                     'optional': None,
+                    'revision': 1,
                 },
             ]
         )
@@ -1773,6 +1773,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
+                    'revision': 1,
                 },
             ]
         )
@@ -1794,6 +1795,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': None,
+                    'revision': 1,
                 },
             ]
         )
@@ -1825,6 +1827,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 }
             ]
         )
@@ -1847,6 +1850,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 }
             ]
         )
@@ -1871,6 +1875,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 },
             ]
         )
@@ -1895,6 +1900,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 1,
                 },
             ]
         )
@@ -1921,6 +1927,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
             ]
         )
@@ -1931,7 +1938,6 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
@@ -1952,6 +1958,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'I',
@@ -1960,6 +1967,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
             ]
         )
@@ -1992,6 +2000,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'I',
@@ -2000,6 +2009,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
             ]
         )
@@ -2010,7 +2020,6 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
@@ -2030,6 +2039,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'I',
@@ -2038,6 +2048,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
             ]
         )
@@ -2048,7 +2059,6 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.assertEqual(
             (
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
@@ -2070,6 +2080,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'U',
@@ -2078,6 +2089,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 2,
                 },
             ]
         )
@@ -2088,7 +2100,6 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'optional': 'my_value',
@@ -2103,6 +2114,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'U',
@@ -2111,6 +2123,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value',
+                    'revision': 2,
                 },
             ]
         )
@@ -2121,7 +2134,6 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
@@ -2139,6 +2151,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'I',
@@ -2147,6 +2160,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
                 {
                     'audit_action': 'D',
@@ -2155,6 +2169,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 3,
                 },
             ]
         )
@@ -2165,12 +2180,10 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 2,
         })
-        time.sleep(1)
         self.TestController.delete({'key': 'my_key1'})
         self._check_audit(
             [
@@ -2181,6 +2194,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'U',
@@ -2189,6 +2203,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 2,
                     'optional': 'my_value1',
+                    'revision': 2,
                 },
                 {
                     'audit_action': 'D',
@@ -2197,6 +2212,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 2,
                     'optional': 'my_value1',
+                    'revision': 3,
                 },
             ],
             filter_audit={'key': 'my_key1'}
@@ -2208,12 +2224,10 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.put({
             'key': 'my_key1',
             'mandatory': 2,
         })
-        time.sleep(1)
         self.TestController.delete({'key': 'my_key1'})
         self._check_audit(
             [
@@ -2224,6 +2238,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 2,
                     'optional': 'my_value1',
+                    'revision': 2,
                 },
             ],
             filter_audit={'audit_action': 'U'}
@@ -2235,13 +2250,11 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,
             'optional': 'my_value1',
         })
-        time.sleep(1)
         self.TestController.post({
             'key': 'my_key2',
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        time.sleep(1)
         self.assertEqual(2, self.TestController.delete({}))
         self.assertEqual([], self.TestController.get({}))
         self._check_audit(
@@ -2253,6 +2266,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 1,
                 },
                 {
                     'audit_action': 'I',
@@ -2261,6 +2275,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 2,
                 },
                 {
                     'audit_action': 'D',
@@ -2269,6 +2284,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key1',
                     'mandatory': 1,
                     'optional': 'my_value1',
+                    'revision': 3,
                 },
                 {
                     'audit_action': 'D',
@@ -2277,6 +2293,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     'key': 'my_key2',
                     'mandatory': 2,
                     'optional': 'my_value2',
+                    'revision': 4,
                 },
             ]
         )
@@ -2304,6 +2321,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 'optional': str,
                 'limit': inputs.positive,
                 'offset': inputs.natural,
+                'revision': int,
             },
             parser_types(self.TestController.query_get_audit_parser))
         self._check_audit([])
@@ -2332,12 +2350,15 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             'AuditTestModel',
             self.TestController.get_audit_response_model.name)
         self.assertEqual(
-            {'audit_action': 'String',
-             'audit_date_utc': 'DateTime',
-             'audit_user': 'String',
-             'key': 'String',
-             'mandatory': 'Integer',
-             'optional': 'String'},
+            {
+                'audit_action': 'String',
+                'audit_date_utc': 'DateTime',
+                'audit_user': 'String',
+                'key': 'String',
+                'mandatory': 'Integer',
+                'optional': 'String',
+                'revision': 'Integer',
+            },
             self.TestController.get_audit_response_model.fields_flask_type)
         self._check_audit([])
 

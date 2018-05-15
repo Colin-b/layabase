@@ -11,6 +11,7 @@ List all changes in various categories:
 ### Enhancements ###
 
 - [Mongo] Allow to fail if keys are unknown (default to skip field)
+- [SQLAlchemy] Audit is now using a single auto incremented key (revision)
 
 ## Version 10.8.0 (2018-05-14) ##
 
