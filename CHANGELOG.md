@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.9.0 (2018-05-15) ##
+
+### Enhancements ###
+
+- [Mongo] Allow to fail if keys are unknown (default to skip field)
+
 ## Version 10.8.0 (2018-05-14) ##
 
 ### Enhancements ###

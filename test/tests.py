@@ -2618,6 +2618,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestController(database.CRUDController):
         pass
 
+    class TestStrictController(database.CRUDController):
+        pass
+
     class TestAutoIncrementController(database.CRUDController):
         pass
 
@@ -2663,6 +2666,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def setUpClass(cls):
         cls._db = database.load('mongomock', cls._create_models)
         cls.TestController.namespace(TestAPI)
+        cls.TestStrictController.namespace(TestAPI)
         cls.TestAutoIncrementController.namespace(TestAPI)
         cls.TestDateController.namespace(TestAPI)
         cls.TestDictController.namespace(TestAPI)
@@ -2686,6 +2690,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
         logger.info('Declare model class...')
 
         class TestModel(database_mongo.CRUDModel, base=base, table_name='sample_table_name'):
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        class TestStrictModel(database_mongo.CRUDModel, base=base, table_name='strict_table_name', skip_unknown_fields=False):
             key = database_mongo.Column(str, is_primary_key=True)
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
@@ -2765,6 +2774,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
+        cls.TestStrictController.model(TestStrictModel)
         cls.TestAutoIncrementController.model(TestAutoIncrementModel)
         cls.TestDateController.model(TestDateModel)
         cls.TestDictController.model(TestDictModel)
@@ -2778,7 +2788,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestVersionedController.model(TestVersionedModel)
         cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
+        return [TestModel, TestStrictModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel, TestUnvalidatedListAndDictModel,
                 TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel]
 
@@ -5102,6 +5112,18 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'unknown': 'my_value',
             })
         )
+
+    def test_post_with_unknown_field_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestStrictController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+                'optional': 'my_value',
+                # This field do not exists in schema
+                'unknown': 'my_value',
+            })
+        self.assertEqual({'unknown': ['Unknown field']}, cm.exception.errors)
+        self.assertEqual({'key': 'my_key', 'mandatory': 1, 'optional': 'my_value', 'unknown': 'my_value'}, cm.exception.received_data)
 
     def test_post_many_with_unknown_field_is_valid(self):
         self.assertListEqual(
