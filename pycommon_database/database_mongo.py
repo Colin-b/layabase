@@ -1579,20 +1579,15 @@ def _dump(base, dump_path: str):
     :param base: database object as returned by the _load method (Mandatory).
     :param dump_path: directory name of where to store all the collections dumps (Mandatory).
     """
-    try:
-        logger.debug(f'dumping collections as bson...')
-        pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
-        for collection in base.collection_names():
-            dump_file = os.path.join(dump_path, f'{collection}.bson')
-            logger.debug(f'dumping collection {collection} in {dump_file}')
-            documents = base[collection].find({})
-            if documents.count() > 0:
-                with open(dump_file, "w") as output:
-                    output.write(dumps(documents))
-    except Exception as e:
-        logger.debug(e)
-        raise e
-    return
+    logger.debug(f'dumping collections as bson...')
+    pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
+    for collection in base.collection_names():
+        dump_file = os.path.join(dump_path, f'{collection}.bson')
+        logger.debug(f'dumping collection {collection} in {dump_file}')
+        documents = base[collection].find({})
+        if documents.count() > 0:
+            with open(dump_file, "w") as output:
+                output.write(dumps(documents))
 
 
 def _restore(base, restore_path: str):
@@ -1602,22 +1597,17 @@ def _restore(base, restore_path: str):
     :param base: database object as returned by the _load method (Mandatory).
     :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
     """
-    try:
-        logger.debug(f'restoring collections dumped as bson...')
-        collections = [os.path.splitext(collection)[0] for collection in os.listdir(restore_path) if os.path.isfile(os.path.join(restore_path,collection)) and os.path.splitext(collection)[1] == '.bson']
-        for collection in collections:
-            restore_file = os.path.join(restore_path, f'{collection}.bson')
-            with open(restore_file, "r") as input:
-                documents = loads(input.read())
-                if len(documents) > 0:
-                    logger.debug(f'drop all records from collection {collection} if any')
-                    base[collection].delete_many({})
-                    logger.debug(f'import {restore_file} into collection {collection}')
-                    base[collection].insert_many(documents)
-    except Exception as e:
-        logger.debug(e)
-        raise e
-    return
+    logger.debug(f'restoring collections dumped as bson...')
+    collections = [os.path.splitext(collection)[0] for collection in os.listdir(restore_path) if os.path.isfile(os.path.join(restore_path,collection)) and os.path.splitext(collection)[1] == '.bson']
+    for collection in collections:
+        restore_file = os.path.join(restore_path, f'{collection}.bson')
+        with open(restore_file, "r") as input:
+            documents = loads(input.read())
+            if len(documents) > 0:
+                logger.debug(f'drop all records from collection {collection} if any')
+                base[collection].delete_many({})
+                logger.debug(f'import {restore_file} into collection {collection}')
+                base[collection].insert_many(documents)
 
 
 def _get_example(field: Column):
