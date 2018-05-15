@@ -10,6 +10,7 @@ from threading import Thread
 import time
 import enum
 import json
+import tempfile
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -7411,6 +7412,101 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.get_audit_response_model.fields_flask_type)
         self._check_audit(self.TestController, [])
 
+
+class MongoCRUDControllerBackupTest(unittest.TestCase):
+    class TestController(database.CRUDController):
+        pass
+
+    _db = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls._db = database.load('mongomock', cls._create_models)
+        cls.TestController.namespace(TestAPI)
+
+    @classmethod
+    def tearDownClass(cls):
+        database.reset(cls._db)
+
+    @classmethod
+    def _create_models(cls, base):
+        logger.info('Declare model class...')
+
+        class TestModel(database_mongo.CRUDModel, base=base, table_name='sample_table_name'):
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        logger.info('Save model class...')
+        cls.TestController.model(TestModel)
+        return [TestModel]
+
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+        database.reset(self._db)
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_dump_delete_one_restore_is_restoring_db_dumped(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        with tempfile.TemporaryDirectory() as temp_directory:
+            database.dump(self._db, temp_directory)
+            self.TestController.delete({'key': 'my_key1'})
+            database.restore(self._db, temp_directory)
+
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+                {'key': 'my_key2', 'mandatory': 3, 'optional': 'my_value3'},
+            ],
+            self.TestController.get({}))
+
+    def test_dump_delete_all_restore_is_restoring_db_dumped(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        with tempfile.TemporaryDirectory() as temp_directory:
+            database.dump(self._db, temp_directory)
+            self.TestController.delete({})
+            database.restore(self._db, temp_directory)
+
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+                {'key': 'my_key2', 'mandatory': 3, 'optional': 'my_value3'},
+            ],
+            self.TestController.get({}))
 
 if __name__ == '__main__':
     unittest.main()

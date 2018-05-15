@@ -1572,22 +1572,14 @@ def _reset_collection(base, collection):
     logger.info(f'{nb_removed} counter records deleted')
 
 
-def _dump(database_connection_url: str, dump_path: str):
+def _dump(base, dump_path: str):
     """
     Dump the content of all the collections of provided database as bson files in the provided directory
 
-    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
+    :param base: database object as returned by the _load method (Mandatory).
     :param dump_path: directory name of where to store all the collections dumps (Mandatory).
     """
-    logger.info(f'Connecting to {database_connection_url}...')
     try:
-        database_name = os.path.basename(database_connection_url)
-        if database_connection_url.startswith('mongomock'):
-            import mongomock  # This is a test dependency only
-            client = mongomock.MongoClient()
-        else:
-            client = pymongo.MongoClient(database_connection_url)
-        base = client[database_name]
         logger.debug(f'dumping collections as bson...')
         pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
         for collection in base.collection_names():
@@ -1603,22 +1595,14 @@ def _dump(database_connection_url: str, dump_path: str):
     return
 
 
-def _restore(database_connection_url: str, restore_path: str):
+def _restore(base, restore_path: str):
     """
     Restore in the provided database the content of all the collections dumped in the provided path as bson.
 
-    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
+    :param base: database object as returned by the _load method (Mandatory).
     :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
     """
-    logger.info(f'Connecting to {database_connection_url}...')
     try:
-        database_name = os.path.basename(database_connection_url)
-        if database_connection_url.startswith('mongomock'):
-            import mongomock  # This is a test dependency only
-            client = mongomock.MongoClient()
-        else:
-            client = pymongo.MongoClient(database_connection_url)
-        base = client[database_name]
         logger.debug(f'restoring collections dumped as bson...')
         collections = [os.path.splitext(collection)[0] for collection in os.listdir(restore_path) if os.path.isfile(os.path.join(restore_path,collection)) and os.path.splitext(collection)[1] == '.bson']
         for collection in collections:

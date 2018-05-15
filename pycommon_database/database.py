@@ -67,60 +67,44 @@ def reset(base):
         database_sqlalchemy._reset(base)
 
 
-def dump(database_connection_url: str, dump_path: str):
+def dump(base, dump_path: str):
     """
     Dump the content of all the collections part of the provided database in the provided path.
 
-    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    Here are some sample connection urls:
-     - Mongo (in memory): mongomock
-     - Mongo: mongodb://host:port/server_name
-
-     - SQL Lite (in memory): sqlite:///:memory:
-     - Postgre SQL: postgresql://user_name:user_password@host:port/server_name
-     - Oracle: oracle://user_name:user_password@host:port/server_name
-     - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
+    :param base: database object returned from the load function (Mandatory).
      TODO not supported yet for non Mongo DBs
     :param dump_path: directory name where to store the dump bson results
      (Mandatory).
     """
-    if not database_connection_url:
+    if not base:
         raise NoDatabaseProvided()
     if not dump_path:
         raise NoPathProvided()
 
-    if _is_mongo(database_connection_url):
+    if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        database_mongo._dump(database_connection_url, dump_path)
+        database_mongo._dump(base, dump_path)
 
     return
 
 
-def restore(database_connection_url: str, restore_path: str):
+def restore(base, restore_path: str):
     """
     Restore in the provided database the content of all the collections dumped in the provided path as bson.
 
-    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    Here are some sample connection urls:
-     - Mongo (in memory): mongomock
-     - Mongo: mongodb://host:port/server_name
-
-     - SQL Lite (in memory): sqlite:///:memory:
-     - Postgre SQL: postgresql://user_name:user_password@host:port/server_name
-     - Oracle: oracle://user_name:user_password@host:port/server_name
-     - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
+    :param base: database object returned from the load function (Mandatory).
      TODO not supported yet for non Mongo DBs
     :param restore_path: directory name where the dumped bson files are stored. The filename will be used as the collection name
      (Mandatory).
     """
-    if not database_connection_url:
+    if not base:
         raise NoDatabaseProvided()
     if not restore_path:
         raise NoPathProvided()
 
-    if _is_mongo(database_connection_url):
+    if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        database_mongo._restore(database_connection_url, restore_path)
+        database_mongo._restore(base, restore_path)
 
     return
 
