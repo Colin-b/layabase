@@ -6,6 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.8.1 (2018-05-16) ##
+
+### Bug Fixes ###
+
+- New dump and restore features don't store/retrieve to/from file.
+- Done from memory instead
+- dump feature made iterable
+
 ## Version 10.8.0 (2018-05-14) ##
 
 ### Enhancements ###
