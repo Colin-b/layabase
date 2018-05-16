@@ -6,18 +6,18 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.9.1 (2018-05-14) ##
+
+### Enhancements ###
+
+- New dump and restore features to handle mongodb backups
+
 ## Version 10.9.0 (2018-05-15) ##
 
 ### Enhancements ###
 
 - [Mongo] Allow to fail if keys are unknown (default to skip field)
 - [SQLAlchemy] Audit is now using a single auto incremented key (revision)
-
-## Version 10.8.0 (2018-05-14) ##
-
-### Enhancements ###
-
-- New dump and restore features to handle mongodb backups
 
 ## Version 10.7.0 (2018-05-04) ##
 

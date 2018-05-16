@@ -18,9 +18,9 @@ class NoRelatedModels(Exception):
         Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
-class NoPathProvided(Exception):
+class NoDumpDataProvided(Exception):
     def __init__(self):
-        Exception.__init__(self, 'A directory name must be provided.')
+        Exception.__init__(self, 'Dump Data must be provided.')
 
 
 def load(database_connection_url: str, create_models_func: callable, **kwargs):
@@ -67,46 +67,40 @@ def reset(base):
         database_sqlalchemy._reset(base)
 
 
-def dump(base, dump_path: str):
+def dump(base):
     """
-    Dump the content of all the collections part of the provided database in the provided path.
+    Dump the content of all the collections part of the provided database in a dict
 
     :param base: database object returned from the load function (Mandatory).
      TODO not supported yet for non Mongo DBs
-    :param dump_path: directory name where to store the dump bson results
-     (Mandatory).
+    :returns The database dump formatted as a dictionary {<collection_name> : [<bson_content>]}.
     """
     if not base:
         raise NoDatabaseProvided()
-    if not dump_path:
-        raise NoPathProvided()
 
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        database_mongo._dump(base, dump_path)
+        return database_mongo._dump(base)
 
-    return
+    return [(None, None)]
 
 
-def restore(base, restore_path: str):
+def restore(base, content: dict):
     """
-    Restore in the provided database the content of all the collections dumped in the provided path as bson.
+    Restore in the provided database the content of all the collections dumped as a dictionary {<collection_name> : [<bson_content>]}.
 
     :param base: database object returned from the load function (Mandatory).
      TODO not supported yet for non Mongo DBs
-    :param restore_path: directory name where the dumped bson files are stored. The filename will be used as the collection name
-     (Mandatory).
+    :param content: The database dump formatted as a dictionary {<collection_name> : [<bson_content>]} (Mandatory).
     """
     if not base:
         raise NoDatabaseProvided()
-    if not restore_path:
-        raise NoPathProvided()
+    if not content:
+        raise NoDumpDataProvided()
 
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        database_mongo._restore(base, restore_path)
-
-    return
+        database_mongo._restore(base, content)
 
 
 class ControllerModelNotSet(Exception):
