@@ -1572,7 +1572,7 @@ def _reset_collection(base, collection):
     logger.info(f'{nb_removed} counter records deleted')
 
 
-def _dump(base) -> dict:
+def _dump(base):
     """
     Dump the content of all the collections part of the provided database in a dict
 
@@ -1585,8 +1585,7 @@ def _dump(base) -> dict:
         logger.debug(f'dumping collection {collection}')
         documents = base[collection].find({})
         if documents.count() > 0:
-            content[collection] = dumps(documents)
-    return content
+            yield collection, dumps(documents)
 
 
 def _restore(base, content: dict):

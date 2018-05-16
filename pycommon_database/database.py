@@ -67,7 +67,7 @@ def reset(base):
         database_sqlalchemy._reset(base)
 
 
-def dump(base) -> dict:
+def dump(base):
     """
     Dump the content of all the collections part of the provided database in a dict
 
