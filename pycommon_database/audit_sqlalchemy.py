@@ -1,6 +1,6 @@
 import datetime
 import enum
-from sqlalchemy import Column, DateTime, Enum, String, inspect
+from sqlalchemy import Column, DateTime, Enum, String, inspect, Integer
 
 from pycommon_database.flask_restplus_errors import ValidationFailed
 from pycommon_database.audit import current_user_name
@@ -17,7 +17,7 @@ def _column(attribute):
     if len(attribute.columns) != 1:
         raise Exception(f'Recreating an attribute ({attribute}) based on more than one column is not handled for now.')
     column = attribute.columns[0]
-    return Column(column.name, column.type, primary_key=column.primary_key, nullable=column.nullable)
+    return Column(column.name, column.type, nullable=column.nullable)
 
 
 def _create_from(model):
@@ -28,8 +28,10 @@ def _create_from(model):
         __tablename__ = f'audit_{model.__tablename__}'
         _model = model
 
-        audit_user = Column(String, primary_key=True)
-        audit_date_utc = Column(DateTime, primary_key=True)
+        revision = Column(Integer, primary_key=True, autoincrement=True)
+
+        audit_user = Column(String)
+        audit_date_utc = Column(DateTime)
         audit_action = Column(Enum(*[action.value for action in Action], name='action_type'))
 
         @classmethod

@@ -712,12 +712,14 @@ class CRUDModel:
     __counters__ = None  # Mongo counters collection (to increment fields)
     __fields__: List[Column] = []  # All Mongo fields within this model
     audit_model = None
+    _skip_unknown_fields = True
 
-    def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, **kwargs):
+    def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, skip_unknown_fields: bool=True, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if
                           isinstance(attribute[1], Column)]
+        cls._skip_unknown_fields = skip_unknown_fields
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
@@ -1016,14 +1018,16 @@ class CRUDModel:
 
         new_document = copy.deepcopy(document)
 
+        errors = {}
+
         field_names = [field.name for field in cls.__fields__]
         unknown_fields = [field_name for field_name in new_document if field_name not in field_names]
         for unknown_field in unknown_fields:
             known_field, field_value = cls._to_known_field(unknown_field, new_document[unknown_field])
             if known_field:
                 new_document.setdefault(known_field.name, {}).update(field_value)
-
-        errors = {}
+            elif not cls._skip_unknown_fields:
+                errors.update({unknown_field: ['Unknown field']})
 
         for field in cls.__fields__:
             errors.update(field.validate_insert(new_document))
@@ -1171,14 +1175,16 @@ class CRUDModel:
 
         new_document = copy.deepcopy(document)
 
+        errors = {}
+
         updated_field_names = [field.name for field in cls.__fields__ if field.name in new_document]
         unknown_fields = [field_name for field_name in new_document if field_name not in updated_field_names]
         for unknown_field in unknown_fields:
             known_field, field_value = cls._to_known_field(unknown_field, new_document[unknown_field])
             if known_field:
                 new_document.setdefault(known_field.name, {}).update(field_value)
-
-        errors = {}
+            elif not cls._skip_unknown_fields:
+                errors.update({unknown_field: ['Unknown field']})
 
         # Also ensure that primary keys will contain a valid value
         updated_fields = [field for field in cls.__fields__ if field.name in new_document or field.is_primary_key]
