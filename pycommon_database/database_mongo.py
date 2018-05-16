@@ -1580,7 +1580,6 @@ def _dump(base):
     :returns The database dump formatted as a dictionary {<collection_name> : [<bson_content>]}.
     """
     logger.debug(f'dumping collections as bson...')
-    content = {}
     for collection in base.collection_names():
         logger.debug(f'dumping collection {collection}')
         documents = base[collection].find({})

@@ -82,7 +82,7 @@ def dump(base):
         import pycommon_database.database_mongo as database_mongo
         return database_mongo._dump(base)
 
-    return {}
+    return [(None, None)]
 
 
 def restore(base, content: dict):
