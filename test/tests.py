@@ -10,7 +10,6 @@ from threading import Thread
 import time
 import enum
 import json
-import tempfile
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -7466,10 +7465,9 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             'mandatory': 3,
             'optional': 'my_value3',
         })
-        with tempfile.TemporaryDirectory() as temp_directory:
-            database.dump(self._db, temp_directory)
-            self.TestController.delete({'key': 'my_key1'})
-            database.restore(self._db, temp_directory)
+        dump_content = database.dump(self._db)
+        self.TestController.delete({'key': 'my_key1'})
+        database.restore(self._db, dump_content)
 
         self.assertEqual(
             [
@@ -7495,10 +7493,9 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             'mandatory': 3,
             'optional': 'my_value3',
         })
-        with tempfile.TemporaryDirectory() as temp_directory:
-            database.dump(self._db, temp_directory)
-            self.TestController.delete({})
-            database.restore(self._db, temp_directory)
+        dump_content = database.dump(self._db)
+        self.TestController.delete({})
+        database.restore(self._db, dump_content)
 
         self.assertEqual(
             [

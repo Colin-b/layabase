@@ -1572,42 +1572,38 @@ def _reset_collection(base, collection):
     logger.info(f'{nb_removed} counter records deleted')
 
 
-def _dump(base, dump_path: str):
+def _dump(base) -> dict:
     """
-    Dump the content of all the collections of provided database as bson files in the provided directory
+    Dump the content of all the collections part of the provided database in a dict
 
     :param base: database object as returned by the _load method (Mandatory).
-    :param dump_path: directory name of where to store all the collections dumps (Mandatory).
+    :returns The database dump formatted as a dictionary {<collection_name> : [<bson_content>]}.
     """
     logger.debug(f'dumping collections as bson...')
-    pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
+    content = {}
     for collection in base.collection_names():
-        dump_file = os.path.join(dump_path, f'{collection}.bson')
-        logger.debug(f'dumping collection {collection} in {dump_file}')
+        logger.debug(f'dumping collection {collection}')
         documents = base[collection].find({})
         if documents.count() > 0:
-            with open(dump_file, "w") as output:
-                output.write(dumps(documents))
+            content[collection] = dumps(documents)
+    return content
 
 
-def _restore(base, restore_path: str):
+def _restore(base, content: dict):
     """
-    Restore in the provided database the content of all the collections dumped in the provided path as bson.
+    Restore in the provided database the content of all the collections dumped as a dictionary {<collection_name> : [<bson_content>]}.
 
     :param base: database object as returned by the _load method (Mandatory).
-    :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
+    :param content: The database dump formatted as a dictionary {<collection_name> : [<bson_content>]} (Mandatory).
     """
-    logger.debug(f'restoring collections dumped as bson...')
-    collections = [os.path.splitext(collection)[0] for collection in os.listdir(restore_path) if os.path.isfile(os.path.join(restore_path,collection)) and os.path.splitext(collection)[1] == '.bson']
-    for collection in collections:
-        restore_file = os.path.join(restore_path, f'{collection}.bson')
-        with open(restore_file, "r") as input:
-            documents = loads(input.read())
-            if len(documents) > 0:
-                logger.debug(f'drop all records from collection {collection} if any')
-                base[collection].delete_many({})
-                logger.debug(f'import {restore_file} into collection {collection}')
-                base[collection].insert_many(documents)
+    logger.debug(f'restoring collections dumped as dict of bson...')
+    for collection in content.keys():
+        documents = loads(content[collection])
+        if len(documents) > 0:
+            logger.debug(f'drop all records from collection {collection} if any')
+            base[collection].delete_many({})
+            logger.debug(f'import data into collection {collection}')
+            base[collection].insert_many(documents)
 
 
 def _get_example(field: Column):
