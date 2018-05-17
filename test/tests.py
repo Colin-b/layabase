@@ -7535,10 +7535,12 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        dump_content = {collection: content for (collection, content) in database.dump(self._db)}
+        dump_content = {collection: database.dump(self._db, collection) for collection in database.list_content(self._db)}
         self.TestController.delete({'key': 'my_key1'})
         self.TestSecondController.delete({'key': 'my_key1'})
-        database.restore(self._db, dump_content)
+
+        for collection in dump_content.keys():
+            database.restore(self._db, collection, dump_content[collection])
 
         self.assertEqual(
             [
@@ -7580,10 +7582,10 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        dump_content = {collection: content for (collection, content) in database.dump(self._db) if collection == 'sample_table_name'}
+        dump_content = database.dump(self._db, 'sample_table_name')
         self.TestController.delete({'key': 'my_key1'})
         self.TestSecondController.delete({'key': 'my_key1'})
-        database.restore(self._db, dump_content)
+        database.restore(self._db, 'sample_table_name', dump_content)
 
         self.assertEqual(
             [
@@ -7614,9 +7616,10 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             'mandatory': 3,
             'optional': 'my_value3',
         })
-        dump_content = {collection: content for (collection, content) in database.dump(self._db)}
+        dump_content = {collection: database.dump(self._db, collection) for collection in database.list_content(self._db)}
         self.TestController.delete({})
-        database.restore(self._db, dump_content)
+        for collection in dump_content.keys():
+            database.restore(self._db, collection, dump_content[collection])
 
         self.assertEqual(
             [
