@@ -22,7 +22,7 @@ def _failed_field_validation_model(api):
     exception_details = {
         'item': fields.Integer(description='Position of the item that could not be validated.',
                                required=True,
-                               example='sample_item'),
+                               example=1),
         'field_name': fields.String(description='Name of the field that could not be validated.',
                                     required=True,
                                     example='sample_field_name'),
@@ -56,6 +56,8 @@ def add_failed_validation_handler(api):
         logger.exception('Validation failed.')
         error_list = []
         for field, messages in failed_validation.errors.items():
+            item = 1
+            field_name = field
             if isinstance(messages, dict):
                 key, value = next(iter(messages.items()))
                 field_name = key

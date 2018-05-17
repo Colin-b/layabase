@@ -2571,8 +2571,15 @@ class FlaskRestPlusErrorsTest(unittest.TestCase):
                     # Call handle_exception method
                     result = func(failed_validation)
                     # Assert output, if NOK will raise Assertion Error
-                    assert (result[0] == {'fields': [{'field_name': 'mandatory_integer_value on item number: 1.',
-                                                      'messages': ['Missing data for required field.']}]})
+                    assert (result[0] == {
+                        'fields': [
+                            {
+                                'item': 2,
+                                'field_name': 'mandatory_integer_value',
+                                'messages': ['Missing data for required field.']
+                            }
+                        ]
+                    })
                     assert (result[1] == 400)
                     return result
 
@@ -2615,7 +2622,7 @@ class FlaskRestPlusErrorsTest(unittest.TestCase):
                     result = func(failed_validation)
                     # Assert output, if NOK will raise Assertion Error
                     assert (result[0] == {'fields': [
-                        {'field_name': 'mandatory_integer_value', 'messages': ['Missing data for required field.']}]})
+                        {'item': 1, 'field_name': 'mandatory_integer_value', 'messages': ['Missing data for required field.']}]})
                     assert (result[1] == 400)
                     return result
 

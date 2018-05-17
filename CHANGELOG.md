@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.9.2 (2018-05-17) ##
+
+### Bug fixes ###
+
+- Provide errors that can be automatically parsed.
+
 ## Version 10.9.1 (2018-05-14) ##
 
 ### Enhancements ###
