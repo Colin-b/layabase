@@ -20,6 +20,9 @@ class ModelCouldNotBeFound(Exception):
 
 def _failed_field_validation_model(api):
     exception_details = {
+        'item': fields.Integer(description='Position of the item that could not be validated.',
+                               required=True,
+                               example='sample_item'),
         'field_name': fields.String(description='Name of the field that could not be validated.',
                                     required=True,
                                     example='sample_field_name'),
@@ -55,10 +58,12 @@ def add_failed_validation_handler(api):
         for field, messages in failed_validation.errors.items():
             if isinstance(messages, dict):
                 key, value = next(iter(messages.items()))
-                field = f'{key} on item number: {field}.'
+                field_name = key
+                item = field + 1
                 messages = value
             error_list.append({
-                'field_name': field,
+                'item': item,
+                'field_name': field_name,
                 'messages': messages,
             })
         return {'fields': error_list}, 400
