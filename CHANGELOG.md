@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.9.3 (2018-05-17) ##
+
+### Bug fixes ###
+
+- make mongo dump per collection
+- add list_content feature
+
 ## Version 10.9.2 (2018-05-17) ##
 
 ### Bug fixes ###
