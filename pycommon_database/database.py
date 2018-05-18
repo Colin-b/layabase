@@ -100,23 +100,22 @@ def dump(base, collection: str) -> str:
         return database_mongo._dump(base, collection)
 
 
-def restore(base, collection: str, content: str):
+def restore(base, dump_content: List[dict]):
     """
     Restore in the provided database the provided content in the provided collection name.
 
     :param base: database object as returned by the load function (Mandatory).
-    :param collection: name of the collection to dump (Mandatory).
-    :param content: The database dump formatted as a bson dump
+    :param dump_content: dictionary holding the name of the colections to restore as keys and the collection dump formatted as a bson dump as values (Mandatory)
      TODO not supported yet for non Mongo DBs
     """
     if not base:
         raise NoDatabaseProvided()
-    if not content:
+    if not dump_content:
         raise NoDumpDataProvided()
 
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        database_mongo._restore(base, collection, content)
+        database_mongo._restore(base, dump_content)
 
 
 class ControllerModelNotSet(Exception):

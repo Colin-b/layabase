@@ -1601,24 +1601,26 @@ def _dump(base, collection: str) -> str:
     documents = base[collection].find({})
     if documents.count() > 0:
         return dumps(documents)
-#    for collection in base.collection_names():
 
 
-def _restore(base, collection: str, content: str):
+def _restore(base, dump_content: List[dict]):
     """
-    Restore in the provided database the provided content in the provided collection name.
+    Restore in the provided database the provided contents in the provided collections.
 
     :param base: database object as returned by the _load method (Mandatory).
-    :param collection: name of the collection to dump (Mandatory).
-    :param content: The database dump formatted as a bson dump
+    :param dump_content: dictionary holding the name of the colections to restore as keys and the collection dump formatted as a bson dump as values (Mandatory)
     """
-    logger.debug(f'restoring collection {collection} dumped as bson...')
-    documents = loads(content)
-    if len(documents) > 0:
-        logger.debug(f'drop all records from collection {collection} if any')
-        base[collection].delete_many({})
-        logger.debug(f'import data into collection {collection}')
-        base[collection].insert_many(documents)
+    for dump in dump_content:
+        collection = dump.get('collection', None)
+        content = dump.get('content', None)
+        if collection and content:
+            logger.debug(f'restoring collection {collection} dumped as bson...')
+            documents = loads(content)
+            if len(documents) > 0:
+                logger.debug(f'drop all records from collection {collection} if any')
+                base[collection].delete_many({})
+                logger.debug(f'import data into collection {collection}')
+                base[collection].insert_many(documents)
 
 
 def _get_example(field: Column):
