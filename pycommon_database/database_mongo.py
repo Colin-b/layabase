@@ -262,7 +262,7 @@ class Column:
             if isinstance(value, str):
                 try:
                     value = int(value)
-                except ValueError or OverflowError:
+                except ValueError:
                     return {self.name: [f'Not a valid int.']}
             if isinstance(value, int):
                 if self.get_choices() and value not in self.get_choices():
@@ -275,7 +275,7 @@ class Column:
             if isinstance(value, str):
                 try:
                     value = float(value)
-                except ValueError or OverflowError:
+                except ValueError:
                     return {self.name: [f'Not a valid float.']}
             if isinstance(value, int):
                 value = float(value)
