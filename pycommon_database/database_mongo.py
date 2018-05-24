@@ -1578,48 +1578,42 @@ def _reset_collection(base, collection):
     logger.info(f'{nb_removed} counter records deleted')
 
 
-def _list_content(base) -> List[str]:
+def _dump(base, dump_path: str):
     """
-    List all the collections part of the provided database
+    Dump the content of all the collections of the provided database as bson files in the provided directory
 
     :param base: database object as returned by the _load method (Mandatory).
-    :returns The list of all collections contained in the database
+    :param dump_path: directory name of where to store all the collections dumps. If the directory doesn't exist, it will be created (Mandatory).
     """
-    logger.debug(f'fetch collections...')
-    return base.collection_names()
+    logger.debug(f'dumping collections as bson...')
+    pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
+    for collection in base.collection_names():
+        dump_file = os.path.join(dump_path, f'{collection}.bson')
+        logger.debug(f'dumping collection {collection} in {dump_file}')
+        documents = base[collection].find({})
+        if documents.count() > 0:
+            with open(dump_file, "w") as output:
+                output.write(dumps(documents))
 
 
-def _dump(base, collection: str) -> str:
+def _restore(base, restore_path: str):
     """
-    Dump the content of the provided collection part of the provided database in a bson string
+        Restore in the provided database the content of all the collections dumped in the provided path as bson.
 
-    :param base: database object as returned by the _load method (Mandatory).
-    :param collection: name of the collection to dump (Mandatory).
-    :returns The database dump formatted as a string ('<bson_content>').
+        :param base: database object as returned by the _load method (Mandatory).
+        :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
     """
-    logger.debug(f'dumping collection {collection} as bson...')
-    documents = base[collection].find({})
-    if documents.count() > 0:
-        return dumps(documents)
-
-
-def _restore(base, dump_content: List[dict]):
-    """
-    Restore in the provided database the provided contents in the provided collections.
-
-    :param base: database object as returned by the _load method (Mandatory).
-    :param dump_content: dictionary holding the name of the colections to restore as keys and the collection dump formatted as a bson dump as values (Mandatory)
-    """
-    for dump in dump_content:
-        collection = dump.get('collection', None)
-        content = dump.get('content', None)
-        if collection and content:
-            logger.debug(f'restoring collection {collection} dumped as bson...')
-            documents = loads(content)
+    logger.debug(f'restoring collections dumped as bson...')
+    collections = [os.path.splitext(collection)[0] for collection in os.listdir(restore_path) if
+                   os.path.isfile(os.path.join(restore_path, collection)) and os.path.splitext(collection)[1] == '.bson']
+    for collection in collections:
+        restore_file = os.path.join(restore_path, f'{collection}.bson')
+        with open(restore_file, "r") as input:
+            documents = loads(input.read())
             if len(documents) > 0:
                 logger.debug(f'drop all records from collection {collection} if any')
                 base[collection].delete_many({})
-                logger.debug(f'import data into collection {collection}')
+                logger.debug(f'import {restore_file} into collection {collection}')
                 base[collection].insert_many(documents)
 
 

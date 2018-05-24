@@ -6,6 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.10.0 (2018-05-24) ##
+
+### Enhancements ###
+
+- make mongo dump in a specified directory instead of memory
+- make mongo restore from a specified directory instead of memory
+- remove list_content feature
+
 ## Version 10.9.3 (2018-05-17) ##
 
 ### Bug fixes ###

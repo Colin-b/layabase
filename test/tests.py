@@ -9,6 +9,7 @@ from pycommon_test.flask_restplus_mock import TestAPI
 from threading import Thread
 import enum
 import json
+import tempfile
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
@@ -7509,7 +7510,7 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
         logger.info(f'End of {self._testMethodName}')
         logger.info(f'-------------------------------')
 
-    def test_dump_delete_one_restore_all_is_restoring_db_dumped(self):
+    def test_dump_delete_restore_is_restoring_db_dumped(self):
         self.TestController.post({
             'key': 'my_key1',
             'mandatory': 1,
@@ -7535,56 +7536,12 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        dump_content = [{'collection': collection, 'content': database.dump(self._db, collection)} for collection in database.list_content(self._db)]
-        self.TestController.delete({'key': 'my_key1'})
-        self.TestSecondController.delete({'key': 'my_key1'})
 
-        database.restore(self._db, dump_content)
-
-        self.assertEqual(
-            [
-                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
-                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
-                {'key': 'my_key3', 'mandatory': 3, 'optional': 'my_value3'},
-            ],
-            self.TestController.get({}))
-        self.assertEqual(
-            [
-                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
-                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
-            ],
-            self.TestSecondController.get({}))
-
-    def test_dump_delete_one_restore_one_collection_is_restoring_only_collection_restored(self):
-        self.TestController.post({
-            'key': 'my_key1',
-            'mandatory': 1,
-            'optional': 'my_value1',
-        })
-        self.TestController.post({
-            'key': 'my_key2',
-            'mandatory': 2,
-            'optional': 'my_value2',
-        })
-        self.TestController.post({
-            'key': 'my_key3',
-            'mandatory': 3,
-            'optional': 'my_value3',
-        })
-        self.TestSecondController.post({
-            'key': 'my_key1',
-            'mandatory': 1,
-            'optional': 'my_value1',
-        })
-        self.TestSecondController.post({
-            'key': 'my_key2',
-            'mandatory': 2,
-            'optional': 'my_value2',
-        })
-        dump_content = [{'collection': 'sample_table_name', 'content': database.dump(self._db, 'sample_table_name')}]
-        self.TestController.delete({'key': 'my_key1'})
-        self.TestSecondController.delete({'key': 'my_key1'})
-        database.restore(self._db, dump_content)
+        with tempfile.TemporaryDirectory() as temp_directory:
+            database.dump(self._db, temp_directory)
+            self.TestController.delete({'key': 'my_key1'})
+            self.TestSecondController.delete({'key': 'my_key1'})
+            database.restore(self._db, temp_directory)
 
         self.assertEqual(
             [
@@ -7595,6 +7552,7 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             self.TestController.get({}))
         self.assertEqual(
             [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
                 {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
             ],
             self.TestSecondController.get({}))
@@ -7611,21 +7569,40 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             'optional': 'my_value2',
         })
         self.TestController.post({
-            'key': 'my_key2',
+            'key': 'my_key3',
             'mandatory': 3,
             'optional': 'my_value3',
         })
-        dump_content = [{'collection': collection, 'content': database.dump(self._db, collection)} for collection in database.list_content(self._db)]
-        self.TestController.delete({})
-        database.restore(self._db, dump_content)
+        self.TestSecondController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestSecondController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+
+        with tempfile.TemporaryDirectory() as temp_directory:
+            database.dump(self._db, temp_directory)
+            self.TestController.delete({})
+            self.TestSecondController.delete({})
+            database.restore(self._db, temp_directory)
 
         self.assertEqual(
             [
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
                 {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
-                {'key': 'my_key2', 'mandatory': 3, 'optional': 'my_value3'},
+                {'key': 'my_key3', 'mandatory': 3, 'optional': 'my_value3'},
             ],
             self.TestController.get({}))
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+            ],
+            self.TestSecondController.get({}))
 
 if __name__ == '__main__':
     unittest.main()
