@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.9.4 (2018-05-14) ##
+
+### Enhancements ###
+
+- Try to convert strings to int and float before checking value
+
 ## Version 10.9.3 (2018-05-17) ##
 
 ### Bug fixes ###
