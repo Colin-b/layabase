@@ -3235,12 +3235,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_get_is_valid_with_int_str_in_int_column(self):
         self.TestIntAndFloatController.post({
-            'int_value': "123",
+            'int_value': 123,
             'float_value': 1.0,
         })
         self.assertEqual(
             {
-                'int_value': "123",
+                'int_value': 123,
                 'float_value': 1.0,
             },
             self.TestIntAndFloatController.get_one({'int_value': "123"})
@@ -3249,12 +3249,12 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def test_get_is_valid_with_float_str_in_float_column(self):
         self.TestIntAndFloatController.post({
             'int_value': 1,
-            'float_value': "1.23",
+            'float_value': 1.23,
         })
         self.assertEqual(
             {
                 'int_value': 1,
-                'float_value': "1.23",
+                'float_value': 1.23,
             },
             self.TestIntAndFloatController.get_one({'float_value': "1.23"})
         )

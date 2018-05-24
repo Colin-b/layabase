@@ -375,6 +375,12 @@ class Column:
         elif self.field_type == ObjectId:
             if not isinstance(value, ObjectId):
                 value = ObjectId(value)
+        elif self.field_type == int:
+            if isinstance(value, str):
+                value = int(value)
+        elif self.field_type == float:
+            if isinstance(value, str):
+                value = float(value)
 
         return value
 
