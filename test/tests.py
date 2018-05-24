@@ -3069,6 +3069,52 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestIndexController.get({'unique_key': ['not existing', 'test', 'another non existing']})
         )
 
+    def test_post_int_str_in_int_column(self):
+        self.assertEqual(
+            {
+                'int_value': 15,
+                'float_value': 1.0,
+            },
+            self.TestIntAndFloatController.post({
+                'int_value': "15",
+                'float_value': 1.0,
+            })
+        )
+
+    def test_put_int_str_in_int_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 15,
+            'float_value': 1.0,
+        })
+        self.assertEqual(
+            (
+                {
+                    'int_value': 15,
+                    'float_value': 1.0,
+                },
+                {
+                    'int_value': 16,
+                    'float_value': 1.0,
+                }
+            ),
+            self.TestIntAndFloatController.put({
+                'int_value': "16",
+                'float_value': 1.0,
+            })
+        )
+
+    def test_delete_int_str_in_int_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 15,
+            'float_value': 1.0,
+        })
+        self.assertEqual(
+            1,
+            self.TestIntAndFloatController.delete({
+                'int_value': "15",
+            })
+        )
+
     def test_post_with_non_int_str_in_int_column(self):
         with self.assertRaises(Exception) as cm:
             self.TestIntAndFloatController.post({
