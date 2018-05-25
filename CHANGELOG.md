@@ -6,6 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.10.0 (2018-05-24) ##
+
+### Enhancements ###
+
+- [Mongo] make dump in a specified directory instead of memory
+- [Mongo] make restore from a specified directory instead of memory
+- [Mongo] remove list_content feature
+
 ## Version 10.9.4 (2018-05-14) ##
 
 ### Enhancements ###
