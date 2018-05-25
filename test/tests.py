@@ -2688,6 +2688,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestUniqueNonPrimaryController(database.CRUDController):
         pass
 
+    class TestIntAndFloatController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2708,6 +2711,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestVersionedController.namespace(TestAPI)
         cls.TestVersionedUniqueNonPrimaryController.namespace(TestAPI)
         cls.TestUniqueNonPrimaryController.namespace(TestAPI)
+        cls.TestIntAndFloatController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -2800,6 +2804,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
             unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
 
+        class TestIntAndFloatModel(database_mongo.CRUDModel, base=base, table_name='int_and_float'):
+            int_value = database_mongo.Column(int)
+            float_value = database_mongo.Column(float)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestStrictController.model(TestStrictModel)
@@ -2816,9 +2824,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestVersionedController.model(TestVersionedModel)
         cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
+        cls.TestIntAndFloatController.model(TestIntAndFloatModel)
         return [TestModel, TestStrictModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel, TestUnvalidatedListAndDictModel,
-                TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel]
+                TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel, TestIntAndFloatModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -3059,6 +3068,196 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 },
             ],
             self.TestIndexController.get({'unique_key': ['not existing', 'test', 'another non existing']})
+        )
+
+    def test_post_int_str_in_int_column(self):
+        self.assertEqual(
+            {
+                'int_value': 15,
+                'float_value': 1.0,
+            },
+            self.TestIntAndFloatController.post({
+                'int_value': "15",
+                'float_value': 1.0,
+            })
+        )
+
+    def test_put_int_str_in_int_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 15,
+            'float_value': 1.0,
+        })
+        self.assertEqual(
+            (
+                {
+                    'int_value': 15,
+                    'float_value': 1.0,
+                },
+                {
+                    'int_value': 16,
+                    'float_value': 1.0,
+                }
+            ),
+            self.TestIntAndFloatController.put({
+                'int_value': "16",
+                'float_value': 1.0,
+            })
+        )
+
+    def test_delete_int_str_in_int_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 15,
+            'float_value': 1.0,
+        })
+        self.assertEqual(
+            1,
+            self.TestIntAndFloatController.delete({
+                'int_value': "15",
+            })
+        )
+
+    def test_post_float_str_in_float_column(self):
+        self.assertEqual(
+            {
+                'int_value': 15,
+                'float_value': 1.3,
+            },
+            self.TestIntAndFloatController.post({
+                'int_value': 15,
+                'float_value': "1.3",
+            })
+        )
+
+    def test_put_float_str_in_float_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 15,
+            'float_value': 1.3,
+        })
+        self.assertEqual(
+            (
+                {
+                    'int_value': 15,
+                    'float_value': 1.3,
+                },
+                {
+                    'int_value': 15,
+                    'float_value': 1.4,
+                }
+            ),
+            self.TestIntAndFloatController.put({
+                'int_value': 15,
+                'float_value': "1.4",
+            })
+        )
+
+    def test_delete_float_str_in_float_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 15,
+            'float_value': 1.3,
+        })
+        self.assertEqual(
+            1,
+            self.TestIntAndFloatController.delete({
+                'float_value': "1.3",
+            })
+        )
+
+    def test_post_with_non_int_str_in_int_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.post({
+                'int_value': "abc",
+                'float_value': 1.0,
+            })
+        self.assertEqual({'int_value': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'int_value': "abc", 'float_value': 1.0}, cm.exception.received_data)
+
+    def test_post_with_non_float_str_in_float_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.post({
+                'int_value': 1,
+                'float_value': "abc",
+            })
+        self.assertEqual({'float_value': ['Not a valid float.']}, cm.exception.errors)
+        self.assertEqual({'float_value': "abc", 'int_value': 1}, cm.exception.received_data)
+
+    def test_get_with_non_int_str_in_int_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.get({
+                'int_value': "abc",
+                'float_value': 1.0,
+            })
+        self.assertEqual({'int_value': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'int_value': "abc", 'float_value': 1.0}, cm.exception.received_data)
+
+    def test_get_with_non_float_str_in_float_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.get({
+                'int_value': 1,
+                'float_value': "abc",
+            })
+        self.assertEqual({'float_value': ['Not a valid float.']}, cm.exception.errors)
+        self.assertEqual({'float_value': "abc", 'int_value': 1}, cm.exception.received_data)
+
+    def test_put_with_non_int_str_in_int_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.put({
+                'int_value': "abc",
+                'float_value': 1.0,
+            })
+        self.assertEqual({'int_value': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'int_value': "abc", 'float_value': 1.0}, cm.exception.received_data)
+
+    def test_put_with_non_float_str_in_float_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.put({
+                'int_value': 1,
+                'float_value': "abc",
+            })
+        self.assertEqual({'float_value': ['Not a valid float.']}, cm.exception.errors)
+        self.assertEqual({'float_value': "abc", 'int_value': 1}, cm.exception.received_data)
+
+    def test_delete_with_non_int_str_in_int_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.delete({
+                'int_value': "abc",
+                'float_value': 1.0,
+            })
+        self.assertEqual({'int_value': ['Not a valid int.']}, cm.exception.errors)
+        self.assertEqual({'int_value': "abc", 'float_value': 1.0}, cm.exception.received_data)
+
+    def test_delete_with_non_float_str_in_float_column(self):
+        with self.assertRaises(Exception) as cm:
+            self.TestIntAndFloatController.delete({
+                'int_value': 1,
+                'float_value': "abc",
+            })
+        self.assertEqual({'float_value': ['Not a valid float.']}, cm.exception.errors)
+        self.assertEqual({'float_value': "abc", 'int_value': 1}, cm.exception.received_data)
+
+    def test_get_is_valid_with_int_str_in_int_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 123,
+            'float_value': 1.0,
+        })
+        self.assertEqual(
+            {
+                'int_value': 123,
+                'float_value': 1.0,
+            },
+            self.TestIntAndFloatController.get_one({'int_value': "123"})
+        )
+
+    def test_get_is_valid_with_float_str_in_float_column(self):
+        self.TestIntAndFloatController.post({
+            'int_value': 1,
+            'float_value': 1.23,
+        })
+        self.assertEqual(
+            {
+                'int_value': 1,
+                'float_value': 1.23,
+            },
+            self.TestIntAndFloatController.get_one({'float_value': "1.23"})
         )
 
     def test_delete_with_list_is_valid(self):
@@ -6598,7 +6797,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'value1',
                     'mandatory': 1,
@@ -6620,7 +6819,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6642,7 +6841,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
@@ -6673,7 +6872,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
@@ -6681,7 +6880,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'enum_fld': 'Value2',
                     'key': 'my_key',
@@ -6709,28 +6908,28 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'revision': 1,
                     'table_name': 'versioned_table_name',
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'revision': 2,
                     'table_name': 'versioned_table_name',
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'revision': 3,
                     'table_name': 'versioned_table_name',
                 },
                 {
                     'audit_action': 'Rollback',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'revision': 4,
                     'table_name': 'versioned_table_name',
@@ -6755,7 +6954,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
@@ -6763,7 +6962,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'enum_fld': 'Value1',
                     'key': 'my_key',
@@ -6784,7 +6983,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6819,7 +7018,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6828,7 +7027,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -6837,7 +7036,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6846,7 +7045,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 3,
@@ -6878,7 +7077,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6901,7 +7100,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6926,7 +7125,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6951,7 +7150,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -6978,7 +7177,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7009,7 +7208,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7018,7 +7217,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -7051,7 +7250,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7060,7 +7259,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -7090,7 +7289,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7099,7 +7298,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -7131,7 +7330,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7140,7 +7339,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7165,7 +7364,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7174,7 +7373,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7202,7 +7401,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7211,7 +7410,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -7220,7 +7419,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7245,7 +7444,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7254,7 +7453,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -7263,7 +7462,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -7289,7 +7488,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -7318,7 +7517,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7327,7 +7526,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -7336,7 +7535,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7363,7 +7562,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7372,7 +7571,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -7381,7 +7580,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -7390,7 +7589,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,

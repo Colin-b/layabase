@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.9.4 (2018-05-14) ##
+
+### Enhancements ###
+
+- [Mongo] Convert strings to int or float if needed
+
 ## Version 10.10.0 (2018-05-24) ##
 
 ### Enhancements ###
@@ -18,8 +24,8 @@ List all changes in various categories:
 
 ### Bug fixes ###
 
-- make mongo dump per collection
-- add list_content feature
+- [Mongo] Dump per collection
+- [Mongo] Add list_content feature
 
 ## Version 10.9.2 (2018-05-17) ##
 
@@ -31,7 +37,7 @@ List all changes in various categories:
 
 ### Enhancements ###
 
-- New dump and restore features to handle mongodb backups
+- [Mongo] New dump and restore features to handle backups
 
 ## Version 10.9.0 (2018-05-15) ##
 

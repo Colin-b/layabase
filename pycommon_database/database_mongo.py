@@ -259,6 +259,11 @@ class Column:
                 if self.max_length and len(value) > self.max_length:
                     return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
         elif self.field_type == int:
+            if isinstance(value, str):
+                try:
+                    value = int(value)
+                except ValueError:
+                    return {self.name: [f'Not a valid int.']}
             if isinstance(value, int):
                 if self.get_choices() and value not in self.get_choices():
                     return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
@@ -267,6 +272,11 @@ class Column:
                 if self.max_value is not None and value > self.max_value:
                     return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
         elif self.field_type == float:
+            if isinstance(value, str):
+                try:
+                    value = float(value)
+                except ValueError:
+                    return {self.name: [f'Not a valid float.']}
             if isinstance(value, int):
                 value = float(value)
             if isinstance(value, float):
@@ -365,6 +375,12 @@ class Column:
         elif self.field_type == ObjectId:
             if not isinstance(value, ObjectId):
                 value = ObjectId(value)
+        elif self.field_type == int:
+            if isinstance(value, str):
+                value = int(value)
+        elif self.field_type == float:
+            if isinstance(value, str):
+                value = float(value)
 
         return value
 

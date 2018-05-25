@@ -24,7 +24,7 @@ setup(
             'nose',
             'pycommon-test==1.7.0',
             # Used to Manage Mongo Database
-            'mongomock>=3.10.0',
+            'mongomock==3.10.0',
         ],
         # Used to Manage Mongo Database
         'mongo': [
