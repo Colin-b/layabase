@@ -1561,7 +1561,7 @@ def _reset(base):
     If the database was already created, then drop all tables and recreate them all.
     """
     if base:
-        for collection in base._collections.values():
+        for collection in base.collection_names():
             _reset_collection(base, collection)
 
 
@@ -1569,12 +1569,12 @@ def _reset_collection(base, collection):
     """
     Reset collection and keep indexes.
     """
-    logger.info(f'Resetting all data related to "{collection.name}" collection...')
-    nb_removed = collection.delete_many({}).deleted_count
+    logger.info(f'Resetting all data related to "{collection}" collection...')
+    nb_removed = base[collection].delete_many({}).deleted_count
     logger.info(f'{nb_removed} records deleted.')
 
-    logger.info(f'Resetting counters."{collection.name}".')
-    nb_removed = base['counters'].delete_many({'_id': collection.name}).deleted_count
+    logger.info(f'Resetting counters."{collection}".')
+    nb_removed = base['counters'].delete_many({'_id': collection}).deleted_count
     logger.info(f'{nb_removed} counter records deleted')
 
 
