@@ -3281,6 +3281,17 @@ class MongoCRUDControllerTest(unittest.TestCase):
         })
         self.assertEqual(1, self.TestIndexController.delete({'unique_key': ['test2']}))
 
+    @unittest.expectedFailure
+    def test_non_iso8601_date_failure(self):
+        # TODO Solve the parsing (date-util tried to guess provided date)
+        with self.assertRaises(Exception) as cm:
+            self.TestIndexController.post({
+                'unique_key': 'test',
+                'non_unique_key': '12/06/2017',
+            })
+        self.assertEqual({'non_unique_key': ['Date format is non ISO-8601 compliant.']}, cm.exception.errors)
+        self.assertEqual({'unique_key': 'test', 'non_unique_key': '12/06/2017'}, cm.exception.received_data)
+
     def test_delete_with_empty_list_is_valid(self):
         self.TestIndexController.post({
             'unique_key': 'test',

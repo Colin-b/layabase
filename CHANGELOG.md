@@ -6,11 +6,15 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 10.9.4 (2018-05-14) ##
+## Version 10.9.4 (2018-05-24) ##
 
 ### Enhancements ###
 
 - [Mongo] Convert strings to int or float if needed
+
+### Known issues ###
+
+- [Mongo] non ISO-8601 date/time might be considered as valid if matching a commonly-used formatting.
 
 ## Version 10.9.3 (2018-05-17) ##
 
