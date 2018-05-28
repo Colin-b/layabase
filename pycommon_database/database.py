@@ -18,9 +18,9 @@ class NoRelatedModels(Exception):
         Exception.__init__(self, 'A method allowing to create related models must be provided.')
 
 
-class NoDumpDataProvided(Exception):
+class NoPathProvided(Exception):
     def __init__(self):
-        Exception.__init__(self, 'Dump Data must be provided.')
+        Exception.__init__(self, 'A directory path must be provided.')
 
 
 def load(database_connection_url: str, create_models_func: callable, **kwargs):
@@ -67,55 +67,42 @@ def reset(base):
         database_sqlalchemy._reset(base)
 
 
-def list_content(base) -> List[str]:
+def dump(base, dump_path: str):
     """
-    List all the collections part of the provided database
-
-    :param base: database object as returned by the _load method (Mandatory).
-    :returns The list of all collections contained in the database
-     TODO not supported yet for non Mongo DBs
-    """
-    if not base:
-        raise NoDatabaseProvided()
-
-    if hasattr(base, 'is_mongos'):
-        import pycommon_database.database_mongo as database_mongo
-        return database_mongo._list_content(base)
-
-
-def dump(base, collection: str) -> str:
-    """
-    Dump the content of the provided collection part of the provided database in a bson string
+    Dump the content of all the collections part of the provided database in the provided path.
+    The filenames will be <collection_name>.bson
 
     :param base: database object as returned by the load function (Mandatory).
-    :param collection: name of the collection to dump (Mandatory).
      TODO not supported yet for non Mongo DBs
-    :returns The database dump formatted as a bson string '<bson_content>'.
+     :param dump_path: directory name where to store the dump bson results. (Mandatory).
     """
     if not base:
         raise NoDatabaseProvided()
+    if not dump_path:
+        raise NoPathProvided()
 
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        return database_mongo._dump(base, collection)
+        database_mongo._dump(base, dump_path)
 
 
-def restore(base, dump_content: List[dict]):
+def restore(base, restore_path: str):
     """
-    Restore in the provided database the provided content in the provided collection name.
+    Restore in the provided database the content of all the collections dumped in the provided path as bson.
 
-    :param base: database object as returned by the load function (Mandatory).
-    :param dump_content: dictionary holding the name of the colections to restore as keys and the collection dump formatted as a bson dump as values (Mandatory)
+    :param base: database object returned from the load function (Mandatory).
      TODO not supported yet for non Mongo DBs
+    :param restore_path: directory name where the dumped bson files are stored. The filename will be used as the collection name
+     (Mandatory).
     """
     if not base:
         raise NoDatabaseProvided()
-    if not dump_content:
-        raise NoDumpDataProvided()
+    if not restore_path:
+        raise NoPathProvided()
 
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
-        database_mongo._restore(base, dump_content)
+        database_mongo._restore(base, restore_path)
 
 
 class ControllerModelNotSet(Exception):
