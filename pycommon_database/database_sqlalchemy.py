@@ -11,7 +11,6 @@ from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from typing import List
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
-from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -59,13 +58,11 @@ class CRUDModel:
         """
         query = cls._session.query(cls)
 
-        fc = deepcopy(filters)
         if 'order_by' in filters:
             query = query.order_by(*filters.pop('order_by'))
-        if 'limit' in filters:
-            filters.pop('limit')
-        if 'offset' in filters:
-            filters.pop('offset')
+
+        query_limit = filters.pop('limit', None)
+        query_offset = filters.pop('offset', None)
 
         for column_name, value in filters.items():
             if value is not None:
@@ -75,10 +72,10 @@ class CRUDModel:
                 else:
                     query = query.filter(getattr(cls, column_name) == value)
 
-        if 'limit' in fc:
-            query = query.limit(fc.pop('limit'))
-        if 'offset' in fc:
-            query = query.offset(fc.pop('offset'))
+        if query_limit:
+            query = query.limit(query_limit)
+        if query_offset:
+            query = query.offset(query_offset)
 
         try:
             return query.all()
