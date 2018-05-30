@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.10.1 (2018-05-30) ##
+
+### Bug fixes ###
+
+- [Postgres - sqlAchemy] Correcting filter and offset issue
+
+
 ## Version 10.10.0 (2018-05-24) ##
 
 ### Enhancements ###
