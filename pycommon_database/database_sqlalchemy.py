@@ -11,6 +11,7 @@ from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from typing import List
 
 from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +58,14 @@ class CRUDModel:
         Return all SQLAlchemy models.
         """
         query = cls._session.query(cls)
+
+        fc = deepcopy(filters)
         if 'order_by' in filters:
             query = query.order_by(*filters.pop('order_by'))
         if 'limit' in filters:
-            query = query.limit(filters.pop('limit'))
+            filters.pop('limit')
         if 'offset' in filters:
-            query = query.offset(filters.pop('offset'))
+            filters.pop('offset')
 
         for column_name, value in filters.items():
             if value is not None:
@@ -71,6 +74,12 @@ class CRUDModel:
                         query = query.filter(getattr(cls, column_name).in_(value))
                 else:
                     query = query.filter(getattr(cls, column_name) == value)
+
+        if 'limit' in fc:
+            query = query.limit(fc.pop('limit'))
+        if 'offset' in fc:
+            query = query.offset(fc.pop('offset'))
+
         try:
             return query.all()
         except exc.sa_exc.DBAPIError:
