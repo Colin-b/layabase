@@ -10,7 +10,7 @@ List all changes in various categories:
 
 ### Enhancements ###
 
-- TLS dependencies are now retrieved with Mongo.
+- [Mongo] TLS dependencies are now retrieved.
 
 ## Version 10.10.1 (2018-05-30) ##
 
