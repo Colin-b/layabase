@@ -6,24 +6,29 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.11.0 (2018-06-19) ##
+
+### Enhancements ###
+
+- TLS dependencies are now retrieved with Mongo.
+
 ## Version 10.10.1 (2018-05-30) ##
 
 ### Bug fixes ###
 
-- [Postgres - sqlAchemy] Correcting filter and offset issue
-
+- [SQLAlchemy] Postgres filter and offset are now applied.
 
 ## Version 10.10.0 (2018-05-24) ##
 
 ### Enhancements ###
 
-- [Mongo] make dump in a specified directory instead of memory
-- [Mongo] make restore from a specified directory instead of memory
-- [Mongo] remove list_content feature
+- [Mongo] Dump in a specified directory instead of memory.
+- [Mongo] Restore from a specified directory instead of memory.
+- [Mongo] Remove list_content feature.
 
 ### Known issues ###
 
-- [Mongo] non ISO-8601 date/time might be considered as valid if matching a commonly-used formatting.
+- [Mongo] Non ISO-8601 date/time might be considered as valid if matching a commonly-used formatting.
 
 ## Version 10.9.4 (2018-05-24) ##
 
@@ -35,8 +40,8 @@ List all changes in various categories:
 
 ### Bug fixes ###
 
-- [Mongo] Dump per collection
-- [Mongo] Add list_content feature
+- [Mongo] Dump per collection.
+- [Mongo] Add list_content feature.
 
 ## Version 10.9.2 (2018-05-17) ##
 
@@ -48,7 +53,7 @@ List all changes in various categories:
 
 ### Enhancements ###
 
-- [Mongo] New dump and restore features to handle backups
+- [Mongo] New dump and restore features to handle backups.
 
 ## Version 10.9.0 (2018-05-15) ##
 

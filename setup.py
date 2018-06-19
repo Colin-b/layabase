@@ -28,7 +28,7 @@ setup(
         ],
         # Used to Manage Mongo Database
         'mongo': [
-            'pymongo==3.6.1',
+            'pymongo[tls]==3.6.1',
             # Used to manage date and datetime deserialization
             'python-dateutil==2.7.2',
         ],
