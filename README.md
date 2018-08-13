@@ -1,12 +1,43 @@
 # Python Common Database Module #
 
-Provide helper to manipulate database(s).
+Query your databases easily and transparently thanks to this module providing helpers on top of most brilliant python
+database modules (SQLAlchemy and PyMongo).
 
-## SQLAlchemy model ##
+Features:
+
+ * Audit
+ * Rollback
+ * History
+ * Validation
+ * Conversion
+
+## Concept ##
+
+You will define a model class to help you with the manipulation of:
+
+ * A collection if this is a MongoDB you are connecting to.
+ * A table if this is a non-Mongo database you are connecting to.
+
+This model will describe:
+
+ * The document fields if this is a MongoDB you are connecting to.
+ * The table columns if this is a non-Mongo database you are connecting to.
+
+By providing this model to a controller class, you will automatically have flask-restplus models and arguments parsers.
+
+Every feature provided by a model if exposed via the controller class so that you never have to manipulate the model yourself.
+
+## Relational databases (non-Mongo) ##
+
+SQLAlchemy is the underlying framework used to manipulate relational databases.
+
+To create a representation of a table you will need to extend pycommon_database.database_sqlalchemy.CRUDModel
+
+### SQLAlchemy model ###
 
 Extending pycommon_database.database_sqlalchemy.CRUDModel will provides C.R.U.D. methods on your SQLAlchemy model.
 
-### Model definition ###
+#### Model definition ####
 
 ```python
 from sqlalchemy import Column, String
@@ -20,7 +51,7 @@ class MyModel(CRUDModel, base):
     value = Column(String)
 ```
 
-### Retrieving data ###
+#### Retrieving data ####
 
 ```python
 all_models_as_dict_list = MyModel.get_all()
@@ -30,7 +61,7 @@ filtered_models_as_dict_list = MyModel.get_all(value='value1')
 filtered_model_as_dict = MyModel.get(key='key1')
 ```
 
-### Inserting data ###
+#### Inserting data ####
 
 ```python
 inserted_models_as_dict_list = MyModel.add_all([
@@ -41,23 +72,29 @@ inserted_models_as_dict_list = MyModel.add_all([
 inserted_model_as_dict = MyModel.add({'key': 'key1', 'value': 'value1'})
 ```
 
-### Updating data ###
+#### Updating data ####
 
 ```python
 updated_model_as_dict = MyModel.update({'key': 'key1', 'value': 'new value'})
 ```
 
-### Removing data ###
+#### Removing data ####
 
 ```python
 nb_removed_models = MyModel.remove(key='key1')
 ```
 
-## Mongo model ##
+## MongoDB (non-relational) ##
+
+PyMongo is the underlying framework used to manipulate MongoDB.
+
+To create a representation of a collection you will need to extend pycommon_database.database_mongo.CRUDModel
+
+### Mongo model ###
 
 Extending pycommon_database.database_mongo.CRUDModel will provides C.R.U.D. methods on your Mongo model.
 
-### Model definition ###
+#### Model definition ####
 
 ```python
 from pycommon_database.database_mongo import CRUDModel, Column
@@ -68,7 +105,91 @@ class MyModel(CRUDModel):
     dict_value = Column(dict)
 ```
 
-### Retrieving data ###
+##### String fields #####
+
+Fields containing string can be described using pycommon_database.database_mongo.Column
+
+```python
+from pycommon_database.database_mongo import CRUDModel, Column
+
+class MyModel(CRUDModel):
+
+    key = Column()
+```
+
+As string is considered as the default field type, not providing the type explicitly when creating a column is valid.
+
+The following parameters can also be provided when creating a column of string type:
+
+<table>
+    <th>
+        <td><em>Description</em></td>
+        <td><em>Default value</em></td>
+    </th>
+    <tr>
+        <td><strong>choices</strong></td>
+        <td>Restrict valid values. Should be a list of string or a function (without parameters) returning a list of string.</td>
+        <td>None (unrestricted)</td>
+    </tr>
+    <tr>
+        <td><strong>default_value</strong></td>
+        <td>Default field value returned to the client if field is not set. Should be a string or a function (with dictionary as parameter) returning a string.</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td><strong>description</strong></td>
+        <td>Field description used in Swagger and in error messages. Should be a string value.</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td><strong>index_type</strong></td>
+        <td>If and how this field should be indexed. Value should be one of IndexType enum.</td>
+        <td>None (not indexed)</td>
+    </tr>
+    <tr>
+        <td><strong>allow_none_as_filter</strong></td>
+        <td>If None value should be kept in queries (GET/DELETE). Should be a boolean value.</td>
+        <td>False (remove None from queries)</td>
+    </tr>
+    <tr>
+        <td><strong>is_primary_key</strong></td>
+        <td>If this field value is not allowed to be modified after insert. Should be a boolean value.</td>
+        <td>False (field value can always be modified)</td>
+    </tr>
+    <tr>
+        <td><strong>is_nullable</strong></td>
+        <td>If field value is optional. Should be a boolean value. Note that it is not allowed to force False if field has a default value.</td>
+        <td>
+        Default to True if field is not a primary key.
+        Default to True if field has a default value.
+        Otherwise default to False.</td>
+    </tr>
+    <tr>
+        <td><strong>is_required</strong></td>
+        <td>If field value must be specified in client requests. Use it to avoid heavy requests. Should be a boolean value.</td>
+        <td>False (optional)</td>
+    </tr>
+    <tr>
+        <td><strong>min_length</strong></td>
+        <td>Minimum value length.</td>
+        <td>None (no minimum length)</td>
+    </tr>
+    <tr>
+        <td><strong>max_length</strong></td>
+        <td>Maximum value length.</td>
+        <td>None (no maximum length)</td>
+    </tr>
+</table>
+
+##### Dictionary fields #####
+
+Fields containing a dictionary can be described using pycommon_database.database_mongo.DictColumn
+
+##### List fields #####
+
+Fields containing a list can be described using pycommon_database.database_mongo.ListColumn
+
+#### Retrieving data ####
 
 ```python
 all_models_as_dict_list = MyModel.get_all()
@@ -78,7 +199,7 @@ filtered_models_as_dict_list = MyModel.get_all(dict_value={'dict_key': 'value1'}
 filtered_model_as_dict = MyModel.get(key='key1')
 ```
 
-### Inserting data ###
+#### Inserting data ####
 
 ```python
 inserted_models_as_dict_list = MyModel.add_all([
@@ -89,13 +210,13 @@ inserted_models_as_dict_list = MyModel.add_all([
 inserted_model_as_dict = MyModel.add({'key': 'key1', 'dict_value': {'dict_key': value1'}})
 ```
 
-### Updating data ###
+#### Updating data ####
 
 ```python
 updated_model_as_dict = MyModel.update({'key': 'key1', 'dict_value': {'dict_key': 'new value'}})
 ```
 
-### Removing data ###
+#### Removing data ####
 
 ```python
 nb_removed_models = MyModel.remove(key='key1')
