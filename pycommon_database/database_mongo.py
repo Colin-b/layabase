@@ -73,8 +73,10 @@ class Column:
         Should be a boolean value. Default to False.
         :param min_value: Minimum value for a number field.
         :param max_value: Maximum value for a number field.
-        :param min_length: Minimum length for a str or list field.
-        :param max_length: Maximum length for a str or list field.
+        :param min_length: Minimum value length. Only for integer or list fields.
+        Should be an integer value. Default to None (no minimum length).
+        :param max_length: Maximum value length. Only for integer or list fields.
+        Should be an integer value. Default to None (no maximum length).
         """
         self.field_type = field_type or str
         name = kwargs.pop('name', None)
@@ -1429,6 +1431,7 @@ class CRUDModel:
                     enum=field.get_choices(),
                     default=field.get_default_value({}),
                     readonly=field.should_auto_increment,
+                    skip_none=True,
                 )
             else:
                 return flask_restplus_fields.Raw(
