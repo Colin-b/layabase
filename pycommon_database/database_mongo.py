@@ -1020,8 +1020,6 @@ class CRUDModel:
             return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
-        except Exception as e:
-            raise ValidationFailed(documents, message=str(e))
 
     @classmethod
     def validate_insert(cls, document: dict) -> dict:
