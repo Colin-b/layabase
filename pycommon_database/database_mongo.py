@@ -247,9 +247,9 @@ class Column:
                 except BSONError as e:
                     return {self.name: [e.args[0]]}
         elif self.field_type == str:
-            if isinstance(value, int):
+            if isinstance(value, int) and not isinstance(value, bool):
                 value = str(value)
-            if isinstance(value, float):
+            elif isinstance(value, float):
                 value = str(value)
             if isinstance(value, str):
                 if self.get_choices() and value not in self.get_choices():
@@ -283,7 +283,7 @@ class Column:
                     value = float(value)
                 except ValueError:
                     return {self.name: [f'Not a valid float.']}
-            if isinstance(value, int):
+            elif isinstance(value, int):
                 value = float(value)
             if isinstance(value, float):
                 if self.get_choices() and value not in self.get_choices():
@@ -387,6 +387,9 @@ class Column:
         elif self.field_type == float:
             if isinstance(value, str):
                 value = float(value)
+        elif self.field_type == str:
+            if not isinstance(value, str):
+                value = str(value)
 
         return value
 

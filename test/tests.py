@@ -2927,7 +2927,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def test_post_int_instead_of_str_is_valid(self):
         self.assertEqual(
             {
-                'key': 3,
+                'key': '3',
                 'mandatory': 1,
                 'optional': None
             },
@@ -2937,23 +2937,19 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
-    def test_post_boolean_instead_of_str_is_valid(self):
-        self.assertEqual(
-            {
-                'key': True,
-                'mandatory': 1,
-                'optional': None
-            },
+    def test_post_boolean_instead_of_str_is_invalid(self):
+        with self.assertRaises(Exception) as cm:
             self.TestController.post({
                 'key': True,
                 'mandatory': 1,
             })
-        )
+        self.assertEqual({'key': ['Not a valid str.']}, cm.exception.errors)
+        self.assertEqual({'key': True, 'mandatory': 1}, cm.exception.received_data)
 
     def test_post_float_instead_of_str_is_valid(self):
         self.assertEqual(
             {
-                'key': 1.5,
+                'key': '1.5',
                 'mandatory': 1,
                 'optional': None
             },
