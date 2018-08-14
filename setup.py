@@ -26,6 +26,7 @@ setup(
             'pycommon-test==1.9.0',
             # Used to Manage Mongo Database
             'mongomock==3.10.0',
+            'responses==0.9.0',
         ],
         # Used to Manage Mongo Database
         'mongo': [

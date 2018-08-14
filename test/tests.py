@@ -2918,11 +2918,50 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def test_post_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post({
-                'key': 256,
+                'key': datetime.date(2007, 12, 5),
                 'mandatory': 1,
             })
         self.assertEqual({'key': ['Not a valid str.']}, cm.exception.errors)
-        self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
+        self.assertEqual({'key': datetime.date(2007, 12, 5), 'mandatory': 1}, cm.exception.received_data)
+
+    def test_post_int_instead_of_str_is_valid(self):
+        self.assertEqual(
+            {
+                'key': 3,
+                'mandatory': 1,
+                'optional': None
+            },
+            self.TestController.post({
+                'key': 3,
+                'mandatory': 1,
+            })
+        )
+
+    def test_post_boolean_instead_of_str_is_valid(self):
+        self.assertEqual(
+            {
+                'key': True,
+                'mandatory': 1,
+                'optional': None
+            },
+            self.TestController.post({
+                'key': True,
+                'mandatory': 1,
+            })
+        )
+
+    def test_post_float_instead_of_str_is_valid(self):
+        self.assertEqual(
+            {
+                'key': 1.5,
+                'mandatory': 1,
+                'optional': None
+            },
+            self.TestController.post({
+                'key': 1.5,
+                'mandatory': 1,
+            })
+        )
 
     def test_post_twice_with_unique_index_is_invalid(self):
         self.assertEqual(
@@ -4096,11 +4135,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([{
-                'key': 256,
+                'key': datetime.date(2007, 12, 5),
                 'mandatory': 1,
             }])
         self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
-        self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
+        self.assertEqual([{'key': datetime.date(2007, 12, 5), 'mandatory': 1}], cm.exception.received_data)
 
     def test_json_post_model_versioned(self):
         self.assertEqual(
@@ -6775,21 +6814,21 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     def test_post_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post({
-                'key': 256,
+                'key': datetime.date(2007, 12, 5),
                 'mandatory': 1,
             })
         self.assertEqual({'key': ['Not a valid str.']}, cm.exception.errors)
-        self.assertEqual({'key': 256, 'mandatory': 1}, cm.exception.received_data)
+        self.assertEqual({'key': datetime.date(2007, 12, 5), 'mandatory': 1}, cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([{
-                'key': 256,
+                'key': datetime.date(2007, 12, 5),
                 'mandatory': 1,
             }])
         self.assertEqual({0: {'key': ['Not a valid str.']}}, cm.exception.errors)
-        self.assertEqual([{'key': 256, 'mandatory': 1}], cm.exception.received_data)
+        self.assertEqual([{'key': datetime.date(2007, 12, 5), 'mandatory': 1}], cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_put_with_wrong_type_is_invalid(self):
