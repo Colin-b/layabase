@@ -248,15 +248,9 @@ class Column:
                     return {self.name: [e.args[0]]}
         elif self.field_type == str:
             if isinstance(value, int):
-                try:
-                    value = str(value)
-                except ValueError:
-                    return {self.name: [f'Not a valid str.']}
+                value = str(value)
             if isinstance(value, float):
-                try:
-                    value = str(value)
-                except ValueError:
-                    return {self.name: [f'Not a valid str.']}
+                value = str(value)
             if isinstance(value, str):
                 if self.get_choices() and value not in self.get_choices():
                     return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
