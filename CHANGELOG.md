@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.12.0 (2018-08-14) ##
+
+### Enhancements ###
+
+- [Mongo] Convert int and float to string if needed
+
 ## Version 10.11.1 (2018-08-10) ##
 
 ### Bug fixes ###
