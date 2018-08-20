@@ -2808,6 +2808,16 @@ class MongoCRUDControllerTest(unittest.TestCase):
             int_value = database_mongo.Column(int)
             float_value = database_mongo.Column(float)
 
+        class TestDictInDictModel(database_mongo.CRUDModel, base=base, table_name='dict_in_dict_table_name'):
+            key = database_mongo.Column(is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            dict_field = database_mongo.DictColumn({
+                'first_key': database_mongo.DictColumn({
+                    'inner_key1': database_mongo.Column(EnumTest, is_nullable=False),
+                    'inner_key2': database_mongo.Column(int, is_nullable=False),
+                }, is_required=True),
+                'second_key': database_mongo.Column(int, is_nullable=False),
+            }, is_required=True)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestStrictController.model(TestStrictModel)
@@ -5020,6 +5030,26 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ],
             self.TestDictController.get({
                 'dict_col.first_key': EnumTest.Value1,
+            })
+        )
+
+    def test_get_with_dot_notation_multi_level_is_valid(self):
+        self.assertEqual(
+            {'dict_col': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictController.post({
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': {'inner_key1': EnumTest.Value1, 'inner_key2': 3},
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
+            [
+                {'dict_col': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key'},
+            ],
+            self.TestDictController.get({
+                'dict_col.first_key.inner_key1': EnumTest.Value1,
             })
         )
 
