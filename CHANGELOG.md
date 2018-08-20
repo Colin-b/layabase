@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.12.1 (2018-08-20) ##
+
+### Bug fixes ###
+
+- Update dependencies to latest version.
+
 ## Version 10.12.0 (2018-08-14) ##
 
 ### Enhancements ###
