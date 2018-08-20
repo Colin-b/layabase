@@ -2691,6 +2691,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestIntAndFloatController(database.CRUDController):
         pass
 
+    class TestDictInDictController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2712,6 +2715,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestVersionedUniqueNonPrimaryController.namespace(TestAPI)
         cls.TestUniqueNonPrimaryController.namespace(TestAPI)
         cls.TestIntAndFloatController.namespace(TestAPI)
+        cls.TestDictInDictController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -2835,9 +2839,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
         cls.TestIntAndFloatController.model(TestIntAndFloatModel)
+        cls.TestDictInDictController.model(TestDictInDictModel)
         return [TestModel, TestStrictModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel, TestUnvalidatedListAndDictModel,
-                TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel, TestIntAndFloatModel]
+                TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel, TestIntAndFloatModel,
+                TestDictInDictModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -5035,21 +5041,31 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_get_with_dot_notation_multi_level_is_valid(self):
         self.assertEqual(
-            {'dict_col': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key'},
-            self.TestDictController.post({
+            {'dict_field': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key'},
+            self.TestDictInDictController.post({
                 'key': 'my_key',
-                'dict_col': {
+                'dict_field': {
                     'first_key': {'inner_key1': EnumTest.Value1, 'inner_key2': 3},
                     'second_key': 3,
                 },
             })
         )
         self.assertEqual(
+            {'dict_field': {'first_key': {'inner_key1': 'Value2', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key2'},
+            self.TestDictInDictController.post({
+                'key': 'my_key2',
+                'dict_field': {
+                    'first_key': {'inner_key1': EnumTest.Value2, 'inner_key2': 3},
+                    'second_key': 3,
+                },
+            })
+        )
+        self.assertEqual(
             [
-                {'dict_col': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key'},
+                {'dict_field': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key'},
             ],
-            self.TestDictController.get({
-                'dict_col.first_key.inner_key1': EnumTest.Value1,
+            self.TestDictInDictController.get({
+                'dict_field.first_key.inner_key1': EnumTest.Value1,
             })
         )
 
