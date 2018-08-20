@@ -838,7 +838,11 @@ class CRUDModel:
         if cls.__collection__.count(filters) > 1:
             raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
 
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'Query document matching {filters}...')
         document = cls.__collection__.find_one(filters)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'{"1" if document else "No corresponding"} document retrieved.')
         return cls.serialize(document)
 
     @classmethod
@@ -854,7 +858,14 @@ class CRUDModel:
 
         cls.deserialize_query(filters)
 
+        if logger.isEnabledFor(logging.DEBUG):
+            if filters:
+                logger.debug(f'Query documents matching {filters}...')
+            else:
+                logger.debug(f'Query all documents...')
         documents = cls.__collection__.find(filters, skip=offset, limit=limit)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'{documents.count() if documents else "No corresponding"} documents retrieved.')
         return [cls.serialize(document) for document in documents]
 
     @classmethod
@@ -991,7 +1002,11 @@ class CRUDModel:
 
         cls.deserialize_insert(document)
         try:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'Inserting {document}...')
             cls._insert_one(document)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Document inserted.')
             return cls.serialize(document)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(document), message='This document already exists.')
@@ -1023,7 +1038,11 @@ class CRUDModel:
             raise ValidationFailed(documents, errors)
 
         try:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'Inserting {new_documents}...')
             cls._insert_many(new_documents)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Documents inserted.')
             return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
@@ -1146,7 +1165,11 @@ class CRUDModel:
         cls.deserialize_update(document)
 
         try:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'Updating {document}...')
             previous_document, new_document = cls._update_one(document)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'Document updated to {new_document}.')
             return cls.serialize(previous_document), cls.serialize(new_document)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(document), message='This document already exists.')
@@ -1178,7 +1201,11 @@ class CRUDModel:
             raise ValidationFailed(documents, errors)
 
         try:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'Updating {new_documents}...')
             previous_documents, updated_documents = cls._update_many(new_documents)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'Documents updated to {updated_documents}.')
             return [cls.serialize(document) for document in previous_documents], [cls.serialize(document) for document in updated_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
@@ -1267,7 +1294,15 @@ class CRUDModel:
 
         cls.deserialize_query(filters)
 
-        return cls._delete_many(filters)
+        if logger.isEnabledFor(logging.DEBUG):
+            if filters:
+                logger.debug(f'Removing documents corresponding to {filters}...')
+            else:
+                logger.debug(f'Removing all documents...')
+        nb_removed = cls._delete_many(filters)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'{nb_removed} documents removed.')
+        return nb_removed
 
     @classmethod
     def _insert_many(cls, documents: List[dict]):
