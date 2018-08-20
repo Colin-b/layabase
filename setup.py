@@ -23,7 +23,7 @@ setup(
     extras_require={
         'testing': [
             'nose',
-            'pycommon-test==1.9.0',
+            'pycommon-test==1.9.1',
             # Used to Manage Mongo Database
             'mongomock==3.10.0',
         ],
