@@ -27,7 +27,7 @@ def _common_audit(model, base):
         """
         Class providing Audit fields for a MONGODB model.
         """
-        revision = Column(int, is_primary_key=True, index_type=IndexType.Unique)
+        revision = Column(int, is_primary_key=True)
 
         audit_user = Column(str)
         audit_date_utc = Column(datetime.datetime)
@@ -76,8 +76,8 @@ def _versioning_audit(model, base):
         """
         Class providing the audit for all versioned MONGODB models.
         """
-        table_name = Column(str, is_primary_key=True, index_type=IndexType.Unique)
-        revision = Column(int, is_primary_key=True, index_type=IndexType.Unique)
+        table_name = Column(str, is_primary_key=True)
+        revision = Column(int, is_primary_key=True)
 
         audit_user = Column(str)
         audit_date_utc = Column(datetime.datetime)

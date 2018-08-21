@@ -10,7 +10,7 @@ List all changes in various categories:
 
 ### Bug fixes ###
 
-- Allow to have structures with dict in dict and use dot notation.
+- primary_key fields were not automatically indexed as unique.
 
 ## Version 10.12.1 (2018-08-20) ##
 

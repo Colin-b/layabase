@@ -56,10 +56,12 @@ class Column:
         Should be a string value. Default to None.
         :param index_type: If and how this field should be indexed.
         Value should be one of IndexType enum. Default to None (not indexed).
+        Parameter does not need to be provided if field is a primary key.
         :param allow_none_as_filter: If None value should be kept in queries (GET/DELETE).
         Should be a boolean value. Default to False.
         :param is_primary_key: If this field value is not allowed to be modified after insert.
         Should be a boolean value. Default to False (field value can always be modified).
+        index_type will be IndexType.Unique if field is primary_key.
         :param is_nullable: If field value is optional.
         Should be a boolean value.
         Default to True if field is not a primary key.
@@ -90,6 +92,10 @@ class Column:
 
         self.allow_none_as_filter = bool(kwargs.pop('allow_none_as_filter', False))
         self.is_primary_key = bool(kwargs.pop('is_primary_key', False))
+        if self.is_primary_key:
+            if self.index_type:
+                raise Exception('Primary key fields are supposed to be indexed as unique.')
+            self.index_type = IndexType.Unique
         self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
         if self.should_auto_increment and self.field_type is not int:
             raise Exception('Only int fields can be auto incremented.')

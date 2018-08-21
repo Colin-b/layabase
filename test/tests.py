@@ -2764,7 +2764,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             )
 
         class TestIndexModel(database_mongo.CRUDModel, base=base, table_name='index_table_name'):
-            unique_key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            unique_key = database_mongo.Column(str, is_primary_key=True)
             non_unique_key = database_mongo.Column(datetime.date, index_type=database_mongo.IndexType.Other)
 
         class TestDefaultPrimaryKeyModel(database_mongo.CRUDModel, base=base, table_name='default_primary_table_name'):
@@ -2794,18 +2794,18 @@ class MongoCRUDControllerTest(unittest.TestCase):
             _id = database_mongo.Column(is_primary_key=True)
 
         class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name'):
-            key = database_mongo.Column(is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            key = database_mongo.Column(is_primary_key=True)
             dict_field = database_mongo.DictColumn({
                 'first_key': database_mongo.Column(EnumTest, is_nullable=False),
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }, is_required=True)
 
         class TestVersionedUniqueNonPrimaryModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_uni_table_name'):
-            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            key = database_mongo.Column(int, should_auto_increment=True)
             unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
 
         class TestUniqueNonPrimaryModel(database_mongo.CRUDModel, base=base, table_name='uni_table_name'):
-            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            key = database_mongo.Column(int, should_auto_increment=True)
             unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
 
         class TestIntAndFloatModel(database_mongo.CRUDModel, base=base, table_name='int_and_float'):
@@ -2813,7 +2813,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             float_value = database_mongo.Column(float)
 
         class TestDictInDictModel(database_mongo.CRUDModel, base=base, table_name='dict_in_dict_table_name'):
-            key = database_mongo.Column(is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            key = database_mongo.Column(is_primary_key=True)
             dict_field = database_mongo.DictColumn({
                 'first_key': database_mongo.DictColumn({
                     'inner_key1': database_mongo.Column(EnumTest, is_nullable=False),
@@ -6675,16 +6675,16 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         logger.info('Declare model class...')
 
         class TestModel(database_mongo.CRUDModel, base=base, table_name='sample_table_name', audit=True):
-            key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            key = database_mongo.Column(str, is_primary_key=True)
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
 
         class TestEnumModel(database_mongo.CRUDModel, base=base, table_name='enum_table_name', audit=True):
-            key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            key = database_mongo.Column(str, is_primary_key=True)
             enum_fld = database_mongo.Column(EnumTest)
 
         class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name', audit=True):
-            key = database_mongo.Column(str, is_primary_key=True, index_type=database_mongo.IndexType.Unique)
+            key = database_mongo.Column(str, is_primary_key=True)
             enum_fld = database_mongo.Column(EnumTest)
 
         logger.info('Save model class...')
