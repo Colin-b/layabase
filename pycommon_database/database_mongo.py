@@ -79,6 +79,8 @@ class Column:
         Should be an integer value. Default to None (no minimum length).
         :param max_length: Maximum value length. Only for integer or list fields.
         Should be an integer value. Default to None (no maximum length).
+        :param example: Sample value. Should be of the field type.
+        Default to None (default sample will be generated).
         """
         self.field_type = field_type or str
         name = kwargs.pop('name', None)
@@ -131,6 +133,9 @@ class Column:
                 raise Exception('Maximum length should be positive')
             if self.min_length and self.max_length < self.min_length:
                 raise Exception('Maximum length should be superior or equals to minimum length')
+        self._example = kwargs.pop('example', None)
+        if self._example is not None and not isinstance(self._example, self.field_type):
+            raise Exception('Example must be of field type.')
 
     def _update_name(self, name):
         if '.' in name:
@@ -418,6 +423,43 @@ class Column:
         elif self.field_type == ObjectId:
             document[self.name] = str(value)
 
+    def example(self):
+        if self._example is not None:
+            return self._example
+
+        if self.get_default_value({}) is not None:
+            return self.get_default_value({})
+
+        return self.get_choices()[0] if self.get_choices() else self._default_example()
+
+    def _default_example(self):
+        """
+        Return an Example value corresponding to this Mongodb field.
+        """
+        if self.field_type == int:
+            return self.min_value if self.min_value else 1
+        if self.field_type == float:
+            return 1.4
+        if self.field_type == bool:
+            return True
+        if self.field_type == datetime.date:
+            return '2017-09-24'
+        if self.field_type == datetime.datetime:
+            return '2017-09-24T15:36:09'
+        if self.field_type == list:
+            return [f'Sample {i}' for i in range(self.min_length)] if self.min_length else [
+                f'1st {self.name} sample',
+                f'2nd {self.name} sample',
+            ][:self.max_length or 2]
+        if self.field_type == dict:
+            return {
+                f'1st {self.name} key': f'1st {self.name} sample',
+                f'2nd {self.name} key': f'2nd {self.name} sample',
+            }
+        if self.field_type == ObjectId:
+            return '1234567890QBCDEF01234567'
+        return 'X' * self.min_length if self.min_length else f'sample {self.name}'[:self.max_length or 1000]
+
 
 class DictColumn(Column):
     """
@@ -585,6 +627,12 @@ class DictColumn(Column):
         else:
             self._description_model(document).serialize(value)
 
+    def example(self):
+        return {
+            field_name: dict_field.example()
+            for field_name, dict_field in self.get_fields({}).items()
+        }
+
 
 class ListColumn(Column):
     """
@@ -724,6 +772,9 @@ class ListColumn(Column):
                 new_values.append(document_with_list_item[self.name])
 
             document[self.name] = new_values
+
+    def example(self):
+        return [self.list_item_column.example()]
 
 
 def to_mongo_field(attribute):
@@ -1476,7 +1527,7 @@ class CRUDModel:
                 return flask_restplus_fields.Nested(
                     dict_model,
                     required=field.is_required,
-                    example=_get_example(field),
+                    example=field.example(),
                     description=field.description,
                     enum=field.get_choices(),
                     default=field.get_default_value({}),
@@ -1486,7 +1537,7 @@ class CRUDModel:
             else:
                 return flask_restplus_fields.Raw(
                     required=field.is_required,
-                    example=_get_example(field),
+                    example=field.example(),
                     description=field.description,
                     enum=field.get_choices(),
                     default=field.get_default_value({}),
@@ -1496,7 +1547,7 @@ class CRUDModel:
             return flask_restplus_fields.List(
                 cls._to_flask_restplus_field(namespace, field.list_item_column),
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1508,7 +1559,7 @@ class CRUDModel:
             return flask_restplus_fields.List(
                 flask_restplus_fields.String,
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1519,7 +1570,7 @@ class CRUDModel:
         elif field.field_type == int:
             return flask_restplus_fields.Integer(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1530,7 +1581,7 @@ class CRUDModel:
         elif field.field_type == float:
             return flask_restplus_fields.Float(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1541,7 +1592,7 @@ class CRUDModel:
         elif field.field_type == bool:
             return flask_restplus_fields.Boolean(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1550,7 +1601,7 @@ class CRUDModel:
         elif field.field_type == datetime.date:
             return flask_restplus_fields.Date(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1559,7 +1610,7 @@ class CRUDModel:
         elif field.field_type == datetime.datetime:
             return flask_restplus_fields.DateTime(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1568,7 +1619,7 @@ class CRUDModel:
         elif field.field_type == dict:
             return flask_restplus_fields.Raw(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1577,7 +1628,7 @@ class CRUDModel:
         else:
             return flask_restplus_fields.String(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1684,53 +1735,6 @@ def _restore(base, restore_path: str):
                 base[collection].delete_many({})
                 logger.debug(f'import {restore_file} into collection {collection}')
                 base[collection].insert_many(documents)
-
-
-def _get_example(field: Column):
-    if isinstance(field, DictColumn):
-        return (
-            {
-                field_name: _get_example(dict_field)
-                for field_name, dict_field in field.get_fields({}).items()
-            }
-        )
-
-    if isinstance(field, ListColumn):
-        return [_get_example(field.list_item_column)]
-
-    if field.get_default_value({}) is not None:
-        return field.get_default_value({})
-
-    return field.get_choices()[0] if field.get_choices() else _get_default_example(field)
-
-
-def _get_default_example(field: Column):
-    """
-    Return an Example value corresponding to this Mongodb field.
-    """
-    if field.field_type == int:
-        return field.min_value if field.min_value else 1
-    if field.field_type == float:
-        return 1.4
-    if field.field_type == bool:
-        return True
-    if field.field_type == datetime.date:
-        return '2017-09-24'
-    if field.field_type == datetime.datetime:
-        return '2017-09-24T15:36:09'
-    if field.field_type == list:
-        return [f'Sample {i}' for i in range(field.min_length)] if field.min_length else [
-            f'1st {field.name} sample',
-            f'2nd {field.name} sample',
-        ][:field.max_length or 2]
-    if field.field_type == dict:
-        return {
-            f'1st {field.name} key': f'1st {field.name} sample',
-            f'2nd {field.name} key': f'2nd {field.name} sample',
-        }
-    if field.field_type == ObjectId:
-        return '1234567890QBCDEF01234567'
-    return 'X' * field.min_length if field.min_length else f'sample {field.name}'[:field.max_length or 1000]
 
 
 def _get_python_type(field: Column):

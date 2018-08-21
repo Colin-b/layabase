@@ -2781,7 +2781,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestLimitsModel(database_mongo.CRUDModel, base=base, table_name='limits_table_name'):
             key = database_mongo.Column(is_primary_key=True, min_length=3, max_length=4)
-            list_field = database_mongo.Column(list, min_length=2, max_length=3)
+            list_field = database_mongo.Column(list, min_length=2, max_length=3, example=['my', 'test'])
             int_field = database_mongo.Column(int, min_value=100, max_value=999)
 
         class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel, base=base, table_name='list_and_dict_table_name'):
@@ -6227,7 +6227,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'int_field': 100,
                 'key': 'XXX',
                 'list_field': (
-                    ['Sample 0', 'Sample 1'],
+                    ['my', 'test'],
                     {
                         'list_field_inner': None
                     }
@@ -7894,6 +7894,7 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
                 {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
             ],
             self.TestSecondController.get({}))
+
 
 if __name__ == '__main__':
     unittest.main()
