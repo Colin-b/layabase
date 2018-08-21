@@ -1,6 +1,8 @@
 import logging
 from typing import List
 
+from pycommon_database.flask_restplus_errors import ValidationFailed
+
 logger = logging.getLogger(__name__)
 
 
@@ -112,8 +114,10 @@ class ControllerModelNotSet(Exception):
 
 
 def _ignore_read_only_fields(model_properties: dict, model_as_dict: dict):
-    read_only_fields = [field_name for field_name, field_properties in model_properties.items() if field_properties.get('readOnly')]
     if model_as_dict:
+        if not isinstance(model_as_dict, dict):
+            raise ValidationFailed(model_as_dict, message='Must be a dictionary.')
+        read_only_fields = [field_name for field_name, field_properties in model_properties.items() if field_properties.get('readOnly')]
         return {field_name: field_value for field_name, field_value in model_as_dict.items() if field_name not in read_only_fields}
     return model_as_dict
 
@@ -186,6 +190,8 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
+        if not isinstance(request_arguments, dict):
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
         return cls._model.get_all(**request_arguments)
 
     @classmethod
@@ -195,6 +201,8 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
+        if not isinstance(request_arguments, dict):
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
         return cls._model.get(**request_arguments)
 
     @classmethod
@@ -220,6 +228,8 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if new_dicts and hasattr(cls.json_post_model, '_schema'):
+            if not isinstance(new_dicts, list):
+                raise ValidationFailed(new_dicts, message='Must be a list of dictionaries.')
             new_dicts = [
                 _ignore_read_only_fields(cls.json_post_model._schema.get('properties', {}), new_dict)
                 for new_dict in new_dicts
@@ -258,6 +268,8 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
+        if not isinstance(request_arguments, dict):
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
         return cls._model.remove(**request_arguments)
 
     @classmethod
@@ -269,6 +281,8 @@ class CRUDController:
             raise ControllerModelNotSet(cls)
         if not cls._model.audit_model:
             return []
+        if not isinstance(request_arguments, dict):
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
         return cls._model.audit_model.get_all(**request_arguments)
 
     @classmethod
@@ -285,6 +299,8 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
+        if not isinstance(request_arguments, dict):
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
         return cls._model.rollback_to(**request_arguments)
 
     @classmethod
@@ -294,6 +310,8 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
+        if not isinstance(request_arguments, dict):
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
         return cls._model.get_history(**request_arguments)
 
     @classmethod
