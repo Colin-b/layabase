@@ -6,6 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.12.2 (2018-08-21) ##
+
+### Bug fixes ###
+
+- primary_key fields were not automatically indexed as unique.
+- Allow to provide a custom example value for every field.
+- Return proper error in case values provided to Controller are not of the correct type.
+
 ## Version 10.12.1 (2018-08-20) ##
 
 ### Bug fixes ###

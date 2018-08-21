@@ -56,10 +56,12 @@ class Column:
         Should be a string value. Default to None.
         :param index_type: If and how this field should be indexed.
         Value should be one of IndexType enum. Default to None (not indexed).
+        Parameter does not need to be provided if field is a primary key.
         :param allow_none_as_filter: If None value should be kept in queries (GET/DELETE).
         Should be a boolean value. Default to False.
         :param is_primary_key: If this field value is not allowed to be modified after insert.
         Should be a boolean value. Default to False (field value can always be modified).
+        index_type will be IndexType.Unique if field is primary_key.
         :param is_nullable: If field value is optional.
         Should be a boolean value.
         Default to True if field is not a primary key.
@@ -77,6 +79,8 @@ class Column:
         Should be an integer value. Default to None (no minimum length).
         :param max_length: Maximum value length. Only for integer or list fields.
         Should be an integer value. Default to None (no maximum length).
+        :param example: Sample value. Should be of the field type.
+        Default to None (default sample will be generated).
         """
         self.field_type = field_type or str
         name = kwargs.pop('name', None)
@@ -90,6 +94,10 @@ class Column:
 
         self.allow_none_as_filter = bool(kwargs.pop('allow_none_as_filter', False))
         self.is_primary_key = bool(kwargs.pop('is_primary_key', False))
+        if self.is_primary_key:
+            if self.index_type:
+                raise Exception('Primary key fields are supposed to be indexed as unique.')
+            self.index_type = IndexType.Unique
         self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
         if self.should_auto_increment and self.field_type is not int:
             raise Exception('Only int fields can be auto incremented.')
@@ -125,6 +133,9 @@ class Column:
                 raise Exception('Maximum length should be positive')
             if self.min_length and self.max_length < self.min_length:
                 raise Exception('Maximum length should be superior or equals to minimum length')
+        self._example = kwargs.pop('example', None)
+        if self._example is not None and not isinstance(self._example, self.field_type):
+            raise Exception('Example must be of field type.')
 
     def _update_name(self, name):
         if '.' in name:
@@ -412,6 +423,43 @@ class Column:
         elif self.field_type == ObjectId:
             document[self.name] = str(value)
 
+    def example(self):
+        if self._example is not None:
+            return self._example
+
+        if self.get_default_value({}) is not None:
+            return self.get_default_value({})
+
+        return self.get_choices()[0] if self.get_choices() else self._default_example()
+
+    def _default_example(self):
+        """
+        Return an Example value corresponding to this Mongodb field.
+        """
+        if self.field_type == int:
+            return self.min_value if self.min_value else 1
+        if self.field_type == float:
+            return 1.4
+        if self.field_type == bool:
+            return True
+        if self.field_type == datetime.date:
+            return '2017-09-24'
+        if self.field_type == datetime.datetime:
+            return '2017-09-24T15:36:09'
+        if self.field_type == list:
+            return [f'Sample {i}' for i in range(self.min_length)] if self.min_length else [
+                f'1st {self.name} sample',
+                f'2nd {self.name} sample',
+            ][:self.max_length or 2]
+        if self.field_type == dict:
+            return {
+                f'1st {self.name} key': f'1st {self.name} sample',
+                f'2nd {self.name} key': f'2nd {self.name} sample',
+            }
+        if self.field_type == ObjectId:
+            return '1234567890QBCDEF01234567'
+        return 'X' * self.min_length if self.min_length else f'sample {self.name}'[:self.max_length or 1000]
+
 
 class DictColumn(Column):
     """
@@ -579,6 +627,12 @@ class DictColumn(Column):
         else:
             self._description_model(document).serialize(value)
 
+    def example(self):
+        return {
+            field_name: dict_field.example()
+            for field_name, dict_field in self.get_fields({}).items()
+        }
+
 
 class ListColumn(Column):
     """
@@ -719,6 +773,9 @@ class ListColumn(Column):
 
             document[self.name] = new_values
 
+    def example(self):
+        return [self.list_item_column.example()]
+
 
 def to_mongo_field(attribute):
     attribute[1]._update_name(attribute[0])
@@ -738,10 +795,12 @@ class CRUDModel:
     __fields__: List[Column] = []  # All Mongo fields within this model
     audit_model = None
     _skip_unknown_fields = True
+    logger = None
 
     def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, skip_unknown_fields: bool=True, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
+        cls.logger = logging.getLogger(f'{__name__}.{table_name}')
         cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if
                           isinstance(attribute[1], Column)]
         cls._skip_unknown_fields = skip_unknown_fields
@@ -762,11 +821,11 @@ class CRUDModel:
         As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
         """
         if cls._check_indexes(document):
-            logger.info('Updating indexes...')
+            cls.logger.info('Updating indexes...')
             cls.__collection__.drop_indexes()
             cls._create_indexes(IndexType.Unique, document)
             cls._create_indexes(IndexType.Other, document)
-            logger.info('Indexes updated.')
+            cls.logger.info('Indexes updated.')
             if cls.audit_model:
                 cls.audit_model.update_indexes(document)
 
@@ -803,14 +862,14 @@ class CRUDModel:
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__tablename__}' if index_type == IndexType.Unique else f'idx{cls.__tablename__}'
-                logger.info(
+                cls.logger.info(
                     f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria.")
                 if condition is None:
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
                 else:
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
         except pymongo.errors.DuplicateKeyError:
-            logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
+            cls.logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
             raise
 
     @classmethod
@@ -838,7 +897,11 @@ class CRUDModel:
         if cls.__collection__.count(filters) > 1:
             raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
 
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'Query document matching {filters}...')
         document = cls.__collection__.find_one(filters)
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'{"1" if document else "No corresponding"} document retrieved.')
         return cls.serialize(document)
 
     @classmethod
@@ -854,7 +917,14 @@ class CRUDModel:
 
         cls.deserialize_query(filters)
 
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            if filters:
+                cls.logger.debug(f'Query documents matching {filters}...')
+            else:
+                cls.logger.debug(f'Query all documents...')
         documents = cls.__collection__.find(filters, skip=offset, limit=limit)
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'{documents.count() if documents else "No corresponding"} documents retrieved.')
         return [cls.serialize(document) for document in documents]
 
     @classmethod
@@ -920,7 +990,7 @@ class CRUDModel:
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
             else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
         # Deserialize dot notation values
         for field in [field for field in cls.__fields__ if field.name in known_fields]:
@@ -973,7 +1043,7 @@ class CRUDModel:
             if '_id' in removed_fields:
                 removed_fields.remove('_id')
             if removed_fields:
-                logger.debug(f'Skipping removed fields {removed_fields}.')
+                cls.logger.debug(f'Skipping removed fields {removed_fields}.')
 
         return document
 
@@ -991,7 +1061,11 @@ class CRUDModel:
 
         cls.deserialize_insert(document)
         try:
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Inserting {document}...')
             cls._insert_one(document)
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug('Document inserted.')
             return cls.serialize(document)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(document), message='This document already exists.')
@@ -1023,7 +1097,11 @@ class CRUDModel:
             raise ValidationFailed(documents, errors)
 
         try:
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Inserting {new_documents}...')
             cls._insert_many(new_documents)
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug('Documents inserted.')
             return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
@@ -1073,7 +1151,7 @@ class CRUDModel:
             if known_field:
                 document.setdefault(known_field.name, {}).update(field_value)
             else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
     @classmethod
     def deserialize_insert(cls, document: dict):
@@ -1146,7 +1224,11 @@ class CRUDModel:
         cls.deserialize_update(document)
 
         try:
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Updating {document}...')
             previous_document, new_document = cls._update_one(document)
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Document updated to {new_document}.')
             return cls.serialize(previous_document), cls.serialize(new_document)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(document), message='This document already exists.')
@@ -1178,7 +1260,11 @@ class CRUDModel:
             raise ValidationFailed(documents, errors)
 
         try:
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Updating {new_documents}...')
             previous_documents, updated_documents = cls._update_many(new_documents)
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Documents updated to {updated_documents}.')
             return [cls.serialize(document) for document in previous_documents], [cls.serialize(document) for document in updated_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
@@ -1237,7 +1323,7 @@ class CRUDModel:
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
             else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
         document_without_dot_notation = {**document, **known_fields}
         # Deserialize dot notation values
@@ -1267,7 +1353,15 @@ class CRUDModel:
 
         cls.deserialize_query(filters)
 
-        return cls._delete_many(filters)
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            if filters:
+                cls.logger.debug(f'Removing documents corresponding to {filters}...')
+            else:
+                cls.logger.debug(f'Removing all documents...')
+        nb_removed = cls._delete_many(filters)
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'{nb_removed} documents removed.')
+        return nb_removed
 
     @classmethod
     def _insert_many(cls, documents: List[dict]):
@@ -1433,7 +1527,7 @@ class CRUDModel:
                 return flask_restplus_fields.Nested(
                     dict_model,
                     required=field.is_required,
-                    example=_get_example(field),
+                    example=field.example(),
                     description=field.description,
                     enum=field.get_choices(),
                     default=field.get_default_value({}),
@@ -1443,7 +1537,7 @@ class CRUDModel:
             else:
                 return flask_restplus_fields.Raw(
                     required=field.is_required,
-                    example=_get_example(field),
+                    example=field.example(),
                     description=field.description,
                     enum=field.get_choices(),
                     default=field.get_default_value({}),
@@ -1453,7 +1547,7 @@ class CRUDModel:
             return flask_restplus_fields.List(
                 cls._to_flask_restplus_field(namespace, field.list_item_column),
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1465,7 +1559,7 @@ class CRUDModel:
             return flask_restplus_fields.List(
                 flask_restplus_fields.String,
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1476,7 +1570,7 @@ class CRUDModel:
         elif field.field_type == int:
             return flask_restplus_fields.Integer(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1487,7 +1581,7 @@ class CRUDModel:
         elif field.field_type == float:
             return flask_restplus_fields.Float(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1498,7 +1592,7 @@ class CRUDModel:
         elif field.field_type == bool:
             return flask_restplus_fields.Boolean(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1507,7 +1601,7 @@ class CRUDModel:
         elif field.field_type == datetime.date:
             return flask_restplus_fields.Date(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1516,7 +1610,7 @@ class CRUDModel:
         elif field.field_type == datetime.datetime:
             return flask_restplus_fields.DateTime(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1525,7 +1619,7 @@ class CRUDModel:
         elif field.field_type == dict:
             return flask_restplus_fields.Raw(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1534,7 +1628,7 @@ class CRUDModel:
         else:
             return flask_restplus_fields.String(
                 required=field.is_required,
-                example=_get_example(field),
+                example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
                 default=field.get_default_value({}),
@@ -1641,53 +1735,6 @@ def _restore(base, restore_path: str):
                 base[collection].delete_many({})
                 logger.debug(f'import {restore_file} into collection {collection}')
                 base[collection].insert_many(documents)
-
-
-def _get_example(field: Column):
-    if isinstance(field, DictColumn):
-        return (
-            {
-                field_name: _get_example(dict_field)
-                for field_name, dict_field in field.get_fields({}).items()
-            }
-        )
-
-    if isinstance(field, ListColumn):
-        return [_get_example(field.list_item_column)]
-
-    if field.get_default_value({}) is not None:
-        return field.get_default_value({})
-
-    return field.get_choices()[0] if field.get_choices() else _get_default_example(field)
-
-
-def _get_default_example(field: Column):
-    """
-    Return an Example value corresponding to this Mongodb field.
-    """
-    if field.field_type == int:
-        return field.min_value if field.min_value else 1
-    if field.field_type == float:
-        return 1.4
-    if field.field_type == bool:
-        return True
-    if field.field_type == datetime.date:
-        return '2017-09-24'
-    if field.field_type == datetime.datetime:
-        return '2017-09-24T15:36:09'
-    if field.field_type == list:
-        return [f'Sample {i}' for i in range(field.min_length)] if field.min_length else [
-            f'1st {field.name} sample',
-            f'2nd {field.name} sample',
-        ][:field.max_length or 2]
-    if field.field_type == dict:
-        return {
-            f'1st {field.name} key': f'1st {field.name} sample',
-            f'2nd {field.name} key': f'2nd {field.name} sample',
-        }
-    if field.field_type == ObjectId:
-        return '1234567890QBCDEF01234567'
-    return 'X' * field.min_length if field.min_length else f'sample {field.name}'[:field.max_length or 1000]
 
 
 def _get_python_type(field: Column):
