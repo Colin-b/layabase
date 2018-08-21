@@ -738,10 +738,12 @@ class CRUDModel:
     __fields__: List[Column] = []  # All Mongo fields within this model
     audit_model = None
     _skip_unknown_fields = True
+    logger = None
 
     def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, skip_unknown_fields: bool=True, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
+        cls.logger = logging.getLogger(f'{__name__}.{table_name}')
         cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if
                           isinstance(attribute[1], Column)]
         cls._skip_unknown_fields = skip_unknown_fields
@@ -762,11 +764,11 @@ class CRUDModel:
         As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
         """
         if cls._check_indexes(document):
-            logger.info('Updating indexes...')
+            cls.logger.info('Updating indexes...')
             cls.__collection__.drop_indexes()
             cls._create_indexes(IndexType.Unique, document)
             cls._create_indexes(IndexType.Other, document)
-            logger.info('Indexes updated.')
+            cls.logger.info('Indexes updated.')
             if cls.audit_model:
                 cls.audit_model.update_indexes(document)
 
@@ -803,14 +805,14 @@ class CRUDModel:
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = f'uidx{cls.__tablename__}' if index_type == IndexType.Unique else f'idx{cls.__tablename__}'
-                logger.info(
+                cls.logger.info(
                     f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria.")
                 if condition is None:
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
                 else:
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
         except pymongo.errors.DuplicateKeyError:
-            logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
+            cls.logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
             raise
 
     @classmethod
@@ -838,11 +840,11 @@ class CRUDModel:
         if cls.__collection__.count(filters) > 1:
             raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
 
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'Query document matching {filters}...')
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'Query document matching {filters}...')
         document = cls.__collection__.find_one(filters)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'{"1" if document else "No corresponding"} document retrieved.')
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'{"1" if document else "No corresponding"} document retrieved.')
         return cls.serialize(document)
 
     @classmethod
@@ -858,14 +860,14 @@ class CRUDModel:
 
         cls.deserialize_query(filters)
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if cls.logger.isEnabledFor(logging.DEBUG):
             if filters:
-                logger.debug(f'Query documents matching {filters}...')
+                cls.logger.debug(f'Query documents matching {filters}...')
             else:
-                logger.debug(f'Query all documents...')
+                cls.logger.debug(f'Query all documents...')
         documents = cls.__collection__.find(filters, skip=offset, limit=limit)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'{documents.count() if documents else "No corresponding"} documents retrieved.')
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'{documents.count() if documents else "No corresponding"} documents retrieved.')
         return [cls.serialize(document) for document in documents]
 
     @classmethod
@@ -931,7 +933,7 @@ class CRUDModel:
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
             else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
         # Deserialize dot notation values
         for field in [field for field in cls.__fields__ if field.name in known_fields]:
@@ -984,7 +986,7 @@ class CRUDModel:
             if '_id' in removed_fields:
                 removed_fields.remove('_id')
             if removed_fields:
-                logger.debug(f'Skipping removed fields {removed_fields}.')
+                cls.logger.debug(f'Skipping removed fields {removed_fields}.')
 
         return document
 
@@ -1002,11 +1004,11 @@ class CRUDModel:
 
         cls.deserialize_insert(document)
         try:
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f'Inserting {document}...')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Inserting {document}...')
             cls._insert_one(document)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug('Document inserted.')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug('Document inserted.')
             return cls.serialize(document)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(document), message='This document already exists.')
@@ -1038,11 +1040,11 @@ class CRUDModel:
             raise ValidationFailed(documents, errors)
 
         try:
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f'Inserting {new_documents}...')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Inserting {new_documents}...')
             cls._insert_many(new_documents)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug('Documents inserted.')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug('Documents inserted.')
             return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
@@ -1092,7 +1094,7 @@ class CRUDModel:
             if known_field:
                 document.setdefault(known_field.name, {}).update(field_value)
             else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
     @classmethod
     def deserialize_insert(cls, document: dict):
@@ -1165,11 +1167,11 @@ class CRUDModel:
         cls.deserialize_update(document)
 
         try:
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f'Updating {document}...')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Updating {document}...')
             previous_document, new_document = cls._update_one(document)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f'Document updated to {new_document}.')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Document updated to {new_document}.')
             return cls.serialize(previous_document), cls.serialize(new_document)
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(cls.serialize(document), message='This document already exists.')
@@ -1201,11 +1203,11 @@ class CRUDModel:
             raise ValidationFailed(documents, errors)
 
         try:
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f'Updating {new_documents}...')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Updating {new_documents}...')
             previous_documents, updated_documents = cls._update_many(new_documents)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f'Documents updated to {updated_documents}.')
+            if cls.logger.isEnabledFor(logging.DEBUG):
+                cls.logger.debug(f'Documents updated to {updated_documents}.')
             return [cls.serialize(document) for document in previous_documents], [cls.serialize(document) for document in updated_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
@@ -1264,7 +1266,7 @@ class CRUDModel:
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
             else:
-                logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
         document_without_dot_notation = {**document, **known_fields}
         # Deserialize dot notation values
@@ -1294,14 +1296,14 @@ class CRUDModel:
 
         cls.deserialize_query(filters)
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if cls.logger.isEnabledFor(logging.DEBUG):
             if filters:
-                logger.debug(f'Removing documents corresponding to {filters}...')
+                cls.logger.debug(f'Removing documents corresponding to {filters}...')
             else:
-                logger.debug(f'Removing all documents...')
+                cls.logger.debug(f'Removing all documents...')
         nb_removed = cls._delete_many(filters)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'{nb_removed} documents removed.')
+        if cls.logger.isEnabledFor(logging.DEBUG):
+            cls.logger.debug(f'{nb_removed} documents removed.')
         return nb_removed
 
     @classmethod
