@@ -796,6 +796,7 @@ class CRUDModel:
     audit_model = None
     _skip_unknown_fields = True
     logger = None
+    _server_version = ''
 
     def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, skip_unknown_fields: bool=True, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -807,6 +808,8 @@ class CRUDModel:
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
+            cls._server_version = (base.client.server_info() or {}).get('version', '')
+            cls.logger.info(f'Server version is "{cls._server_version}"')
             cls.update_indexes({})
         if audit:
             from pycommon_database.audit_mongo import _create_from
@@ -851,7 +854,7 @@ class CRUDModel:
         return index_modified
 
     @classmethod
-    def _create_indexes(cls, index_type: IndexType, document: dict, condition = None):
+    def _create_indexes(cls, index_type: IndexType, document: dict, condition=None):
         """
         Create indexes of specified type.
         :param document: Data specified by the user at the time of the index creation.
@@ -866,7 +869,7 @@ class CRUDModel:
                 index_name = f'uidx{cls.__tablename__}' if index_type == IndexType.Unique else f'idx{cls.__tablename__}'
                 cls.logger.info(
                     f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria.")
-                if condition is None:
+                if condition is None or cls._server_version < '3.2':
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
                 else:
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)

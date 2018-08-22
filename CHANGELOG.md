@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.12.5 (2018-08-22) ##
+
+### Bug fixes ###
+
+- [Mongo] Check server version before trying to use partialFilterExpression.
+
 ## Version 10.12.4 (2018-08-22) ##
 
 ### Bug fixes ###

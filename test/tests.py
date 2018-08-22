@@ -12,7 +12,7 @@ import json
 import tempfile
 
 logging.basicConfig(
-    format='%(asctime)s [%(threadName)s] [%(levelname)s] %(message)s',
+    format='%(asctime)s [%(threadName)s] [%(levelname)s] [%(name)s] %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)],
     level=logging.DEBUG)
 logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
