@@ -840,7 +840,8 @@ class CRUDModel:
         unique_criteria = [field_name for field_name in cls._get_index_fields(IndexType.Unique, document, '')]
         index_name = f'idx{cls.__tablename__}'
         unique_index_name = f'uidx{cls.__tablename__}'
-        indexes = {index['name']: index['key'].keys() for index in cls.__collection__.list_indexes()}
+        cls.logger.debug(f'Existing indexes: {cls.__collection__.list_indexes()}')
+        indexes = {index['name']: index['key'].keys() for index in cls.__collection__.list_indexes() if 'name' in index and 'key' in index}
         if (criteria and index_name not in indexes) or (not criteria and index_name in indexes) or (criteria and index_name in indexes and criteria != indexes[index_name]):
             index_modified = True
         elif (unique_criteria and unique_index_name not in indexes) or (not unique_criteria and unique_index_name in indexes) or\
