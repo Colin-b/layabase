@@ -6661,7 +6661,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._db = database.load('mongomock', cls._create_models)
+        cls._db = database.load('mongomock?ssl=True', cls._create_models, replicaSet='globaldb')
         cls.TestController.namespace(TestAPI)
         cls.TestEnumController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
