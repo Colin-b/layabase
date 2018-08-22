@@ -42,7 +42,7 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
      (Mandatory).
     :param kwargs: Additional custom parameters:
      for SQLAlchemy: create_engine methods parameters.
-     for Mongo: unused.
+     for Mongo: MongoClient constructor parameters.
     """
     if not database_connection_url:
         raise NoDatabaseProvided()
@@ -51,7 +51,7 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
 
     if _is_mongo(database_connection_url):
         import pycommon_database.database_mongo as database_mongo
-        return database_mongo._load(database_connection_url, create_models_func)
+        return database_mongo._load(database_connection_url, create_models_func, **kwargs)
 
     import pycommon_database.database_sqlalchemy as database_sqlalchemy
     return database_sqlalchemy._load(database_connection_url, create_models_func, **kwargs)

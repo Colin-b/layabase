@@ -840,8 +840,9 @@ class CRUDModel:
         unique_criteria = [field_name for field_name in cls._get_index_fields(IndexType.Unique, document, '')]
         index_name = f'idx{cls.__tablename__}'
         unique_index_name = f'uidx{cls.__tablename__}'
-        cls.logger.debug(f'Existing indexes: {cls.__collection__.list_indexes()}')
-        indexes = {index['name']: index['key'].keys() for index in cls.__collection__.list_indexes() if 'name' in index and 'key' in index}
+        indexes = cls.__collection__.list_indexes()
+        cls.logger.debug(f'Checking existing indexes: {indexes}')
+        indexes = {index['name']: index['key'].keys() for index in indexes if 'name' in index and 'key' in index}
         if (criteria and index_name not in indexes) or (not criteria and index_name in indexes) or (criteria and index_name in indexes and criteria != indexes[index_name]):
             index_modified = True
         elif (unique_criteria and unique_index_name not in indexes) or (not unique_criteria and unique_index_name in indexes) or\
@@ -1656,21 +1657,25 @@ class CRUDModel:
         return exported_fields
 
 
-def _load(database_connection_url: str, create_models_func: callable):
+def _load(database_connection_url: str, create_models_func: callable, **kwargs):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
     (Mandatory).
+    :param kwargs: MongoClient constructor parameters.
     """
-    logger.info(f'Connecting to {database_connection_url}...')
+    logger.info(f'Connecting to "{database_connection_url}" ...')
     database_name = os.path.basename(database_connection_url)
     if database_connection_url.startswith('mongomock'):
         import mongomock  # This is a test dependency only
-        client = mongomock.MongoClient()
+        client = mongomock.MongoClient(**kwargs)
     else:
-        client = pymongo.MongoClient(database_connection_url)
+        client = pymongo.MongoClient(database_connection_url, **kwargs)
+    if '?' in database_name:  # Remove server options from the database name if any
+        database_name = database_name[:database_name.index('?')]
+    logger.info(f'Connecting to {database_name} database...')
     base = client[database_name]
     logger.debug(f'Creating models...')
     create_models_func(base)

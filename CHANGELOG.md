@@ -6,6 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.12.4 (2018-08-22) ##
+
+### Bug fixes ###
+
+- [Mongo] Handle connection string with parameters.
+- [Mongo] Allow to provide MongoClient options in load.
+- Update dependencies to latest version
+
 ## Version 10.12.3 (2018-08-22) ##
 
 ### Bug fixes ###
