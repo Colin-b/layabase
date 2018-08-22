@@ -36,8 +36,8 @@ setup(
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [
             'marshmallow==2.15.4',
-            'SQLAlchemy==1.2.10',
-            'marshmallow_sqlalchemy==0.14.0',
+            'SQLAlchemy==1.2.11',
+            'marshmallow_sqlalchemy==0.14.1',
         ],
     },
 )
