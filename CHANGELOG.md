@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.13.0 (2018-08-23) ##
+
+### Enhancements ###
+
+- [Mongo] In case an index cannot be created using partialFilterExpression, try without (even if version should allow it as some services such as Azure Cosmos DB do not implement the API properly).
+- [Mongo] Log all server information.
+
 ## Version 10.12.5 (2018-08-22) ##
 
 ### Bug fixes ###

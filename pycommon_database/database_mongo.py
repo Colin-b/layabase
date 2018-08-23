@@ -808,8 +808,10 @@ class CRUDModel:
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
-            cls._server_version = (base.client.server_info() or {}).get('version', '')
-            cls.logger.info(f'Server version is "{cls._server_version}"')
+            server_info = base.client.server_info()
+            if server_info:
+                cls.logger.info(f'Server information: {server_info}')
+                cls._server_version = server_info.get('version', '')
             cls.update_indexes({})
         if audit:
             from pycommon_database.audit_mongo import _create_from
@@ -872,7 +874,11 @@ class CRUDModel:
                 if condition is None or cls._server_version < '3.2':
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
                 else:
-                    cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
+                    try:
+                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
+                    except pymongo.errors.OperationFailure:
+                        cls.logger.exception(f'Unable to create a {index_type.name} index.')
+                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
         except pymongo.errors.DuplicateKeyError:
             cls.logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
             raise
