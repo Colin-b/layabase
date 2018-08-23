@@ -877,7 +877,7 @@ class CRUDModel:
                         cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
                     except pymongo.errors.OperationFailure:
                         cls.logger.exception(f'Unable to create a {index_type.name} index.')
-                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
+                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             cls.logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
             raise
