@@ -1,16 +1,16 @@
 import logging
 import urllib.parse
-from sqlalchemy import create_engine, inspect
-from sqlalchemy.pool import StaticPool
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, exc
+from typing import List
+
+from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from marshmallow import validate
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
-from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
-from typing import List
-
-from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
+from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, exc
+from sqlalchemy.pool import StaticPool
 
 logger = logging.getLogger(__name__)
 

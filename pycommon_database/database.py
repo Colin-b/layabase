@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from pycommon_database.flask_restplus_errors import ValidationFailed
+from pycommon_error.validation import ValidationFailed
 
 logger = logging.getLogger(__name__)
 

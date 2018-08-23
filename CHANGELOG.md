@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 10.13.0 (2018-08-23) ##
+
+### Enhancements ###
+
+- Rely on pycommon-error for error handling.
+
 ## Version 10.12.5 (2018-08-22) ##
 
 ### Bug fixes ###
