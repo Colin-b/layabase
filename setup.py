@@ -1,4 +1,5 @@
 import os
+
 from setuptools import setup, find_packages
 
 from pycommon_database._version import __version__
@@ -19,6 +20,8 @@ setup(
     install_requires=[
         # Used to manage fields
         'flask-restplus==0.11.0',
+        # Used to handle errors
+        'pycommon-error==1.0.0'
     ],
     extras_require={
         'testing': [

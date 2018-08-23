@@ -1,10 +1,11 @@
-from flask_restplus import inputs
-import pymongo
-from typing import List
 import logging
+from typing import List
+
+import pymongo
+from flask_restplus import inputs
+from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 
 from pycommon_database.database_mongo import CRUDModel, Column, IndexType
-from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
 
 logger = logging.getLogger(__name__)
 

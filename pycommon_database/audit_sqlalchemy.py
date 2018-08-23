@@ -1,8 +1,9 @@
 import datetime
 import enum
+
+from pycommon_error.validation import ValidationFailed
 from sqlalchemy import Column, DateTime, Enum, String, inspect, Integer
 
-from pycommon_database.flask_restplus_errors import ValidationFailed
 from pycommon_database.audit import current_user_name
 
 

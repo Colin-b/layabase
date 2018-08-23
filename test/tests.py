@@ -1,15 +1,16 @@
-import unittest
-import logging
-import sqlalchemy
-import sys
 import datetime
-from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
-from flask_restplus import fields as flask_rest_plus_fields, inputs
-from pycommon_test.flask_restplus_mock import TestAPI
-from threading import Thread
 import enum
 import json
+import logging
+import sys
 import tempfile
+import unittest
+from threading import Thread
+
+import sqlalchemy
+from flask_restplus import fields as flask_rest_plus_fields, inputs
+from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
+from pycommon_test.flask_restplus_mock import TestAPI
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] [%(name)s] %(message)s',
@@ -17,7 +18,7 @@ logging.basicConfig(
     level=logging.DEBUG)
 logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
 
-from pycommon_database import database, flask_restplus_errors, database_sqlalchemy, database_mongo, versioning_mongo
+from pycommon_database import database, database_sqlalchemy, database_mongo, versioning_mongo
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,8 @@ class MongoColumnTest(unittest.TestCase):
     def test_field_with_default_value_cannot_be_non_nullable(self):
         with self.assertRaises(Exception) as cm:
             database_mongo.Column(default_value='test', is_nullable=False)
-        self.assertEqual('A field cannot be mandatory and having a default value at the same time.', cm.exception.args[0])
+        self.assertEqual('A field cannot be mandatory and having a default value at the same time.',
+                         cm.exception.args[0])
 
 
 class SQlAlchemyDatabaseTest(unittest.TestCase):
@@ -99,7 +101,8 @@ class SQlAlchemyDatabaseTest(unittest.TestCase):
 
     def test_sybase_url(self):
         self.assertEqual('sybase+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2',
-                         database_sqlalchemy._clean_database_url('sybase+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
+                         database_sqlalchemy._clean_database_url(
+                             'sybase+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
 
     def test_sybase_does_not_support_offset(self):
         self.assertFalse(database_sqlalchemy._supports_offset('sybase+pyodbc'))
@@ -109,7 +112,8 @@ class SQlAlchemyDatabaseTest(unittest.TestCase):
 
     def test_mssql_url(self):
         self.assertEqual('mssql+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2',
-                         database_sqlalchemy._clean_database_url('mssql+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
+                         database_sqlalchemy._clean_database_url(
+                             'mssql+pyodbc:///?odbc_connect=TEST=VALUE;TEST2=VALUE2'))
 
     def test_mssql_does_not_support_offset(self):
         self.assertFalse(database_sqlalchemy._supports_offset('mssql+pyodbc'))
@@ -500,7 +504,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
                 {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'}
             ],
             self._model.get_all(order_by=[sqlalchemy.asc(self._model.mandatory),
-                                                   sqlalchemy.desc(self._model.key)]))
+                                          sqlalchemy.desc(self._model.key)]))
 
     def test_get_with_filter_is_retrieving_the_proper_row_after_multiple_posts(self):
         self._model.add({
@@ -1807,7 +1811,8 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         if not expected_audit:
             self.assertEqual(audit, expected_audit)
         else:
-            self.assertRegex(f'{audit}', f'{expected_audit}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
+            self.assertRegex(f'{audit}',
+                             f'{expected_audit}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
 
     def test_post_with_optional_is_valid(self):
         self.assertEqual(
@@ -2534,109 +2539,6 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
         self.assertEqual('Python field type cannot be guessed for None field.', cm.exception.args[0])
 
 
-class FlaskRestPlusErrorsTest(unittest.TestCase):
-    def setUp(self):
-        logger.info(f'-------------------------------')
-        logger.info(f'Start of {self._testMethodName}')
-
-    def tearDown(self):
-        logger.info(f'End of {self._testMethodName}')
-        logger.info(f'-------------------------------')
-
-    def test_handle_exception_failed_validation_on_list_of_items(self):
-        class TestAPI:
-
-            @staticmethod
-            def model(cls, name):
-                pass
-
-            @staticmethod
-            def errorhandler(cls):
-                pass
-
-            @staticmethod
-            def marshal_with(cls, code):
-                def wrapper(func):
-                    # Mock of the input (List of items)
-                    received_data = [{'optional_string_value': 'my_value1', 'mandatory_integer_value': 1,
-                                      'optional_enum_value': 'First Enum Value', 'optional_date_value': '2017-10-23',
-                                      'optional_date_time_value': '2017-10-24T21:46:57.12458+00:00',
-                                      'optional_float_value': 100},
-                                     {'optional_string_value': 'my_value2', 'optional_enum_value': 'First Enum Value',
-                                      'optional_date_value': '2017-10-23',
-                                      'optional_date_time_value': '2017-10-24T21:46:57.12458+00:00',
-                                      'optional_float_value': 200}]
-                    failed_validation = flask_restplus_errors.ValidationFailed(received_data)
-                    errors = {1: {'mandatory_integer_value': ['Missing data for required field.']}}
-                    setattr(failed_validation, 'errors', errors)
-                    # Call handle_exception method
-                    result = func(failed_validation)
-                    # Assert output, if NOK will raise Assertion Error
-                    assert (result[0] == {
-                        'fields': [
-                            {
-                                'item': 2,
-                                'field_name': 'mandatory_integer_value',
-                                'messages': ['Missing data for required field.']
-                            }
-                        ]
-                    })
-                    assert (result[1] == 400)
-                    return result
-
-                return wrapper
-
-        # Since TestApi is not completely mocked, add_failed_validation_handler will raise a "NoneType is not iterable
-        # exception after the call to handle_exception. Exception is therefore ignored
-        try:
-            flask_restplus_errors.add_failed_validation_handler(TestAPI)
-        except TypeError:
-            pass
-
-    def test_handle_exception_failed_validation_a_single_item(self):
-        class TestAPI:
-
-            @staticmethod
-            def model(cls, name):
-                pass
-
-            @staticmethod
-            def errorhandler(cls):
-                pass
-
-            @staticmethod
-            def marshal_with(cls, code):
-                def wrapper(func):
-                    # Mock of the input (Single item)
-                    received_data = {'optional_string_value': 'my_value1', 'mandatory_integer_value': 1,
-                                     'optional_enum_value': 'First Enum Value', 'optional_date_value': '2017-10-23',
-                                     'optional_date_time_value': '2017-10-24T21:46:57.12458+00:00',
-                                     'optional_float_value': 100}, {'optional_string_value': 'my_value2',
-                                                                    'optional_enum_value': 'First Enum Value',
-                                                                    'optional_date_value': '2017-10-23',
-                                                                    'optional_date_time_value': '2017-10-24T21:46:57.12458+00:00',
-                                                                    'optional_float_value': 200}
-                    failed_validation = flask_restplus_errors.ValidationFailed(received_data)
-                    errors = {'mandatory_integer_value': ['Missing data for required field.']}
-                    setattr(failed_validation, 'errors', errors)
-                    # Call handle_exception method
-                    result = func(failed_validation)
-                    # Assert output, if NOK will raise Assertion Error
-                    assert (result[0] == {'fields': [
-                        {'item': 1, 'field_name': 'mandatory_integer_value', 'messages': ['Missing data for required field.']}]})
-                    assert (result[1] == 400)
-                    return result
-
-                return wrapper
-
-        # Since TestApi is not completely mocked, add_failed_validation_handler will raise a "NoneType is not iterable
-        # exception after the call to handle_exception. Exception is therefore ignored
-        try:
-            flask_restplus_errors.add_failed_validation_handler(TestAPI)
-        except TypeError:
-            pass
-
-
 class EnumTest(enum.Enum):
     Value1 = 1
     Value2 = 2
@@ -2730,7 +2632,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
 
-        class TestStrictModel(database_mongo.CRUDModel, base=base, table_name='strict_table_name', skip_unknown_fields=False):
+        class TestStrictModel(database_mongo.CRUDModel, base=base, table_name='strict_table_name',
+                              skip_unknown_fields=False):
             key = database_mongo.Column(str, is_primary_key=True)
             mandatory = database_mongo.Column(int, is_nullable=False)
             optional = database_mongo.Column(str)
@@ -2774,9 +2677,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
         class TestListModel(database_mongo.CRUDModel, base=base, table_name='list_table_name'):
             key = database_mongo.Column(is_primary_key=True)
             list_field = database_mongo.ListColumn(database_mongo.DictColumn({
-                        'first_key': database_mongo.Column(EnumTest, is_nullable=False),
-                        'second_key': database_mongo.Column(int, is_nullable=False),
-                    }))
+                'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                'second_key': database_mongo.Column(int, is_nullable=False),
+            }))
             bool_field = database_mongo.Column(bool)
 
         class TestLimitsModel(database_mongo.CRUDModel, base=base, table_name='limits_table_name'):
@@ -2784,7 +2687,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             list_field = database_mongo.Column(list, min_length=2, max_length=3, example=['my', 'test'])
             int_field = database_mongo.Column(int, min_value=100, max_value=999)
 
-        class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel, base=base, table_name='list_and_dict_table_name'):
+        class TestUnvalidatedListAndDictModel(database_mongo.CRUDModel, base=base,
+                                              table_name='list_and_dict_table_name'):
             float_key = database_mongo.Column(float, is_primary_key=True)
             float_with_default = database_mongo.Column(float, default_value=34)
             dict_field = database_mongo.Column(dict, is_required=True)
@@ -2800,7 +2704,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }, is_required=True)
 
-        class TestVersionedUniqueNonPrimaryModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_uni_table_name'):
+        class TestVersionedUniqueNonPrimaryModel(versioning_mongo.VersionedCRUDModel, base=base,
+                                                 table_name='versioned_uni_table_name'):
             key = database_mongo.Column(int, should_auto_increment=True)
             unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
 
@@ -2840,8 +2745,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
         cls.TestIntAndFloatController.model(TestIntAndFloatModel)
         cls.TestDictInDictController.model(TestDictInDictModel)
-        return [TestModel, TestStrictModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel, TestIndexModel,
-                TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel, TestUnvalidatedListAndDictModel,
+        return [TestModel, TestStrictModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel,
+                TestIndexModel,
+                TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel,
+                TestUnvalidatedListAndDictModel,
                 TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel, TestIntAndFloatModel,
                 TestDictInDictModel]
 
@@ -3364,7 +3271,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'unique_key': 'test2',
             'non_unique_key': '2017-01-01',
         })
-        self.assertEqual(1, self.TestIndexController.delete({'unique_key': ['not existing', 'test', 'another non existing']}))
+        self.assertEqual(1, self.TestIndexController.delete(
+            {'unique_key': ['not existing', 'test', 'another non existing']}))
 
     def test_get_one_without_result_is_valid(self):
         self.TestIndexController.post({
@@ -3992,7 +3900,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'unique': 1,
             })
         self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
-        self.assertEqual({'key': 2, 'unique': 1, 'valid_since_revision': 2, 'valid_until_revision': -1}, cm.exception.received_data)
+        self.assertEqual({'key': 2, 'unique': 1, 'valid_since_revision': 2, 'valid_until_revision': -1},
+                         cm.exception.received_data)
 
     def test_insert_to_non_unique_after_update(self):
         self.TestVersionedUniqueNonPrimaryController.post({
@@ -4007,7 +3916,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'unique': 2,
             })
         self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
-        self.assertEqual({'key': 2, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1}, cm.exception.received_data)
+        self.assertEqual({'key': 2, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1},
+                         cm.exception.received_data)
 
     @unittest.expectedFailure
     def test_update_to_non_unique_versioned(self):
@@ -4024,7 +3934,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'unique': 2,
             })
         self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
-        self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1}, cm.exception.received_data)
+        self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1},
+                         cm.exception.received_data)
 
     @unittest.expectedFailure
     def test_update_to_non_unique(self):
@@ -4041,7 +3952,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 1,
             })
         self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
-        self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1}, cm.exception.received_data)
+        self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1},
+                         cm.exception.received_data)
 
     def test_post_id_is_valid(self):
         self.assertEqual(
@@ -4056,7 +3968,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestIdController.post({
                 '_id': 'invalid value',
             })
-        self.assertEqual({'_id': ["'invalid value' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string"]}, cm.exception.errors)
+        self.assertEqual({'_id': [
+            "'invalid value' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string"]},
+            cm.exception.errors)
         self.assertEqual({'_id': 'invalid value'}, cm.exception.received_data)
 
     def test_get_all_with_none_primary_key_is_valid(self):
@@ -4088,15 +4002,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ])
         self.assertEqual({'': ['batch op errors occurred']}, cm.exception.errors)
         self.assertEqual([
-                {
-                    'unique_key': 'test',
-                    'non_unique_key': '2017-01-01',
-                },
-                {
-                    'unique_key': 'test',
-                    'non_unique_key': '2017-01-01',
-                }
-            ],
+            {
+                'unique_key': 'test',
+                'non_unique_key': '2017-01-01',
+            },
+            {
+                'unique_key': 'test',
+                'non_unique_key': '2017-01-01',
+            }
+        ],
             cm.exception.received_data)
 
     def test_post_without_primary_key_but_default_value_is_valid(self):
@@ -4650,7 +4564,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'key': ['Value "11" is too small. Minimum length is 3.'],
             'list_field': ["['1', '2', '3', '4', '5'] contains too many values. Maximum length is 3."]
         }, cm.exception.errors)
-        self.assertEqual({'int_field': 1000, 'key': '11', 'list_field': ['1', '2', '3', '4', '5']}, cm.exception.received_data)
+        self.assertEqual({'int_field': 1000, 'key': '11', 'list_field': ['1', '2', '3', '4', '5']},
+                         cm.exception.received_data)
 
     def test_post_optional_missing_list_of_dict_is_valid(self):
         self.assertEqual(
@@ -5062,7 +4977,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
         )
         self.assertEqual(
             [
-                {'dict_field': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3}, 'key': 'my_key'},
+                {'dict_field': {'first_key': {'inner_key1': 'Value1', 'inner_key2': 3}, 'second_key': 3},
+                 'key': 'my_key'},
             ],
             self.TestDictInDictController.get({
                 'dict_field.first_key.inner_key1': EnumTest.Value1,
@@ -5088,21 +5004,21 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_get_with_multiple_results_dot_notation_as_list_is_valid(self):
         self.TestDictController.post_many([
-                {
-                    'key': 'my_key',
-                    'dict_col': {
-                        'first_key': EnumTest.Value1,
-                        'second_key': 3,
-                    },
+            {
+                'key': 'my_key',
+                'dict_col': {
+                    'first_key': EnumTest.Value1,
+                    'second_key': 3,
                 },
-                {
-                    'key': 'my_key2',
-                    'dict_col': {
-                        'first_key': EnumTest.Value2,
-                        'second_key': 4,
-                    },
-                }
-            ]
+            },
+            {
+                'key': 'my_key2',
+                'dict_col': {
+                    'first_key': EnumTest.Value2,
+                    'second_key': 4,
+                },
+            }
+        ]
         )
         self.assertEqual(
             [
@@ -5185,8 +5101,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
         self.assertEqual(1, self.TestDictController.delete({
-                'dict_col.second_key': 3,
-            }))
+            'dict_col.second_key': 3,
+        }))
 
     def test_delete_with_dot_notation_enum_value_is_valid(self):
         self.assertEqual(
@@ -5200,8 +5116,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
         self.assertEqual(1, self.TestDictController.delete({
-                'dict_col.first_key': EnumTest.Value1,
-            }))
+            'dict_col.first_key': EnumTest.Value1,
+        }))
 
     def test_post_with_dot_notation_invalid_value_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -5211,7 +5127,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_col.second_key': 'invalid integer',
             })
         self.assertEqual({'dict_col.second_key': ['Not a valid int.']}, cm.exception.errors)
-        self.assertEqual({'key': 'my_key', 'dict_col.first_key': 'Value1', 'dict_col.second_key': 'invalid integer'}, cm.exception.received_data)
+        self.assertEqual({'key': 'my_key', 'dict_col.first_key': 'Value1', 'dict_col.second_key': 'invalid integer'},
+                         cm.exception.received_data)
 
     def test_post_with_dot_notation_valid_value_is_valid(self):
         self.assertEqual({
@@ -5351,11 +5268,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({
-                'dict_col': {
-                    'first_key': 'Value2',
-                    'second_key': 4,
-                },
-            }, cm.exception.received_data)
+            'dict_col': {
+                'first_key': 'Value2',
+                'second_key': 4,
+            },
+        }, cm.exception.received_data)
 
     def test_post_dict_with_dot_notation_is_valid(self):
         self.assertEqual(
@@ -5442,7 +5359,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'unknown': 'my_value',
             })
         self.assertEqual({'unknown': ['Unknown field']}, cm.exception.errors)
-        self.assertEqual({'key': 'my_key', 'mandatory': 1, 'optional': 'my_value', 'unknown': 'my_value'}, cm.exception.received_data)
+        self.assertEqual({'key': 'my_key', 'mandatory': 1, 'optional': 'my_value', 'unknown': 'my_value'},
+                         cm.exception.received_data)
 
     def test_post_many_with_unknown_field_is_valid(self):
         self.assertListEqual(
@@ -5492,7 +5410,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'my_key',
                 'enum_field': 'InvalidValue',
             })
-        self.assertEqual({'enum_field': ['Value "InvalidValue" is not within [\'Value1\', \'Value2\'].']}, cm.exception.errors)
+        self.assertEqual({'enum_field': ['Value "InvalidValue" is not within [\'Value1\', \'Value2\'].']},
+                         cm.exception.errors)
         self.assertEqual({'enum_field': 'InvalidValue'}, cm.exception.received_data)
 
     def test_post_many_with_specified_incremented_field_is_ignored_and_valid(self):
@@ -5687,10 +5606,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         self.assertEqual({'date_str': ['Not a valid date.']}, cm.exception.errors)
         self.assertEqual({
-                'key': 'my_key1',
-                'date_str': 'this is not a date',
-                'datetime_str': '2016-09-23T23:59:59',
-            },
+            'key': 'my_key1',
+            'date_str': 'this is not a date',
+            'datetime_str': '2016-09-23T23:59:59',
+        },
             cm.exception.received_data)
 
     def test_get_invalid_date_is_invalid(self):
@@ -5700,8 +5619,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         self.assertEqual({'date_str': ['Not a valid date.']}, cm.exception.errors)
         self.assertEqual({
-                'date_str': 'this is not a date',
-            },
+            'date_str': 'this is not a date',
+        },
             cm.exception.received_data)
 
     def test_delete_invalid_date_is_invalid(self):
@@ -5711,8 +5630,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         self.assertEqual({'date_str': ['Not a valid date.']}, cm.exception.errors)
         self.assertEqual({
-                'date_str': 'this is not a date',
-            },
+            'date_str': 'this is not a date',
+        },
             cm.exception.received_data)
 
     def test_get_with_unknown_fields_is_valid(self):
@@ -5786,8 +5705,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 'my_key2',
             })
         self.assertEqual({
-                'key': 'my_key2',
-            },
+            'key': 'my_key2',
+        },
             cm.exception.requested_data)
 
     def test_post_invalid_datetime_is_invalid(self):
@@ -5799,10 +5718,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         self.assertEqual({'datetime_str': ['Not a valid datetime.']}, cm.exception.errors)
         self.assertEqual({
-                'key': 'my_key1',
-                'date_str': '2016-09-23',
-                'datetime_str': 'This is not a valid datetime',
-            },
+            'key': 'my_key1',
+            'date_str': '2016-09-23',
+            'datetime_str': 'This is not a valid datetime',
+        },
             cm.exception.received_data)
 
     def test_post_datetime_for_a_date_is_valid(self):
@@ -5987,7 +5906,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'dict_field.second_key': int,
                 'key': str,
                 'revision': inputs.positive
-             },
+            },
             parser_types(self.TestVersionedController.query_rollback_parser))
         self.assertEqual(
             {
@@ -6683,7 +6602,8 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             enum_fld = database_mongo.Column(EnumTest)
 
-        class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name', audit=True):
+        class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name',
+                                 audit=True):
             key = database_mongo.Column(str, is_primary_key=True)
             enum_fld = database_mongo.Column(EnumTest)
 
@@ -6886,18 +6806,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual({'mandatory': ['Not a valid int.']}, cm.exception.errors)
         self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'value1',
-                    'mandatory': 1,
-                    'optional': None,
-                    'revision': 1,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'value1',
+                                  'mandatory': 1,
+                                  'optional': None,
+                                  'revision': 1,
+                              },
+                          ]
+                          )
 
     def test_post_without_optional_is_valid(self):
         self.assertEqual(
@@ -6908,18 +6828,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         )
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': None,
-                    'revision': 1,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': None,
+                                  'revision': 1,
+                              },
+                          ]
+                          )
 
     def test_post_with_enum_is_valid(self):
         self.assertEqual(
@@ -6930,17 +6850,17 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         )
         self._check_audit(self.TestEnumController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'enum_fld': 'Value1',
-                    'key': 'my_key',
-                    'revision': 1,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'enum_fld': 'Value1',
+                                  'key': 'my_key',
+                                  'revision': 1,
+                              },
+                          ]
+                          )
 
     def test_put_with_enum_is_valid(self):
         self.assertEqual(
@@ -6961,25 +6881,25 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         )
         self._check_audit(self.TestEnumController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'enum_fld': 'Value1',
-                    'key': 'my_key',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'enum_fld': 'Value2',
-                    'key': 'my_key',
-                    'revision': 2,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'enum_fld': 'Value1',
+                                  'key': 'my_key',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'enum_fld': 'Value2',
+                                  'key': 'my_key',
+                                  'revision': 2,
+                              },
+                          ]
+                          )
 
     def test_versioned_audit_after_post_put_delete_rollback(self):
         self.TestVersionedController.post({
@@ -6997,37 +6917,37 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'revision': 1
         })
         self._check_audit(self.TestVersionedController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'revision': 1,
-                    'table_name': 'versioned_table_name',
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'revision': 2,
-                    'table_name': 'versioned_table_name',
-                },
-                {
-                    'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'revision': 3,
-                    'table_name': 'versioned_table_name',
-                },
-                {
-                    'audit_action': 'Rollback',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'revision': 4,
-                    'table_name': 'versioned_table_name',
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'revision': 1,
+                                  'table_name': 'versioned_table_name',
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'revision': 2,
+                                  'table_name': 'versioned_table_name',
+                              },
+                              {
+                                  'audit_action': 'Delete',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'revision': 3,
+                                  'table_name': 'versioned_table_name',
+                              },
+                              {
+                                  'audit_action': 'Rollback',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'revision': 4,
+                                  'table_name': 'versioned_table_name',
+                              },
+                          ]
+                          )
 
     def test_delete_with_enum_is_valid(self):
         self.assertEqual(
@@ -7038,30 +6958,30 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         )
         self.assertEqual(1,
-            self.TestEnumController.delete({
-                'enum_fld': EnumTest.Value1,
-            })
-        )
+                         self.TestEnumController.delete({
+                             'enum_fld': EnumTest.Value1,
+                         })
+                         )
         self._check_audit(self.TestEnumController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'enum_fld': 'Value1',
-                    'key': 'my_key',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'enum_fld': 'Value1',
-                    'key': 'my_key',
-                    'revision': 2,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'enum_fld': 'Value1',
+                                  'key': 'my_key',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Delete',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'enum_fld': 'Value1',
+                                  'key': 'my_key',
+                                  'revision': 2,
+                              },
+                          ]
+                          )
 
     def test_post_many_without_optional_is_valid(self):
         self.assertListEqual(
@@ -7072,18 +6992,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }])
         )
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': None,
-                    'revision': 1,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': None,
+                                  'revision': 1,
+                              },
+                          ]
+                          )
 
     def test_put_many_is_valid(self):
         self.TestController.post_many([
@@ -7107,45 +7027,45 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }
         ])
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': None,
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 2,
-                    'optional': None,
-                    'revision': 2,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': 'test',
-                    'revision': 3,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 3,
-                    'optional': None,
-                    'revision': 4,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': None,
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 2,
+                                  'optional': None,
+                                  'revision': 2,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': 'test',
+                                  'revision': 3,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 3,
+                                  'optional': None,
+                                  'revision': 4,
+                              },
+                          ]
+                          )
 
     def _check_audit(self, controller, expected_audit, filter_audit={}):
         audit = controller.get_audit(filter_audit)
@@ -7154,7 +7074,8 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         if not expected_audit:
             self.assertEqual(audit, expected_audit)
         else:
-            self.assertRegex(f'{audit}', f'{expected_audit}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
+            self.assertRegex(f'{audit}',
+                             f'{expected_audit}'.replace('[', '\\[').replace(']', '\\]').replace('\\\\', '\\'))
 
     def test_post_with_optional_is_valid(self):
         self.assertEqual(
@@ -7166,18 +7087,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         )
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': 'my_value',
-                    'revision': 1,
-                }
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': 'my_value',
+                                  'revision': 1,
+                              }
+                          ]
+                          )
 
     def test_post_many_with_optional_is_valid(self):
         self.assertListEqual(
@@ -7189,18 +7110,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }])
         )
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': 'my_value',
-                    'revision': 1,
-                }
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': 'my_value',
+                                  'revision': 1,
+                              }
+                          ]
+                          )
 
     def test_post_with_unknown_field_is_valid(self):
         self.assertEqual(
@@ -7214,18 +7135,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             })
         )
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': 'my_value',
-                    'revision': 1,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': 'my_value',
+                                  'revision': 1,
+                              },
+                          ]
+                          )
 
     def test_post_many_with_unknown_field_is_valid(self):
         self.assertListEqual(
@@ -7239,18 +7160,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }])
         )
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key',
-                    'mandatory': 1,
-                    'optional': 'my_value',
-                    'revision': 1,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': 'my_value',
+                                  'revision': 1,
+                              },
+                          ]
+                          )
 
     def test_get_without_filter_is_retrieving_the_only_item(self):
         self.TestController.post({
@@ -7266,18 +7187,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             }],
             self.TestController.get({}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                          ]
+                          )
 
     def test_get_without_filter_is_retrieving_everything_with_multiple_posts(self):
         self.TestController.post({
@@ -7297,27 +7218,27 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             ],
             self.TestController.get({}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 2,
-                    'optional': 'my_value2',
-                    'revision': 2,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 2,
+                                  'optional': 'my_value2',
+                                  'revision': 2,
+                              },
+                          ]
+                          )
 
     def test_get_without_filter_is_retrieving_everything(self):
         self.TestController.post_many([
@@ -7339,27 +7260,27 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             ],
             self.TestController.get({}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 2,
-                    'optional': 'my_value2',
-                    'revision': 2,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 2,
+                                  'optional': 'my_value2',
+                                  'revision': 2,
+                              },
+                          ]
+                          )
 
     def test_get_with_filter_is_retrieving_subset(self):
         self.TestController.post({
@@ -7378,27 +7299,27 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             ],
             self.TestController.get({'optional': 'my_value1'}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 2,
-                    'optional': 'my_value2',
-                    'revision': 2,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 2,
+                                  'optional': 'my_value2',
+                                  'revision': 2,
+                              },
+                          ]
+                          )
 
     def test_put_is_updating(self):
         self.TestController.post({
@@ -7419,27 +7340,27 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual([{'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value'}],
                          self.TestController.get({'mandatory': 1}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value',
-                    'revision': 2,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value',
+                                  'revision': 2,
+                              },
+                          ]
+                          )
 
     def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(self):
         self.TestController.post({
@@ -7453,27 +7374,27 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         })
         self.assertEqual([], self.TestController.get({'optional': 'my_value1'}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value',
-                    'revision': 2,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value',
+                                  'revision': 2,
+                              },
+                          ]
+                          )
 
     def test_delete_with_filter_is_removing_the_proper_row(self):
         self.TestController.post({
@@ -7490,36 +7411,36 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual([{'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'}],
                          self.TestController.get({}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 2,
-                    'optional': 'my_value2',
-                    'revision': 2,
-                },
-                {
-                    'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 3,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 2,
+                                  'optional': 'my_value2',
+                                  'revision': 2,
+                              },
+                              {
+                                  'audit_action': 'Delete',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 3,
+                              },
+                          ]
+                          )
 
     def test_audit_filter_on_model_is_returning_only_selected_data(self):
         self.TestController.post({
@@ -7533,37 +7454,37 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         })
         self.TestController.delete({'key': 'my_key1'})
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 2,
-                    'optional': 'my_value1',
-                    'revision': 2,
-                },
-                {
-                    'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 2,
-                    'optional': 'my_value1',
-                    'revision': 3,
-                },
-            ],
-            filter_audit={'key': 'my_key1'}
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 2,
+                                  'optional': 'my_value1',
+                                  'revision': 2,
+                              },
+                              {
+                                  'audit_action': 'Delete',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 2,
+                                  'optional': 'my_value1',
+                                  'revision': 3,
+                              },
+                          ],
+                          filter_audit={'key': 'my_key1'}
+                          )
 
     def test_audit_filter_on_audit_model_is_returning_only_selected_data(self):
         self.TestController.post({
@@ -7577,19 +7498,19 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         })
         self.TestController.delete({'key': 'my_key1'})
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 2,
-                    'optional': 'my_value1',
-                    'revision': 2,
-                },
-            ],
-            filter_audit={'audit_action': 'Update'}
-        )
+                          [
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 2,
+                                  'optional': 'my_value1',
+                                  'revision': 2,
+                              },
+                          ],
+                          filter_audit={'audit_action': 'Update'}
+                          )
 
     def test_value_can_be_updated_to_previous_value(self):
         self.TestController.post({
@@ -7606,36 +7527,36 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             'mandatory': 1,  # Put back initial value
         })
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 2,
-                    'optional': 'my_value1',
-                    'revision': 2,
-                },
-                {
-                    'audit_action': 'Update',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 3,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 2,
+                                  'optional': 'my_value1',
+                                  'revision': 2,
+                              },
+                              {
+                                  'audit_action': 'Update',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 3,
+                              },
+                          ]
+                          )
 
     def test_delete_without_filter_is_removing_everything(self):
         self.TestController.post({
@@ -7651,45 +7572,45 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual(2, self.TestController.delete({}))
         self.assertEqual([], self.TestController.get({}))
         self._check_audit(self.TestController,
-            [
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 1,
-                },
-                {
-                    'audit_action': 'Insert',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 2,
-                    'optional': 'my_value2',
-                    'revision': 2,
-                },
-                {
-                    'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key1',
-                    'mandatory': 1,
-                    'optional': 'my_value1',
-                    'revision': 3,
-                },
-                {
-                    'audit_action': 'Delete',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
-                    'audit_user': '',
-                    'key': 'my_key2',
-                    'mandatory': 2,
-                    'optional': 'my_value2',
-                    'revision': 4,
-                },
-            ]
-        )
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 1,
+                              },
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 2,
+                                  'optional': 'my_value2',
+                                  'revision': 2,
+                              },
+                              {
+                                  'audit_action': 'Delete',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key1',
+                                  'mandatory': 1,
+                                  'optional': 'my_value1',
+                                  'revision': 3,
+                              },
+                              {
+                                  'audit_action': 'Delete',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key2',
+                                  'mandatory': 2,
+                                  'optional': 'my_value2',
+                                  'revision': 4,
+                              },
+                          ]
+                          )
 
     def test_query_get_parser(self):
         self.assertEqual(

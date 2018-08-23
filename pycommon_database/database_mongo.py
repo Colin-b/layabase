@@ -1,22 +1,21 @@
-import logging
+import copy
 import datetime
 import enum
+import inspect
+import json
+import logging
 import os.path
 import pathlib
-import inspect
+from typing import List, Dict
 
 import dateutil.parser
-import copy
 import pymongo
 import pymongo.errors
-from typing import List, Dict
-from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
-from bson.objectid import ObjectId
 from bson.errors import BSONError
 from bson.json_util import dumps, loads
-import json
-
-from pycommon_database.flask_restplus_errors import ValidationFailed, ModelCouldNotBeFound
+from bson.objectid import ObjectId
+from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
+from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 
 logger = logging.getLogger(__name__)
 
@@ -808,8 +807,10 @@ class CRUDModel:
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
-            cls._server_version = (base.client.server_info() or {}).get('version', '')
-            cls.logger.info(f'Server version is "{cls._server_version}"')
+            server_info = base.client.server_info()
+            if server_info:
+                cls.logger.info(f'Server information: {server_info}')
+                cls._server_version = server_info.get('version', '')
             cls.update_indexes({})
         if audit:
             from pycommon_database.audit_mongo import _create_from
@@ -872,7 +873,11 @@ class CRUDModel:
                 if condition is None or cls._server_version < '3.2':
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
                 else:
-                    cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
+                    try:
+                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
+                    except pymongo.errors.OperationFailure:
+                        cls.logger.exception(f'Unable to create a {index_type.name} index.')
+                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
         except pymongo.errors.DuplicateKeyError:
             cls.logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
             raise
