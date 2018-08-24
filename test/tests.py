@@ -2650,7 +2650,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestDictModel(database_mongo.CRUDModel, base=base, table_name='dict_table_name'):
             key = database_mongo.Column(str, is_primary_key=True)
-            dict_col = database_mongo.DictColumn(
+            dict_col = database_mongo.DictColumn(fields=
                 {
                     'first_key': database_mongo.Column(EnumTest, is_nullable=False),
                     'second_key': database_mongo.Column(int, is_nullable=False),
@@ -2659,7 +2659,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestOptionalDictModel(database_mongo.CRUDModel, base=base, table_name='optional_dict_table_name'):
             key = database_mongo.Column(str, is_primary_key=True)
-            dict_col = database_mongo.DictColumn(
+            dict_col = database_mongo.DictColumn(get_fields=
                 lambda model_as_dict: {
                     'first_key': database_mongo.Column(EnumTest, is_nullable=True),
                     'second_key': database_mongo.Column(int, is_nullable=True),
@@ -2676,7 +2676,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestListModel(database_mongo.CRUDModel, base=base, table_name='list_table_name'):
             key = database_mongo.Column(is_primary_key=True)
-            list_field = database_mongo.ListColumn(database_mongo.DictColumn({
+            list_field = database_mongo.ListColumn(database_mongo.DictColumn(fields={
                 'first_key': database_mongo.Column(EnumTest, is_nullable=False),
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }))
@@ -2699,7 +2699,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name'):
             key = database_mongo.Column(is_primary_key=True)
-            dict_field = database_mongo.DictColumn({
+            dict_field = database_mongo.DictColumn(fields={
                 'first_key': database_mongo.Column(EnumTest, is_nullable=False),
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }, is_required=True)
@@ -2719,8 +2719,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
         class TestDictInDictModel(database_mongo.CRUDModel, base=base, table_name='dict_in_dict_table_name'):
             key = database_mongo.Column(is_primary_key=True)
-            dict_field = database_mongo.DictColumn({
-                'first_key': database_mongo.DictColumn({
+            dict_field = database_mongo.DictColumn(fields={
+                'first_key': database_mongo.DictColumn(fields={
                     'inner_key1': database_mongo.Column(EnumTest, is_nullable=False),
                     'inner_key2': database_mongo.Column(int, is_nullable=False),
                 }, is_required=True),

@@ -49,8 +49,11 @@ class Column:
          - Counter name (field name by default), string value.
          - Counter category (table name by default), string value.
         :param default_value: Default field value returned to the client if field is not set.
-        Should be of field type or a function (with dictionary as parameter) returning a value of field type.
+        Should be of field type.
         None by default.
+        :param get_default_value: Function returning default field value returned to the client if field is not set.
+        Should be a function (with dictionary as parameter) returning a value of field type.
+        Return default_value by default.
         :param description: Field description used in Swagger and in error messages.
         Should be a string value. Default to None.
         :param index_type: If and how this field should be indexed.
@@ -87,7 +90,8 @@ class Column:
             self._update_name(name)
         self.get_choices = self._to_get_choices(kwargs.pop('choices', None))
         self.get_counter = self._to_get_counter(kwargs.pop('counter', None))
-        self.get_default_value = self._to_get_default_value(kwargs.pop('default_value', None))
+        self.default_value = kwargs.pop('default_value', None)
+        self.get_default_value = self._to_get_default_value(kwargs.pop('get_default_value', None))
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
 
@@ -104,11 +108,11 @@ class Column:
         if not self.is_nullable:
             if self.should_auto_increment:
                 raise Exception('A field cannot be mandatory and auto incremented at the same time.')
-            if self.get_default_value({}):
+            if self.default_value:
                 raise Exception('A field cannot be mandatory and having a default value at the same time.')
         else:
             # Field will be optional only if it is not a primary key without default value and not auto incremented
-            self.is_nullable = not self.is_primary_key or self.get_default_value({}) or self.should_auto_increment
+            self.is_nullable = not self.is_primary_key or self.default_value or self.should_auto_increment
         self.is_required = bool(kwargs.pop('is_required', False))
         self.min_value = kwargs.pop('min_value', None)
         if self.min_value is not None:
@@ -159,11 +163,8 @@ class Column:
             return lambda: list(self.field_type.__members__.keys())
         return lambda: None
 
-    @staticmethod
-    def _to_get_default_value(default_value):
-        if default_value:
-            return default_value if callable(default_value) else (lambda model_as_dict: default_value)
-        return lambda model_as_dict: None
+    def _to_get_default_value(self, get_default_value):
+        return get_default_value if get_default_value else lambda model_as_dict: self.default_value
 
     def __str__(self):
         return f'{self.name}'
@@ -426,8 +427,8 @@ class Column:
         if self._example is not None:
             return self._example
 
-        if self.get_default_value({}) is not None:
-            return self.get_default_value({})
+        if self.default_value is not None:
+            return self.default_value
 
         return self.get_choices()[0] if self.get_choices() else self._default_example()
 
@@ -466,19 +467,35 @@ class DictColumn(Column):
     If you do not want to validate the content of this dictionary use a Column(dict) instead.
     """
 
-    def __init__(self, fields: Dict[str, Column], index_fields: Dict[str, Column] = None, **kwargs):
+    def __init__(self,
+                 fields: Dict[str, Column]=None,
+                 get_fields=None,
+                 index_fields: Dict[str, Column] = None,
+                 get_index_fields = None,
+                 **kwargs):
         """
-        :param fields: Definition of this dictionary.
-        Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
+        :param fields: Static definition of this dictionary.
         Keys are field names and associated values are Column.
+        Default to an empty dictionary.
+        :param get_fields: Function returning a definition of this dictionary.
+        Should be a function (with dictionary as parameter) returning a dictionary.
+        Keys are field names and associated values are Column.
+        Default to returning fields.
         :param index_fields: Definition of all possible dictionary fields.
         This is used to identify every possible index fields.
-        Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
         Keys are field names and associated values are Column.
         Default to fields.
+        :param get_index_fields: Function returning a definition of all possible dictionary fields.
+        This is used to identify every possible index fields.
+        Should be a function (with dictionary as parameter) returning a dictionary.
+        Keys are field names and associated values are Column.
+        Default to returning index_fields.
         :param default_value: Default field value returned to the client if field is not set.
-        Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
-        None by default.
+        Should be a dictionary.
+        Dictionary based on fields if field is nullable.
+        :param get_default_value: Function returning default field value returned to the client if field is not set.
+        Should be a function (with dictionary as parameter) returning a dictionary.
+        Function returning a dictionary based on get_fields if field is nullable.
         :param description: Field description used in Swagger and in error messages.
         Should be a string value. Default to None.
         :param index_type: If and how this field should be indexed.
@@ -498,34 +515,71 @@ class DictColumn(Column):
         """
         kwargs.pop('field_type', None)
 
-        if not fields:
-            raise Exception('fields is a mandatory parameter.')
+        if not fields and not get_fields:
+            raise Exception('fields or get_fields must be provided.')
 
-        self.get_fields = fields if callable(fields) else lambda model_as_dict: fields
+        self._default_fields = fields or {}
+        self._get_fields = get_fields if get_fields else lambda model_as_dict: self._default_fields
 
         if index_fields:
-            self.get_index_fields = index_fields if callable(index_fields) else lambda model_as_dict: index_fields
+            self._get_all_index_fields = get_index_fields if get_index_fields else lambda model_as_dict: index_fields
+            self._default_index_fields = index_fields
         else:
-            self.get_index_fields = self.get_fields
+            self._get_all_index_fields = self._get_fields
+            self._default_index_fields = self._default_fields
 
         if bool(kwargs.get('is_nullable', True)):  # Ensure that there will be a default value if field is nullable
-            kwargs['default_value'] = lambda model_as_dict: {
-                field_name: field.get_default_value(model_as_dict)
-                for field_name, field in self.get_fields(model_as_dict or {}).items()
-            }
+            if 'default_value' not in kwargs:
+                kwargs['default_value'] = {
+                    field_name: field.default_value
+                    for field_name, field in self._default_fields.items()
+                }
+            if 'get_default_value' not in kwargs:
+                kwargs['get_default_value'] = lambda model_as_dict: {
+                    field_name: field.get_default_value(model_as_dict)
+                    for field_name, field in self._get_fields(model_as_dict).items()
+                }
 
         Column.__init__(self, dict, **kwargs)
 
-    def _description_model(self, model_as_dict: dict):
+    def _default_description_model(self):
         """
-        :param model_as_dict: Data provided by the user or empty in case this method is called in another context.
         :return: A CRUDModel describing every dictionary fields.
         """
 
         class FakeModel(CRUDModel):
             pass
 
-        for name, column in self.get_fields(model_as_dict or {}).items():
+        for name, column in self._default_fields.items():
+            column._update_name(name)
+            FakeModel.__fields__.append(column)
+
+        return FakeModel
+
+    def _description_model(self, model_as_dict: dict):
+        """
+        :param model_as_dict: Data provided by the user.
+        :return: A CRUDModel describing every dictionary fields.
+        """
+
+        class FakeModel(CRUDModel):
+            pass
+
+        for name, column in self._get_fields(model_as_dict).items():
+            column._update_name(name)
+            FakeModel.__fields__.append(column)
+
+        return FakeModel
+
+    def _default_index_description_model(self):
+        """
+        :return: A CRUDModel describing every index fields.
+        """
+
+        class FakeModel(CRUDModel):
+            pass
+
+        for name, column in self._default_index_fields.items():
             column._update_name(name)
             FakeModel.__fields__.append(column)
 
@@ -533,20 +587,22 @@ class DictColumn(Column):
 
     def _index_description_model(self, model_as_dict: dict):
         """
-        :param model_as_dict: Data provided by the user or empty in case this method is called in another context.
+        :param model_as_dict: Data provided by the user.
         :return: A CRUDModel describing every index fields.
         """
 
         class FakeModel(CRUDModel):
             pass
 
-        for name, column in self.get_index_fields(model_as_dict or {}).items():
+        for name, column in self._get_all_index_fields(model_as_dict).items():
             column._update_name(name)
             FakeModel.__fields__.append(column)
 
         return FakeModel
 
     def _get_index_fields(self, index_type: IndexType, model_as_dict: dict, prefix: str) -> List[str]:
+        if model_as_dict is None:
+            return self._default_index_description_model()._get_index_fields(index_type, None, f'{prefix}{self.name}.')
         return self._index_description_model(model_as_dict)._get_index_fields(index_type, model_as_dict,
                                                                               f'{prefix}{self.name}.')
 
@@ -629,7 +685,7 @@ class DictColumn(Column):
     def example(self):
         return {
             field_name: dict_field.example()
-            for field_name, dict_field in self.get_fields({}).items()
+            for field_name, dict_field in self._default_fields.items()
         }
 
 
@@ -811,7 +867,7 @@ class CRUDModel:
             if server_info:
                 cls.logger.info(f'Server information: {server_info}')
                 cls._server_version = server_info.get('version', '')
-            cls.update_indexes({})
+            cls.update_indexes()
         if audit:
             from pycommon_database.audit_mongo import _create_from
             cls.audit_model = _create_from(cls, base)
@@ -819,7 +875,7 @@ class CRUDModel:
             cls.audit_model = None  # Ensure no circular reference when creating the audit
 
     @classmethod
-    def update_indexes(cls, document: dict):
+    def update_indexes(cls, document: dict=None):
         """
         Drop all indexes and recreate them.
         As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
@@ -1466,7 +1522,7 @@ class CRUDModel:
     def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=''):
         if isinstance(field, DictColumn):
             # Describe every dict column field as dot notation
-            for inner_field in field._description_model({}).__fields__:
+            for inner_field in field._default_description_model().__fields__:
                 cls._add_field_to_query_parser(query_parser, inner_field, f'{field.name}.')
         elif isinstance(field, ListColumn):
             # Note that List of dict or list of list might be wrongly parsed
@@ -1530,7 +1586,7 @@ class CRUDModel:
     @classmethod
     def _to_flask_restplus_field(cls, namespace, field: Column):
         if isinstance(field, DictColumn):
-            dict_fields = field._description_model({})._flask_restplus_fields(namespace)
+            dict_fields = field._default_description_model()._flask_restplus_fields(namespace)
             if dict_fields:
                 dict_model = namespace.model('_'.join(dict_fields), dict_fields)
                 # Nested field cannot contains nothing
@@ -1540,7 +1596,7 @@ class CRUDModel:
                     example=field.example(),
                     description=field.description,
                     enum=field.get_choices(),
-                    default=field.get_default_value({}),
+                    default=field.default_value,
                     readonly=field.should_auto_increment,
                     skip_none=True,
                 )
@@ -1550,7 +1606,7 @@ class CRUDModel:
                     example=field.example(),
                     description=field.description,
                     enum=field.get_choices(),
-                    default=field.get_default_value({}),
+                    default=field.default_value,
                     readonly=field.should_auto_increment,
                 )
         elif isinstance(field, ListColumn):
@@ -1560,7 +1616,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
                 min_items=field.min_length,
                 max_items=field.max_length,
@@ -1572,7 +1628,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
                 min_items=field.min_length,
                 max_items=field.max_length,
@@ -1583,7 +1639,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
                 min=field.min_value,
                 max=field.max_value,
@@ -1594,7 +1650,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
                 min=field.min_value,
                 max=field.max_value,
@@ -1605,7 +1661,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
             )
         elif field.field_type == datetime.date:
@@ -1614,7 +1670,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
             )
         elif field.field_type == datetime.datetime:
@@ -1623,7 +1679,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
             )
         elif field.field_type == dict:
@@ -1632,7 +1688,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
             )
         else:
@@ -1641,7 +1697,7 @@ class CRUDModel:
                 example=field.example(),
                 description=field.description,
                 enum=field.get_choices(),
-                default=field.get_default_value({}),
+                default=field.default_value,
                 readonly=field.should_auto_increment,
                 min_length=field.min_length,
                 max_length=field.max_length,

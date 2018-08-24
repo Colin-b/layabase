@@ -6,6 +6,18 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.0.0 (2018-08-24) ##
+
+### Release notes ###
+
+- [Mongo] default_value must now be a default value, to provide a function use the new get_default_value parameter.
+- [Mongo] DictColumn fields must now be dictionary, to provide a function use the new get_fields parameter.
+- [Mongo] DictColumn index_fields must now be dictionary, to provide a function use the new get_index_fields parameter.
+
+### Enhancements ###
+
+- [Mongo] Providing methods for a default value, DictColumn fields or index_fields no longer requires to handle empty as a normal case, received data will always be client sent data.
+
 ## Version 11.0.0 (2018-08-23) ##
 
 ### Release notes ###
