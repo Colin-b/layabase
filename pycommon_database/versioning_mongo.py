@@ -22,7 +22,7 @@ class VersionedCRUDModel(CRUDModel):
     valid_until_revision = Column(int, index_type=IndexType.Unique, description='Record is valid until this revision (excluded).')
 
     @classmethod
-    def update_indexes(cls, document: dict):
+    def update_indexes(cls, document: dict=None):
         """
         Drop all indexes and recreate them.
         As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
