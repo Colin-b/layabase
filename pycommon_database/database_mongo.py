@@ -77,9 +77,9 @@ class Column:
         Should be a boolean value. Default to False.
         :param min_value: Minimum value for a number field.
         :param max_value: Maximum value for a number field.
-        :param min_length: Minimum value length. Only for integer or list fields.
+        :param min_length: Minimum value length. Only for integer, list or dict fields.
         Should be an integer value. Default to None (no minimum length).
-        :param max_length: Maximum value length. Only for integer or list fields.
+        :param max_length: Maximum value length. Only for integer, list or dict fields.
         Should be an integer value. Default to None (no maximum length).
         :param example: Sample value. Should be of the field type.
         Default to None (default sample will be generated).
@@ -275,6 +275,14 @@ class Column:
                     return {self.name: [f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
                 if self.max_length and len(value) > self.max_length:
                     return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
+        elif self.field_type == dict:
+            if isinstance(value, dict):
+                if self.min_length and len(value) < self.min_length:
+                    return {self.name: [
+                        f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
+                if self.max_length and len(value) > self.max_length:
+                    return {
+                        self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
         elif self.field_type == int:
             if isinstance(value, str):
                 try:
@@ -512,6 +520,10 @@ class DictColumn(Column):
         Note that it is not allowed to force False if field has a default value.
         :param is_required: If field value must be specified in client requests. Use it to avoid heavy requests.
         Should be a boolean value. Default to False.
+        :param min_length: Minimum number of items.
+        Should be an integer value. Default to None (no minimum length).
+        :param max_length: Maximum number of items.
+        Should be an integer value. Default to None (no maximum length).
         """
         kwargs.pop('field_type', None)
 

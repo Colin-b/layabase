@@ -17,6 +17,7 @@ List all changes in various categories:
 ### Enhancements ###
 
 - [Mongo] Providing methods for a default value, DictColumn fields or index_fields no longer requires to handle empty as a normal case, received data will always be client sent data.
+- [Mongo] Allow to provide min_length and max_length for dict columns.
 
 ## Version 11.0.0 (2018-08-23) ##
 
