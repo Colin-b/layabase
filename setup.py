@@ -21,7 +21,7 @@ setup(
         # Used to manage fields
         'flask-restplus==0.11.0',
         # Used to handle errors
-        'pycommon-error==1.0.0'
+        'pycommon-error==1.1.0'
     ],
     extras_require={
         'testing': [
