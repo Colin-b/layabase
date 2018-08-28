@@ -2584,6 +2584,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestVersionedController(database.CRUDController):
         pass
 
+    class TestNullableAutoSetController(database.CRUDController):
+        pass
+
     class TestVersionedUniqueNonPrimaryController(database.CRUDController):
         pass
 
@@ -2614,6 +2617,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIdController.namespace(TestAPI)
         cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
+        cls.TestNullableAutoSetController.namespace(TestAPI)
         cls.TestVersionedUniqueNonPrimaryController.namespace(TestAPI)
         cls.TestUniqueNonPrimaryController.namespace(TestAPI)
         cls.TestIntAndFloatController.namespace(TestAPI)
@@ -2697,6 +2701,11 @@ class MongoCRUDControllerTest(unittest.TestCase):
         class TestIdModel(database_mongo.CRUDModel, base=base, table_name='id_table_name'):
             _id = database_mongo.Column(is_primary_key=True)
 
+        class TestNullableAutoSetModel(database_mongo.CRUDModel, base=base, table_name='nullable_auto_set_table_name'):
+            prim_def_inc = database_mongo.Column(int, is_primary_key=True, default_value=1, should_auto_increment=True)
+            prim_def = database_mongo.Column(int, is_primary_key=True, default_value=1)
+            prim_inc = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+
         class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name'):
             key = database_mongo.Column(is_primary_key=True)
             dict_field = database_mongo.DictColumn(fields={
@@ -2740,6 +2749,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestLimitsController.model(TestLimitsModel)
         cls.TestIdController.model(TestIdModel)
         cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
+        cls.TestNullableAutoSetController.model(TestNullableAutoSetModel)
         cls.TestVersionedController.model(TestVersionedModel)
         cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
@@ -2749,7 +2759,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel,
                 TestUnvalidatedListAndDictModel,
-                TestVersionedModel, TestVersionedUniqueNonPrimaryModel, TestUniqueNonPrimaryModel, TestIntAndFloatModel,
+                TestVersionedModel, TestNullableAutoSetModel, TestVersionedUniqueNonPrimaryModel,
+                TestUniqueNonPrimaryModel, TestIntAndFloatModel,
                 TestDictInDictModel]
 
     def setUp(self):
@@ -3061,6 +3072,17 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'float_value': 1.0,
             })
         )
+
+    def test_put_without_primary_and_incremented_field(self):
+        self.TestNullableAutoSetController.post({
+            'prim_def': 1,
+        })
+        with self.assertRaises(Exception) as cm:
+            self.TestNullableAutoSetController.put({
+                'prim_def': 1,
+            })
+        self.assertEqual({'prim_inc': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'prim_def': 1}, cm.exception.received_data)
 
     def test_delete_int_str_in_int_column(self):
         self.TestIntAndFloatController.post({
