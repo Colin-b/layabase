@@ -68,7 +68,7 @@ class Column:
         Should be a boolean value.
         Default to True if field is not a primary key.
         Default to True if field has a default value.
-        Default to True if field value should auto increment.
+        Default to True (for insert only) if field value should auto increment.
         Otherwise default to False.
         Note that it is not allowed to force False if field has a default value or if value should auto increment.
         :param is_required: If field value must be specified in client requests. Use it to avoid heavy requests.
@@ -104,15 +104,19 @@ class Column:
         self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
         if self.should_auto_increment and self.field_type is not int:
             raise Exception('Only int fields can be auto incremented.')
-        self.is_nullable = bool(kwargs.pop('is_nullable', True))
-        if not self.is_nullable:
+        is_nullable = bool(kwargs.pop('is_nullable', True))
+        if not is_nullable:
             if self.should_auto_increment:
                 raise Exception('A field cannot be mandatory and auto incremented at the same time.')
             if self.default_value:
                 raise Exception('A field cannot be mandatory and having a default value at the same time.')
+            self._is_nullable_on_insert = is_nullable
+            self._is_nullable_on_update = is_nullable
         else:
             # Field will be optional only if it is not a primary key without default value and not auto incremented
-            self.is_nullable = not self.is_primary_key or self.default_value or self.should_auto_increment
+            self._is_nullable_on_insert = not self.is_primary_key or self.default_value or self.should_auto_increment
+            # Field will be optional only if it is not a primary key without default value
+            self._is_nullable_on_update = not self.is_primary_key or self.default_value
         self.is_required = bool(kwargs.pop('is_required', False))
         self.min_value = kwargs.pop('min_value', None)
         if self.min_value is not None:
@@ -205,7 +209,7 @@ class Column:
         """
         value = document.get(self.name)
         if value is None:
-            if not self.is_nullable:
+            if not self._is_nullable_on_insert:
                 return {self.name: ['Missing data for required field.']}
             return {}
         return self._validate_value(value)
@@ -222,7 +226,7 @@ class Column:
         """
         value = document.get(self.name)
         if value is None:
-            if not self.is_nullable:
+            if not self._is_nullable_on_update:
                 return {self.name: ['Missing data for required field.']}
             return {}
         return self._validate_value(value)
