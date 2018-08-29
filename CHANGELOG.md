@@ -6,9 +6,16 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.0.2 (2018-08-28) ##
+
+### Bug fixes ###
+
+- [Mongo] If a field is a primary key and does not have a default value, it is not allowed to perform an update without this field, even if it is auto_incremented.
+- [Mongo] Column.is_nullable is now a private field (for insert and update)
+
 ## Version 12.0.1 (2018-08-27) ##
 
-### Release notes ###
+### Bug fixes ###
 
 - Update dependencies
 
