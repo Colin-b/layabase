@@ -3941,9 +3941,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual({'key': 2, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1},
                          cm.exception.received_data)
 
-    @unittest.expectedFailure
     def test_update_to_non_unique_versioned(self):
-        # TODO CHeck behavior with pymongo instead of Mongo mock
         self.TestVersionedUniqueNonPrimaryController.post({
             'unique': 1,
         })
@@ -3959,9 +3957,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1},
                          cm.exception.received_data)
 
-    @unittest.expectedFailure
     def test_update_to_non_unique(self):
-        # TODO CHeck behavior with pymongo instead of Mongo mock
         self.TestUniqueNonPrimaryController.post({
             'unique': 1,
         })
@@ -3974,8 +3970,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'key': 1,
             })
         self.assertEqual({'': ['This document already exists.']}, cm.exception.errors)
-        self.assertEqual({'key': 1, 'unique': 2, 'valid_since_revision': 3, 'valid_until_revision': -1},
-                         cm.exception.received_data)
+        self.assertEqual({'key': 1, 'unique': 2}, cm.exception.received_data)
 
     def test_post_id_is_valid(self):
         self.assertEqual(
@@ -4022,7 +4017,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     'non_unique_key': '2017-01-01',
                 }
             ])
-        self.assertEqual({'': ['batch op errors occurred']}, cm.exception.errors)
+        self.assertRegex(
+            str(cm.exception.errors[''][0]),
+            "{'writeErrors': [{'index': 1, 'code': 11000, 'errmsg': 'E11000 duplicate key error', 'op': {'unique_key': 'test', 'non_unique_key': "
+      "datetime.datetime(2017, 1, 1, 0, 0), '_id': ObjectId('.*')}}], 'nInserted': 1}".
+                replace('[', '\[').
+                replace(']', '\]').
+                replace('(', '\(').
+                replace(')', '\)')
+        )
         self.assertEqual([
             {
                 'unique_key': 'test',

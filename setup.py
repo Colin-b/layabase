@@ -21,18 +21,20 @@ setup(
         # Used to manage fields
         'flask-restplus==0.11.0',
         # Used to handle errors
-        'pycommon-error==1.1.0'
+        'pycommon-error==1.1.1'
     ],
     extras_require={
         'testing': [
-            'nose',
+            # Used to run tests
+            'nose==1.3.7',
+            # Used to provide testing help
             'pycommon-test==1.9.1',
             # Used to Manage Mongo Database
-            'mongomock==3.10.0',
+            'mongomock==3.11.1',
         ],
         # Used to Manage Mongo Database
         'mongo': [
-            'pymongo[tls]==3.6.1',
+            'pymongo[tls]==3.7.1',
             # Used to manage date and datetime deserialization
             'python-dateutil==2.7.3',
         ],
