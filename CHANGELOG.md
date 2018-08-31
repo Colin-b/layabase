@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.1.0 (2018-08-31) ##
+
+### Enhancements ###
+
+- [Mongo] Add validate_and_deserialize_insert and validate_and_deserialize_update methods to CRUDModel
+
 ## Version 12.0.3 (2018-08-30) ##
 
 ### Bug fixes ###
