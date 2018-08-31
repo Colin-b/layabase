@@ -1165,16 +1165,7 @@ class CRUDModel:
 
         new_documents = copy.deepcopy(documents)
 
-        errors = {}
-
-        for index, document in enumerate(new_documents):
-            document_errors = cls.validate_insert(document)
-            if document_errors:
-                errors[index] = document_errors
-                continue
-
-            cls.deserialize_insert(document)
-
+        errors = cls.validate_and_deserialize_insert(new_documents)
         if errors:
             raise ValidationFailed(documents, errors)
 
@@ -1187,6 +1178,20 @@ class CRUDModel:
             return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
+
+    @classmethod
+    def validate_and_deserialize_insert(cls, documents: List[dict]) -> dict:
+        errors = {}
+
+        for index, document in enumerate(documents):
+            document_errors = cls.validate_insert(document)
+            if document_errors:
+                errors[index] = document_errors
+                continue
+
+            cls.deserialize_insert(document)
+
+        return errors
 
     @classmethod
     def validate_insert(cls, document: dict) -> dict:
@@ -1328,16 +1333,7 @@ class CRUDModel:
 
         new_documents = copy.deepcopy(documents)
 
-        errors = {}
-
-        for index, document in enumerate(new_documents):
-            document_errors = cls.validate_update(document)
-            if document_errors:
-                errors[index] = document_errors
-                continue
-
-            cls.deserialize_update(document)
-
+        errors = cls.validate_and_deserialize_update(new_documents)
         if errors:
             raise ValidationFailed(documents, errors)
 
@@ -1352,6 +1348,20 @@ class CRUDModel:
             raise ValidationFailed(documents, message=str(e.details))
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed([cls.serialize(document) for document in documents], message='One document already exists.')
+
+    @classmethod
+    def validate_and_deserialize_update(cls, documents: List[dict]) -> dict:
+        errors = {}
+
+        for index, document in enumerate(documents):
+            document_errors = cls.validate_update(document)
+            if document_errors:
+                errors[index] = document_errors
+                continue
+
+            cls.deserialize_update(document)
+
+        return errors
 
     @classmethod
     def validate_update(cls, document: dict) -> dict:
