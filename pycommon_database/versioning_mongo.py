@@ -155,7 +155,7 @@ class VersionedCRUDModel(CRUDModel):
     def _get_revision(cls, filters: dict) -> int:
         # TODO Use an int Column validate + deserializa
         revision = filters.get('revision')
-        if not revision:
+        if revision is None:
             raise ValidationFailed(filters, {'revision': ['Missing data for required field.']})
 
         if not isinstance(revision, int):
@@ -247,3 +247,7 @@ class VersionedCRUDModel(CRUDModel):
         if cls.audit_model:
             cls.audit_model.audit_rollback(new_revision)
         return len(expired_documents) + nb_removed
+
+    @classmethod
+    def current_revision(cls) -> int:
+        return cls._get_counter(*REVISION_COUNTER)

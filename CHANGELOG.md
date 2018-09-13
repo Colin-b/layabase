@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.2.0 (2018-09-13) ##
+
+### Enhancements ###
+
+- [Mongo] Add current_revision method to VersionedCRUDModel to retrieve current revision.
+
 ## Version 12.1.0 (2018-08-31) ##
 
 ### Enhancements ###
