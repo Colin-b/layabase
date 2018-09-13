@@ -1275,6 +1275,19 @@ class CRUDModel:
         return counter_element[counter_name]['counter']
 
     @classmethod
+    def _get_counter(cls, counter_name: str, counter_category: str=None) -> int:
+        """
+        Get current counter value.
+
+        :param counter_name: Name of the counter to retrieve.
+        :param counter_category: Category storing those counters. Default to model table name.
+        :return: Counter value or 0 if not existing.
+        """
+        counter_key = {'_id': counter_category if counter_category else cls.__collection__.name}
+        counter_element = cls.__counters__.find_one(counter_key)
+        return counter_element[counter_name]['counter'] if counter_element else 0
+
+    @classmethod
     def reset_counters(cls):
         """
         reset the class related counters

@@ -3793,6 +3793,57 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestVersionedController.get({'key': 'second'})
         )
 
+    def test_get_revision_is_valid_when_empty(self):
+        self.assertEqual(0, self.TestVersionedController._model.current_revision())
+
+    def test_get_revision_is_valid_when_1(self):
+        self.TestVersionedController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.assertEqual(1, self.TestVersionedController._model.current_revision())
+        self.TestVersionedController.post({
+            'key': 'second',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.assertEqual(2, self.TestVersionedController._model.current_revision())
+
+    def test_get_revision_is_valid_when_2(self):
+        self.TestVersionedController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersionedController.post({
+            'key': 'second',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.assertEqual(2, self.TestVersionedController._model.current_revision())
+
+    def test_rollback_to_0(self):
+        self.TestVersionedController.post({
+            'key': 'first',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.TestVersionedController.post({
+            'key': 'second',
+            'dict_field.first_key': EnumTest.Value1,
+            'dict_field.second_key': 1,
+        })
+        self.assertEqual(
+            2,
+            self.TestVersionedController.rollback_to({'revision': 0})
+        )
+        self.assertEqual(
+            [
+            ],
+            self.TestVersionedController.get({})
+        )
+
     def test_rollback_multiple_rows_is_valid(self):
         self.TestVersionedController.post({
             'key': '1',
