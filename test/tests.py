@@ -3803,12 +3803,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
             'dict_field.second_key': 1,
         })
         self.assertEqual(1, self.TestVersionedController._model.current_revision())
-        self.TestVersionedController.post({
-            'key': 'second',
-            'dict_field.first_key': EnumTest.Value1,
-            'dict_field.second_key': 1,
-        })
-        self.assertEqual(2, self.TestVersionedController._model.current_revision())
 
     def test_get_revision_is_valid_when_2(self):
         self.TestVersionedController.post({
