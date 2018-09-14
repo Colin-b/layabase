@@ -2599,6 +2599,15 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestDictInDictController(database.CRUDController):
         pass
 
+    class TestNoneInsertController(database.CRUDController):
+        pass
+
+    class TestNoneRetrieveController(database.CRUDController):
+        pass
+
+    class TestNoneNotInsertedController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2622,6 +2631,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestUniqueNonPrimaryController.namespace(TestAPI)
         cls.TestIntAndFloatController.namespace(TestAPI)
         cls.TestDictInDictController.namespace(TestAPI)
+        cls.TestNoneInsertController.namespace(TestAPI)
+        cls.TestNoneRetrieveController.namespace(TestAPI)
+        cls.TestNoneNotInsertedController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -2736,6 +2748,22 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }, is_required=True)
 
+        class TestNoneNotInsertedModel(database_mongo.CRUDModel, base=base, table_name='none_table_name'):
+            key = database_mongo.Column(int, is_primary_key=True)
+            my_dict = database_mongo.DictColumn(fields={
+                'null_value': database_mongo.Column(store_none=False),
+            }, is_required=True)
+
+        class TestNoneInsertModel(database_mongo.CRUDModel, base=base, table_name='none_table_name'):
+            key = database_mongo.Column(int, is_primary_key=True)
+            my_dict = database_mongo.DictColumn(fields={
+                'null_value': database_mongo.Column(store_none=True),
+            }, is_required=True)
+
+        class TestNoneRetrieveModel(database_mongo.CRUDModel, base=base, table_name='none_table_name'):
+            key = database_mongo.Column(int, is_primary_key=True)
+            my_dict = database_mongo.Column(dict, is_required=True)
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestStrictController.model(TestStrictModel)
@@ -2755,13 +2783,16 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
         cls.TestIntAndFloatController.model(TestIntAndFloatModel)
         cls.TestDictInDictController.model(TestDictInDictModel)
+        cls.TestNoneNotInsertedController.model(TestNoneNotInsertedModel)
+        cls.TestNoneInsertController.model(TestNoneInsertModel)
+        cls.TestNoneRetrieveController.model(TestNoneRetrieveModel)
         return [TestModel, TestStrictModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel,
                 TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel,
                 TestUnvalidatedListAndDictModel,
                 TestVersionedModel, TestNullableAutoSetModel, TestVersionedUniqueNonPrimaryModel,
                 TestUniqueNonPrimaryModel, TestIntAndFloatModel,
-                TestDictInDictModel]
+                TestDictInDictModel, TestNoneInsertModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -3225,6 +3256,38 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'float_value': 1.0,
             },
             self.TestIntAndFloatController.get_one({'int_value': "123"})
+        )
+
+    def test_get_retrieve_none_field_when_not_in_model(self):
+        self.TestNoneInsertController.post({
+            'key': 1,
+            'my_dict': {
+                'null_value': None,
+            },
+        })
+        self.assertEqual(
+            [{
+                'key': 1,
+                'my_dict': {
+                    'null_value': None,
+                },
+            }],
+            self.TestNoneRetrieveController.get({})
+        )
+
+    def test_get_do_not_retrieve_none_field_when_not_in_model(self):
+        self.TestNoneNotInsertedController.post({
+            'key': 1,
+            'my_dict': {
+                'null_value': None,
+            },
+        })
+        self.assertEqual(
+            [{
+                'key': 1,
+                'my_dict': {},
+            }],
+            self.TestNoneRetrieveController.get({})
         )
 
     def test_get_is_valid_with_float_str_in_float_column(self):
