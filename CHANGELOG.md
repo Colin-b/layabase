@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.2.1 (2018-09-14) ##
+
+### Bug fixes ###
+
+- [Mongo] Allow to create fields storing None (to be able to retrieve None in case model is not retrievable on GET).
+
 ## Version 12.2.0 (2018-09-13) ##
 
 ### Enhancements ###

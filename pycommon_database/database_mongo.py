@@ -83,6 +83,8 @@ class Column:
         Should be an integer value. Default to None (no maximum length).
         :param example: Sample value. Should be of the field type.
         Default to None (default sample will be generated).
+        :param store_none: If field value should be stored if None and None is a valid value. Should be a boolean.
+        Default to False (None values will not be stored to save space).
         """
         self.field_type = field_type or str
         name = kwargs.pop('name', None)
@@ -143,6 +145,7 @@ class Column:
         self._example = kwargs.pop('example', None)
         if self._example is not None and not isinstance(self._example, self.field_type):
             raise Exception('Example must be of field type.')
+        self._store_none = bool(kwargs.pop('store_none', False))
 
     def _update_name(self, name):
         if '.' in name:
@@ -352,8 +355,9 @@ class Column:
         """
         value = document.get(self.name)
         if value is None:
-            # Ensure that None value are not stored to save space and allow to change default value.
-            document.pop(self.name, None)
+            if not self._store_none:
+                # Ensure that None value are not stored to save space and allow to change default value.
+                document.pop(self.name, None)
         else:
             document[self.name] = self._deserialize_value(value)
 
@@ -367,8 +371,9 @@ class Column:
         """
         value = document.get(self.name)
         if value is None:
-            # Ensure that None value are not stored to save space and allow to change default value.
-            document.pop(self.name, None)
+            if not self._store_none:
+                # Ensure that None value are not stored to save space and allow to change default value.
+                document.pop(self.name, None)
         else:
             document[self.name] = self._deserialize_value(value)
 
