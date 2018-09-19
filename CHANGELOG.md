@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.3.0 (2018-09-19) ##
+
+### Enhancements ###
+
+- [Mongo] ListColumn can now be sorted.
+
 ## Version 12.2.1 (2018-09-14) ##
 
 ### Bug fixes ###

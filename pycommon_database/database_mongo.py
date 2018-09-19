@@ -720,6 +720,7 @@ class ListColumn(Column):
     def __init__(self, list_item_type: Column, **kwargs):
         """
         :param list_item_type: Column describing an element of this list.
+        :param sorted: If content should be sorted. Insertion order is kept by default.
 
         :param default_value: Default field value returned to the client if field is not set.
         Should be a dictionary or a function (with dictionary as parameter) returning a dictionary.
@@ -745,6 +746,7 @@ class ListColumn(Column):
         """
         kwargs.pop('field_type', None)
         self.list_item_column = list_item_type
+        self.sorted = bool(kwargs.pop('sorted', False))
         Column.__init__(self, list, **kwargs)
 
     def _update_name(self, name):
@@ -777,7 +779,7 @@ class ListColumn(Column):
                 if self.name in document_with_list_item:
                     new_values.append(document_with_list_item[self.name])
 
-            document[self.name] = new_values
+            document[self.name] = sorted(new_values) if self.sorted else new_values
 
     def validate_update(self, document: dict) -> dict:
         errors = Column.validate_update(self, document)
@@ -805,7 +807,7 @@ class ListColumn(Column):
                 if self.name in document_with_list_item:
                     new_values.append(document_with_list_item[self.name])
 
-            document[self.name] = new_values
+            document[self.name] = sorted(new_values) if self.sorted else new_values
 
     def validate_query(self, filters: dict) -> dict:
         errors = Column.validate_query(self, filters)

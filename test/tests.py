@@ -2572,6 +2572,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestListController(database.CRUDController):
         pass
 
+    class TestStringListController(database.CRUDController):
+        pass
+
     class TestLimitsController(database.CRUDController):
         pass
 
@@ -2622,6 +2625,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIndexController.namespace(TestAPI)
         cls.TestDefaultPrimaryKeyController.namespace(TestAPI)
         cls.TestListController.namespace(TestAPI)
+        cls.TestStringListController.namespace(TestAPI)
         cls.TestLimitsController.namespace(TestAPI)
         cls.TestIdController.namespace(TestAPI)
         cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
@@ -2697,6 +2701,10 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }))
             bool_field = database_mongo.Column(bool)
+
+        class TestStringListModel(database_mongo.CRUDModel, base=base, table_name='string_list_table_name'):
+            key = database_mongo.Column(is_primary_key=True)
+            list_field = database_mongo.ListColumn(database_mongo.Column(), sorted=True)
 
         class TestLimitsModel(database_mongo.CRUDModel, base=base, table_name='limits_table_name'):
             key = database_mongo.Column(is_primary_key=True, min_length=3, max_length=4)
@@ -2774,6 +2782,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIndexController.model(TestIndexModel)
         cls.TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
         cls.TestListController.model(TestListModel)
+        cls.TestStringListController.model(TestStringListModel)
         cls.TestLimitsController.model(TestLimitsModel)
         cls.TestIdController.model(TestIdModel)
         cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
@@ -2788,7 +2797,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestNoneRetrieveController.model(TestNoneRetrieveModel)
         return [TestModel, TestStrictModel, TestAutoIncrementModel, TestDateModel, TestDictModel, TestOptionalDictModel,
                 TestIndexModel,
-                TestDefaultPrimaryKeyModel, TestListModel, TestLimitsModel, TestIdModel,
+                TestDefaultPrimaryKeyModel, TestListModel, TestStringListModel, TestLimitsModel, TestIdModel,
                 TestUnvalidatedListAndDictModel,
                 TestVersionedModel, TestNullableAutoSetModel, TestVersionedUniqueNonPrimaryModel,
                 TestUniqueNonPrimaryModel, TestIntAndFloatModel,
@@ -4671,6 +4680,18 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_post_list_of_str_is_sorted(self):
+        self.assertEqual(
+            {
+                'key': 'my_key',
+                'list_field': ['a', 'b', 'c'],
+            },
+            self.TestStringListController.post({
+                'key': 'my_key',
+                'list_field': ['c', 'a', 'b'],
+            })
+        )
+
     def test_within_limits_is_valid(self):
         self.assertEqual(
             {
@@ -4850,6 +4871,28 @@ class MongoCRUDControllerTest(unittest.TestCase):
                     {'first_key': EnumTest.Value1, 'second_key': 2}
                 ],
                 'bool_field': True,
+            })
+        )
+
+    def test_put_list_of_str_is_sorted(self):
+        self.TestStringListController.post({
+            'key': 'my_key',
+            'list_field': ['a', 'c', 'b'],
+        })
+        self.assertEqual(
+            (
+                {
+                    'key': 'my_key',
+                    'list_field': ['a', 'b', 'c'],
+                },
+                {
+                    'key': 'my_key',
+                    'list_field': ['d', 'e', 'f'],
+                },
+            ),
+            self.TestStringListController.put({
+                'key': 'my_key',
+                'list_field': ['f', 'e', 'd'],
             })
         )
 
