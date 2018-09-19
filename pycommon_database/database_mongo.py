@@ -873,16 +873,24 @@ class CRUDModel:
     __fields__: List[Column] = []  # All Mongo fields within this model
     audit_model = None
     _skip_unknown_fields = True
+    _skip_log_for_unknown_fields = []
     logger = None
     _server_version = ''
 
-    def __init_subclass__(cls, base=None, table_name: str=None, audit: bool=False, skip_unknown_fields: bool=True, **kwargs):
+    def __init_subclass__(cls,
+                          base=None,
+                          table_name: str=None,
+                          audit: bool=False,
+                          skip_unknown_fields: bool=True,
+                          skip_log_for_unknown_fields: List[str]=None,
+                          **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         cls.logger = logging.getLogger(f'{__name__}.{table_name}')
         cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if
                           isinstance(attribute[1], Column)]
         cls._skip_unknown_fields = skip_unknown_fields
+        cls._skip_log_for_unknown_fields = skip_log_for_unknown_fields or []
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
@@ -1078,7 +1086,7 @@ class CRUDModel:
             del filters[unknown_field]
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
-            else:
+            elif unknown_field not in cls._skip_log_for_unknown_fields:
                 cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
         # Deserialize dot notation values
@@ -1244,7 +1252,7 @@ class CRUDModel:
             del document[unknown_field]
             if known_field:
                 document.setdefault(known_field.name, {}).update(field_value)
-            else:
+            elif unknown_field not in cls._skip_log_for_unknown_fields:
                 cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
     @classmethod
@@ -1434,7 +1442,7 @@ class CRUDModel:
             del document[unknown_field]
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
-            else:
+            elif unknown_field not in cls._skip_log_for_unknown_fields:
                 cls.logger.warning(f'Skipping unknown field {unknown_field}.')
 
         document_without_dot_notation = {**document, **known_fields}

@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.4.0 (2018-09-19) ##
+
+### Enhancements ###
+
+- [Mongo] It is now possible to avoid logging unknown fields.
+
 ## Version 12.3.0 (2018-09-19) ##
 
 ### Enhancements ###
