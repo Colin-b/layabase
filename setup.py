@@ -18,17 +18,15 @@ setup(
         'test',
     ]),
     install_requires=[
-        # Used to manage fields
-        'flask-restplus==0.11.0',
         # Used to handle errors
-        'pycommon-error==1.1.1'
+        'pycommon-error==1.1.2'
     ],
     extras_require={
         'testing': [
             # Used to run tests
             'nose==1.3.7',
             # Used to provide testing help
-            'pycommon-test==1.9.1',
+            'pycommon-test==1.10.2',
             # Used to Manage Mongo Database
             'mongomock==3.11.1',
         ],
@@ -40,8 +38,8 @@ setup(
         ],
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [
-            'marshmallow==2.15.4',
-            'SQLAlchemy==1.2.11',
+            'marshmallow==2.15.6',
+            'SQLAlchemy==1.2.12',
             'marshmallow_sqlalchemy==0.14.1',
         ],
     },
