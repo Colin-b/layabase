@@ -19,14 +19,14 @@ setup(
     ]),
     install_requires=[
         # Used to handle errors
-        'pycommon-error==1.1.1'
+        'pycommon-error==1.1.2'
     ],
     extras_require={
         'testing': [
             # Used to run tests
             'nose==1.3.7',
             # Used to provide testing help
-            'pycommon-test==1.10.1',
+            'pycommon-test==1.10.2',
             # Used to Manage Mongo Database
             'mongomock==3.11.1',
         ],
