@@ -58,8 +58,9 @@ class CRUDModel:
         """
         query = cls._session.query(cls)
 
-        if 'order_by' in filters:
-            query = query.order_by(*filters.pop('order_by'))
+        order_by = filters.pop('order_by', [])
+        if order_by:
+            query = query.order_by(*order_by)
 
         query_limit = filters.pop('limit', None)
         query_offset = filters.pop('offset', None)
@@ -321,6 +322,7 @@ class CRUDModel:
     def query_get_parser(cls):
         query_get_parser = cls._query_parser()
         query_get_parser.add_argument('limit', type=inputs.positive)
+        query_get_parser.add_argument('order_by', type=str, action='append')
         if _supports_offset(cls.metadata.bind.url.drivername):
             query_get_parser.add_argument('offset', type=inputs.natural)
         return query_get_parser
