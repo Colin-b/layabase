@@ -1265,6 +1265,7 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
                 'mandatory': int,
                 'optional': str,
                 'limit': inputs.positive,
+                'order_by': str,
                 'offset': inputs.natural,
             },
             parser_types(self.TestController.query_get_parser))
@@ -1343,6 +1344,78 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
         self.assertEqual(
             {'enum_field': ['Value1', 'Value2'], 'key': None, 'optional_with_default': None},
             self.TestAutoIncrementController.get_response_model.fields_enum)
+
+    def test_get_with_order_by_desc_is_retrieving_elements_ordered_by_descending_mode(self):
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.TestController.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key3', 'mandatory': 3, 'optional': 'my_value3'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+            ],
+            self.TestController.get({'order_by': ['key desc']}))
+
+    def test_get_with_order_by_is_retrieving_elements_ordered_by_ascending_mode(self):
+        self.TestController.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+                {'key': 'my_key3', 'mandatory': 3, 'optional': 'my_value3'},
+            ],
+            self.TestController.get({'order_by': ['key']}))
+
+    def test_get_with_2_order_by_is_retrieving_elements_ordered_by(self):
+        self.TestController.post({
+            'key': 'my_key3',
+            'mandatory': 3,
+            'optional': 'my_value3',
+        })
+        self.TestController.post({
+            'key': 'my_key1',
+            'mandatory': 1,
+            'optional': 'my_value1',
+        })
+        self.TestController.post({
+            'key': 'my_key2',
+            'mandatory': 2,
+            'optional': 'my_value2',
+        })
+        self.assertEqual(
+            [
+                {'key': 'my_key1', 'mandatory': 1, 'optional': 'my_value1'},
+                {'key': 'my_key2', 'mandatory': 2, 'optional': 'my_value2'},
+                {'key': 'my_key3', 'mandatory': 3, 'optional': 'my_value3'},
+            ],
+            self.TestController.get({'order_by': ['key', 'mandatory desc']}))
 
     def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(self):
         self.TestController.post({
@@ -1599,6 +1672,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 'mandatory',
                 'optional',
                 'limit',
+                'order_by',
                 'offset',
             ],
             [arg.name for arg in self.TestController.query_get_parser.args]
@@ -2310,6 +2384,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 'mandatory': int,
                 'optional': str,
                 'limit': inputs.positive,
+                'order_by': str,
                 'offset': inputs.natural,
             },
             parser_types(self.TestController.query_get_parser))
@@ -2325,6 +2400,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 'mandatory': int,
                 'optional': str,
                 'limit': inputs.positive,
+                'order_by': str,
                 'offset': inputs.natural,
                 'revision': int,
             },
