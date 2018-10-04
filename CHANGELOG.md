@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.5.0 (2018-10-04) ##
+
+### Enhancements ###
+
+- [SqlAlchemy] add the order_by feature as a parameter for the service
+
 ## Version 12.4.1 (2018-10-01) ##
 
 ### Bug fixes ###
