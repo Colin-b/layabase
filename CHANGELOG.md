@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.7.0 (2018-10-05) ##
+
+### Enhancements ###
+
+- [Mongo] Differentiate get and delete validation to allow custom behavior in one case and not another.
+
 ## Version 12.6.0 (2018-10-04) ##
 
 ### Enhancements ###
