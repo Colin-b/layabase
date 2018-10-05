@@ -1467,7 +1467,7 @@ class CRUDModel:
         Each entry if composed of a field name associated to a value.
         :returns Number of removed documents.
         """
-        errors = cls.validate_query(filters)
+        errors = cls.validate_remove(filters)
         if errors:
             raise ValidationFailed(filters, errors)
 
@@ -1482,6 +1482,18 @@ class CRUDModel:
         if cls.logger.isEnabledFor(logging.DEBUG):
             cls.logger.debug(f'{nb_removed} documents removed.')
         return nb_removed
+
+    @classmethod
+    def validate_remove(cls, filters: dict) -> dict:
+        """
+        Validate a document(s) removal request.
+
+        :param filters: Provided filters.
+        Each entry if composed of a field name associated to a value.
+        :return: Validation errors that might have occurred. Empty if no error occurred.
+        Entry would be composed of a field name associated to a list of error messages.
+        """
+        return cls.validate_query(filters)
 
     @classmethod
     def _insert_many(cls, documents: List[dict]):
