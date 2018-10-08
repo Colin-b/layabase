@@ -7093,6 +7093,43 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                           ]
                           )
 
+    def test_revision_not_shared_if_not_versioned(self):
+        self.assertEqual(
+            {'optional': None, 'mandatory': 1, 'key': 'my_key'},
+            self.TestController.post({
+                'key': 'my_key',
+                'mandatory': 1,
+            })
+        )
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self._check_audit(self.TestController,
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'key': 'my_key',
+                                  'mandatory': 1,
+                                  'optional': None,
+                                  'revision': 1,
+                              },
+                          ]
+                          )
+        self._check_audit(self.TestVersionedController,
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'revision': 1,
+                                  'table_name': 'versioned_table_name',
+                              },
+                          ]
+                          )
+
     def test_post_with_enum_is_valid(self):
         self.assertEqual(
             {'enum_fld': 'Value1', 'key': 'my_key'},

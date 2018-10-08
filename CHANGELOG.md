@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.7.1 (2018-10-08) ##
+
+### Bug fixes ###
+
+- [Mongo] Revision was shared even if model was not versioned.
+
 ## Version 12.7.0 (2018-10-05) ##
 
 ### Enhancements ###
