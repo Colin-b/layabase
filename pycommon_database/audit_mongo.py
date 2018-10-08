@@ -62,7 +62,7 @@ def _common_audit(model, base):
         @classmethod
         def _audit_action(cls, action: Action, document: dict):
             document.pop('_id', None)
-            document[cls.revision.name] = cls._increment(*REVISION_COUNTER)
+            document[cls.revision.name] = cls._increment('revision', model.__tablename__)
             document[cls.audit_user.name] = current_user_name()
             document[cls.audit_date_utc.name] = datetime.datetime.utcnow()
             document[cls.audit_action.name] = action.value
