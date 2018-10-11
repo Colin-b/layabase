@@ -19,26 +19,26 @@ setup(
     ]),
     install_requires=[
         # Used to handle errors
-        'pycommon-error==1.2.0'
+        'pycommon-error==1.3.0'
     ],
     extras_require={
         'testing': [
             # Used to run tests
             'nose==1.3.7',
             # Used to provide testing help
-            'pycommon-test==1.11.0',
+            'pycommon-test==1.12.0',
             # Used to Manage Mongo Database
             'mongomock==3.11.1',
         ],
         # Used to Manage Mongo Database
         'mongo': [
-            'pymongo[tls]==3.7.1',
+            'pymongo[tls]==3.7.2',
             # Used to manage date and datetime deserialization
             'python-dateutil==2.7.3',
         ],
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [
-            'marshmallow==2.15.6',
+            'marshmallow==2.16.0',
             'SQLAlchemy==1.2.12',
             'marshmallow_sqlalchemy==0.14.1',
         ],
