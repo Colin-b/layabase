@@ -247,7 +247,7 @@ class Column:
                     value = dateutil.parser.parse(value)
                 except ValueError or OverflowError:
                     return {self.name: ['Not a valid datetime.']}
-        elif self.field_type == datetime.date:
+        elif issubclass(datetime.date, self.field_type):
             if isinstance(value, str):
                 try:
                     value = dateutil.parser.parse(value).date()

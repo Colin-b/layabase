@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.7.3 (2018-10-15) ##
+
+### Bug fixes ###
+
+- Check field_type is a subclass of datetime allows mocking datetime.
+
 ## Version 12.7.2 (2018-10-11) ##
 
 ### Bug fixes ###
