@@ -68,7 +68,7 @@ def _create_from(model):
             row['audit_action'] = action.value
             row_model, errors = cls.schema().load(row, session=cls._session)
             if errors:
-                raise ValidationFailed(row, marshmallow_errors=errors)
+                raise ValidationFailed(row, errors)
             cls._session.add(row_model)  # Let any error be handled by the caller (main model), same for commit
 
     for attribute in inspect(model).attrs:
