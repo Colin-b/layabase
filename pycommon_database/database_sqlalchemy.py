@@ -131,7 +131,7 @@ class CRUDModel:
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
         if errors:
-            raise ValidationFailed(rows, marshmallow_errors=errors)
+            raise ValidationFailed(rows, errors)
         try:
             cls._session.add_all(models)
             if cls.audit_model:
@@ -162,7 +162,7 @@ class CRUDModel:
             logger.exception('Database could not be reached.')
             raise Exception('Database could not be reached.')
         if errors:
-            raise ValidationFailed(row, marshmallow_errors=errors)
+            raise ValidationFailed(row, errors)
         try:
             cls._session.add(model)
             if cls.audit_model:
@@ -200,7 +200,7 @@ class CRUDModel:
             previous_row = _model_field_values(previous_model)
             new_model, errors = cls.schema().load(row, instance=previous_model, partial=True, session=cls._session)
             if errors:
-                raise ValidationFailed(row, marshmallow_errors=errors)
+                raise ValidationFailed(row, errors)
             new_row = _model_field_values(new_model)
 
             previous_rows.append(previous_row)
@@ -241,7 +241,7 @@ class CRUDModel:
         previous_row = _model_field_values(previous_model)
         new_model, errors = cls.schema().load(row, instance=previous_model, partial=True, session=cls._session)
         if errors:
-            raise ValidationFailed(row, marshmallow_errors=errors)
+            raise ValidationFailed(row, errors)
         new_row = _model_field_values(new_model)
         try:
             cls._session.add(new_model)
