@@ -1817,11 +1817,11 @@ def _reset(base):
     If the database was already created, then drop all tables and recreate them all.
     """
     if base:
-        for collection in base.collection_names():
+        for collection in base.list_collection_names():
             _reset_collection(base, collection)
 
 
-def _reset_collection(base, collection):
+def _reset_collection(base, collection: str):
     """
     Reset collection and keep indexes.
     """
@@ -1843,7 +1843,7 @@ def _dump(base, dump_path: str):
     """
     logger.debug(f'dumping collections as bson...')
     pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
-    for collection in base.collection_names():
+    for collection in base.list_collection_names():
         dump_file = os.path.join(dump_path, f'{collection}.bson')
         logger.debug(f'dumping collection {collection} in {dump_file}')
         documents = base[collection].find({})
