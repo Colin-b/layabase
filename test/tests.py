@@ -6828,6 +6828,15 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     class TestVersionedController(database.CRUDController):
         pass
 
+    class TestPrimaryIntController(database.CRUDController):
+        pass
+
+    class TestIntController(database.CRUDController):
+        pass
+
+    class TestPrimaryIntVersionedController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -6836,6 +6845,9 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         cls.TestController.namespace(TestAPI)
         cls.TestEnumController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
+        cls.TestPrimaryIntController.namespace(TestAPI)
+        cls.TestIntController.namespace(TestAPI)
+        cls.TestPrimaryIntVersionedController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -6854,6 +6866,17 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             enum_fld = database_mongo.Column(EnumTest)
 
+        class TestPrimaryIntModel(database_mongo.CRUDModel, base=base, table_name='prim_int_table_name', audit=True):
+            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            other = database_mongo.Column()
+
+        class TestPrimaryIntVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='prim_int_version_table_name', audit=True):
+            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            other = database_mongo.Column()
+
+        class TestIntModel(database_mongo.CRUDModel, base=base, table_name='int_table_name', audit=True):
+            key = database_mongo.Column(int)
+
         class TestVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='versioned_table_name',
                                  audit=True):
             key = database_mongo.Column(str, is_primary_key=True)
@@ -6862,8 +6885,11 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestEnumController.model(TestEnumModel)
+        cls.TestPrimaryIntController.model(TestPrimaryIntModel)
+        cls.TestIntController.model(TestIntModel)
+        cls.TestPrimaryIntVersionedController.model(TestPrimaryIntVersionedModel)
         cls.TestVersionedController.model(TestVersionedModel)
-        return [TestModel, TestEnumModel, TestVersionedModel]
+        return [TestModel, TestEnumModel, TestPrimaryIntModel, TestPrimaryIntVersionedModel, TestVersionedModel, TestIntModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -7070,6 +7096,160 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                               },
                           ]
                           )
+
+    def test_versioned_int_primary_key_is_reset_after_delete(self):
+        self.assertEqual(
+            {
+                'key': 1,
+                'other': 'test1',
+                'valid_since_revision': 1,
+                'valid_until_revision': -1,
+            },
+            self.TestPrimaryIntVersionedController.post({'other': 'test1'})
+        )
+        self.assertEqual(
+            1,
+            self.TestPrimaryIntVersionedController.delete({})
+        )
+        self.assertEqual(
+            {
+                'key': 1,
+                'other': 'test1',
+                'valid_since_revision': 3,
+                'valid_until_revision': -1,
+            },
+            self.TestPrimaryIntVersionedController.post({'other': 'test1'})
+        )
+        self._check_audit(
+            self.TestPrimaryIntVersionedController,
+            [{'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'revision': 1,
+              'table_name': 'prim_int_version_table_name'},
+             {'audit_action': 'Delete',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'revision': 2,
+              'table_name': 'prim_int_version_table_name'},
+             {'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'revision': 3,
+              'table_name': 'prim_int_version_table_name'}]
+        )
+        self.assertEqual(
+            [{'key': 1,
+              'other': 'test1',
+              'valid_since_revision': 1,
+              'valid_until_revision': 2},
+             {'key': 1,
+              'other': 'test1',
+              'valid_since_revision': 3,
+              'valid_until_revision': -1}],
+            self.TestPrimaryIntVersionedController.get_history({})
+        )
+
+    def test_int_primary_key_is_reset_after_delete(self):
+        self.assertEqual(
+            {
+                'key': 1,
+                'other': 'test1',
+            },
+            self.TestPrimaryIntController.post({'other': 'test1'})
+        )
+        self.assertEqual(
+            1,
+            self.TestPrimaryIntController.delete({})
+        )
+        self.assertEqual(
+            {
+                'key': 1,
+                'other': 'test1',
+            },
+            self.TestPrimaryIntController.post({'other': 'test1'})
+        )
+        self.assertEqual(
+            {
+                'key': 2,
+                'other': 'test1',
+            },
+            self.TestPrimaryIntController.post({'other': 'test1'})
+        )
+        self._check_audit(
+            self.TestPrimaryIntController,
+            [{'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 1,
+              'other': 'test1',
+              'revision': 1},
+             {'audit_action': 'Delete',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 1,
+              'other': 'test1',
+              'revision': 2},
+             {'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 1,
+              'other': 'test1',
+              'revision': 3},
+             {'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 2,
+              'other': 'test1',
+              'revision': 4}]
+        )
+
+    def test_int_revision_is_not_reset_after_delete(self):
+        self.assertEqual(
+            {
+                'key': 1,
+            },
+            self.TestIntController.post({'key': 1})
+        )
+        self.assertEqual(
+            1,
+            self.TestIntController.delete({})
+        )
+        self.assertEqual(
+            {
+                'key': 1,
+            },
+            self.TestIntController.post({'key': 1})
+        )
+        self.assertEqual(
+            {
+                'key': 2,
+            },
+            self.TestIntController.post({'key': 2})
+        )
+        self._check_audit(
+            self.TestIntController,
+            [{'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 1,
+              'revision': 1},
+             {'audit_action': 'Delete',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 1,
+              'revision': 2},
+             {'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 1,
+              'revision': 3},
+             {'audit_action': 'Insert',
+              'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+              'audit_user': '',
+              'key': 2,
+              'revision': 4}]
+        )
 
     def test_post_without_optional_is_valid(self):
         self.assertEqual(

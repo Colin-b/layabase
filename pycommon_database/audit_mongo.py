@@ -2,10 +2,11 @@ import logging
 import datetime
 import enum
 import copy
+from typing import Type
 
-from pycommon_database.database_mongo import Column, IndexType, CRUDModel
+from pycommon_database.database_mongo import Column, CRUDModel
 from pycommon_database.audit import current_user_name
-from pycommon_database.versioning_mongo import VersionedCRUDModel, REVISION_COUNTER
+from pycommon_database.versioning_mongo import VersionedCRUDModel
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +19,11 @@ class Action(enum.IntEnum):
     Rollback = 4
 
 
-def _create_from(model, base):
+def _create_from(model: Type[CRUDModel], base):
     return _versioning_audit(model, base) if issubclass(model, VersionedCRUDModel) else _common_audit(model, base)
 
 
-def _common_audit(model, base):
+def _common_audit(model: Type[CRUDModel], base):
     class AuditModel(model, base=base, table_name=f'audit_{model.__tablename__}', audit=False):
         """
         Class providing Audit fields for a MONGODB model.
@@ -71,7 +72,7 @@ def _common_audit(model, base):
     return AuditModel
 
 
-def _versioning_audit(model, base):
+def _versioning_audit(model: Type[VersionedCRUDModel], base):
     class AuditModel(CRUDModel, base=base, table_name='audit', audit=False):
         """
         Class providing the audit for all versioned MONGODB models.
