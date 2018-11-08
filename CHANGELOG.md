@@ -12,6 +12,7 @@ List all changes in various categories:
 
 - [Mongo] Faster validation.
 - [Mongo] Only consider ISO8601 as valid date or date-time format.
+- [Mongo] Forbid counters collection creation.
 
 ## Version 12.7.5 (2018-11-07) ##
 

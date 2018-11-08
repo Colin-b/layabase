@@ -1080,6 +1080,8 @@ class CRUDModel:
                           **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
+        if 'counters' == cls.__tablename__:
+            raise Exception('Counters is a reserved collection name.')
         cls.logger = logging.getLogger(f'{__name__}.{table_name}')
         cls.__fields__ = [
             field._update_name(field_name)

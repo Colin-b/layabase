@@ -6705,6 +6705,23 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestController.get_model_description_response_model.fields_flask_type)
 
 
+class MongoCountersCollectionTest(unittest.TestCase):
+
+    def setUp(self):
+        logger.info(f'-------------------------------')
+        logger.info(f'Start of {self._testMethodName}')
+
+    def tearDown(self):
+        logger.info(f'End of {self._testMethodName}')
+        logger.info(f'-------------------------------')
+
+    def test_counters_table_name_is_forbidden(self):
+        with self.assertRaises(Exception) as cm:
+            class TestModel(database_mongo.CRUDModel, base=None, table_name='counters'):
+                key = database_mongo.Column(str)
+        self.assertEqual('Counters is a reserved collection name.', str(cm.exception))
+
+
 class MongoCRUDControllerFailuresTest(unittest.TestCase):
     class TestController(database.CRUDController):
         pass
