@@ -6,7 +6,7 @@ import json
 import logging
 import os.path
 import pathlib
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import iso8601
 import pymongo
@@ -96,57 +96,60 @@ class Column:
         self.get_default_value = self._to_get_default_value(kwargs.pop('get_default_value', None))
         self.description = kwargs.pop('description', None)
         self.index_type = kwargs.pop('index_type', None)
-
-        self.allow_none_as_filter = bool(kwargs.pop('allow_none_as_filter', False))
-        self.is_primary_key = bool(kwargs.pop('is_primary_key', False))
+        self.allow_none_as_filter: bool = bool(kwargs.pop('allow_none_as_filter', False))
+        self.should_auto_increment: bool = bool(kwargs.pop('should_auto_increment', False))
+        self.is_required: bool = bool(kwargs.pop('is_required', False))
+        self.min_value = kwargs.pop('min_value', None)
+        self.max_value = kwargs.pop('max_value', None)
+        self.min_length: int = kwargs.pop('min_length', None)
+        if self.min_length is not None:
+            self.min_length = int(self.min_length)
+        self.max_length: int = kwargs.pop('max_length', None)
+        if self.max_length is not None:
+            self.max_length = int(self.max_length)
+        self._example = kwargs.pop('example', None)
+        self._store_none: bool = bool(kwargs.pop('store_none', False))
+        self.is_primary_key: bool = bool(kwargs.pop('is_primary_key', False))
         if self.is_primary_key:
             if self.index_type:
                 raise Exception('Primary key fields are supposed to be indexed as unique.')
             self.index_type = IndexType.Unique
-        self.should_auto_increment = bool(kwargs.pop('should_auto_increment', False))
-        if self.should_auto_increment and self.field_type is not int:
-            raise Exception('Only int fields can be auto incremented.')
         is_nullable = bool(kwargs.pop('is_nullable', True))
         if not is_nullable:
             if self.should_auto_increment:
                 raise Exception('A field cannot be mandatory and auto incremented at the same time.')
             if self.default_value:
                 raise Exception('A field cannot be mandatory and having a default value at the same time.')
-            self._is_nullable_on_insert = is_nullable
-            self._is_nullable_on_update = is_nullable
+            self._is_nullable_on_insert = False
+            self._is_nullable_on_update = False
         else:
             # Field will be optional only if it is not a primary key without default value and not auto incremented
             self._is_nullable_on_insert = not self.is_primary_key or self.default_value or self.should_auto_increment
             # Field will be optional only if it is not a primary key without default value
             self._is_nullable_on_update = not self.is_primary_key or self.default_value
-        self.is_required = bool(kwargs.pop('is_required', False))
-        self.min_value = kwargs.pop('min_value', None)
+        self._check_parameters_validity()
+
+    def _check_parameters_validity(self):
+        if self.should_auto_increment and self.field_type is not int:
+            raise Exception('Only int fields can be auto incremented.')
         if self.min_value is not None and not isinstance(self.min_value, self.field_type):
             raise Exception(f'Minimum value should be of {self.field_type} type.')
-        self.max_value = kwargs.pop('max_value', None)
         if self.max_value is not None:
             if not isinstance(self.max_value, self.field_type):
                 raise Exception(f'Maximum value should be of {self.field_type} type.')
             if self.min_value is not None and self.max_value < self.min_value:
                 raise Exception('Maximum value should be superior or equals to minimum value')
-        self.min_length = kwargs.pop('min_length', None)
-        if self.min_length is not None:
-            self.min_length = int(self.min_length)
-            if self.min_length < 0:
-                raise Exception('Minimum length should be positive')
-        self.max_length = kwargs.pop('max_length', None)
+        if self.min_length is not None and self.min_length < 0:
+            raise Exception('Minimum length should be positive')
         if self.max_length is not None:
-            self.max_length = int(self.max_length)
             if self.max_length < 0:
                 raise Exception('Maximum length should be positive')
-            if self.min_length and self.max_length < self.min_length:
+            if self.min_length is not None and self.max_length < self.min_length:
                 raise Exception('Maximum length should be superior or equals to minimum length')
-        self._example = kwargs.pop('example', None)
         if self._example is not None and not isinstance(self._example, self.field_type):
             raise Exception('Example must be of field type.')
-        self._store_none = bool(kwargs.pop('store_none', False))
 
-    def _update_name(self, name):
+    def _update_name(self, name: str) -> 'Column':
         if '.' in name:
             raise Exception(f'{name} is not a valid name. Dots are not allowed in Mongo field names.')
         self.name = name
@@ -154,6 +157,7 @@ class Column:
             self.field_type = ObjectId
         self._validate_value = self._get_value_validation_function()
         self._deserialize_value = self._get_value_deserialization_function()
+        return self
 
     def _to_get_counter(self, counter):
         if counter:
@@ -815,7 +819,7 @@ class DictColumn(Column):
 
         return FakeModel
 
-    def _get_index_fields(self, index_type: IndexType, model_as_dict: dict, prefix: str) -> List[str]:
+    def _get_index_fields(self, index_type: IndexType, model_as_dict: Union[dict, None], prefix: str) -> List[str]:
         if model_as_dict is None:
             return self._default_index_description_model()._get_index_fields(index_type, None, f'{prefix}{self.name}.')
         return self._index_description_model(model_as_dict)._get_index_fields(index_type, model_as_dict,
@@ -943,9 +947,10 @@ class ListColumn(Column):
         self.sorted = bool(kwargs.pop('sorted', False))
         Column.__init__(self, list, **kwargs)
 
-    def _update_name(self, name):
+    def _update_name(self, name: str) -> 'Column':
         Column._update_name(self, name)
         self.list_item_column._update_name(name)
+        return self
 
     def validate_insert(self, document: dict) -> dict:
         errors = Column.validate_insert(self, document)
@@ -1049,11 +1054,6 @@ class ListColumn(Column):
         return [self.list_item_column.example()]
 
 
-def to_mongo_field(attribute):
-    attribute[1]._update_name(attribute[0])
-    return attribute[1]
-
-
 class CRUDModel:
     """
     Class providing CRUD helper methods for a Mongo model.
@@ -1081,8 +1081,10 @@ class CRUDModel:
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         cls.logger = logging.getLogger(f'{__name__}.{table_name}')
-        cls.__fields__ = [to_mongo_field(attribute) for attribute in inspect.getmembers(cls) if
-                          isinstance(attribute[1], Column)]
+        cls.__fields__ = [
+            field._update_name(field_name)
+            for field_name, field in inspect.getmembers(cls) if isinstance(field, Column)
+        ]
         cls._skip_unknown_fields = skip_unknown_fields
         cls._skip_log_for_unknown_fields = skip_log_for_unknown_fields or []
         if base is not None:  # Allow to not provide base to create fake models
@@ -1163,7 +1165,7 @@ class CRUDModel:
             raise
 
     @classmethod
-    def _get_index_fields(cls, index_type: IndexType, document: dict, prefix: str) -> List[str]:
+    def _get_index_fields(cls, index_type: IndexType, document: Union[dict, None], prefix: str) -> List[str]:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
