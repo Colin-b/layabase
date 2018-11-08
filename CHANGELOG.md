@@ -6,11 +6,18 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.7.6 (2018-11-08) ##
+
+### Bug fixes ###
+
+- [Mongo] Faster validation.
+- [Mongo] Only consider ISO8601 as valid date or date-time format.
+
 ## Version 12.7.5 (2018-11-07) ##
 
 ### Bug fixes ###
 
--[Mongo] Avoid using deprecated methods.
+- [Mongo] Avoid using deprecated methods.
 
 ## Version 12.7.4 (2018-10-30) ##
 

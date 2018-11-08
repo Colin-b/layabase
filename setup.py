@@ -34,7 +34,7 @@ setup(
         'mongo': [
             'pymongo[tls]==3.7.2',
             # Used to manage date and datetime deserialization
-            'python-dateutil==2.7.5',
+            'iso8601==0.1.12',
         ],
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [

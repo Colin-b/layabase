@@ -1824,7 +1824,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'value1',
                     'mandatory': 1,
@@ -1846,7 +1846,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1868,7 +1868,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1901,7 +1901,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1924,7 +1924,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1949,7 +1949,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -1974,7 +1974,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key',
                     'mandatory': 1,
@@ -2001,7 +2001,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2032,7 +2032,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2041,7 +2041,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2074,7 +2074,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2083,7 +2083,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2113,7 +2113,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2122,7 +2122,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2154,7 +2154,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2163,7 +2163,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2188,7 +2188,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2197,7 +2197,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2225,7 +2225,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2234,7 +2234,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2243,7 +2243,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2268,7 +2268,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2277,7 +2277,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2286,7 +2286,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2312,7 +2312,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'U',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 2,
@@ -2340,7 +2340,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             [
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2349,7 +2349,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'I',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -2358,7 +2358,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key1',
                     'mandatory': 1,
@@ -2367,7 +2367,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                 },
                 {
                     'audit_action': 'D',
-                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\d\d\d\d\+00:00',
+                    'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00',
                     'audit_user': '',
                     'key': 'my_key2',
                     'mandatory': 2,
@@ -3410,15 +3410,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
         })
         self.assertEqual(1, self.TestIndexController.delete({'unique_key': ['test2']}))
 
-    @unittest.expectedFailure
     def test_non_iso8601_date_failure(self):
-        # TODO Solve the parsing (date-util tried to guess provided date)
         with self.assertRaises(Exception) as cm:
             self.TestIndexController.post({
                 'unique_key': 'test',
                 'non_unique_key': '12/06/2017',
             })
-        self.assertEqual({'non_unique_key': ['Date format is non ISO-8601 compliant.']}, cm.exception.errors)
+        self.assertEqual({'non_unique_key': ['Not a valid date.']}, cm.exception.errors)
         self.assertEqual({'unique_key': 'test', 'non_unique_key': '12/06/2017'}, cm.exception.received_data)
 
     def test_delete_with_empty_list_is_valid(self):

@@ -8,7 +8,7 @@ import os.path
 import pathlib
 from typing import List, Dict
 
-import dateutil.parser
+import iso8601
 import pymongo
 import pymongo.errors
 from bson.errors import BSONError
@@ -121,9 +121,8 @@ class Column:
             self._is_nullable_on_update = not self.is_primary_key or self.default_value
         self.is_required = bool(kwargs.pop('is_required', False))
         self.min_value = kwargs.pop('min_value', None)
-        if self.min_value is not None:
-            if not isinstance(self.min_value, self.field_type):
-                raise Exception(f'Minimum value should be of {self.field_type} type.')
+        if self.min_value is not None and not isinstance(self.min_value, self.field_type):
+            raise Exception(f'Minimum value should be of {self.field_type} type.')
         self.max_value = kwargs.pop('max_value', None)
         if self.max_value is not None:
             if not isinstance(self.max_value, self.field_type):
@@ -153,6 +152,8 @@ class Column:
         self.name = name
         if '_id' == self.name:
             self.field_type = ObjectId
+        self._validate_value = self._get_value_validation_function()
+        self._deserialize_value = self._get_value_deserialization_function()
 
     def _to_get_counter(self, counter):
         if counter:
@@ -234,91 +235,192 @@ class Column:
             return {}
         return self._validate_value(value)
 
-    def _validate_value(self, value) -> dict:
+    def _get_value_validation_function(self) -> callable:
         """
-        Validate this value for this field.
+        Return the function used to validate values on this field.
+        """
+        if self.field_type == datetime.datetime:
+            return self._validate_date_time
+        elif issubclass(datetime.date, self.field_type):
+            return self._validate_date
+        elif isinstance(self.field_type, enum.EnumMeta):
+            return self._validate_enum
+        elif self.field_type == ObjectId:
+            return self._validate_object_id
+        elif self.field_type == str:
+            return self._validate_str
+        elif self.field_type == list:
+            return self._validate_list
+        elif self.field_type == dict:
+            return self._validate_dict
+        elif self.field_type == int:
+            return self._validate_int
+        elif self.field_type == float:
+            return self._validate_float
+        else:
+            return self._validate_type
+
+    def _validate_date_time(self, value) -> dict:
+        """
+        Validate this value for this datetime field.
 
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
-        if self.field_type == datetime.datetime:
-            if isinstance(value, str):
-                try:
-                    value = dateutil.parser.parse(value)
-                except ValueError or OverflowError:
-                    return {self.name: ['Not a valid datetime.']}
-        elif issubclass(datetime.date, self.field_type):
-            if isinstance(value, str):
-                try:
-                    value = dateutil.parser.parse(value).date()
-                except ValueError or OverflowError:
-                    return {self.name: ['Not a valid date.']}
-        elif isinstance(self.field_type, enum.EnumMeta):
-            if isinstance(value, str):
-                if value not in self.get_choices():
-                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
-                return {}  # Consider string values valid for Enum type
-        elif self.field_type == ObjectId:
-            if not isinstance(value, ObjectId):
-                try:
-                    value = ObjectId(value)
-                except BSONError as e:
-                    return {self.name: [e.args[0]]}
-        elif self.field_type == str:
-            if isinstance(value, int) and not isinstance(value, bool):
-                value = str(value)
-            elif isinstance(value, float):
-                value = str(value)
-            if isinstance(value, str):
-                if self.get_choices() and value not in self.get_choices():
-                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
-                if self.min_length and len(value) < self.min_length:
-                    return {self.name: [f'Value "{value}" is too small. Minimum length is {self.min_length}.']}
-                if self.max_length and len(value) > self.max_length:
-                    return {self.name: [f'Value "{value}" is too big. Maximum length is {self.max_length}.']}
-        elif self.field_type == list:
-            if isinstance(value, list):
-                if self.min_length and len(value) < self.min_length:
-                    return {self.name: [f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
-                if self.max_length and len(value) > self.max_length:
-                    return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
-        elif self.field_type == dict:
-            if isinstance(value, dict):
-                if self.min_length and len(value) < self.min_length:
-                    return {self.name: [
-                        f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
-                if self.max_length and len(value) > self.max_length:
-                    return {
-                        self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
-        elif self.field_type == int:
-            if isinstance(value, str):
-                try:
-                    value = int(value)
-                except ValueError:
-                    return {self.name: [f'Not a valid int.']}
-            if isinstance(value, int):
-                if self.get_choices() and value not in self.get_choices():
-                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
-                if self.min_value is not None and value < self.min_value:
-                    return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
-                if self.max_value is not None and value > self.max_value:
-                    return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
-        elif self.field_type == float:
-            if isinstance(value, str):
-                try:
-                    value = float(value)
-                except ValueError:
-                    return {self.name: [f'Not a valid float.']}
-            elif isinstance(value, int):
-                value = float(value)
-            if isinstance(value, float):
-                if self.get_choices() and value not in self.get_choices():
-                    return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
-                if self.min_value is not None and value < self.min_value:
-                    return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
-                if self.max_value is not None and value > self.max_value:
-                    return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
+        if isinstance(value, str):
+            try:
+                value = iso8601.parse_date(value)
+            except iso8601.ParseError:
+                return {self.name: ['Not a valid datetime.']}
 
+        return self._validate_type(value)
+
+    def _validate_date(self, value) -> dict:
+        """
+        Validate this value for this date field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, str):
+            try:
+                value = iso8601.parse_date(value).date()
+            except iso8601.ParseError:
+                return {self.name: ['Not a valid date.']}
+
+        return self._validate_type(value)
+
+    def _validate_enum(self, value) -> dict:
+        """
+        Validate this value for this Enum field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, str):
+            if value not in self.get_choices():
+                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+            return {}  # Consider string values valid for Enum type
+
+        return self._validate_type(value)
+
+    def _validate_object_id(self, value) -> dict:
+        """
+        Validate this value for this ObjectId field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if not isinstance(value, ObjectId):
+            try:
+                value = ObjectId(value)
+            except BSONError as e:
+                return {self.name: [str(e)]}
+
+        return self._validate_type(value)
+
+    def _validate_str(self, value) -> dict:
+        """
+        Validate this value for this str field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if (isinstance(value, int) and not isinstance(value, bool)) or isinstance(value, float):
+            value = str(value)
+        if isinstance(value, str):
+            if self.get_choices() and value not in self.get_choices():
+                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+            if self.min_length and len(value) < self.min_length:
+                return {self.name: [f'Value "{value}" is too small. Minimum length is {self.min_length}.']}
+            if self.max_length and len(value) > self.max_length:
+                return {self.name: [f'Value "{value}" is too big. Maximum length is {self.max_length}.']}
+
+        return self._validate_type(value)
+
+    def _validate_list(self, value) -> dict:
+        """
+        Validate this value for this list field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, list):
+            if self.min_length and len(value) < self.min_length:
+                return {self.name: [f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
+            if self.max_length and len(value) > self.max_length:
+                return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
+
+        return self._validate_type(value)
+
+    def _validate_dict(self, value) -> dict:
+        """
+        Validate this value for this dict field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, dict):
+            if self.min_length and len(value) < self.min_length:
+                return {self.name: [f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
+            if self.max_length and len(value) > self.max_length:
+                return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
+
+        return self._validate_type(value)
+
+    def _validate_int(self, value) -> dict:
+        """
+        Validate this value for this int field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, str):
+            try:
+                value = int(value)
+            except ValueError:
+                return {self.name: [f'Not a valid int.']}
+        if isinstance(value, int):
+            if self.get_choices() and value not in self.get_choices():
+                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+            if self.min_value is not None and value < self.min_value:
+                return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
+            if self.max_value is not None and value > self.max_value:
+                return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
+
+        return self._validate_type(value)
+
+    def _validate_float(self, value) -> dict:
+        """
+        Validate this value for this float field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, str):
+            try:
+                value = float(value)
+            except ValueError:
+                return {self.name: [f'Not a valid float.']}
+        elif isinstance(value, int):
+            value = float(value)
+        if isinstance(value, float):
+            if self.get_choices() and value not in self.get_choices():
+                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+            if self.min_value is not None and value < self.min_value:
+                return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
+            if self.max_value is not None and value > self.max_value:
+                return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
+
+        return self._validate_type(value)
+
+    def _validate_type(self, value) -> dict:
+        """
+        Validate this value according to the expected field type.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
         if not isinstance(value, self.field_type):
             return {self.name: [f'Not a valid {self.field_type.__name__}.']}
 
@@ -377,7 +479,28 @@ class Column:
         else:
             document[self.name] = self._deserialize_value(value)
 
-    def _deserialize_value(self, value):
+    def _get_value_deserialization_function(self) -> callable:
+        """
+        Return the function to convert values to the proper value that can be inserted in Mongo.
+        """
+        if self.field_type == datetime.datetime:
+            return self._deserialize_date_time
+        elif self.field_type == datetime.date:
+            return self._deserialize_date
+        elif isinstance(self.field_type, enum.EnumMeta):
+            return self._deserialize_enum
+        elif self.field_type == ObjectId:
+            return self._deserialize_object_id
+        elif self.field_type == int:
+            return self._deserialize_int
+        elif self.field_type == float:
+            return self._deserialize_float
+        elif self.field_type == str:
+            return self._deserialize_str
+        else:
+            return lambda value: value
+
+    def _deserialize_date_time(self, value):
         """
         Convert this field value to the proper value that can be inserted in Mongo.
 
@@ -387,37 +510,108 @@ class Column:
         if value is None:
             return None
 
-        if self.field_type == datetime.datetime:
-            if isinstance(value, str):
-                value = dateutil.parser.parse(value)
-        elif self.field_type == datetime.date:
-            if isinstance(value, str):
-                value = dateutil.parser.parse(value)
-            elif isinstance(value, datetime.date):
-                # dates cannot be stored in Mongo, use datetime instead
-                if not isinstance(value, datetime.datetime):
-                    value = datetime.datetime.combine(value, datetime.datetime.min.time())
-                # Ensure that time is not something else than midnight
-                else:
-                    value = datetime.datetime.combine(value.date(), datetime.datetime.min.time())
-        elif isinstance(self.field_type, enum.EnumMeta):
-            # Enum cannot be stored in Mongo, use enum value instead
-            if isinstance(value, enum.Enum):
-                value = value.value
-            elif isinstance(value, str):
-                value = self.field_type[value].value
-        elif self.field_type == ObjectId:
-            if not isinstance(value, ObjectId):
-                value = ObjectId(value)
-        elif self.field_type == int:
-            if isinstance(value, str):
-                value = int(value)
-        elif self.field_type == float:
-            if isinstance(value, str):
-                value = float(value)
-        elif self.field_type == str:
-            if not isinstance(value, str):
-                value = str(value)
+        if isinstance(value, str):
+            value = iso8601.parse_date(value)
+
+        return value
+
+    def _deserialize_date(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            value = iso8601.parse_date(value)
+        elif isinstance(value, datetime.date):
+            # dates cannot be stored in Mongo, use datetime instead
+            if not isinstance(value, datetime.datetime):
+                value = datetime.datetime.combine(value, datetime.datetime.min.time())
+            # Ensure that time is not something else than midnight
+            else:
+                value = datetime.datetime.combine(value.date(), datetime.datetime.min.time())
+
+        return value
+
+    def _deserialize_enum(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        if value is None:
+            return None
+
+        # Enum cannot be stored in Mongo, use enum value instead
+        if isinstance(value, enum.Enum):
+            value = value.value
+        elif isinstance(value, str):
+            value = self.field_type[value].value
+
+        return value
+
+    def _deserialize_object_id(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        if value is None:
+            return None
+
+        if not isinstance(value, ObjectId):
+            value = ObjectId(value)
+
+        return value
+
+    def _deserialize_int(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            value = int(value)
+
+        return value
+
+    def _deserialize_float(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            value = float(value)
+
+        return value
+
+    def _deserialize_str(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        if value is None:
+            return None
+
+        if not isinstance(value, str):
+            value = str(value)
 
         return value
 
@@ -926,7 +1120,6 @@ class CRUDModel:
         Check if indexes are present and if criteria have been modified
         :param document: Data specified by the user at the time of the index creation.
         """
-        index_modified = False
         criteria = [field_name for field_name in cls._get_index_fields(IndexType.Other, document, '')]
         unique_criteria = [field_name for field_name in cls._get_index_fields(IndexType.Unique, document, '')]
         index_name = f'idx{cls.__tablename__}'
@@ -934,12 +1127,12 @@ class CRUDModel:
         indexes = cls.__collection__.list_indexes()
         cls.logger.debug(f'Checking existing indexes: {indexes}')
         indexes = {index['name']: index['key'].keys() for index in indexes if 'name' in index and 'key' in index}
-        if (criteria and index_name not in indexes) or (not criteria and index_name in indexes) or (criteria and index_name in indexes and criteria != indexes[index_name]):
-            index_modified = True
-        elif (unique_criteria and unique_index_name not in indexes) or (not unique_criteria and unique_index_name in indexes) or\
-                (unique_criteria and unique_index_name in indexes and unique_criteria != indexes[unique_index_name]):
-            index_modified = True
-        return index_modified
+        return (criteria and index_name not in indexes) or \
+               (not criteria and index_name in indexes) or \
+               (criteria and index_name in indexes and criteria != indexes[index_name]) or \
+               (unique_criteria and unique_index_name not in indexes) or \
+               (not unique_criteria and unique_index_name in indexes) or \
+               (unique_criteria and unique_index_name in indexes and unique_criteria != indexes[unique_index_name])
 
     @classmethod
     def _create_indexes(cls, index_type: IndexType, document: dict, condition=None):
