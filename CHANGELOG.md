@@ -6,7 +6,11 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 12.7.6 (2018-11-08) ##
+## Version 12.8.0 (2018-11-08) ##
+
+### Enhancements ###
+
+- Avoid the need to import from database module.
 
 ### Bug fixes ###
 

@@ -2004,6 +2004,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
     (Mandatory).
     :param kwargs: MongoClient constructor parameters.
+    :return Mongo Database instance.
     """
     logger.info(f'Connecting to "{database_connection_url}" ...')
     database_name = os.path.basename(database_connection_url)

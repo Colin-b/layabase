@@ -38,11 +38,14 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
      - Postgre SQL: postgresql://user_name:user_password@host:port/server_name
      - Oracle: oracle://user_name:user_password@host:port/server_name
      - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
-     (Mandatory).
+    :param create_models_func: Function that will be called to create models and return them (subclasses of CRUDModel)
+     (Mandatory). It should take a single parameter (the base).
     :param kwargs: Additional custom parameters:
      for SQLAlchemy: create_engine methods parameters.
      for Mongo: MongoClient constructor parameters.
+    :return Database object.
+     for SQLAlchemy: base instance.
+     for Mongo: Mongo Database instance.
     """
     if not database_connection_url:
         raise NoDatabaseProvided()
@@ -60,6 +63,8 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
 def reset(base):
     """
     If the database was already created, then drop all tables and recreate them all.
+
+    :param base: database object as returned by the load function (Mandatory).
     """
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
