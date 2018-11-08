@@ -17,6 +17,7 @@ List all changes in various categories:
 - [Mongo] Faster validation.
 - [Mongo] Only consider ISO8601 as valid date or date-time format.
 - [Mongo] Forbid counters collection creation.
+- [Mongo] Forbid audited collection names.
 - [Mongo] Post/Put on model ensure that data is of proper type.
 
 ## Version 12.7.5 (2018-11-07) ##

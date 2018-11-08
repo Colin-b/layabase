@@ -2839,13 +2839,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'null_value': database_mongo.Column(store_none=False),
             }, is_required=True)
 
-        class TestNoneInsertModel(database_mongo.CRUDModel, base=base, table_name='none_table_name'):
+        class TestNoneInsertModel(database_mongo.CRUDModel, base=base, table_name='none_table_name', skip_name_check=True):
             key = database_mongo.Column(int, is_primary_key=True)
             my_dict = database_mongo.DictColumn(fields={
                 'null_value': database_mongo.Column(store_none=True),
             }, is_required=True)
 
-        class TestNoneRetrieveModel(database_mongo.CRUDModel, base=base, table_name='none_table_name'):
+        class TestNoneRetrieveModel(database_mongo.CRUDModel, base=base, table_name='none_table_name', skip_name_check=True):
             key = database_mongo.Column(int, is_primary_key=True)
             my_dict = database_mongo.Column(dict, is_required=True)
 
@@ -6744,7 +6744,7 @@ class MongoCountersCollectionTest(unittest.TestCase):
         with self.assertRaises(Exception) as cm:
             class TestModel(database_mongo.CRUDModel, base=None, table_name='counters'):
                 key = database_mongo.Column(str)
-        self.assertEqual('Counters is a reserved collection name.', str(cm.exception))
+        self.assertEqual('counters is a reserved collection name.', str(cm.exception))
 
 
 class MongoCRUDControllerFailuresTest(unittest.TestCase):
@@ -6943,6 +6943,18 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     def test_get_all_without_data_returns_empty_list(self):
         self.assertEqual([], self.TestController.get({}))
         self._check_audit(self.TestController, [])
+
+    def test_audit_table_name_is_forbidden(self):
+        with self.assertRaises(Exception) as cm:
+            class TestAuditModel(database_mongo.CRUDModel, base=self._db, table_name='audit'):
+                key = database_mongo.Column(str)
+        self.assertEqual('audit is a reserved collection name.', str(cm.exception))
+
+    def test_audited_table_name_is_forbidden(self):
+        with self.assertRaises(Exception) as cm:
+            class TestAuditModel(database_mongo.CRUDModel, base=self._db, table_name='audit_int_table_name'):
+                key = database_mongo.Column(str)
+        self.assertEqual('audit_int_table_name is a reserved collection name.', str(cm.exception))
 
     def test_get_parser_fields_order(self):
         self.assertEqual(

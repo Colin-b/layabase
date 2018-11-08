@@ -1077,11 +1077,12 @@ class CRUDModel:
                           audit: bool=False,
                           skip_unknown_fields: bool=True,
                           skip_log_for_unknown_fields: List[str]=None,
+                          skip_name_check: bool=False,
                           **kwargs):
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
-        if 'counters' == cls.__tablename__:
-            raise Exception('Counters is a reserved collection name.')
+        if not skip_name_check and cls._is_forbidden(base):
+            raise Exception(f'{cls.__tablename__} is a reserved collection name.')
         cls.logger = logging.getLogger(f'{__name__}.{table_name}')
         cls.__fields__ = [
             field._update_name(field_name)
@@ -1102,6 +1103,14 @@ class CRUDModel:
             cls.audit_model = _create_from(cls, base)
         else:
             cls.audit_model = None  # Ensure no circular reference when creating the audit
+
+    @classmethod
+    def _is_forbidden(cls, base):
+        if 'counters' == cls.__tablename__:
+            return True
+        if base:
+            return cls.__tablename__ in base.list_collection_names()
+        return False
 
     @classmethod
     def update_indexes(cls, document: dict=None):

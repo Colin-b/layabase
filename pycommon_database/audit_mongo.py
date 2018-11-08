@@ -24,7 +24,7 @@ def _create_from(model: Type[CRUDModel], base):
 
 
 def _common_audit(model: Type[CRUDModel], base):
-    class AuditModel(model, base=base, table_name=f'audit_{model.__tablename__}', audit=False):
+    class AuditModel(model, base=base, table_name=f'audit_{model.__tablename__}', audit=False, skip_name_check=True):
         """
         Class providing Audit fields for a MONGODB model.
         """
@@ -73,7 +73,7 @@ def _common_audit(model: Type[CRUDModel], base):
 
 
 def _versioning_audit(model: Type[VersionedCRUDModel], base):
-    class AuditModel(CRUDModel, base=base, table_name='audit', audit=False):
+    class AuditModel(CRUDModel, base=base, table_name='audit', audit=False, skip_name_check=True):
         """
         Class providing the audit for all versioned MONGODB models.
         """
