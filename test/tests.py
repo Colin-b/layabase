@@ -10,6 +10,7 @@ from threading import Thread
 import sqlalchemy
 from flask_restplus import fields as flask_rest_plus_fields, inputs
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
+from pycommon_error.validation import ValidationFailed
 from pycommon_test.flask_restplus_mock import TestAPI
 
 logging.basicConfig(
@@ -2892,19 +2893,19 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual([], self.TestController.get({}))
 
     def test_post_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual(None, cm.exception.received_data)
 
     def test_post_list_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post_many(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual([], cm.exception.received_data)
 
     def test_post_with_empty_dict_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post({})
         self.assertEqual({
             'key': ['Missing data for required field.'],
@@ -2912,20 +2913,44 @@ class MongoCRUDControllerTest(unittest.TestCase):
         }, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
+    def test_post_with_list_is_invalid(self):
+        with self.assertRaises(ValidationFailed) as cm:
+            self.TestController.post([''])
+        self.assertEqual({'': ['Must be a dictionary.']}, cm.exception.errors)
+        self.assertEqual([''], cm.exception.received_data)
+
+    def test_post_many_with_dict_is_invalid(self):
+        with self.assertRaises(ValidationFailed) as cm:
+            self.TestController.post_many({''})
+        self.assertEqual({'': ['Must be a list of dictionaries.']}, cm.exception.errors)
+        self.assertEqual({''}, cm.exception.received_data)
+
+    def test_put_with_list_is_invalid(self):
+        with self.assertRaises(ValidationFailed) as cm:
+            self.TestController.put([''])
+        self.assertEqual({'': ['Must be a dictionary.']}, cm.exception.errors)
+        self.assertEqual([''], cm.exception.received_data)
+
+    def test_put_many_with_dict_is_invalid(self):
+        with self.assertRaises(ValidationFailed) as cm:
+            self.TestController.put_many({''})
+        self.assertEqual({'': ['Must be a list.']}, cm.exception.errors)
+        self.assertEqual({''}, cm.exception.received_data)
+
     def test_post_many_with_empty_list_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post_many([])
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual([], cm.exception.received_data)
 
     def test_put_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.put(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual(None, cm.exception.received_data)
 
     def test_put_with_empty_dict_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.put({})
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)

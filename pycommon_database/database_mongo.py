@@ -1375,6 +1375,9 @@ class CRUDModel:
         if not documents:
             raise ValidationFailed([], message='No data provided.')
 
+        if not isinstance(documents, list):
+            raise ValidationFailed(documents, message='Must be a list.')
+
         new_documents = copy.deepcopy(documents)
 
         errors = cls.validate_and_deserialize_insert(new_documents)
@@ -1417,6 +1420,9 @@ class CRUDModel:
         """
         if document is None:
             return {'': ['No data provided.']}
+
+        if not isinstance(document, dict):
+            raise ValidationFailed(document, message='Must be a dictionary.')
 
         new_document = copy.deepcopy(document)
 
@@ -1556,6 +1562,9 @@ class CRUDModel:
         if not documents:
             raise ValidationFailed([], message='No data provided.')
 
+        if not isinstance(documents, list):
+            raise ValidationFailed(documents, message='Must be a list.')
+
         new_documents = copy.deepcopy(documents)
 
         errors = cls.validate_and_deserialize_update(new_documents)
@@ -1600,6 +1609,9 @@ class CRUDModel:
         """
         if document is None:
             return {'': ['No data provided.']}
+
+        if not isinstance(document, dict):
+            raise ValidationFailed(document, message='Must be a dictionary.')
 
         new_document = copy.deepcopy(document)
 
