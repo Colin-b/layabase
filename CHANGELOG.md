@@ -11,6 +11,7 @@ List all changes in various categories:
 ### Enhancements ###
 
 - Avoid the need to import from database module.
+- [Mongo] Avoid deserialization step in post_many and put_many in case at least one error already occurred.
 
 ### Bug fixes ###
 

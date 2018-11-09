@@ -1413,7 +1413,8 @@ class CRUDModel:
                 errors[index] = document_errors
                 continue
 
-            cls.deserialize_insert(document)
+            if not errors:  # Skip deserialization in case errors were found as it will stop
+                cls.deserialize_insert(document)
 
         return errors
 
@@ -1602,7 +1603,8 @@ class CRUDModel:
                 errors[index] = document_errors
                 continue
 
-            cls.deserialize_update(document)
+            if not errors:  # Skip deserialization in case errors were found as it will stop
+                cls.deserialize_update(document)
 
         return errors
 

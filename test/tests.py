@@ -10,7 +10,7 @@ from threading import Thread
 import sqlalchemy
 from flask_restplus import fields as flask_rest_plus_fields, inputs
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
-from pycommon_error.validation import ValidationFailed
+from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 from pycommon_test.flask_restplus_mock import TestAPI
 
 logging.basicConfig(
@@ -6960,6 +6960,9 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     class TestPrimaryIntVersionedController(database.CRUDController):
         pass
 
+    class TestAutoIncAuditVersionedController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -6971,6 +6974,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         cls.TestPrimaryIntController.namespace(TestAPI)
         cls.TestIntController.namespace(TestAPI)
         cls.TestPrimaryIntVersionedController.namespace(TestAPI)
+        cls.TestAutoIncAuditVersionedController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -6997,6 +7001,10 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
             other = database_mongo.Column()
 
+        class TestAutoIncAuditVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='prim_int_auto_inc_version_table_name', audit=True):
+            key = database_mongo.Column(int, is_primary_key=True, should_auto_increment=True)
+            other = database_mongo.Column(int)
+
         class TestIntModel(database_mongo.CRUDModel, base=base, table_name='int_table_name', audit=True):
             key = database_mongo.Column(int)
 
@@ -7012,7 +7020,9 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         cls.TestIntController.model(TestIntModel)
         cls.TestPrimaryIntVersionedController.model(TestPrimaryIntVersionedModel)
         cls.TestVersionedController.model(TestVersionedModel)
-        return [TestModel, TestEnumModel, TestPrimaryIntModel, TestPrimaryIntVersionedModel, TestVersionedModel, TestIntModel]
+        cls.TestAutoIncAuditVersionedController.model(TestAutoIncAuditVersionedModel)
+        return [TestModel, TestEnumModel, TestPrimaryIntModel, TestPrimaryIntVersionedModel, TestVersionedModel,
+                TestIntModel, TestAutoIncAuditVersionedModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -7285,6 +7295,101 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             self.TestPrimaryIntVersionedController.get_history({})
         )
 
+    def test_auto_incremented_fields_are_not_incremented_on_post_failure(self):
+        self.assertEqual(
+            {
+                'key': 1,
+                'other': 1,
+                'valid_since_revision': 1,
+                'valid_until_revision': -1,
+            },
+            self.TestAutoIncAuditVersionedController.post({'other': 1})
+        )
+
+        # Should not increment revision, nor the auto incremented key
+        with self.assertRaises(ValidationFailed):
+            self.TestAutoIncAuditVersionedController.post({'other': 'FAILED'})
+
+        self.assertEqual(
+            {
+                'key': 2,
+                'other': 2,
+                'valid_since_revision': 2,
+                'valid_until_revision': -1,
+            },
+            self.TestAutoIncAuditVersionedController.post({'other': 2})
+        )
+
+    def test_auto_incremented_fields_are_not_incremented_on_multi_post_failure(self):
+        self.assertEqual(
+            [
+                {
+                    'key': 1,
+                    'other': 1,
+                    'valid_since_revision': 1,
+                    'valid_until_revision': -1,
+                },
+            ],
+            self.TestAutoIncAuditVersionedController.post_many([{'other': 1}])
+        )
+
+        # Should not increment revision, nor the auto incremented key
+        with self.assertRaises(ValidationFailed):
+            self.TestAutoIncAuditVersionedController.post_many([
+                {
+                    'other': 2,
+                },
+                {'other': 'FAILED'},
+                {
+                    'other': 4,
+                },
+            ])
+
+        self.assertEqual(
+            [{
+                'key': 3,  # For performance reasons, deserialization is performed before checks on other doc (so first valid document incremented the counter)
+                'other': 5,
+                'valid_since_revision': 2,
+                'valid_until_revision': -1,
+            }],
+            self.TestAutoIncAuditVersionedController.post_many([{'other': 5}])
+        )
+
+    def test_auto_incremented_fields_are_not_incremented_on_multi_post_failure(self):
+        self.assertEqual(
+            [
+                {
+                    'key': 1,
+                    'other': 1,
+                    'valid_since_revision': 1,
+                    'valid_until_revision': -1,
+                },
+            ],
+            self.TestAutoIncAuditVersionedController.post_many([{'other': 1}])
+        )
+
+        # Should not increment revision
+        with self.assertRaises(ValidationFailed):
+            self.TestAutoIncAuditVersionedController.put_many([
+                {
+                    'other': 1,
+                },
+                {'other': 'FAILED'},
+                {
+                    'other': 1,
+                },
+            ])
+
+        self.assertEqual(
+            [{
+                'key': 2,
+                'other': 5,
+                'valid_since_revision': 2,
+                'valid_until_revision': -1,
+            }],
+            self.TestAutoIncAuditVersionedController.post_many([{'other': 5}])
+        )
+
     def test_int_primary_key_is_reset_after_delete(self):
         self.assertEqual(
             {
@@ -7504,6 +7609,39 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                               },
                           ]
                           )
+
+    def test_revision_on_versionned_audit_after_put_failure(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        with self.assertRaises(ModelCouldNotBeFound):
+            self.TestVersionedController.put({
+                'key': 'my_key2',
+                'enum_fld': EnumTest.Value2,
+            })
+        self.TestVersionedController.delete({
+            'key': 'my_key',
+        })
+        self._check_audit(self.TestVersionedController,
+                          [
+                              {
+                                  'audit_action': 'Insert',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'revision': 1,
+                                  'table_name': 'versioned_table_name',
+                              },
+                              {
+                                  'audit_action': 'Delete',
+                                  'audit_date_utc': '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})',
+                                  'audit_user': '',
+                                  'revision': 2,
+                                  'table_name': 'versioned_table_name',
+                              },
+                          ]
+                          )
+
 
     def test_versioned_audit_after_post_put_delete_rollback(self):
         self.TestVersionedController.post({
