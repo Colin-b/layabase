@@ -2688,6 +2688,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestNoneNotInsertedController(database.CRUDController):
         pass
 
+    class TestDictRequiredNonNullableVersionedController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -2707,6 +2710,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestIdController.namespace(TestAPI)
         cls.TestUnvalidatedListAndDictController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
+        cls.TestDictRequiredNonNullableVersionedController.namespace(TestAPI)
         cls.TestNullableAutoSetController.namespace(TestAPI)
         cls.TestVersionedUniqueNonPrimaryController.namespace(TestAPI)
         cls.TestUniqueNonPrimaryController.namespace(TestAPI)
@@ -2810,6 +2814,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 'second_key': database_mongo.Column(int, is_nullable=False),
             }, is_required=True)
 
+        class TestDictRequiredNonNullableVersionedModel(versioning_mongo.VersionedCRUDModel, base=base, table_name='req_not_null_versioned_table_name'):
+            key = database_mongo.Column(is_primary_key=True)
+            dict_field = database_mongo.DictColumn(fields={
+                'first_key': database_mongo.Column(EnumTest, is_nullable=False),
+                'second_key': database_mongo.Column(int, is_nullable=False),
+            }, is_required=True, is_nullable=False)
+
         class TestVersionedUniqueNonPrimaryModel(versioning_mongo.VersionedCRUDModel, base=base,
                                                  table_name='versioned_uni_table_name'):
             key = database_mongo.Column(int, should_auto_increment=True)
@@ -2865,6 +2876,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
         cls.TestNullableAutoSetController.model(TestNullableAutoSetModel)
         cls.TestVersionedController.model(TestVersionedModel)
+        cls.TestDictRequiredNonNullableVersionedController.model(TestDictRequiredNonNullableVersionedModel)
         cls.TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
         cls.TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
         cls.TestIntAndFloatController.model(TestIntAndFloatModel)
@@ -2876,7 +2888,8 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 TestIndexModel,
                 TestDefaultPrimaryKeyModel, TestListModel, TestStringListModel, TestLimitsModel, TestIdModel,
                 TestUnvalidatedListAndDictModel,
-                TestVersionedModel, TestNullableAutoSetModel, TestVersionedUniqueNonPrimaryModel,
+                TestVersionedModel, TestDictRequiredNonNullableVersionedModel,
+                TestNullableAutoSetModel, TestVersionedUniqueNonPrimaryModel,
                 TestUniqueNonPrimaryModel, TestIntAndFloatModel,
                 TestDictInDictModel, TestNoneInsertModel]
 
@@ -3436,7 +3449,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         self.assertEqual(1, self.TestIndexController.delete({'unique_key': ['test2']}))
 
     def test_non_iso8601_date_failure(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestIndexController.post({
                 'unique_key': 'test',
                 'non_unique_key': '12/06/2017',
@@ -3527,6 +3540,76 @@ class MongoCRUDControllerTest(unittest.TestCase):
             ],
             self.TestVersionedController.get({})
         )
+
+    def test_post_without_providing_required_nullable_dict_column_is_valid(self):
+        self.assertEqual(
+            {'dict_field': {'first_key': None, 'second_key': None},
+             'key': 'first',
+             'valid_since_revision': 1,
+             'valid_until_revision': -1},
+            self.TestVersionedController.post({
+                'key': 'first',
+            })
+        )
+
+    def test_post_without_providing_required_non_nullable_dict_column_is_invalid(self):
+        with self.assertRaises(ValidationFailed) as cm:
+            self.TestDictRequiredNonNullableVersionedController.post({
+                'key': 'first',
+            })
+        self.assertEqual({'dict_field': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'key': 'first'}, cm.exception.received_data)
+
+    def test_put_without_providing_required_nullable_dict_column_is_valid(self):
+        self.TestVersionedController.post({
+            'key': 'first',
+            'dict_field': {'first_key': 'Value1', 'second_key': 0},
+        })
+        self.assertEqual(
+            ({'dict_field': {'first_key': 'Value1', 'second_key': 0},
+              'key': 'first',
+              'valid_since_revision': 1,
+              'valid_until_revision': -1},
+             {'dict_field': {'first_key': 'Value1', 'second_key': 0},
+              'key': 'first',
+              'valid_since_revision': 2,
+              'valid_until_revision': -1}),
+            self.TestVersionedController.put({
+                'key': 'first',
+            })
+        )
+
+    def test_put_without_providing_required_non_nullable_dict_column_is_valid(self):
+        self.TestDictRequiredNonNullableVersionedController.post({
+            'key': 'first',
+            'dict_field': {'first_key': 'Value1', 'second_key': 0},
+        })
+        self.assertEqual(
+            ({'dict_field': {'first_key': 'Value1', 'second_key': 0},
+              'key': 'first',
+              'valid_since_revision': 1,
+              'valid_until_revision': -1},
+             {'dict_field': {'first_key': 'Value1', 'second_key': 0},
+              'key': 'first',
+              'valid_since_revision': 2,
+              'valid_until_revision': -1}),
+            self.TestDictRequiredNonNullableVersionedController.put({
+                'key': 'first',
+            })
+        )
+
+    def test_put_with_null_provided_required_non_nullable_dict_column_is_invalid(self):
+        self.TestDictRequiredNonNullableVersionedController.post({
+            'key': 'first',
+            'dict_field': {'first_key': 'Value1', 'second_key': 0},
+        })
+        with self.assertRaises(ValidationFailed) as cm:
+            self.TestDictRequiredNonNullableVersionedController.put({
+                'key': 'first',
+                'dict_field': None,
+            })
+        self.assertEqual({'dict_field': ['Missing data for required field.']}, cm.exception.errors)
+        self.assertEqual({'key': 'first', 'dict_field': None}, cm.exception.received_data)
 
     def test_revison_is_shared(self):
         self.TestVersionedController.post({
@@ -7026,14 +7109,14 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self._check_audit(self.TestController, [])
 
     def test_post_many_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post_many(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual([], cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_post_with_empty_dict_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post({})
         self.assertEqual({
             'key': ['Missing data for required field.'],
@@ -7043,21 +7126,21 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self._check_audit(self.TestController, [])
 
     def test_post_many_with_empty_list_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post_many([])
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual([], cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_put_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.put(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual(None, cm.exception.received_data)
         self._check_audit(self.TestController, [])
 
     def test_put_with_empty_dict_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.put({})
         self.assertEqual({'key': ['Missing data for required field.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
@@ -7068,7 +7151,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         self._check_audit(self.TestController, [])
 
     def test_post_without_mandatory_field_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self.TestController.post({
                 'key': 'my_key',
             })
