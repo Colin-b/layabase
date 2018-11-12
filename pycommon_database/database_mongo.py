@@ -438,18 +438,28 @@ class Column:
         Each entry if composed of a field name associated to a value.
         This field might not be in it.
         """
-        value = filters.get(self.name)
+        value = filters.pop(self.name, None)
         if value is None:
-            if not self.allow_none_as_filter:
-                filters.pop(self.name, None)
+            if self.allow_none_as_filter:
+                filters[self.name] = None
         # Allow to specify a list of values to query
         elif isinstance(value, list) and self.field_type != list:
-            if not value:
-                filters.pop(self.name, None)
-            else:
-                filters[self.name] = {'$in': [self._deserialize_value(value_in_list) for value_in_list in value]}
+            if value:  # Discard empty list as filter on non list field
+                mongo_values = [self._deserialize_value(value_in_list) for value_in_list in value]
+                if self.get_default_value(filters) in mongo_values:
+                    or_filter = filters.setdefault('$or', [])
+                    or_filter.append({self.name: {'$exists': False}})
+                    or_filter.append({self.name: {'$in': mongo_values}})
+                else:
+                    filters[self.name] = {'$in': mongo_values}
         else:
-            filters[self.name] = self._deserialize_value(value)
+            mongo_value = self._deserialize_value(value)
+            if self.get_default_value(filters) == mongo_value:
+                or_filter = filters.setdefault('$or', [])
+                or_filter.append({self.name: {'$exists': False}})
+                or_filter.append({self.name: mongo_value})
+            else:
+                filters[self.name] = mongo_value
 
     def deserialize_insert(self, document: dict):
         """

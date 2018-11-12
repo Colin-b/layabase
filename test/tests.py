@@ -4345,6 +4345,36 @@ class MongoCRUDControllerTest(unittest.TestCase):
             })
         )
 
+    def test_get_on_default_value_is_valid(self):
+        self.TestDefaultPrimaryKeyController.post({
+            'optional': 'test',
+        })
+        self.TestDefaultPrimaryKeyController.post({
+            'key': 'test2',
+            'optional': 'test2',
+        })
+        self.assertEqual(
+            [{'key': 'test', 'optional': 'test'}],
+            self.TestDefaultPrimaryKeyController.get({
+                'key': 'test',
+            })
+        )
+
+    def test_delete_on_default_value_is_valid(self):
+        self.TestDefaultPrimaryKeyController.post({
+            'optional': 'test',
+        })
+        self.TestDefaultPrimaryKeyController.post({
+            'key': 'test2',
+            'optional': 'test2',
+        })
+        self.assertEqual(
+            1,
+            self.TestDefaultPrimaryKeyController.delete({
+                'key': 'test',
+            })
+        )
+
     def test_put_without_primary_key_but_default_value_is_valid(self):
         self.assertEqual(
             {'key': 'test', 'optional': 'test2'},

@@ -6,7 +6,7 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 12.8.0 (2018-11-09) ##
+## Version 12.8.0 (2018-11-12) ##
 
 ### Enhancements ###
 
@@ -20,6 +20,7 @@ List all changes in various categories:
 - [Mongo] Forbid counters collection creation.
 - [Mongo] Forbid audited collection names.
 - [Mongo] Post/Put on model ensure that data is of proper type.
+- [Mongo] Query on default values are now returning expected content even if default value is not set in database.
 
 ## Version 12.7.5 (2018-11-07) ##
 
