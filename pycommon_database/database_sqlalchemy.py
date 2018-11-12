@@ -167,7 +167,7 @@ class CRUDModel:
             cls._session.add(model)
             if cls.audit_model:
                 cls.audit_model.audit_add(row)
-            ret = cls._session.commit()
+            cls._session.commit()
             return _model_field_values(model)
         except exc.sa_exc.DBAPIError:
             cls._session.rollback()
@@ -445,6 +445,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
     :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
      (Mandatory).
     :param pool_recycle: Number of seconds to wait before recycling a connection pool. Default value is 60.
+    :return SQLAlchemy base.
     """
     database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f'Connecting to {database_connection_url}...')
