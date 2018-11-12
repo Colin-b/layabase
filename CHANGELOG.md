@@ -6,11 +6,27 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.8.0 (2018-11-12) ##
+
+### Enhancements ###
+
+- Avoid the need to import from database module.
+- [Mongo] Avoid deserialization step in post_many and put_many in case at least one error already occurred.
+
+### Bug fixes ###
+
+- [Mongo] Faster validation.
+- [Mongo] Only consider ISO8601 as valid date or date-time format.
+- [Mongo] Forbid counters collection creation.
+- [Mongo] Forbid audited collection names.
+- [Mongo] Post/Put on model ensure that data is of proper type.
+- [Mongo] Query on default values are now returning expected content even if default value is not set in database.
+
 ## Version 12.7.5 (2018-11-07) ##
 
 ### Bug fixes ###
 
--[Mongo] Avoid using deprecated methods.
+- [Mongo] Avoid using deprecated methods.
 
 ## Version 12.7.4 (2018-10-30) ##
 

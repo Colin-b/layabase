@@ -1,17 +1,13 @@
 import os
-
 from setuptools import setup, find_packages
 
-from pycommon_database._version import __version__
-
 this_dir = os.path.abspath(os.path.dirname(__file__))
-
 with open(os.path.join(this_dir, 'README.md'), 'r') as f:
     long_description = f.read()
 
 setup(
     name='pycommon_database',
-    version=__version__,
+    version=open("pycommon_database/_version.py").readlines()[-1].split()[-1].strip("\"'"),
     description="Common Database handling",
     long_description=long_description,
     packages=find_packages(exclude=[
@@ -34,7 +30,7 @@ setup(
         'mongo': [
             'pymongo[tls]==3.7.2',
             # Used to manage date and datetime deserialization
-            'python-dateutil==2.7.5',
+            'iso8601==0.1.12',
         ],
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [
