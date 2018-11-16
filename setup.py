@@ -22,7 +22,7 @@ setup(
             # Used to run tests
             'nose==1.3.7',
             # Used to provide testing help
-            'pycommon-test==1.15.2',
+            'pycommon-test==2.0.0',
             # Used to Manage Mongo Database
             'mongomock==3.13.0',
         ],
