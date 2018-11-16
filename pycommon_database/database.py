@@ -211,6 +211,17 @@ class CRUDController:
         return cls._model.get(**request_arguments)
 
     @classmethod
+    def get_last(cls, request_arguments: dict) -> dict:
+        """
+        Return last revision of a model formatted as a dictionary.
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+        if not isinstance(request_arguments, dict):
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+        return cls._model.get_last(**request_arguments)
+
+    @classmethod
     def post(cls, new_dict: dict) -> dict:
         """
         Add a model formatted as a dictionary.

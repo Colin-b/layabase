@@ -7672,7 +7672,6 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                           ]
                           )
 
-
     def test_versioned_audit_after_post_put_delete_rollback(self):
         self.TestVersionedController.post({
             'key': 'my_key',
@@ -7720,6 +7719,129 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                               },
                           ]
                           )
+
+    def test_get_last_when_empty(self):
+        self.assertEqual(
+            self.TestVersionedController.get_last({}), {}
+        )
+
+    def test_get_last_when_single_doc_post(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.assertEqual(
+            self.TestVersionedController.get_last({}),
+            {
+                'enum_fld': 'Value1',
+                'key': 'my_key',
+                'valid_since_revision': 1,
+                'valid_until_revision': -1
+            }
+        )
+
+    def test_get_last_with_unmatched_filter(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.assertEqual(
+            self.TestVersionedController.get_last({'key': 'my_key2'}),
+            {}
+        )
+
+    def test_get_last_when_single_update(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.TestVersionedController.put({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value2,
+        })
+        self.assertEqual(
+            self.TestVersionedController.get_last({}),
+            {
+                'enum_fld': 'Value2',
+                'key': 'my_key',
+                'valid_since_revision': 2,
+                'valid_until_revision': -1
+            }
+        )
+
+    def test_get_last_when_removed(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.TestVersionedController.put({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value2,
+        })
+        self.TestVersionedController.delete({
+            'key': 'my_key',
+        })
+        self.assertEqual(
+            self.TestVersionedController.get_last({}),
+            {
+                'enum_fld': 'Value2',
+                'key': 'my_key',
+                'valid_since_revision': 2,
+                'valid_until_revision': 3
+            }
+        )
+
+    def test_get_last_with_one_removed_and_a_valid(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.TestVersionedController.put({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value2,
+        })
+        self.TestVersionedController.delete({
+            'key': 'my_key',
+        })
+        self.TestVersionedController.post({
+            'key': 'my_key2',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.assertEqual(
+            self.TestVersionedController.get_last({}),
+            {
+                'enum_fld': 'Value1',
+                'key': 'my_key2',
+                'valid_since_revision': 4,
+                'valid_until_revision': -1
+            }
+        )
+
+    def test_get_last_with_one_removed_and_a_valid_and_filter_on_removed(self):
+        self.TestVersionedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.TestVersionedController.put({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value2,
+        })
+        self.TestVersionedController.delete({
+            'key': 'my_key',
+        })
+        self.TestVersionedController.post({
+            'key': 'my_key2',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.assertEqual(
+            self.TestVersionedController.get_last({'key': 'my_key'}),
+            {
+                'enum_fld': 'Value2',
+                'key': 'my_key',
+                'valid_since_revision': 2,
+                'valid_until_revision': 3
+            }
+        )
 
     def test_delete_with_enum_is_valid(self):
         self.assertEqual(

@@ -117,6 +117,13 @@ class CRUDModel:
             cls._handle_connection_failure()
 
     @classmethod
+    def get_last(cls, **filters) -> dict:
+        """
+        Return last revision of the model formatted as a dictionary.
+        """
+        return cls.get(**filters)
+
+    @classmethod
     def add_all(cls, rows: List[dict]) -> List[dict]:
         """
         Add models formatted as a list of dictionaries.
