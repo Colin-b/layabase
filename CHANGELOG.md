@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.11.0 (2018-11-16) ##
+
+### Enhancements ###
+
+- Update dependencies to latest version (impact SQLAlchemy users by providing new features)
+
 ## Version 12.10.0 (2018-11-16) ##
 
 ### Enhancements ###
