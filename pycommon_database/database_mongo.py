@@ -6,7 +6,7 @@ import json
 import logging
 import os.path
 import pathlib
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Type
 
 import iso8601
 import pymongo
@@ -1072,15 +1072,15 @@ class CRUDModel:
     __counters__ class property must be specified in Model.
     Calling load_from(...) will provide you those properties.
     """
-    __tablename__ = None  # Name of the collection described by this model
-    __collection__ = None  # Mongo collection
-    __counters__ = None  # Mongo counters collection (to increment fields)
+    __tablename__: str = None  # Name of the collection described by this model
+    __collection__: pymongo.collection.Collection = None  # Mongo collection
+    __counters__: pymongo.collection.Collection = None  # Mongo counters collection (to increment fields)
     __fields__: List[Column] = []  # All Mongo fields within this model
-    audit_model = None
-    _skip_unknown_fields = True
-    _skip_log_for_unknown_fields = []
+    audit_model: Type["CRUDModel"] = None
+    _skip_unknown_fields: bool = True
+    _skip_log_for_unknown_fields: List[str] = []
     logger = None
-    _server_version = ''
+    _server_version: str = ''
 
     def __init_subclass__(cls,
                           base: pymongo.database.Database=None,
