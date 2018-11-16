@@ -11,6 +11,7 @@ from typing import List, Dict, Union
 import iso8601
 import pymongo
 import pymongo.errors
+import pymongo.database
 from bson.errors import BSONError
 from bson.json_util import dumps, loads
 from bson.objectid import ObjectId
@@ -695,8 +696,8 @@ class DictColumn(Column):
     def __init__(self,
                  fields: Dict[str, Column]=None,
                  get_fields=None,
-                 index_fields: Dict[str, Column] = None,
-                 get_index_fields = None,
+                 index_fields: Dict[str, Column]=None,
+                 get_index_fields=None,
                  **kwargs):
         """
         :param fields: Static definition of this dictionary.
@@ -1082,13 +1083,13 @@ class CRUDModel:
     _server_version = ''
 
     def __init_subclass__(cls,
-                          base=None,
+                          base: pymongo.database.Database=None,
                           table_name: str=None,
                           audit: bool=False,
-                          skip_unknown_fields: bool=True,
-                          skip_log_for_unknown_fields: List[str]=None,
-                          skip_name_check: bool=False,
                           **kwargs):
+        cls._skip_unknown_fields = kwargs.pop('skip_unknown_fields', True)
+        cls._skip_log_for_unknown_fields = kwargs.pop('skip_log_for_unknown_fields', [])
+        skip_name_check = kwargs.pop('skip_name_check', False)
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         if not skip_name_check and cls._is_forbidden(base):
@@ -1098,8 +1099,6 @@ class CRUDModel:
             field._update_name(field_name)
             for field_name, field in inspect.getmembers(cls) if isinstance(field, Column)
         ]
-        cls._skip_unknown_fields = skip_unknown_fields
-        cls._skip_log_for_unknown_fields = skip_log_for_unknown_fields or []
         if base is not None:  # Allow to not provide base to create fake models
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
@@ -1177,12 +1176,15 @@ class CRUDModel:
                     cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
                 else:
                     try:
-                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name, partialFilterExpression=condition)
+                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique,
+                                                        name=index_name, partialFilterExpression=condition)
                     except pymongo.errors.OperationFailure:
                         cls.logger.exception(f'Unable to create a {index_type.name} index.')
-                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
+                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique,
+                                                        name=index_name)
         except pymongo.errors.DuplicateKeyError:
-            cls.logger.exception(f'Duplicate key found for {criteria} criteria when creating a {index_type.name} index.')
+            cls.logger.exception(f'Duplicate key found for {criteria} criteria '
+                                 f'when creating a {index_type.name} index.')
             raise
 
     @classmethod
@@ -1550,7 +1552,9 @@ class CRUDModel:
         :param counter_name: Name of the counter to reset. Will be created at 0 if not existing yet.
         """
         counter_key = {'_id': cls.__collection__.name}
-        counter_update = {'$set': {f'{counter_name}.counter': 0, f'{counter_name}.last_update_time': datetime.datetime.utcnow()}}
+        counter_update = {'$set': {
+            f'{counter_name}.counter': 0, f'{counter_name}.last_update_time': datetime.datetime.utcnow()
+        }}
         cls.__counters__.find_one_and_update(counter_key, counter_update, upsert=True)
         return
 
@@ -1604,11 +1608,13 @@ class CRUDModel:
             previous_documents, updated_documents = cls._update_many(new_documents)
             if cls.logger.isEnabledFor(logging.DEBUG):
                 cls.logger.debug(f'Documents updated to {updated_documents}.')
-            return [cls.serialize(document) for document in previous_documents], [cls.serialize(document) for document in updated_documents]
+            return [cls.serialize(document) for document in previous_documents], \
+                   [cls.serialize(document) for document in updated_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
         except pymongo.errors.DuplicateKeyError:
-            raise ValidationFailed([cls.serialize(document) for document in documents], message='One document already exists.')
+            raise ValidationFailed([cls.serialize(document) for document in documents],
+                                   message='One document already exists.')
 
     @classmethod
     def validate_and_deserialize_update(cls, documents: List[dict]) -> dict:
@@ -1812,7 +1818,7 @@ class CRUDModel:
 
     @classmethod
     def query_rollback_parser(cls):
-        return  # Only VersionedCRUDModel allows rollback
+        pass  # Only VersionedCRUDModel allows rollback
 
     @classmethod
     def _query_parser(cls):
@@ -2024,7 +2030,7 @@ class CRUDModel:
         return exported_fields
 
 
-def _load(database_connection_url: str, create_models_func: callable, **kwargs):
+def _load(database_connection_url: str, create_models_func: callable, **kwargs) -> pymongo.database.Database:
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
@@ -2050,18 +2056,23 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
     return base
 
 
-def _reset(base):
+def _reset(base: pymongo.database.Database) -> None:
     """
     If the database was already created, then drop all tables and recreate them all.
+
+    :param base: database object as returned by the _load method (Mandatory).
     """
     if base:
         for collection in base.list_collection_names():
             _reset_collection(base, collection)
 
 
-def _reset_collection(base, collection: str):
+def _reset_collection(base: pymongo.database.Database, collection: str) -> None:
     """
     Reset collection and keep indexes.
+
+    :param base: database object as returned by the _load method (Mandatory).
+    :param collection: name of the collection (Mandatory).
     """
     logger.info(f'Resetting all data related to "{collection}" collection...')
     nb_removed = base[collection].delete_many({}).deleted_count
@@ -2072,12 +2083,13 @@ def _reset_collection(base, collection: str):
     logger.info(f'{nb_removed} counter records deleted')
 
 
-def _dump(base, dump_path: str):
+def _dump(base: pymongo.database.Database, dump_path: str) -> None:
     """
     Dump the content of all the collections of the provided database as bson files in the provided directory
 
     :param base: database object as returned by the _load method (Mandatory).
-    :param dump_path: directory name of where to store all the collections dumps. If the directory doesn't exist, it will be created (Mandatory).
+    :param dump_path: directory name of where to store all the collections dumps.
+    If the directory doesn't exist, it will be created (Mandatory).
     """
     logger.debug(f'dumping collections as bson...')
     pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
@@ -2090,16 +2102,19 @@ def _dump(base, dump_path: str):
                 output.write(dumps(documents))
 
 
-def _restore(base, restore_path: str):
+def _restore(base: pymongo.database.Database, restore_path: str) -> None:
     """
-        Restore in the provided database the content of all the collections dumped in the provided path as bson.
+    Restore in the provided database the content of all the collections dumped in the provided path as bson.
 
-        :param base: database object as returned by the _load method (Mandatory).
-        :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
+    :param base: database object as returned by the _load method (Mandatory).
+    :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
     """
     logger.debug(f'restoring collections dumped as bson...')
-    collections = [os.path.splitext(collection)[0] for collection in os.listdir(restore_path) if
-                   os.path.isfile(os.path.join(restore_path, collection)) and os.path.splitext(collection)[1] == '.bson']
+    collections = [
+        os.path.splitext(collection)[0]
+        for collection in os.listdir(restore_path)
+        if os.path.isfile(os.path.join(restore_path, collection)) and os.path.splitext(collection)[1] == '.bson'
+    ]
     for collection in collections:
         restore_file = os.path.join(restore_path, f'{collection}.bson')
         with open(restore_file, "r") as input:
@@ -2111,11 +2126,9 @@ def _restore(base, restore_path: str):
                 base[collection].insert_many(documents)
 
 
-def _get_python_type(field: Column):
+def _get_python_type(field: Column) -> callable:
     """
-    Return the Python type corresponding to this Mongo field.
-
-    :raises Exception if field type is not managed yet.
+    Return a function taking a single parameter (the value) and converting to the required field type.
     """
     if field.field_type == bool:
         return inputs.boolean
