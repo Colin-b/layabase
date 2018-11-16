@@ -1092,14 +1092,14 @@ class CRUDModel:
         skip_name_check = kwargs.pop('skip_name_check', False)
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
-        if not skip_name_check and cls._is_forbidden(base):
-            raise Exception(f'{cls.__tablename__} is a reserved collection name.')
         cls.logger = logging.getLogger(f'{__name__}.{table_name}')
         cls.__fields__ = [
             field._update_name(field_name)
             for field_name, field in inspect.getmembers(cls) if isinstance(field, Column)
         ]
         if base is not None:  # Allow to not provide base to create fake models
+            if not skip_name_check and cls._is_forbidden():
+                raise Exception(f'{cls.__tablename__} is a reserved collection name.')
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
             server_info = base.client.server_info()
@@ -1114,12 +1114,10 @@ class CRUDModel:
             cls.audit_model = None  # Ensure no circular reference when creating the audit
 
     @classmethod
-    def _is_forbidden(cls, base):
-        if 'counters' == cls.__tablename__:
-            return True
-        if base:
-            return cls.__tablename__ in base.list_collection_names()
-        return False
+    def _is_forbidden(cls):
+        # Counters collection is managed by pycommon_database
+        # Audit collections are managed by pycommon_database
+        return not cls.__tablename__ or 'counters' == cls.__tablename__ or cls.__tablename__.startswith('audit')
 
     @classmethod
     def update_indexes(cls, document: dict=None):
