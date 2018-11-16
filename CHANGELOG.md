@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.11.1 (2018-11-16) ##
+
+### Bug fixes ###
+
+- [Mongo] Prevent creation of audit* or counters collection only.
+
 ## Version 12.11.0 (2018-11-16) ##
 
 ### Enhancements ###
