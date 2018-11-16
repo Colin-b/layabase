@@ -15,7 +15,7 @@ setup(
     ]),
     install_requires=[
         # Used to handle errors
-        'pycommon-error==2.0.0'
+        'pycommon-error==2.1.0'
     ],
     extras_require={
         'testing': [
