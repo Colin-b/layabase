@@ -1207,7 +1207,7 @@ class CRUDModel:
 
         cls.deserialize_query(filters)
 
-        if cls.__collection__.count(filters) > 1:
+        if cls.__collection__.count_documents(filters) > 1:
             raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
 
         if cls.logger.isEnabledFor(logging.DEBUG):
@@ -1216,6 +1216,13 @@ class CRUDModel:
         if cls.logger.isEnabledFor(logging.DEBUG):
             cls.logger.debug(f'{"1" if document else "No corresponding"} document retrieved.')
         return cls.serialize(document)
+
+    @classmethod
+    def get_last(cls, **filters) -> dict:
+        """
+        Return last revision of the document matching provided filters.
+        """
+        return cls.get(**filters)
 
     @classmethod
     def get_all(cls, **filters) -> List[dict]:

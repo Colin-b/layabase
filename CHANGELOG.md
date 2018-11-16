@@ -6,6 +6,16 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.9.0 (2018-11-15) ##
+
+### Enhancements ###
+
+- [Mongo] Allow to retrieve last version of a document on a versioned collection (even if removed).
+
+### Bug fixes ###
+
+- [Mongo] Stop using deprecated count method and use count_documents instead.
+
 ## Version 12.8.0 (2018-11-12) ##
 
 ### Enhancements ###

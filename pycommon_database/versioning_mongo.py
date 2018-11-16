@@ -153,13 +153,13 @@ class VersionedCRUDModel(CRUDModel):
 
     @classmethod
     def _get_revision(cls, filters: dict) -> int:
-        # TODO Use an int Column validate + deserializa
+        # TODO Use an int Column validate + deserialize
         revision = filters.get('revision')
         if revision is None:
             raise ValidationFailed(filters, {'revision': ['Missing data for required field.']})
 
         if not isinstance(revision, int):
-            raise ValidationFailed(filters, {'revision': [f'Not a valid int.']})
+            raise ValidationFailed(filters, {'revision': ['Not a valid int.']})
 
         del filters['revision']
         return revision
@@ -186,6 +186,28 @@ class VersionedCRUDModel(CRUDModel):
         filters.pop(cls.valid_since_revision.name, None)
         filters[cls.valid_until_revision.name] = -1
         return super().get(**filters)
+
+    @classmethod
+    def get_last(cls, **filters) -> dict:
+        """
+        Return last revision of document corresponding to query.
+        """
+        filters.pop(cls.valid_until_revision.name, None)
+        filters[cls.valid_until_revision.name] = -1
+        last_valid = super().get(**filters)
+        if last_valid:
+            return last_valid
+
+        filters[cls.valid_until_revision.name] = {'$exists': True, '$ne': -1}
+        all_invalid = cls.__collection__.find(filters)
+        max_valid_since_revision = 0
+        last_invalid = None
+        for invalid in all_invalid:
+            valid_since_revision = invalid[cls.valid_since_revision.name]
+            if max_valid_since_revision < valid_since_revision:
+                max_valid_since_revision = valid_since_revision
+                last_invalid = invalid
+        return cls.serialize(last_invalid)
 
     @classmethod
     def get_all(cls, **filters) -> List[dict]:
