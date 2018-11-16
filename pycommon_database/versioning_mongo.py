@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Dict
 
 import pymongo
 from flask_restplus import inputs
@@ -240,6 +240,10 @@ class VersionedCRUDModel(CRUDModel):
         expired_documents = cls.__collection__.find({**filters, **previously_expired}, projection={'_id': False})
         expired_documents = list(expired_documents)  # Convert Cursor to list
 
+        errors = cls.validate_rollback(filters, expired_documents)
+        if errors:
+            raise ValidationFailed({**filters, 'revision': revision}, errors)
+
         new_revision = cls._increment(*REVISION_COUNTER)
 
         # Update currently valid as non valid anymore (new version since this validity)
@@ -269,6 +273,17 @@ class VersionedCRUDModel(CRUDModel):
         if cls.audit_model:
             cls.audit_model.audit_rollback(new_revision)
         return len(expired_documents) + nb_removed
+
+    @classmethod
+    def validate_rollback(cls, filters: dict, future_documents: List[dict]) -> Dict[str, List[str]]:
+        """
+        Validate rollback
+
+        :param filters: Received filters for rollback (without revision), can be used directly in a mongo query.
+        :param future_documents: Documents corresponding to the new state if rollback is ok. Not yet serialized.
+        :return: Validation errors. Key corresponds to the field name, value should be a list of error messages,
+        """
+        return {}  # No validation by default
 
     @classmethod
     def current_revision(cls) -> int:

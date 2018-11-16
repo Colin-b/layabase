@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.10.0 (2018-11-16) ##
+
+### Enhancements ###
+
+- [Mongo] Allow to validate rollback on model.
+- Update pycommon_test to 2.0.0
+
 ## Version 12.9.0 (2018-11-15) ##
 
 ### Enhancements ###

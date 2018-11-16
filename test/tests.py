@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from threading import Thread
+from typing import List, Dict
 
 import sqlalchemy
 from flask_restplus import fields as flask_rest_plus_fields, inputs
@@ -6981,6 +6982,9 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
     class TestVersionedController(database.CRUDController):
         pass
 
+    class TestVersionedNoRollbackAllowedController(database.CRUDController):
+        pass
+
     class TestPrimaryIntController(database.CRUDController):
         pass
 
@@ -7001,6 +7005,7 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         cls.TestController.namespace(TestAPI)
         cls.TestEnumController.namespace(TestAPI)
         cls.TestVersionedController.namespace(TestAPI)
+        cls.TestVersionedNoRollbackAllowedController.namespace(TestAPI)
         cls.TestPrimaryIntController.namespace(TestAPI)
         cls.TestIntController.namespace(TestAPI)
         cls.TestPrimaryIntVersionedController.namespace(TestAPI)
@@ -7043,6 +7048,16 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
             key = database_mongo.Column(str, is_primary_key=True)
             enum_fld = database_mongo.Column(EnumTest)
 
+        class TestVersionedNoRollbackAllowedModel(versioning_mongo.VersionedCRUDModel, base=base,
+                                                  table_name='versioned_no_rollback_table_name',
+                                 audit=True):
+            key = database_mongo.Column(str, is_primary_key=True)
+            enum_fld = database_mongo.Column(EnumTest)
+
+            @classmethod
+            def validate_rollback(cls, filters: dict, future_documents: List[dict]) -> Dict[str, List[str]]:
+                return {'key': ['Rollback forbidden']}
+
         logger.info('Save model class...')
         cls.TestController.model(TestModel)
         cls.TestEnumController.model(TestEnumModel)
@@ -7050,9 +7065,10 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
         cls.TestIntController.model(TestIntModel)
         cls.TestPrimaryIntVersionedController.model(TestPrimaryIntVersionedModel)
         cls.TestVersionedController.model(TestVersionedModel)
+        cls.TestVersionedNoRollbackAllowedController.model(TestVersionedNoRollbackAllowedModel)
         cls.TestAutoIncAuditVersionedController.model(TestAutoIncAuditVersionedModel)
         return [TestModel, TestEnumModel, TestPrimaryIntModel, TestPrimaryIntVersionedModel, TestVersionedModel,
-                TestIntModel, TestAutoIncAuditVersionedModel]
+                TestIntModel, TestAutoIncAuditVersionedModel, TestVersionedNoRollbackAllowedModel]
 
     def setUp(self):
         logger.info(f'-------------------------------')
@@ -7719,6 +7735,25 @@ class MongoCRUDControllerAuditTest(unittest.TestCase):
                               },
                           ]
                           )
+
+    def test_rollback_validation_custom(self):
+        self.TestVersionedNoRollbackAllowedController.post({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value1,
+        })
+        self.TestVersionedNoRollbackAllowedController.put({
+            'key': 'my_key',
+            'enum_fld': EnumTest.Value2,
+        })
+        self.TestVersionedNoRollbackAllowedController.delete({
+            'key': 'my_key',
+        })
+        with self.assertRaises(ValidationFailed) as cm:
+            self.TestVersionedNoRollbackAllowedController.rollback_to({
+                'revision': 1
+            })
+        self.assertEqual({'key': ['Rollback forbidden']}, cm.exception.errors)
+        self.assertEqual({'revision': 1}, cm.exception.received_data)
 
     def test_get_last_when_empty(self):
         self.assertEqual(
