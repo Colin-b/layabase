@@ -2044,7 +2044,8 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs) 
         import mongomock  # This is a test dependency only
         client = mongomock.MongoClient(**kwargs)
     else:
-        client = pymongo.MongoClient(database_connection_url, **kwargs)
+        # Avoid thread-race when connecting upon creation of MongoClient (No servers found yet error)
+        client = pymongo.MongoClient(database_connection_url, connect=False, **kwargs)
     if '?' in database_name:  # Remove server options from the database name if any
         database_name = database_name[:database_name.index('?')]
     logger.info(f'Connecting to {database_name} database...')

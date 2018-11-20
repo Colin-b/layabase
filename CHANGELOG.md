@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.11.2 (2018-11-20) ##
+
+### Bug fixes ###
+
+- [Mongo] Avoid connection upon creation of MongoClient (see https://stackoverflow.com/questions/30710427/pymongo-and-multiprocessing-serverselectiontimeouterror for details).
+
 ## Version 12.11.1 (2018-11-16) ##
 
 ### Bug fixes ###
