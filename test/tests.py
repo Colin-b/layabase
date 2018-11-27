@@ -213,6 +213,9 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
+    def test_primary_keys_are_returned(self):
+        self.assertEqual(['key', 'mandatory'], self._model.get_primary_keys())
+
     def test_add_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self._model.add({})

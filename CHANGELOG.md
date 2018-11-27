@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.13.0 (2018-11-28) ##
+
+### Enhancements ###
+
+- Allow to retrieve GET url for a provided list of models.
+- Allow to retrieve primary key field names from model.
+
 ## Version 12.12.0 (2018-11-26) ##
 
 ### Enhancements ###

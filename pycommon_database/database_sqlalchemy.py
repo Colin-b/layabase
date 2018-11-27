@@ -1,13 +1,13 @@
 import logging
 import urllib.parse
-from typing import List
+from typing import List, Dict
 
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from marshmallow import validate
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, Column
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import StaticPool
@@ -292,7 +292,7 @@ class CRUDModel:
             raise
 
     @classmethod
-    def schema(cls):
+    def schema(cls) -> ModelSchema:
         """
         Create a new Marshmallow SQL Alchemy schema instance.
 
@@ -314,7 +314,7 @@ class CRUDModel:
         return schema
 
     @classmethod
-    def _enrich_schema_field(cls, marshmallow_field, sql_alchemy_field):
+    def _enrich_schema_field(cls, marshmallow_field: marshmallow_fields.Field, sql_alchemy_field: Column):
         # Default value
         defaults = [column.default.arg for column in sql_alchemy_field.columns if column.default]
         if defaults:
@@ -326,7 +326,7 @@ class CRUDModel:
             marshmallow_field.metadata['sqlalchemy_autoincrement'] = autoincrement[0]
 
     @classmethod
-    def query_get_parser(cls):
+    def query_get_parser(cls) -> reqparse.RequestParser:
         query_get_parser = cls._query_parser()
         query_get_parser.add_argument('limit', type=inputs.positive)
         query_get_parser.add_argument('order_by', type=str, action='append')
@@ -335,7 +335,7 @@ class CRUDModel:
         return query_get_parser
 
     @classmethod
-    def query_get_history_parser(cls):
+    def query_get_history_parser(cls) -> reqparse.RequestParser:
         query_get_hist_parser = cls._query_parser()
         query_get_hist_parser.add_argument('limit', type=inputs.positive)
         if _supports_offset(cls.metadata.bind.url.drivername):
@@ -343,15 +343,15 @@ class CRUDModel:
         return query_get_hist_parser
 
     @classmethod
-    def query_delete_parser(cls):
+    def query_delete_parser(cls) -> reqparse.RequestParser:
         return cls._query_parser()
 
     @classmethod
-    def query_rollback_parser(cls):
+    def query_rollback_parser(cls) -> None:
         return  # Only VersionedCRUDModel allows rollback
 
     @classmethod
-    def _query_parser(cls):
+    def _query_parser(cls) -> reqparse.RequestParser:
         query_parser = reqparse.RequestParser()
         for marshmallow_field in cls.schema().fields.values():
             query_parser.add_argument(
@@ -363,7 +363,15 @@ class CRUDModel:
         return query_parser
 
     @classmethod
-    def description_dictionary(cls):
+    def get_primary_keys(cls) -> List[str]:
+        return [
+            marshmallow_field.name
+            for marshmallow_field in cls.schema().fields.values()
+            if marshmallow_field.required
+        ]
+
+    @classmethod
+    def description_dictionary(cls) -> Dict[str, str]:
         description = {
             'table': cls.__tablename__,
         }
@@ -398,7 +406,7 @@ class CRUDModel:
         return namespace.model(cls.__name__, cls._flask_restplus_fields())
 
     @classmethod
-    def _flask_restplus_fields(cls):
+    def _flask_restplus_fields(cls) -> dict:
         return {
             marshmallow_field.name: _get_rest_plus_type(marshmallow_field)(
                 required=marshmallow_field.required,
@@ -416,7 +424,7 @@ class CRUDModel:
         return [field.name for field in cls.schema().fields.values()]
 
     @classmethod
-    def flask_restplus_description_fields(cls):
+    def flask_restplus_description_fields(cls) -> dict:
         exported_fields = {
             'table': flask_restplus_fields.String(required=True, example='table', description='Table name'),
         }
@@ -436,7 +444,7 @@ class CRUDModel:
         return exported_fields
 
     @classmethod
-    def audit(cls):
+    def audit(cls) -> None:
         """
         Call this method to add audit to a model.
         """
@@ -492,7 +500,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
     return base
 
 
-def _reset(base):
+def _reset(base) -> None:
     """
     If the database was already created, then drop all tables and recreate them all.
     """
@@ -503,12 +511,12 @@ def _reset(base):
         logger.info(f'All data related to {base.metadata.bind.url} reset.')
 
 
-def _model_field_values(model_instance):
+def _model_field_values(model_instance) -> dict:
     """Return model fields values (with the proper type) as a dictionary."""
     return model_instance.schema().dump(model_instance).data
 
 
-def _models_field_values(model_instances: list):
+def _models_field_values(model_instances: list) -> List[dict]:
     """Return models fields values (with the proper type) as a list of dictionaries."""
     if not model_instances:
         return []
@@ -520,24 +528,24 @@ class MultiSchemaNotSupported(Exception):
         Exception.__init__(self, 'SQLite does not manage multi-schemas..')
 
 
-def _clean_database_url(database_connection_url: str):
+def _clean_database_url(database_connection_url: str) -> str:
     connection_details = database_connection_url.split(':///?odbc_connect=', maxsplit=1)
     if len(connection_details) == 2:
         return f'{connection_details[0]}:///?odbc_connect={urllib.parse.quote_plus(connection_details[1])}'
     return database_connection_url
 
 
-def _can_retrieve_metadata(database_connection_url: str):
+def _can_retrieve_metadata(database_connection_url: str) -> bool:
     return not (database_connection_url.startswith('sybase') or
                 database_connection_url.startswith('mssql'))
 
 
-def _supports_offset(driver_name: str):
+def _supports_offset(driver_name: str) -> bool:
     return not (driver_name.startswith('sybase') or
                 driver_name.startswith('mssql'))
 
 
-def _in_memory(database_connection_url: str):
+def _in_memory(database_connection_url: str) -> bool:
     return ':memory:' in database_connection_url
 
 
