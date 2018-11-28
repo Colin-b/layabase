@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 12.14.0 (2018-11-28) ##
+
+### Enhancements ###
+
+- [Mongo] Allow to retrieve health details for a database.
+
 ## Version 12.13.0 (2018-11-28) ##
 
 ### Enhancements ###
