@@ -112,13 +112,13 @@ def restore(base, restore_path: str):
         database_mongo._restore(base, restore_path)
 
 
-def health_details(base) -> (bool, dict):
+def health_details(base) -> (str, dict):
     """
     Return Health details for this database connection.
 
     :param base: database object as returned by the load method (Mandatory).
      TODO not supported yet for non Mongo DBs
-    :return: A tuple with a boolean indicating if check passed, and the details.
+    :return: A tuple with a string providing the status (pass, warn, fail), and the details.
     """
     if not base:
         raise NoDatabaseProvided()
