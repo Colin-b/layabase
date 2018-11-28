@@ -240,7 +240,7 @@ class CRUDController:
             for new_dict in new_dicts
             for primary_key in cls._model.get_primary_keys()
         ]
-        return f'{endpoint}?{"&".join(dict_identifiers)}'
+        return f'{endpoint}{"?" if dict_identifiers else ""}{"&".join(dict_identifiers)}'
 
     @classmethod
     def post(cls, new_dict: dict) -> dict:
