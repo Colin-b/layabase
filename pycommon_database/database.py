@@ -112,6 +112,24 @@ def restore(base, restore_path: str):
         database_mongo._restore(base, restore_path)
 
 
+def health_details(base) -> (bool, dict):
+    """
+    Return Health details for this database connection.
+
+    :param base: database object as returned by the load method (Mandatory).
+     TODO not supported yet for non Mongo DBs
+    :return: A tuple with a boolean indicating if check passed, and the details.
+    """
+    if not base:
+        raise NoDatabaseProvided()
+
+    if hasattr(base, 'is_mongos'):
+        import pycommon_database.database_mongo as database_mongo
+        return database_mongo._health_details(base)
+
+    raise NotImplementedError('Health check is not yet implemented for SQLAlchemy.')
+
+
 class ControllerModelNotSet(Exception):
     def __init__(self, controller_class):
         Exception.__init__(self,

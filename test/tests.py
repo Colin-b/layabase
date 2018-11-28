@@ -13,6 +13,7 @@ from flask_restplus import fields as flask_rest_plus_fields, inputs
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 from pycommon_test.flask_restplus_mock import TestAPI
+from pycommon_test import mock_now, revert_now
 
 logging.basicConfig(
     format='%(asctime)s [%(threadName)s] [%(levelname)s] [%(name)s] %(message)s',
@@ -145,17 +146,17 @@ class MongoDatabaseTest(unittest.TestCase):
     def test_none_connection_string_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             database.load(None, None)
-        self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
+        self.assertEqual('A database connection URL must be provided.', str(cm.exception))
 
     def test_empty_connection_string_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             database.load('', None)
-        self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
+        self.assertEqual('A database connection URL must be provided.', str(cm.exception))
 
     def test_no_create_models_function_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             database.load('mongomock', None)
-        self.assertEqual('A method allowing to create related models must be provided.', cm.exception.args[0])
+        self.assertEqual('A method allowing to create related models must be provided.', str(cm.exception))
 
 
 class SQlAlchemyCRUDModelTest(unittest.TestCase):
@@ -201,6 +202,16 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         logger.info(f'End of {self._testMethodName}')
         logger.info(f'-------------------------------')
 
+    def test_health_details(self):
+        with self.assertRaises(Exception) as cm:
+            database.health_details(self._db)
+        self.assertEqual('Health check is not yet implemented for SQLAlchemy.', str(cm.exception))
+
+    def test_health_details_no_db(self):
+        with self.assertRaises(Exception) as cm:
+            database.health_details(None)
+        self.assertEqual('A database connection URL must be provided.', str(cm.exception))
+
     def test_get_all_without_data_returns_empty_list(self):
         self.assertEqual([], self._model.get_all())
 
@@ -208,7 +219,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({}, self._model.get())
 
     def test_add_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
@@ -217,19 +228,19 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual(['key', 'mandatory'], self._model.get_primary_keys())
 
     def test_add_with_empty_dict_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add({})
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
     def test_update_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.update(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
     def test_update_with_empty_dict_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.update({})
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
@@ -240,7 +251,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({}, self._model.get())
 
     def test_add_without_mandatory_field_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add({
                 'key': 'my_key',
             })
@@ -249,7 +260,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({}, self._model.get())
 
     def test_add_without_key_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add({
                 'mandatory': 1,
             })
@@ -258,7 +269,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({}, self._model.get())
 
     def test_add_with_wrong_type_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add({
                 'key': 256,
                 'mandatory': 1,
@@ -272,7 +283,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
             'key': 'value1',
             'mandatory': 1,
         })
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.update({
                 'key': 'value1',
                 'mandatory': 'invalid_value',
@@ -281,18 +292,18 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({'key': 'value1', 'mandatory': 'invalid_value'}, cm.exception.received_data)
 
     def test_add_all_with_nothing_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add_all(None)
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
 
     def test_add_all_with_empty_dict_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add_all({})
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
     def test_add_all_without_mandatory_field_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add_all([{
                 'key': 'my_key',
             },
@@ -308,7 +319,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({}, self._model.get())
 
     def test_add_all_without_key_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add_all([{
                 'mandatory': 1,
             },
@@ -324,7 +335,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({}, self._model.get())
 
     def test_add_all_with_wrong_type_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.add_all([{
                 'key': 256,
                 'mandatory': 1,
@@ -362,7 +373,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({'key': 'my_key', 'mandatory': 1, 'optional': 'my_value'}, self._model.get())
 
     def test_update_unexisting_is_invalid(self):
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ModelCouldNotBeFound) as cm:
             self._model.update({
                 'key': 'my_key',
                 'mandatory': 1,
@@ -408,7 +419,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
             'mandatory': 2,
             'optional': 'my_value2',
         })
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValidationFailed) as cm:
             self._model.get()
         self.assertEqual({'': ['More than one result: Consider another filtering.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
@@ -616,6 +627,7 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        revert_now()
         cls._db = database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
@@ -1634,6 +1646,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        revert_now()
         cls._db = database.load('sqlite:///:memory:', cls._create_models)
         cls.TestController.namespace(TestAPI)
 
@@ -2548,6 +2561,7 @@ class SQlAlchemyColumnsTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        revert_now()
         database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
@@ -2699,6 +2713,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        mock_now()
         cls._db = database.load('mongomock', cls._create_models)
         cls.TestController.namespace(TestAPI)
         cls.TestStrictController.namespace(TestAPI)
@@ -2905,6 +2920,19 @@ class MongoCRUDControllerTest(unittest.TestCase):
     def tearDown(self):
         logger.info(f'End of {self._testMethodName}')
         logger.info(f'-------------------------------')
+
+    def test_health_details_failure(self):
+        self.assertEqual((
+            False,
+            {
+                'mongomock:ping': {
+                    'componentType': 'datastore',
+                    'output': "'Collection' object is not callable",
+                    'status': 'fail',
+                    'time': '2018-10-11T15:05:05.663979'
+                }
+            }
+        ), database.health_details(self._db))
 
     def test_get_all_without_data_returns_empty_list(self):
         self.assertEqual([], self.TestController.get({}))
