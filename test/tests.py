@@ -213,6 +213,9 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         self.assertEqual({'': ['No data provided.']}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
 
+    def test_primary_keys_are_returned(self):
+        self.assertEqual(['key', 'mandatory'], self._model.get_primary_keys())
+
     def test_add_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self._model.add({})
@@ -2932,6 +2935,49 @@ class MongoCRUDControllerTest(unittest.TestCase):
             self.TestController.post([''])
         self.assertEqual({'': ['Must be a dictionary.']}, cm.exception.errors)
         self.assertEqual([''], cm.exception.received_data)
+
+    def test_get_url_with_primary_key_in_model_and_many_models(self):
+        models = [
+            {
+                'key': 'first',
+                'dict_field': {'first_key': 'Value1', 'second_key': 1},
+                'valid_since_revision': 1,
+                'valid_until_revision': -1
+            },
+            {
+                'key': 'second',
+                'dict_field': {'first_key': 'Value2', 'second_key': 2},
+                'valid_since_revision': 1,
+                'valid_until_revision': -1
+            },
+        ]
+        self.assertEqual('/test?key=first&key=second', self.TestVersionedController.get_url('/test', *models))
+
+    def test_get_url_with_primary_key_in_model_and_a_single_model(self):
+        model = {
+            'key': 'first',
+            'dict_field': {'first_key': 'Value1', 'second_key': 1},
+            'valid_since_revision': 1,
+            'valid_until_revision': -1
+        }
+        self.assertEqual('/test?key=first', self.TestVersionedController.get_url('/test', model))
+
+    def test_get_url_with_primary_key_in_model_and_no_model(self):
+        self.assertEqual('/test', self.TestVersionedController.get_url('/test'))
+
+    def test_get_url_without_primary_key_in_model_and_many_models(self):
+        models = [
+            {'key': 1, 'unique': 2},
+            {'key': 2, 'unique': 3},
+        ]
+        self.assertEqual('/test', self.TestUniqueNonPrimaryController.get_url('/test', *models))
+
+    def test_get_url_without_primary_key_in_model_and_one_model(self):
+        model = {'key': 1, 'unique': 2}
+        self.assertEqual('/test', self.TestUniqueNonPrimaryController.get_url('/test', model))
+
+    def test_get_url_without_primary_key_in_model_and_no_model(self):
+        self.assertEqual('/test', self.TestUniqueNonPrimaryController.get_url('/test'))
 
     def test_post_many_with_dict_is_invalid(self):
         with self.assertRaises(ValidationFailed) as cm:

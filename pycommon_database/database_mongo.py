@@ -1114,6 +1114,14 @@ class CRUDModel:
             cls.audit_model = None  # Ensure no circular reference when creating the audit
 
     @classmethod
+    def get_primary_keys(cls) -> List[str]:
+        return [
+            field.name
+            for field in cls.__fields__
+            if field.is_primary_key
+        ]
+
+    @classmethod
     def _is_forbidden(cls):
         # Counters collection is managed by pycommon_database
         # Audit collections are managed by pycommon_database
