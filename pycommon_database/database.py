@@ -222,6 +222,27 @@ class CRUDController:
         return cls._model.get_last(**request_arguments)
 
     @classmethod
+    def get_url(cls, endpoint: str, *new_dicts) -> str:
+        """
+        Return URL providing dictionaries.
+
+        :param endpoint: Original GET endpoint (without any query parameter).
+        :param new_dicts: All dictionaries that should be returned via the endpoint.
+        """
+        if not cls._model:
+            raise ControllerModelNotSet(cls)
+
+        if not new_dicts:
+            return endpoint
+
+        dict_identifiers = [
+            f'{primary_key}={new_dict[primary_key]}'
+            for new_dict in new_dicts
+            for primary_key in cls._model.get_primary_keys()
+        ]
+        return f'{endpoint}{"?" if dict_identifiers else ""}{"&".join(dict_identifiers)}'
+
+    @classmethod
     def post(cls, new_dict: dict) -> dict:
         """
         Add a model formatted as a dictionary.
