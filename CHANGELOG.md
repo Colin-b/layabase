@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.0.0 (2018-11-28) ##
+
+### Release notes ###
+
+- [Mongo] Database health details now return a status string as first element instead of a boolean.
+
 ## Version 12.14.0 (2018-11-28) ##
 
 ### Enhancements ###

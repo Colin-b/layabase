@@ -2923,7 +2923,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def test_health_details_failure(self):
         self.assertEqual((
-            False,
+            'fail',
             {
                 'mongomock:ping': {
                     'componentType': 'datastore',
