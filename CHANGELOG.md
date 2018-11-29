@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.2.0 (2018-11-29) ##
+
+### Enhancements ###
+
+- Provide health_details in pycommon_database.
+
 ## Version 13.1.0 (2018-11-29) ##
 
 ### Enhancements ###
