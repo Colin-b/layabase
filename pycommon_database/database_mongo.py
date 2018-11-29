@@ -2133,16 +2133,16 @@ def _restore(base: pymongo.database.Database, restore_path: str) -> None:
                 base[collection].insert_many(documents)
 
 
-def _health_details(base: pymongo.database.Database) -> (bool, dict):
+def _health_details(base: pymongo.database.Database) -> (str, dict):
     """
     Return Health details for this Mongo database connection.
 
     :param base: database object as returned by the _load method (Mandatory).
-    :return: A tuple with a boolean indicating if check passed, and the details.
+    :return: A tuple with a string providing the status (pass, warn, fail), and the details.
     """
     try:
         response = base.command('ping')
-        return True, {
+        return 'pass', {
             f'{base.name}:ping': {
                 'componentType': 'datastore',
                 'observedValue': response,
@@ -2152,7 +2152,7 @@ def _health_details(base: pymongo.database.Database) -> (bool, dict):
             }
         }
     except Exception as e:
-        return False, {
+        return 'fail', {
             f'{base.name}:ping': {
                 'componentType': 'datastore',
                 'status': 'fail',
