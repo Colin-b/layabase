@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.4.0 (2018-12-03) ##
+
+### Enhancements ###
+
+- Update dependencies to latest version (pycommon_test 4.0.0, pycommon_error 2.6.0).
+
 ## Version 13.3.0 (2018-11-30) ##
 
 ### Enhancements ###
