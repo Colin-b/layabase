@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.6.1 (2018-12-10) ##
+
+### Bug fixes ###
+
+- [Mongo] pymongo.Database is not hashable, while mongomock.Database is.
+
 ## Version 13.6.0 (2018-12-10) ##
 
 ### Enhancements ###
