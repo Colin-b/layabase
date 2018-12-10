@@ -6,6 +6,14 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.6.0 (2018-12-10) ##
+
+### Enhancements ###
+
+- [Mongo] Log server information in debug.
+- [Mongo] Retrieve server information only once.
+- [Mongo] Allow client to set connect parameter.
+
 ## Version 13.5.0 (2018-12-04) ##
 
 ### Enhancements ###
