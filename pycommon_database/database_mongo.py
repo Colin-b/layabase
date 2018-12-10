@@ -1065,6 +1065,9 @@ class ListColumn(Column):
         return [self.list_item_column.example()]
 
 
+_server_versions: Dict[pymongo.database.Database, str] = {}
+
+
 class CRUDModel:
     """
     Class providing CRUD helper methods for a Mongo model.
@@ -1102,10 +1105,7 @@ class CRUDModel:
                 raise Exception(f'{cls.__tablename__} is a reserved collection name.')
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
-            server_info = base.client.server_info()
-            if server_info:
-                cls.logger.info(f'Server information: {server_info}')
-                cls._server_version = server_info.get('version', '')
+            cls._server_version = _server_versions.get(base, '')
             cls.update_indexes()
         if audit:
             from pycommon_database.audit_mongo import _create_from
@@ -2052,12 +2052,16 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs) 
         import mongomock  # This is a test dependency only
         client = mongomock.MongoClient(**kwargs)
     else:
-        # Avoid thread-race when connecting upon creation of MongoClient (No servers found yet error)
-        client = pymongo.MongoClient(database_connection_url, connect=False, **kwargs)
+        # Connect is false to avoid thread-race when connecting upon creation of MongoClient (No servers found yet)
+        client = pymongo.MongoClient(database_connection_url, connect=kwargs.pop('connect', False), **kwargs)
     if '?' in database_name:  # Remove server options from the database name if any
         database_name = database_name[:database_name.index('?')]
     logger.info(f'Connecting to {database_name} database...')
     base = client[database_name]
+    server_info = client.server_info()
+    if server_info:
+        logger.debug(f'Server information: {server_info}')
+        _server_versions.setdefault(base, server_info.get('version', ''))
     logger.debug(f'Creating models...')
     create_models_func(base)
     return base
