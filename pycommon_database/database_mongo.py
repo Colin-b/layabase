@@ -1065,7 +1065,7 @@ class ListColumn(Column):
         return [self.list_item_column.example()]
 
 
-_server_versions: Dict[pymongo.database.Database, str] = {}
+_server_versions: Dict[str, str] = {}
 
 
 class CRUDModel:
@@ -1105,7 +1105,7 @@ class CRUDModel:
                 raise Exception(f'{cls.__tablename__} is a reserved collection name.')
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base['counters']
-            cls._server_version = _server_versions.get(base, '')
+            cls._server_version = _server_versions.get(base.name, '')
             cls.update_indexes()
         if audit:
             from pycommon_database.audit_mongo import _create_from
@@ -2061,7 +2061,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs) 
     server_info = client.server_info()
     if server_info:
         logger.debug(f'Server information: {server_info}')
-        _server_versions.setdefault(base, server_info.get('version', ''))
+        _server_versions.setdefault(base.name, server_info.get('version', ''))
     logger.debug(f'Creating models...')
     create_models_func(base)
     return base
