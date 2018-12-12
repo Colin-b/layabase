@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.7.0 (2018-12-12) ##
+
+### Enhancements ###
+
+- Update dependencies to latest version (pycommon_test 4.3.0, pycommon_error 2.8.0, SQLAlchemy 1.2.15).
+
 ## Version 13.6.1 (2018-12-10) ##
 
 ### Bug fixes ###
