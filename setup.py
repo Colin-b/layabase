@@ -33,7 +33,7 @@ setup(
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [
             'marshmallow==2.16.3',
-            'SQLAlchemy==1.2.14',
+            'SQLAlchemy==1.2.15',
             'marshmallow_sqlalchemy==0.15.0',
         ],
     },
