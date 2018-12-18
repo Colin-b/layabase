@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.11.1 (2018-12-18) ##
+
+### Bug fixes ###
+
+- [Mongo] Forbid spaces at start and end of column names.
+
 ## Version 13.11.0 (2018-12-14) ##
 
 ### Enhancements ###

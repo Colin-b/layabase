@@ -46,18 +46,33 @@ class MongoColumnTest(unittest.TestCase):
     def test_str_column_cannot_auto_increment(self):
         with self.assertRaises(Exception) as cm:
             database_mongo.Column(should_auto_increment=True)
-        self.assertEqual('Only int fields can be auto incremented.', cm.exception.args[0])
+        self.assertEqual('Only int fields can be auto incremented.', str(cm.exception))
 
     def test_auto_incremented_field_cannot_be_non_nullable(self):
         with self.assertRaises(Exception) as cm:
             database_mongo.Column(int, should_auto_increment=True, is_nullable=False)
-        self.assertEqual('A field cannot be mandatory and auto incremented at the same time.', cm.exception.args[0])
+        self.assertEqual('A field cannot be mandatory and auto incremented at the same time.', str(cm.exception))
 
     def test_field_with_default_value_cannot_be_non_nullable(self):
         with self.assertRaises(Exception) as cm:
             database_mongo.Column(default_value='test', is_nullable=False)
         self.assertEqual('A field cannot be mandatory and having a default value at the same time.',
-                         cm.exception.args[0])
+                         str(cm.exception))
+
+    def test_spaces_are_forbidden_at_start_of_column_name(self):
+        with self.assertRaises(Exception) as cm:
+            database_mongo.Column(name='   test')
+        self.assertEqual('   test is not a valid name. Spaces are not allowed at start or end of field names.', str(cm.exception))
+
+    def test_spaces_are_forbidden_at_end_of_column_name(self):
+        with self.assertRaises(Exception) as cm:
+            database_mongo.Column(name='test   ')
+        self.assertEqual('test    is not a valid name. Spaces are not allowed at start or end of field names.', str(cm.exception))
+
+    def test_spaces_are_forbidden_at_start_and_end_of_column_name(self):
+        with self.assertRaises(Exception) as cm:
+            database_mongo.Column(name='   test   ')
+        self.assertEqual('   test    is not a valid name. Spaces are not allowed at start or end of field names.', str(cm.exception))
 
 
 class SQlAlchemyDatabaseTest(unittest.TestCase):
@@ -73,17 +88,17 @@ class SQlAlchemyDatabaseTest(unittest.TestCase):
     def test_none_connection_string_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             database.load(None, None)
-        self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
+        self.assertEqual('A database connection URL must be provided.', str(cm.exception))
 
     def test_empty_connection_string_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             database.load('', None)
-        self.assertEqual('A database connection URL must be provided.', cm.exception.args[0])
+        self.assertEqual('A database connection URL must be provided.', str(cm.exception))
 
     def test_no_create_models_function_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             database.load('sqlite:///:memory:', None)
-        self.assertEqual('A method allowing to create related models must be provided.', cm.exception.args[0])
+        self.assertEqual('A method allowing to create related models must be provided.', str(cm.exception))
 
     def test_models_are_added_to_metadata(self):
         def create_models(base):

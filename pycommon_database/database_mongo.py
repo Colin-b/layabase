@@ -153,6 +153,8 @@ class Column:
     def _update_name(self, name: str) -> 'Column':
         if '.' in name:
             raise Exception(f'{name} is not a valid name. Dots are not allowed in Mongo field names.')
+        if name and (name[0] == ' ' or name[-1] == ' '):
+            raise Exception(f'{name} is not a valid name. Spaces are not allowed at start or end of field names.')
         self.name = name
         if '_id' == self.name:
             self.field_type = ObjectId
