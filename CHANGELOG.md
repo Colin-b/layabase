@@ -16,7 +16,7 @@ List all changes in various categories:
 
 ### Bug fixes ###
 
-- [Mongo] Forbid spaces at start and end of column names.
+- [Mongo] Forbid spaces at the start and the end of column names.
 
 ## Version 13.11.0 (2018-12-14) ##
 
