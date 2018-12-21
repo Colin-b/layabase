@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.12.2 (2018-12-20) ##
+
+### Bug fixes ###
+There is no release of database connection in the sql alchemy module.
+Each uwsgi worker was locking the last SELECT done
+Fix is to enable force commit on query.all() or query.one_or_none
+
 ## Version 13.12.0 (2018-12-19) ##
 
 ### Enhancements ###
