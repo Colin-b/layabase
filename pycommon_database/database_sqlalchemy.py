@@ -496,7 +496,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
     logger.debug(f'Creating session...')
-    session = sessionmaker(bind=engine, autocommit=True)()
+    session = sessionmaker(bind=engine)()
     logger.info(f'Connected to {database_connection_url}.')
     for model_class in model_classes:
         model_class._post_init(session)
