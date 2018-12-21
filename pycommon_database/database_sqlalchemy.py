@@ -79,7 +79,9 @@ class CRUDModel:
             query = query.offset(query_offset)
 
         try:
-            return query.all()
+            result = query.all()
+            cls._session.commit()
+            return result
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
 
@@ -109,6 +111,7 @@ class CRUDModel:
                 query = query.filter(getattr(cls, column_name) == value)
         try:
             model = query.one_or_none()
+            cls._session.commit()
             return cls.schema().dump(model).data
         except exc.MultipleResultsFound:
             cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
