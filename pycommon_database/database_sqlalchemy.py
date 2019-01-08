@@ -1,3 +1,4 @@
+import datetime
 import logging
 import urllib.parse
 from typing import List, Dict
@@ -665,3 +666,33 @@ def _get_python_type(marshmallow_field):
         return str
 
     raise Exception(f'Python field type cannot be guessed for {marshmallow_field} field.')
+
+
+def _health_details(base) -> (str, dict):
+    """
+    Return Health details for this SqlAlchemy database connection.
+
+    :param base: database object as returned by the _load method (Mandatory).
+    :return: A tuple with a string providing the status (pass, warn, fail), and the details.
+    """
+    try:
+        base.metadata.bind.engine.execute('SELECT 1')
+        return 'pass', {
+            f'{base.metadata.bind.engine.name}:select': {
+                'componentType': 'datastore',
+                'observedValue': '',
+                'status': 'pass',
+                'time': datetime.datetime.utcnow().isoformat(),
+                'output': ''
+            }
+        }
+    except Exception as e:
+        return 'fail', {
+            f'{base.metadata.bind.engine.name}:select': {
+                'componentType': 'datastore',
+                'observedValue': '',
+                'status': 'fail',
+                'time': datetime.datetime.utcnow().isoformat(),
+                'output': str(e)
+            }
+        }
