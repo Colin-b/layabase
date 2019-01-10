@@ -180,6 +180,7 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        mock_now()
         cls._db = database.load('sqlite:///:memory:', cls._create_models)
 
     @classmethod
@@ -218,9 +219,9 @@ class SQlAlchemyCRUDModelTest(unittest.TestCase):
         logger.info(f'-------------------------------')
 
     def test_health_details(self):
-        with self.assertRaises(Exception) as cm:
-            database.health_details(self._db)
-        self.assertEqual('Health check is not yet implemented for SQLAlchemy.', str(cm.exception))
+        health_status = database.health_details(self._db)
+        expected_result = ('pass', {'sqlite:select': {'componentType': 'datastore', 'observedValue': '', 'status': 'pass', 'time': '2018-10-11T15:05:05.663979'}})
+        self.assertEqual(expected_result, health_status)
 
     def test_health_details_no_db(self):
         with self.assertRaises(Exception) as cm:

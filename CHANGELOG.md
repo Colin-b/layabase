@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.13.0 (2018-12-19) ##
+
+### Enhancements ###
+
+Implement health check method for SQLAlchemy
+
 ## Version 13.12.2 (2018-12-20) ##
 
 ### Bug fixes ###

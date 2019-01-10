@@ -15,12 +15,12 @@ setup(
     ]),
     install_requires=[
         # Used to handle errors
-        'pycommon-error==2.13.0'
+        'pycommon-error==2.14.0'
     ],
     extras_require={
         'testing': [
             # Used to provide testing help
-            'pycommon-test==4.8.0',
+            'pycommon-test==4.9.0',
             # Used to Manage Mongo Database
             'mongomock==3.14.0',
         ],
@@ -32,7 +32,7 @@ setup(
         ],
         # Used to Manage Non-Mongo Database
         'sqlalchemy': [
-            'marshmallow==2.16.3',
+            'marshmallow==2.17.0',
             'SQLAlchemy==1.2.15',
             'marshmallow_sqlalchemy==0.15.0',
         ],

@@ -126,8 +126,9 @@ def health_details(base) -> (str, dict):
     if hasattr(base, 'is_mongos'):
         import pycommon_database.database_mongo as database_mongo
         return database_mongo._health_details(base)
-
-    raise NotImplementedError('Health check is not yet implemented for SQLAlchemy.')
+    else:
+        import pycommon_database.database_sqlalchemy as database_sqlalchemy
+        return database_sqlalchemy._health_details(base)
 
 
 class ControllerModelNotSet(Exception):
