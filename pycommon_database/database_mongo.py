@@ -2153,8 +2153,7 @@ def _health_details(base: pymongo.database.Database) -> (str, dict):
                 'componentType': 'datastore',
                 'observedValue': response,
                 'status': 'pass',
-                'time': datetime.datetime.utcnow().isoformat(),
-                'output': ''
+                'time': datetime.datetime.utcnow().isoformat()
             }
         }
     except Exception as e:
