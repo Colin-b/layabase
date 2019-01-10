@@ -6,18 +6,23 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 13.13.0 (2018-12-19) ##
+## Version 13.14.0 (2019-01-10) ##
 
 ### Enhancements ###
 
-Implement health check method for SQLAlchemy
+- Update dependencies to latest version (pycommon_test 4.10.0, pycommon_error 2.15.0).
+
+## Version 13.13.0 (2019-01-09) ##
+
+### Enhancements ###
+
+- [SQLAlchemy] Implement health check.
 
 ## Version 13.12.2 (2018-12-20) ##
 
 ### Bug fixes ###
-There is no release of database connection in the sql alchemy module.
-Each uwsgi worker was locking the last SELECT done
-Fix is to enable force commit on query.all() or query.one_or_none
+
+- [SQLAlchemy] Commit after query.all and query.one_or_none.
 
 ## Version 13.12.0 (2018-12-19) ##
 
