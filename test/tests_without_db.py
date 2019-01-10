@@ -9,6 +9,7 @@ logging.basicConfig(
     level=logging.DEBUG)
 
 from pycommon_database import database, database_sqlalchemy
+from pycommon_test import mock_now
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,10 @@ class SQLAlchemyCRUDModelTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        mock_now()
         cls._db = database.load('sqlite:///:memory:', cls._create_models)
         cls._db.metadata.bind.dispose()
+        cls._db.metadata.bind.engine.execute = lambda x: exec('raise(Exception(x))')
 
     @classmethod
     def _create_models(cls, base):
@@ -78,6 +81,18 @@ class SQLAlchemyCRUDModelTest(unittest.TestCase):
             self._model.remove()
         self.assertEqual('Database could not be reached.', cm.exception.args[0])
 
+    def test_health_details_failure(self):
+        self.assertEqual((
+            'fail',
+            {
+                'sqlite:select': {
+                    'componentType': 'datastore',
+                    'status': 'fail',
+                    'time': '2018-10-11T15:05:05.663979',
+                    'output': 'SELECT 1'
+                }
+            }
+        ), database.health_details(self._db))
 
 if __name__ == '__main__':
     unittest.main()
