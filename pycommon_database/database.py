@@ -7,22 +7,24 @@ logger = logging.getLogger(__name__)
 
 
 def _is_mongo(database_connection_url: str) -> bool:
-    return database_connection_url.startswith('mongo')
+    return database_connection_url.startswith("mongo")
 
 
 class NoDatabaseProvided(Exception):
     def __init__(self):
-        Exception.__init__(self, 'A database connection URL must be provided.')
+        Exception.__init__(self, "A database connection URL must be provided.")
 
 
 class NoRelatedModels(Exception):
     def __init__(self):
-        Exception.__init__(self, 'A method allowing to create related models must be provided.')
+        Exception.__init__(
+            self, "A method allowing to create related models must be provided."
+        )
 
 
 class NoPathProvided(Exception):
     def __init__(self):
-        Exception.__init__(self, 'A directory path must be provided.')
+        Exception.__init__(self, "A directory path must be provided.")
 
 
 def load(database_connection_url: str, create_models_func: callable, **kwargs):
@@ -54,10 +56,16 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
 
     if _is_mongo(database_connection_url):
         import pycommon_database.database_mongo as database_mongo
-        return database_mongo._load(database_connection_url, create_models_func, **kwargs)
+
+        return database_mongo._load(
+            database_connection_url, create_models_func, **kwargs
+        )
 
     import pycommon_database.database_sqlalchemy as database_sqlalchemy
-    return database_sqlalchemy._load(database_connection_url, create_models_func, **kwargs)
+
+    return database_sqlalchemy._load(
+        database_connection_url, create_models_func, **kwargs
+    )
 
 
 def reset(base):
@@ -66,11 +74,13 @@ def reset(base):
 
     :param base: database object as returned by the load function (Mandatory).
     """
-    if hasattr(base, 'is_mongos'):
+    if hasattr(base, "is_mongos"):
         import pycommon_database.database_mongo as database_mongo
+
         database_mongo._reset(base)
     else:
         import pycommon_database.database_sqlalchemy as database_sqlalchemy
+
         database_sqlalchemy._reset(base)
 
 
@@ -88,8 +98,9 @@ def dump(base, dump_path: str):
     if not dump_path:
         raise NoPathProvided()
 
-    if hasattr(base, 'is_mongos'):
+    if hasattr(base, "is_mongos"):
         import pycommon_database.database_mongo as database_mongo
+
         database_mongo._dump(base, dump_path)
 
 
@@ -107,8 +118,9 @@ def restore(base, restore_path: str):
     if not restore_path:
         raise NoPathProvided()
 
-    if hasattr(base, 'is_mongos'):
+    if hasattr(base, "is_mongos"):
         import pycommon_database.database_mongo as database_mongo
+
         database_mongo._restore(base, restore_path)
 
 
@@ -123,26 +135,38 @@ def health_details(base) -> (str, dict):
     if not base:
         raise NoDatabaseProvided()
 
-    if hasattr(base, 'is_mongos'):
+    if hasattr(base, "is_mongos"):
         import pycommon_database.database_mongo as database_mongo
+
         return database_mongo._health_details(base)
     else:
         import pycommon_database.database_sqlalchemy as database_sqlalchemy
+
         return database_sqlalchemy._health_details(base)
 
 
 class ControllerModelNotSet(Exception):
     def __init__(self, controller_class):
-        Exception.__init__(self,
-                           f'Model was not attached to {controller_class.__name__}. Call {controller_class.model}.')
+        Exception.__init__(
+            self,
+            f"Model was not attached to {controller_class.__name__}. Call {controller_class.model}.",
+        )
 
 
 def _ignore_read_only_fields(model_properties: dict, model_as_dict: dict):
     if model_as_dict:
         if not isinstance(model_as_dict, dict):
-            raise ValidationFailed(model_as_dict, message='Must be a dictionary.')
-        read_only_fields = [field_name for field_name, field_properties in model_properties.items() if field_properties.get('readOnly')]
-        return {field_name: field_value for field_name, field_value in model_as_dict.items() if field_name not in read_only_fields}
+            raise ValidationFailed(model_as_dict, message="Must be a dictionary.")
+        read_only_fields = [
+            field_name
+            for field_name, field_properties in model_properties.items()
+            if field_properties.get("readOnly")
+        ]
+        return {
+            field_name: field_value
+            for field_name, field_value in model_as_dict.items()
+            if field_name not in read_only_fields
+        }
     return model_as_dict
 
 
@@ -150,6 +174,7 @@ class CRUDController:
     """
     Class providing methods to interact with a CRUDModel.
     """
+
     _model = None
 
     # CRUD request parsers
@@ -186,7 +211,11 @@ class CRUDController:
         cls.query_delete_parser = cls._model.query_delete_parser()
         cls.query_rollback_parser = cls._model.query_rollback_parser()
         cls.query_get_history_parser = cls._model.query_get_history_parser()
-        cls.query_get_audit_parser = cls._model.audit_model.query_get_parser() if cls._model.audit_model else None
+        cls.query_get_audit_parser = (
+            cls._model.audit_model.query_get_parser()
+            if cls._model.audit_model
+            else None
+        )
         cls._model_description_dictionary = cls._model.description_dictionary()
 
     @classmethod
@@ -202,10 +231,18 @@ class CRUDController:
         cls.json_post_model = cls._model.json_post_model(namespace)
         cls.json_put_model = cls._model.json_put_model(namespace)
         cls.get_response_model = cls._model.get_response_model(namespace)
-        cls.get_history_response_model = cls._model.get_history_response_model(namespace)
-        cls.get_audit_response_model = cls._model.audit_model.get_response_model(namespace) if cls._model.audit_model else None
-        cls.get_model_description_response_model = namespace.model(''.join([cls._model.__name__, 'Description']),
-                                                                   cls._model.flask_restplus_description_fields())
+        cls.get_history_response_model = cls._model.get_history_response_model(
+            namespace
+        )
+        cls.get_audit_response_model = (
+            cls._model.audit_model.get_response_model(namespace)
+            if cls._model.audit_model
+            else None
+        )
+        cls.get_model_description_response_model = namespace.model(
+            "".join([cls._model.__name__, "Description"]),
+            cls._model.flask_restplus_description_fields(),
+        )
 
     @classmethod
     def get(cls, request_arguments: dict) -> List[dict]:
@@ -215,7 +252,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
         return cls._model.get_all(**request_arguments)
 
     @classmethod
@@ -226,7 +263,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
         return cls._model.get(**request_arguments)
 
     @classmethod
@@ -237,7 +274,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
         return cls._model.get_last(**request_arguments)
 
     @classmethod
@@ -255,11 +292,13 @@ class CRUDController:
             return endpoint
 
         dict_identifiers = [
-            f'{primary_key}={new_dict[primary_key]}'
+            f"{primary_key}={new_dict[primary_key]}"
             for new_dict in new_dicts
             for primary_key in cls._model.get_primary_keys()
         ]
-        return f'{endpoint}{"?" if dict_identifiers else ""}{"&".join(dict_identifiers)}'
+        return (
+            f'{endpoint}{"?" if dict_identifiers else ""}{"&".join(dict_identifiers)}'
+        )
 
     @classmethod
     def post(cls, new_dict: dict) -> dict:
@@ -270,8 +309,10 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        if hasattr(cls.json_post_model, '_schema'):
-            new_dict = _ignore_read_only_fields(cls.json_post_model._schema.get('properties', {}), new_dict)
+        if hasattr(cls.json_post_model, "_schema"):
+            new_dict = _ignore_read_only_fields(
+                cls.json_post_model._schema.get("properties", {}), new_dict
+            )
         return cls._model.add(new_dict)
 
     @classmethod
@@ -283,11 +324,15 @@ class CRUDController:
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        if new_dicts and hasattr(cls.json_post_model, '_schema'):
+        if new_dicts and hasattr(cls.json_post_model, "_schema"):
             if not isinstance(new_dicts, list):
-                raise ValidationFailed(new_dicts, message='Must be a list of dictionaries.')
+                raise ValidationFailed(
+                    new_dicts, message="Must be a list of dictionaries."
+                )
             new_dicts = [
-                _ignore_read_only_fields(cls.json_post_model._schema.get('properties', {}), new_dict)
+                _ignore_read_only_fields(
+                    cls.json_post_model._schema.get("properties", {}), new_dict
+                )
                 for new_dict in new_dicts
             ]
         return cls._model.add_all(new_dicts)
@@ -325,7 +370,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
         return cls._model.remove(**request_arguments)
 
     @classmethod
@@ -338,7 +383,7 @@ class CRUDController:
         if not cls._model.audit_model:
             return []
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
         return cls._model.audit_model.get_all(**request_arguments)
 
     @classmethod
@@ -356,7 +401,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
         return cls._model.rollback_to(**request_arguments)
 
     @classmethod
@@ -367,7 +412,7 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
+            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
         return cls._model.get_history(**request_arguments)
 
     @classmethod
