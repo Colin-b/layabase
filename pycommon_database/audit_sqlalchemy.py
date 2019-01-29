@@ -70,9 +70,9 @@ def _create_from(model):
             if errors:
                 raise ValidationFailed(row, errors)
             cls._session.add(row_model)  # Let any error be handled by the caller (main model), same for commit
-
+    existing_field_names = list(AuditModel.get_field_names())
     for attribute in inspect(model).attrs:
-        if attribute.key not in AuditModel.get_field_names():
+        if attribute.key not in existing_field_names:
 	    setattr(AuditModel, attribute.key, _column(attribute))
 
     return AuditModel
