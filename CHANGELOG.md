@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.16.1 (2019-01-29)
+
+### Bug fixes ###
+
+- [SQLAlchemy] In case an audited model contains fields thanks to inheritance. Those fields were duplicated in audit model (resulting in audit failure).
+
 ## Version 13.16.0 (2019-01-25) ##
 
 ### Enhancements ###

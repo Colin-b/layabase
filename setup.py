@@ -21,7 +21,7 @@ setup(
     extras_require={
         "testing": [
             # Used to provide testing help
-            "pycommon-test==5.0.0",
+            "pycommon-test==5.0.1",
             # Used to Manage Mongo Database
             "mongomock==3.14.0",
         ],

@@ -624,6 +624,9 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
     class TestDateController(database.CRUDController):
         pass
 
+    class TestInheritanceController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -668,6 +671,17 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             date_str = sqlalchemy.Column(sqlalchemy.Date)
             datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
 
+        class Inherited:
+            optional = sqlalchemy.Column(sqlalchemy.String)
+
+        class TestInheritanceModel(database_sqlalchemy.CRUDModel, Inherited, base):
+            __tablename__ = "inheritance_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+
+        TestInheritanceModel.audit()
+
         logger.info("Save model class...")
         cls.TestController.model(TestModel)
         cls.TestController.namespace(TestAPI)
@@ -675,7 +689,9 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
         cls.TestAutoIncrementController.namespace(TestAPI)
         cls.TestDateController.model(TestDateModel)
         cls.TestDateController.namespace(TestAPI)
-        return [TestModel, TestAutoIncrementModel, TestDateModel]
+        cls.TestInheritanceController.model(TestInheritanceModel)
+        cls.TestInheritanceController.namespace(TestAPI)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestInheritanceModel]
 
     def setUp(self):
         logger.info(f"-------------------------------")
