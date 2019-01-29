@@ -72,6 +72,7 @@ def _create_from(model):
             cls._session.add(row_model)  # Let any error be handled by the caller (main model), same for commit
 
     for attribute in inspect(model).attrs:
-        setattr(AuditModel, attribute.key, _column(attribute))
+        if attribute.key not in AuditModel.get_field_names():
+	    setattr(AuditModel, attribute.key, _column(attribute))
 
     return AuditModel
