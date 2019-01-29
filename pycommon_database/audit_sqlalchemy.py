@@ -76,13 +76,12 @@ def _create_from(model):
             row_model, errors = cls.schema().load(row, session=cls._session)
             if errors:
                 raise ValidationFailed(row, errors)
-            cls._session.add(
-                row_model
-            )  # Let any error be handled by the caller (main model), same for commit
+            # Let any error be handled by the caller (main model), same for commit
+            cls._session.add(row_model)
 
     existing_field_names = list(AuditModel.get_field_names())
     for attribute in inspect(model).attrs:
         if attribute.key not in existing_field_names:
-	    setattr(AuditModel, attribute.key, _column(attribute))
+            setattr(AuditModel, attribute.key, _column(attribute))
 
     return AuditModel
