@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.14.1 (2019-01-29) ##
+
+### Bugfixes ###
+
+- Fix problem with inherited classes for audit model when adding base model columns
+
 ## Version 13.14.0 (2019-01-10) ##
 
 ### Enhancements ###
