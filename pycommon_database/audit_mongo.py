@@ -20,14 +20,25 @@ class Action(enum.IntEnum):
 
 
 def _create_from(model: Type[CRUDModel], base):
-    return _versioning_audit(model, base) if issubclass(model, VersionedCRUDModel) else _common_audit(model, base)
+    return (
+        _versioning_audit(model, base)
+        if issubclass(model, VersionedCRUDModel)
+        else _common_audit(model, base)
+    )
 
 
 def _common_audit(model: Type[CRUDModel], base):
-    class AuditModel(model, base=base, table_name=f'audit_{model.__tablename__}', audit=False, skip_name_check=True):
+    class AuditModel(
+        model,
+        base=base,
+        table_name=f"audit_{model.__tablename__}",
+        audit=False,
+        skip_name_check=True,
+    ):
         """
         Class providing Audit fields for a MONGODB model.
         """
+
         revision = Column(int, is_primary_key=True)
 
         audit_user = Column(str)
@@ -36,7 +47,9 @@ def _common_audit(model: Type[CRUDModel], base):
 
         @classmethod
         def get_response_model(cls, namespace):
-            return namespace.model('Audit' + model.__name__, cls._flask_restplus_fields(namespace))
+            return namespace.model(
+                "Audit" + model.__name__, cls._flask_restplus_fields(namespace)
+            )
 
         @classmethod
         def audit_add(cls, document: dict):
@@ -62,8 +75,10 @@ def _common_audit(model: Type[CRUDModel], base):
 
         @classmethod
         def _audit_action(cls, action: Action, document: dict):
-            document.pop('_id', None)
-            document[cls.revision.name] = cls._increment('revision', model.__tablename__)
+            document.pop("_id", None)
+            document[cls.revision.name] = cls._increment(
+                "revision", model.__tablename__
+            )
             document[cls.audit_user.name] = current_user_name()
             document[cls.audit_date_utc.name] = datetime.datetime.utcnow()
             document[cls.audit_action.name] = action.value
@@ -73,10 +88,13 @@ def _common_audit(model: Type[CRUDModel], base):
 
 
 def _versioning_audit(model: Type[VersionedCRUDModel], base):
-    class AuditModel(CRUDModel, base=base, table_name='audit', audit=False, skip_name_check=True):
+    class AuditModel(
+        CRUDModel, base=base, table_name="audit", audit=False, skip_name_check=True
+    ):
         """
         Class providing the audit for all versioned MONGODB models.
         """
+
         table_name = Column(str, is_primary_key=True)
         revision = Column(int, is_primary_key=True)
 
@@ -94,7 +112,7 @@ def _versioning_audit(model: Type[VersionedCRUDModel], base):
         def get_response_model(cls, namespace):
             all_fields = cls._flask_restplus_fields(namespace)
             del all_fields[cls.table_name.name]
-            return namespace.model('AuditModel', all_fields)
+            return namespace.model("AuditModel", all_fields)
 
         @classmethod
         def get_all(cls, **filters):
@@ -119,12 +137,14 @@ def _versioning_audit(model: Type[VersionedCRUDModel], base):
 
         @classmethod
         def _audit_action(cls, action: Action, revision: int):
-            cls.__collection__.insert_one({
-                cls.table_name.name: model.__tablename__,
-                cls.revision.name: revision,
-                cls.audit_user.name: current_user_name(),
-                cls.audit_date_utc.name: datetime.datetime.utcnow(),
-                cls.audit_action.name: action.value,
-            })
+            cls.__collection__.insert_one(
+                {
+                    cls.table_name.name: model.__tablename__,
+                    cls.revision.name: revision,
+                    cls.audit_user.name: current_user_name(),
+                    cls.audit_date_utc.name: datetime.datetime.utcnow(),
+                    cls.audit_action.name: action.value,
+                }
+            )
 
     return AuditModel

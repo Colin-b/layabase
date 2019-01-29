@@ -1,4 +1,8 @@
-# Python Common Database Module #
+<h2 align="center">Python Common Database Module</h2>
+
+<p align="center">
+<a href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+</p>
 
 Query your databases easily and transparently thanks to this module providing helpers on top of most brilliant python
 database modules (SQLAlchemy and PyMongo).
