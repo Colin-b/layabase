@@ -6,23 +6,17 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 13.16.1 (2019-01-29)
-
-### Bug fixes ###
-
-- [SQLAlchemy] In case an audited model contains fields thanks to inheritance. Those fields were duplicated in audit model (resulting in audit failure).
-
-## Version 13.16.0 (2019-01-25) ##
-
-### Enhancements ###
-
-- Update dependencies to latest version (marshmallow 2.18.0, SQLAlchemy 1.2.16).
-
-## Version 13.15.0 (2019-01-11) ##
+## Version 13.15.0 (2019-01-29) ##
 
 ### Enhancements ###
 
 - Update dependencies to latest version (pycommon_test 4.10.1, pycommon_error 2.16.0).
+- Update dependencies to latest version (marshmallow 2.18.0, SQLAlchemy 1.2.16).
+- Add all dependencies for testing requirements.
+
+### Bug fixes ###
+
+- [SQLAlchemy] In case an audited model contains fields thanks to inheritance. Those fields were duplicated in audit model (resulting in audit failure).
 
 ## Version 13.14.0 (2019-01-10) ##
 
