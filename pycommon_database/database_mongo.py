@@ -88,75 +88,101 @@ class Column:
         Default to False (None values will not be stored to save space).
         """
         self.field_type = field_type or str
-        name = kwargs.pop('name', None)
+        name = kwargs.pop("name", None)
         if name:
             self._update_name(name)
-        self.get_choices = self._to_get_choices(kwargs.pop('choices', None))
-        self.get_counter = self._to_get_counter(kwargs.pop('counter', None))
-        self.default_value = kwargs.pop('default_value', None)
-        self.get_default_value = self._to_get_default_value(kwargs.pop('get_default_value', None))
-        self.description = kwargs.pop('description', None)
-        self.index_type = kwargs.pop('index_type', None)
-        self.allow_none_as_filter: bool = bool(kwargs.pop('allow_none_as_filter', False))
-        self.should_auto_increment: bool = bool(kwargs.pop('should_auto_increment', False))
-        self.is_required: bool = bool(kwargs.pop('is_required', False))
-        self.min_value = kwargs.pop('min_value', None)
-        self.max_value = kwargs.pop('max_value', None)
-        self.min_length: int = kwargs.pop('min_length', None)
+        self.get_choices = self._to_get_choices(kwargs.pop("choices", None))
+        self.get_counter = self._to_get_counter(kwargs.pop("counter", None))
+        self.default_value = kwargs.pop("default_value", None)
+        self.get_default_value = self._to_get_default_value(
+            kwargs.pop("get_default_value", None)
+        )
+        self.description = kwargs.pop("description", None)
+        self.index_type = kwargs.pop("index_type", None)
+        self.allow_none_as_filter: bool = bool(
+            kwargs.pop("allow_none_as_filter", False)
+        )
+        self.should_auto_increment: bool = bool(
+            kwargs.pop("should_auto_increment", False)
+        )
+        self.is_required: bool = bool(kwargs.pop("is_required", False))
+        self.min_value = kwargs.pop("min_value", None)
+        self.max_value = kwargs.pop("max_value", None)
+        self.min_length: int = kwargs.pop("min_length", None)
         if self.min_length is not None:
             self.min_length = int(self.min_length)
-        self.max_length: int = kwargs.pop('max_length', None)
+        self.max_length: int = kwargs.pop("max_length", None)
         if self.max_length is not None:
             self.max_length = int(self.max_length)
-        self._example = kwargs.pop('example', None)
-        self._store_none: bool = bool(kwargs.pop('store_none', False))
-        self.is_primary_key: bool = bool(kwargs.pop('is_primary_key', False))
+        self._example = kwargs.pop("example", None)
+        self._store_none: bool = bool(kwargs.pop("store_none", False))
+        self.is_primary_key: bool = bool(kwargs.pop("is_primary_key", False))
         if self.is_primary_key:
             if self.index_type:
-                raise Exception('Primary key fields are supposed to be indexed as unique.')
+                raise Exception(
+                    "Primary key fields are supposed to be indexed as unique."
+                )
             self.index_type = IndexType.Unique
-        is_nullable = bool(kwargs.pop('is_nullable', True))
+        is_nullable = bool(kwargs.pop("is_nullable", True))
         if not is_nullable:
             if self.should_auto_increment:
-                raise Exception('A field cannot be mandatory and auto incremented at the same time.')
+                raise Exception(
+                    "A field cannot be mandatory and auto incremented at the same time."
+                )
             if self.default_value:
-                raise Exception('A field cannot be mandatory and having a default value at the same time.')
+                raise Exception(
+                    "A field cannot be mandatory and having a default value at the same time."
+                )
             self._is_nullable_on_insert = False
             self._is_nullable_on_update = False
         else:
             # Field will be optional only if it is not a primary key without default value and not auto incremented
-            self._is_nullable_on_insert = not self.is_primary_key or self.default_value or self.should_auto_increment
+            self._is_nullable_on_insert = (
+                not self.is_primary_key
+                or self.default_value
+                or self.should_auto_increment
+            )
             # Field will be optional only if it is not a primary key without default value
             self._is_nullable_on_update = not self.is_primary_key or self.default_value
         self._check_parameters_validity()
 
     def _check_parameters_validity(self):
         if self.should_auto_increment and self.field_type is not int:
-            raise Exception('Only int fields can be auto incremented.')
-        if self.min_value is not None and not isinstance(self.min_value, self.field_type):
-            raise Exception(f'Minimum value should be of {self.field_type} type.')
+            raise Exception("Only int fields can be auto incremented.")
+        if self.min_value is not None and not isinstance(
+            self.min_value, self.field_type
+        ):
+            raise Exception(f"Minimum value should be of {self.field_type} type.")
         if self.max_value is not None:
             if not isinstance(self.max_value, self.field_type):
-                raise Exception(f'Maximum value should be of {self.field_type} type.')
+                raise Exception(f"Maximum value should be of {self.field_type} type.")
             if self.min_value is not None and self.max_value < self.min_value:
-                raise Exception('Maximum value should be superior or equals to minimum value')
+                raise Exception(
+                    "Maximum value should be superior or equals to minimum value"
+                )
         if self.min_length is not None and self.min_length < 0:
-            raise Exception('Minimum length should be positive')
+            raise Exception("Minimum length should be positive")
         if self.max_length is not None:
             if self.max_length < 0:
-                raise Exception('Maximum length should be positive')
+                raise Exception("Maximum length should be positive")
             if self.min_length is not None and self.max_length < self.min_length:
-                raise Exception('Maximum length should be superior or equals to minimum length')
+                raise Exception(
+                    "Maximum length should be superior or equals to minimum length"
+                )
         if self._example is not None and not isinstance(self._example, self.field_type):
-            raise Exception('Example must be of field type.')
+            raise Exception("Example must be of field type.")
 
-    def _update_name(self, name: str) -> 'Column':
-        if '.' in name:
-            raise Exception(f'{name} is not a valid name. Dots are not allowed in Mongo field names.')
-        if name and (name[0] == ' ' or name[-1] == ' '):
-            raise Exception(f'{name} is not a valid name. Spaces are not allowed at start or end of field names.')
+    def _update_name(self, name: str) -> "Column":
+        if "." in name:
+            raise Exception(
+                f"{name} is not a valid name. Dots are not allowed in Mongo field names."
+            )
+        if name and (name[0] == " " or name[-1] == " "):
+            raise Exception(
+                f"{name} is not a valid name. Spaces are not allowed at start or end of field names."
+            )
         self.name = name
-        if '_id' == self.name:
+        if "_id" == self.name:
             self.field_type = ObjectId
         self._validate_value = self._get_value_validation_function()
         self._deserialize_value = self._get_value_deserialization_function()
@@ -179,10 +205,14 @@ class Column:
         return lambda: None
 
     def _to_get_default_value(self, get_default_value):
-        return get_default_value if get_default_value else lambda model_as_dict: self.default_value
+        return (
+            get_default_value
+            if get_default_value
+            else lambda model_as_dict: self.default_value
+        )
 
     def __str__(self):
-        return f'{self.name}'
+        return f"{self.name}"
 
     def validate_query(self, filters: dict) -> dict:
         """
@@ -197,7 +227,7 @@ class Column:
         value = filters.get(self.name)
         if value is None:
             if self.is_required:
-                return {self.name: ['Missing data for required field.']}
+                return {self.name: ["Missing data for required field."]}
             return {}
         # Allow to specify a list of values when querying a field
         if isinstance(value, list) and self.field_type != list:
@@ -221,7 +251,7 @@ class Column:
         value = document.get(self.name)
         if value is None:
             if not self._is_nullable_on_insert:
-                return {self.name: ['Missing data for required field.']}
+                return {self.name: ["Missing data for required field."]}
             return {}
         return self._validate_value(value)
 
@@ -238,7 +268,7 @@ class Column:
         value = document.get(self.name)
         if value is None:
             if not self._is_nullable_on_update:
-                return {self.name: ['Missing data for required field.']}
+                return {self.name: ["Missing data for required field."]}
             return {}
         return self._validate_value(value)
 
@@ -278,7 +308,7 @@ class Column:
             try:
                 value = iso8601.parse_date(value)
             except iso8601.ParseError:
-                return {self.name: ['Not a valid datetime.']}
+                return {self.name: ["Not a valid datetime."]}
 
         return self._validate_type(value)
 
@@ -293,7 +323,7 @@ class Column:
             try:
                 value = iso8601.parse_date(value).date()
             except iso8601.ParseError:
-                return {self.name: ['Not a valid date.']}
+                return {self.name: ["Not a valid date."]}
 
         return self._validate_type(value)
 
@@ -306,7 +336,9 @@ class Column:
         """
         if isinstance(value, str):
             if value not in self.get_choices():
-                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+                return {
+                    self.name: [f'Value "{value}" is not within {self.get_choices()}.']
+                }
             return {}  # Consider string values valid for Enum type
 
         return self._validate_type(value)
@@ -333,15 +365,27 @@ class Column:
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
-        if (isinstance(value, int) and not isinstance(value, bool)) or isinstance(value, float):
+        if (isinstance(value, int) and not isinstance(value, bool)) or isinstance(
+            value, float
+        ):
             value = str(value)
         if isinstance(value, str):
             if self.get_choices() and value not in self.get_choices():
-                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+                return {
+                    self.name: [f'Value "{value}" is not within {self.get_choices()}.']
+                }
             if self.min_length and len(value) < self.min_length:
-                return {self.name: [f'Value "{value}" is too small. Minimum length is {self.min_length}.']}
+                return {
+                    self.name: [
+                        f'Value "{value}" is too small. Minimum length is {self.min_length}.'
+                    ]
+                }
             if self.max_length and len(value) > self.max_length:
-                return {self.name: [f'Value "{value}" is too big. Maximum length is {self.max_length}.']}
+                return {
+                    self.name: [
+                        f'Value "{value}" is too big. Maximum length is {self.max_length}.'
+                    ]
+                }
 
         return self._validate_type(value)
 
@@ -354,9 +398,17 @@ class Column:
         """
         if isinstance(value, list):
             if self.min_length and len(value) < self.min_length:
-                return {self.name: [f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
+                return {
+                    self.name: [
+                        f"{value} does not contains enough values. Minimum length is {self.min_length}."
+                    ]
+                }
             if self.max_length and len(value) > self.max_length:
-                return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
+                return {
+                    self.name: [
+                        f"{value} contains too many values. Maximum length is {self.max_length}."
+                    ]
+                }
 
         return self._validate_type(value)
 
@@ -369,9 +421,17 @@ class Column:
         """
         if isinstance(value, dict):
             if self.min_length and len(value) < self.min_length:
-                return {self.name: [f'{value} does not contains enough values. Minimum length is {self.min_length}.']}
+                return {
+                    self.name: [
+                        f"{value} does not contains enough values. Minimum length is {self.min_length}."
+                    ]
+                }
             if self.max_length and len(value) > self.max_length:
-                return {self.name: [f'{value} contains too many values. Maximum length is {self.max_length}.']}
+                return {
+                    self.name: [
+                        f"{value} contains too many values. Maximum length is {self.max_length}."
+                    ]
+                }
 
         return self._validate_type(value)
 
@@ -386,14 +446,24 @@ class Column:
             try:
                 value = int(value)
             except ValueError:
-                return {self.name: [f'Not a valid int.']}
+                return {self.name: [f"Not a valid int."]}
         if isinstance(value, int):
             if self.get_choices() and value not in self.get_choices():
-                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+                return {
+                    self.name: [f'Value "{value}" is not within {self.get_choices()}.']
+                }
             if self.min_value is not None and value < self.min_value:
-                return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
+                return {
+                    self.name: [
+                        f'Value "{value}" is too small. Minimum value is {self.min_value}.'
+                    ]
+                }
             if self.max_value is not None and value > self.max_value:
-                return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
+                return {
+                    self.name: [
+                        f'Value "{value}" is too big. Maximum value is {self.max_value}.'
+                    ]
+                }
 
         return self._validate_type(value)
 
@@ -408,16 +478,26 @@ class Column:
             try:
                 value = float(value)
             except ValueError:
-                return {self.name: [f'Not a valid float.']}
+                return {self.name: [f"Not a valid float."]}
         elif isinstance(value, int):
             value = float(value)
         if isinstance(value, float):
             if self.get_choices() and value not in self.get_choices():
-                return {self.name: [f'Value "{value}" is not within {self.get_choices()}.']}
+                return {
+                    self.name: [f'Value "{value}" is not within {self.get_choices()}.']
+                }
             if self.min_value is not None and value < self.min_value:
-                return {self.name: [f'Value "{value}" is too small. Minimum value is {self.min_value}.']}
+                return {
+                    self.name: [
+                        f'Value "{value}" is too small. Minimum value is {self.min_value}.'
+                    ]
+                }
             if self.max_value is not None and value > self.max_value:
-                return {self.name: [f'Value "{value}" is too big. Maximum value is {self.max_value}.']}
+                return {
+                    self.name: [
+                        f'Value "{value}" is too big. Maximum value is {self.max_value}.'
+                    ]
+                }
 
         return self._validate_type(value)
 
@@ -429,7 +509,7 @@ class Column:
         Entry would be composed of the field name associated to a list of error messages.
         """
         if not isinstance(value, self.field_type):
-            return {self.name: [f'Not a valid {self.field_type.__name__}.']}
+            return {self.name: [f"Not a valid {self.field_type.__name__}."]}
 
         return {}
 
@@ -448,18 +528,20 @@ class Column:
         # Allow to specify a list of values to query
         elif isinstance(value, list) and self.field_type != list:
             if value:  # Discard empty list as filter on non list field
-                mongo_values = [self._deserialize_value(value_in_list) for value_in_list in value]
+                mongo_values = [
+                    self._deserialize_value(value_in_list) for value_in_list in value
+                ]
                 if self.get_default_value(filters) in mongo_values:
-                    or_filter = filters.setdefault('$or', [])
-                    or_filter.append({self.name: {'$exists': False}})
-                    or_filter.append({self.name: {'$in': mongo_values}})
+                    or_filter = filters.setdefault("$or", [])
+                    or_filter.append({self.name: {"$exists": False}})
+                    or_filter.append({self.name: {"$in": mongo_values}})
                 else:
-                    filters[self.name] = {'$in': mongo_values}
+                    filters[self.name] = {"$in": mongo_values}
         else:
             mongo_value = self._deserialize_value(value)
             if self.get_default_value(filters) == mongo_value:
-                or_filter = filters.setdefault('$or', [])
-                or_filter.append({self.name: {'$exists': False}})
+                or_filter = filters.setdefault("$or", [])
+                or_filter.append({self.name: {"$exists": False}})
                 or_filter.append({self.name: mongo_value})
             else:
                 filters[self.name] = mongo_value
@@ -550,7 +632,9 @@ class Column:
                 value = datetime.datetime.combine(value, datetime.datetime.min.time())
             # Ensure that time is not something else than midnight
             else:
-                value = datetime.datetime.combine(value.date(), datetime.datetime.min.time())
+                value = datetime.datetime.combine(
+                    value.date(), datetime.datetime.min.time()
+                )
 
         return value
 
@@ -643,7 +727,11 @@ class Column:
         if value is None:
             document[self.name] = self.get_default_value(document)
         elif self.field_type == datetime.datetime:
-            document[self.name] = value.isoformat()  # TODO Time Offset is missing to be fully compliant with RFC
+            document[
+                self.name
+            ] = (
+                value.isoformat()
+            )  # TODO Time Offset is missing to be fully compliant with RFC
         elif self.field_type == datetime.date:
             document[self.name] = value.date().isoformat()
         elif isinstance(self.field_type, enum.EnumMeta):
@@ -671,22 +759,29 @@ class Column:
         if self.field_type == bool:
             return True
         if self.field_type == datetime.date:
-            return '2017-09-24'
+            return "2017-09-24"
         if self.field_type == datetime.datetime:
-            return '2017-09-24T15:36:09'
+            return "2017-09-24T15:36:09"
         if self.field_type == list:
-            return [f'Sample {i}' for i in range(self.min_length)] if self.min_length else [
-                f'1st {self.name} sample',
-                f'2nd {self.name} sample',
-            ][:self.max_length or 2]
+            return (
+                [f"Sample {i}" for i in range(self.min_length)]
+                if self.min_length
+                else [f"1st {self.name} sample", f"2nd {self.name} sample"][
+                    : self.max_length or 2
+                ]
+            )
         if self.field_type == dict:
             return {
-                f'1st {self.name} key': f'1st {self.name} sample',
-                f'2nd {self.name} key': f'2nd {self.name} sample',
+                f"1st {self.name} key": f"1st {self.name} sample",
+                f"2nd {self.name} key": f"2nd {self.name} sample",
             }
         if self.field_type == ObjectId:
-            return '1234567890QBCDEF01234567'
-        return 'X' * self.min_length if self.min_length else f'sample {self.name}'[:self.max_length or 1000]
+            return "1234567890QBCDEF01234567"
+        return (
+            "X" * self.min_length
+            if self.min_length
+            else f"sample {self.name}"[: self.max_length or 1000]
+        )
 
 
 class DictColumn(Column):
@@ -695,12 +790,14 @@ class DictColumn(Column):
     If you do not want to validate the content of this dictionary use a Column(dict) instead.
     """
 
-    def __init__(self,
-                 fields: Dict[str, Column]=None,
-                 get_fields=None,
-                 index_fields: Dict[str, Column]=None,
-                 get_index_fields=None,
-                 **kwargs):
+    def __init__(
+        self,
+        fields: Dict[str, Column] = None,
+        get_fields=None,
+        index_fields: Dict[str, Column] = None,
+        get_index_fields=None,
+        **kwargs,
+    ):
         """
         :param fields: Static definition of this dictionary.
         Keys are field names and associated values are Column.
@@ -745,29 +842,37 @@ class DictColumn(Column):
         :param max_length: Maximum number of items.
         Should be an integer value. Default to None (no maximum length).
         """
-        kwargs.pop('field_type', None)
+        kwargs.pop("field_type", None)
 
         if not fields and not get_fields:
-            raise Exception('fields or get_fields must be provided.')
+            raise Exception("fields or get_fields must be provided.")
 
         self._default_fields = fields or {}
-        self._get_fields = get_fields if get_fields else lambda model_as_dict: self._default_fields
+        self._get_fields = (
+            get_fields if get_fields else lambda model_as_dict: self._default_fields
+        )
 
         if index_fields:
-            self._get_all_index_fields = get_index_fields if get_index_fields else lambda model_as_dict: index_fields
+            self._get_all_index_fields = (
+                get_index_fields
+                if get_index_fields
+                else lambda model_as_dict: index_fields
+            )
             self._default_index_fields = index_fields
         else:
             self._get_all_index_fields = self._get_fields
             self._default_index_fields = self._default_fields
 
-        if bool(kwargs.get('is_nullable', True)):  # Ensure that there will be a default value if field is nullable
-            if 'default_value' not in kwargs:
-                kwargs['default_value'] = {
+        if bool(
+            kwargs.get("is_nullable", True)
+        ):  # Ensure that there will be a default value if field is nullable
+            if "default_value" not in kwargs:
+                kwargs["default_value"] = {
                     field_name: field.default_value
                     for field_name, field in self._default_fields.items()
                 }
-            if 'get_default_value' not in kwargs:
-                kwargs['get_default_value'] = lambda model_as_dict: {
+            if "get_default_value" not in kwargs:
+                kwargs["get_default_value"] = lambda model_as_dict: {
                     field_name: field.get_default_value(model_as_dict)
                     for field_name, field in self._get_fields(model_as_dict).items()
                 }
@@ -832,11 +937,16 @@ class DictColumn(Column):
 
         return FakeModel
 
-    def _get_index_fields(self, index_type: IndexType, model_as_dict: Union[dict, None], prefix: str) -> List[str]:
+    def _get_index_fields(
+        self, index_type: IndexType, model_as_dict: Union[dict, None], prefix: str
+    ) -> List[str]:
         if model_as_dict is None:
-            return self._default_index_description_model()._get_index_fields(index_type, None, f'{prefix}{self.name}.')
-        return self._index_description_model(model_as_dict)._get_index_fields(index_type, model_as_dict,
-                                                                              f'{prefix}{self.name}.')
+            return self._default_index_description_model()._get_index_fields(
+                index_type, None, f"{prefix}{self.name}."
+            )
+        return self._index_description_model(model_as_dict)._get_index_fields(
+            index_type, model_as_dict, f"{prefix}{self.name}."
+        )
 
     def validate_insert(self, model_as_dict: dict) -> dict:
         errors = Column.validate_insert(self, model_as_dict)
@@ -845,10 +955,14 @@ class DictColumn(Column):
             if value is not None:
                 try:
                     description_model = self._description_model(model_as_dict)
-                    errors.update({
-                        f'{self.name}.{field_name}': field_errors
-                        for field_name, field_errors in description_model.validate_insert(value).items()
-                    })
+                    errors.update(
+                        {
+                            f"{self.name}.{field_name}": field_errors
+                            for field_name, field_errors in description_model.validate_insert(
+                                value
+                            ).items()
+                        }
+                    )
                 except Exception as e:
                     errors[self.name] = [str(e)]
         return errors
@@ -868,10 +982,14 @@ class DictColumn(Column):
             if value is not None:
                 try:
                     description_model = self._description_model(document)
-                    errors.update({
-                        f'{self.name}.{field_name}': field_errors
-                        for field_name, field_errors in description_model.validate_update(value).items()
-                    })
+                    errors.update(
+                        {
+                            f"{self.name}.{field_name}": field_errors
+                            for field_name, field_errors in description_model.validate_update(
+                                value
+                            ).items()
+                        }
+                    )
                 except Exception as e:
                     errors[self.name] = [str(e)]
         return errors
@@ -891,10 +1009,14 @@ class DictColumn(Column):
             if value is not None:
                 try:
                     description_model = self._description_model(filters)
-                    errors.update({
-                        f'{self.name}.{field_name}': field_errors
-                        for field_name, field_errors in description_model.validate_query(value).items()
-                    })
+                    errors.update(
+                        {
+                            f"{self.name}.{field_name}": field_errors
+                            for field_name, field_errors in description_model.validate_query(
+                                value
+                            ).items()
+                        }
+                    )
                 except Exception as e:
                     errors[self.name] = [str(e)]
         return errors
@@ -955,12 +1077,12 @@ class ListColumn(Column):
         :param min_length: Minimum number of items.
         :param max_length: Maximum number of items.
         """
-        kwargs.pop('field_type', None)
+        kwargs.pop("field_type", None)
         self.list_item_column = list_item_type
-        self.sorted = bool(kwargs.pop('sorted', False))
+        self.sorted = bool(kwargs.pop("sorted", False))
         Column.__init__(self, list, **kwargs)
 
-    def _update_name(self, name: str) -> 'Column':
+    def _update_name(self, name: str) -> "Column":
         Column._update_name(self, name)
         self.list_item_column._update_name(name)
         return self
@@ -971,11 +1093,15 @@ class ListColumn(Column):
             values = document.get(self.name) or []
             for index, value in enumerate(values):
                 document_with_list_item = {**document, self.name: value}
-                list_item_errors = self.list_item_column.validate_insert(document_with_list_item)
-                errors.update({
-                    f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in list_item_errors.items()
-                })
+                list_item_errors = self.list_item_column.validate_insert(
+                    document_with_list_item
+                )
+                errors.update(
+                    {
+                        f"{field_name}[{index}]": field_errors
+                        for field_name, field_errors in list_item_errors.items()
+                    }
+                )
         return errors
 
     def deserialize_insert(self, document: dict):
@@ -999,11 +1125,15 @@ class ListColumn(Column):
             values = document[self.name]
             for index, value in enumerate(values):
                 document_with_list_item = {**document, self.name: value}
-                list_item_errors = self.list_item_column.validate_update(document_with_list_item)
-                errors.update({
-                    f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in list_item_errors.items()
-                })
+                list_item_errors = self.list_item_column.validate_update(
+                    document_with_list_item
+                )
+                errors.update(
+                    {
+                        f"{field_name}[{index}]": field_errors
+                        for field_name, field_errors in list_item_errors.items()
+                    }
+                )
         return errors
 
     def deserialize_update(self, document: dict):
@@ -1027,11 +1157,15 @@ class ListColumn(Column):
             values = filters.get(self.name) or []
             for index, value in enumerate(values):
                 filters_with_list_item = {**filters, self.name: value}
-                list_item_errors = self.list_item_column.validate_query(filters_with_list_item)
-                errors.update({
-                    f'{field_name}[{index}]': field_errors
-                    for field_name, field_errors in list_item_errors.items()
-                })
+                list_item_errors = self.list_item_column.validate_query(
+                    filters_with_list_item
+                )
+                errors.update(
+                    {
+                        f"{field_name}[{index}]": field_errors
+                        for field_name, field_errors in list_item_errors.items()
+                    }
+                )
         return errors
 
     def deserialize_query(self, filters: dict):
@@ -1077,6 +1211,7 @@ class CRUDModel:
     __counters__ class property must be specified in Model.
     Calling load_from(...) will provide you those properties.
     """
+
     __tablename__: str = None  # Name of the collection described by this model
     __collection__: pymongo.collection.Collection = None  # Mongo collection
     __counters__: pymongo.collection.Collection = None  # Mongo counters collection (to increment fields)
@@ -1085,62 +1220,68 @@ class CRUDModel:
     _skip_unknown_fields: bool = True
     _skip_log_for_unknown_fields: List[str] = []
     logger = None
-    _server_version: str = ''
+    _server_version: str = ""
 
-    def __init_subclass__(cls,
-                          base: pymongo.database.Database=None,
-                          table_name: str=None,
-                          audit: bool=False,
-                          **kwargs):
-        cls._skip_unknown_fields = kwargs.pop('skip_unknown_fields', True)
-        cls._skip_log_for_unknown_fields = kwargs.pop('skip_log_for_unknown_fields', [])
-        skip_name_check = kwargs.pop('skip_name_check', False)
+    def __init_subclass__(
+        cls,
+        base: pymongo.database.Database = None,
+        table_name: str = None,
+        audit: bool = False,
+        **kwargs,
+    ):
+        cls._skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
+        cls._skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
+        skip_name_check = kwargs.pop("skip_name_check", False)
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
-        cls.logger = logging.getLogger(f'{__name__}.{table_name}')
+        cls.logger = logging.getLogger(f"{__name__}.{table_name}")
         cls.__fields__ = [
             field._update_name(field_name)
-            for field_name, field in inspect.getmembers(cls) if isinstance(field, Column)
+            for field_name, field in inspect.getmembers(cls)
+            if isinstance(field, Column)
         ]
         if base is not None:  # Allow to not provide base to create fake models
             if not skip_name_check and cls._is_forbidden():
-                raise Exception(f'{cls.__tablename__} is a reserved collection name.')
+                raise Exception(f"{cls.__tablename__} is a reserved collection name.")
             cls.__collection__ = base[cls.__tablename__]
-            cls.__counters__ = base['counters']
-            cls._server_version = _server_versions.get(base.name, '')
+            cls.__counters__ = base["counters"]
+            cls._server_version = _server_versions.get(base.name, "")
             cls.update_indexes()
         if audit:
             from pycommon_database.audit_mongo import _create_from
+
             cls.audit_model = _create_from(cls, base)
         else:
-            cls.audit_model = None  # Ensure no circular reference when creating the audit
+            cls.audit_model = (
+                None
+            )  # Ensure no circular reference when creating the audit
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
-        return [
-            field.name
-            for field in cls.__fields__
-            if field.is_primary_key
-        ]
+        return [field.name for field in cls.__fields__ if field.is_primary_key]
 
     @classmethod
     def _is_forbidden(cls):
         # Counters collection is managed by pycommon_database
         # Audit collections are managed by pycommon_database
-        return not cls.__tablename__ or 'counters' == cls.__tablename__ or cls.__tablename__.startswith('audit')
+        return (
+            not cls.__tablename__
+            or "counters" == cls.__tablename__
+            or cls.__tablename__.startswith("audit")
+        )
 
     @classmethod
-    def update_indexes(cls, document: dict=None):
+    def update_indexes(cls, document: dict = None):
         """
         Drop all indexes and recreate them.
         As advised in https://docs.mongodb.com/manual/tutorial/manage-indexes/#modify-an-index
         """
         if cls._check_indexes(document):
-            cls.logger.info('Updating indexes...')
+            cls.logger.info("Updating indexes...")
             cls.__collection__.drop_indexes()
             cls._create_indexes(IndexType.Unique, document)
             cls._create_indexes(IndexType.Other, document)
-            cls.logger.info('Indexes updated.')
+            cls.logger.info("Indexes updated.")
             if cls.audit_model:
                 cls.audit_model.update_indexes(document)
 
@@ -1150,19 +1291,35 @@ class CRUDModel:
         Check if indexes are present and if criteria have been modified
         :param document: Data specified by the user at the time of the index creation.
         """
-        criteria = [field_name for field_name in cls._get_index_fields(IndexType.Other, document, '')]
-        unique_criteria = [field_name for field_name in cls._get_index_fields(IndexType.Unique, document, '')]
-        index_name = f'idx{cls.__tablename__}'
-        unique_index_name = f'uidx{cls.__tablename__}'
+        criteria = [
+            field_name
+            for field_name in cls._get_index_fields(IndexType.Other, document, "")
+        ]
+        unique_criteria = [
+            field_name
+            for field_name in cls._get_index_fields(IndexType.Unique, document, "")
+        ]
+        index_name = f"idx{cls.__tablename__}"
+        unique_index_name = f"uidx{cls.__tablename__}"
         indexes = cls.__collection__.list_indexes()
-        cls.logger.debug(f'Checking existing indexes: {indexes}')
-        indexes = {index['name']: index['key'].keys() for index in indexes if 'name' in index and 'key' in index}
-        return (criteria and index_name not in indexes) or \
-               (not criteria and index_name in indexes) or \
-               (criteria and index_name in indexes and criteria != indexes[index_name]) or \
-               (unique_criteria and unique_index_name not in indexes) or \
-               (not unique_criteria and unique_index_name in indexes) or \
-               (unique_criteria and unique_index_name in indexes and unique_criteria != indexes[unique_index_name])
+        cls.logger.debug(f"Checking existing indexes: {indexes}")
+        indexes = {
+            index["name"]: index["key"].keys()
+            for index in indexes
+            if "name" in index and "key" in index
+        }
+        return (
+            (criteria and index_name not in indexes)
+            or (not criteria and index_name in indexes)
+            or (criteria and index_name in indexes and criteria != indexes[index_name])
+            or (unique_criteria and unique_index_name not in indexes)
+            or (not unique_criteria and unique_index_name in indexes)
+            or (
+                unique_criteria
+                and unique_index_name in indexes
+                and unique_criteria != indexes[unique_index_name]
+            )
+        )
 
     @classmethod
     def _create_indexes(cls, index_type: IndexType, document: dict, condition=None):
@@ -1173,37 +1330,63 @@ class CRUDModel:
         try:
             criteria = [
                 (field_name, pymongo.ASCENDING)
-                for field_name in cls._get_index_fields(index_type, document, '')
+                for field_name in cls._get_index_fields(index_type, document, "")
             ]
             if criteria:
                 # Avoid using auto generated index name that might be too long
-                index_name = f'uidx{cls.__tablename__}' if index_type == IndexType.Unique else f'idx{cls.__tablename__}'
+                index_name = (
+                    f"uidx{cls.__tablename__}"
+                    if index_type == IndexType.Unique
+                    else f"idx{cls.__tablename__}"
+                )
                 cls.logger.info(
-                    f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria.")
-                if condition is None or cls._server_version < '3.2':
-                    cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique, name=index_name)
+                    f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria."
+                )
+                if condition is None or cls._server_version < "3.2":
+                    cls.__collection__.create_index(
+                        criteria, unique=index_type == IndexType.Unique, name=index_name
+                    )
                 else:
                     try:
-                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique,
-                                                        name=index_name, partialFilterExpression=condition)
+                        cls.__collection__.create_index(
+                            criteria,
+                            unique=index_type == IndexType.Unique,
+                            name=index_name,
+                            partialFilterExpression=condition,
+                        )
                     except pymongo.errors.OperationFailure:
-                        cls.logger.exception(f'Unable to create a {index_type.name} index.')
-                        cls.__collection__.create_index(criteria, unique=index_type == IndexType.Unique,
-                                                        name=index_name)
+                        cls.logger.exception(
+                            f"Unable to create a {index_type.name} index."
+                        )
+                        cls.__collection__.create_index(
+                            criteria,
+                            unique=index_type == IndexType.Unique,
+                            name=index_name,
+                        )
         except pymongo.errors.DuplicateKeyError:
-            cls.logger.exception(f'Duplicate key found for {criteria} criteria '
-                                 f'when creating a {index_type.name} index.')
+            cls.logger.exception(
+                f"Duplicate key found for {criteria} criteria "
+                f"when creating a {index_type.name} index."
+            )
             raise
 
     @classmethod
-    def _get_index_fields(cls, index_type: IndexType, document: Union[dict, None], prefix: str) -> List[str]:
+    def _get_index_fields(
+        cls, index_type: IndexType, document: Union[dict, None], prefix: str
+    ) -> List[str]:
         """
         In case a field is a dictionary and some fields within it should be indexed, override this method.
         """
-        index_fields = [f'{prefix}{field.name}' for field in cls.__fields__ if field.index_type == index_type]
+        index_fields = [
+            f"{prefix}{field.name}"
+            for field in cls.__fields__
+            if field.index_type == index_type
+        ]
         for field in cls.__fields__:
             if isinstance(field, DictColumn):
-                index_fields.extend(field._get_index_fields(index_type, document, prefix))
+                index_fields.extend(
+                    field._get_index_fields(index_type, document, prefix)
+                )
         return index_fields
 
     @classmethod
@@ -1218,13 +1401,17 @@ class CRUDModel:
         cls.deserialize_query(filters)
 
         if cls.__collection__.count_documents(filters) > 1:
-            raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
+            raise ValidationFailed(
+                filters, message="More than one result: Consider another filtering."
+            )
 
         if cls.logger.isEnabledFor(logging.DEBUG):
-            cls.logger.debug(f'Query document matching {filters}...')
+            cls.logger.debug(f"Query document matching {filters}...")
         document = cls.__collection__.find_one(filters)
         if cls.logger.isEnabledFor(logging.DEBUG):
-            cls.logger.debug(f'{"1" if document else "No corresponding"} document retrieved.')
+            cls.logger.debug(
+                f'{"1" if document else "No corresponding"} document retrieved.'
+            )
         return cls.serialize(document)
 
     @classmethod
@@ -1239,8 +1426,8 @@ class CRUDModel:
         """
         Return all documents matching provided filters.
         """
-        limit = filters.pop('limit', 0) or 0
-        offset = filters.pop('offset', 0) or 0
+        limit = filters.pop("limit", 0) or 0
+        offset = filters.pop("offset", 0) or 0
         errors = cls.validate_query(filters)
         if errors:
             raise ValidationFailed(filters, errors)
@@ -1249,12 +1436,14 @@ class CRUDModel:
 
         if cls.logger.isEnabledFor(logging.DEBUG):
             if filters:
-                cls.logger.debug(f'Query documents matching {filters}...')
+                cls.logger.debug(f"Query documents matching {filters}...")
             else:
-                cls.logger.debug(f'Query all documents...')
+                cls.logger.debug(f"Query all documents...")
         documents = cls.__collection__.find(filters, skip=offset, limit=limit)
         if cls.logger.isEnabledFor(logging.DEBUG):
-            cls.logger.debug(f'{documents.count() if documents else "No corresponding"} documents retrieved.')
+            cls.logger.debug(
+                f'{documents.count() if documents else "No corresponding"} documents retrieved.'
+            )
         return [cls.serialize(document) for document in documents]
 
     @classmethod
@@ -1286,11 +1475,17 @@ class CRUDModel:
         :return: Validation errors that might have occurred. Empty if no error occurred.
         Each entry if composed of a field name associated to a list of error messages.
         """
-        queried_fields = [field.name for field in cls.__fields__ if field.name in filters]
-        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields]
+        queried_fields = [
+            field.name for field in cls.__fields__ if field.name in filters
+        ]
+        unknown_fields = [
+            field_name for field_name in filters if field_name not in queried_fields
+        ]
         known_filters = copy.deepcopy(filters)
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._to_known_field(unknown_field, known_filters[unknown_field])
+            known_field, field_value = cls._to_known_field(
+                unknown_field, known_filters[unknown_field]
+            )
             if known_field:
                 known_filters.setdefault(known_field.name, {}).update(field_value)
 
@@ -1310,24 +1505,30 @@ class CRUDModel:
         :param filters: Provided filters.
         Each entry if composed of a field name associated to a value.
         """
-        queried_fields = [field.name for field in cls.__fields__ if field.name in filters]
-        unknown_fields = [field_name for field_name in filters if field_name not in queried_fields]
+        queried_fields = [
+            field.name for field in cls.__fields__ if field.name in filters
+        ]
+        unknown_fields = [
+            field_name for field_name in filters if field_name not in queried_fields
+        ]
         known_fields = {}  # Contains converted known dot notation fields
 
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._to_known_field(unknown_field, filters[unknown_field])
+            known_field, field_value = cls._to_known_field(
+                unknown_field, filters[unknown_field]
+            )
             del filters[unknown_field]
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
             elif unknown_field not in cls._skip_log_for_unknown_fields:
-                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f"Skipping unknown field {unknown_field}.")
 
         # Deserialize dot notation values
         for field in [field for field in cls.__fields__ if field.name in known_fields]:
             field.deserialize_query(known_fields)
             # Put back deserialized values as dot notation fields
             for inner_field_name, value in known_fields[field.name].items():
-                filters[f'{field.name}.{inner_field_name}'] = value
+                filters[f"{field.name}.{inner_field_name}"] = value
 
         for field in [field for field in cls.__fields__ if field.name in filters]:
             field.deserialize_query(filters)
@@ -1347,7 +1548,7 @@ class CRUDModel:
         :return: Tuple containing dictionary field (first item) and dictionary containing the sub field and its value.
         (None, None) if not found.
         """
-        field_names = field_name.split('.', maxsplit=1)
+        field_names = field_name.split(".", maxsplit=1)
         if len(field_names) == 2:
             for field in cls.__fields__:
                 if field.name == field_names[0] and field.field_type == dict:
@@ -1365,15 +1566,17 @@ class CRUDModel:
         # Make sure fields that were stored in a previous version of a model are not returned if removed since then
         # It also ensure _id can be skipped unless specified otherwise in the model
         known_fields = [field.name for field in cls.__fields__]
-        removed_fields = [field_name for field_name in document if field_name not in known_fields]
+        removed_fields = [
+            field_name for field_name in document if field_name not in known_fields
+        ]
         if removed_fields:
             for removed_field in removed_fields:
                 del document[removed_field]
             # Do not log the fact that _id is removed as it is a Mongo specific field
-            if '_id' in removed_fields:
-                removed_fields.remove('_id')
+            if "_id" in removed_fields:
+                removed_fields.remove("_id")
             if removed_fields:
-                cls.logger.debug(f'Skipping removed fields {removed_fields}.')
+                cls.logger.debug(f"Skipping removed fields {removed_fields}.")
 
         return document
 
@@ -1392,13 +1595,15 @@ class CRUDModel:
         cls.deserialize_insert(document)
         try:
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug(f'Inserting {document}...')
+                cls.logger.debug(f"Inserting {document}...")
             cls._insert_one(document)
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug('Document inserted.')
+                cls.logger.debug("Document inserted.")
             return cls.serialize(document)
         except pymongo.errors.DuplicateKeyError:
-            raise ValidationFailed(cls.serialize(document), message='This document already exists.')
+            raise ValidationFailed(
+                cls.serialize(document), message="This document already exists."
+            )
 
     @classmethod
     def add_all(cls, documents: List[dict]) -> List[dict]:
@@ -1409,10 +1614,10 @@ class CRUDModel:
         :returns The inserted documents formatted as a list of dictionaries.
         """
         if not documents:
-            raise ValidationFailed([], message='No data provided.')
+            raise ValidationFailed([], message="No data provided.")
 
         if not isinstance(documents, list):
-            raise ValidationFailed(documents, message='Must be a list.')
+            raise ValidationFailed(documents, message="Must be a list.")
 
         new_documents = copy.deepcopy(documents)
 
@@ -1422,10 +1627,10 @@ class CRUDModel:
 
         try:
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug(f'Inserting {new_documents}...')
+                cls.logger.debug(f"Inserting {new_documents}...")
             cls._insert_many(new_documents)
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug('Documents inserted.')
+                cls.logger.debug("Documents inserted.")
             return [cls.serialize(document) for document in new_documents]
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
@@ -1440,7 +1645,9 @@ class CRUDModel:
                 errors[index] = document_errors
                 continue
 
-            if not errors:  # Skip deserialization in case errors were found as it will stop
+            if (
+                not errors
+            ):  # Skip deserialization in case errors were found as it will stop
                 cls.deserialize_insert(document)
 
         return errors
@@ -1456,23 +1663,27 @@ class CRUDModel:
         Entry would be composed of a field name associated to a list of error messages.
         """
         if document is None:
-            return {'': ['No data provided.']}
+            return {"": ["No data provided."]}
 
         if not isinstance(document, dict):
-            raise ValidationFailed(document, message='Must be a dictionary.')
+            raise ValidationFailed(document, message="Must be a dictionary.")
 
         new_document = copy.deepcopy(document)
 
         errors = {}
 
         field_names = [field.name for field in cls.__fields__]
-        unknown_fields = [field_name for field_name in new_document if field_name not in field_names]
+        unknown_fields = [
+            field_name for field_name in new_document if field_name not in field_names
+        ]
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._to_known_field(unknown_field, new_document[unknown_field])
+            known_field, field_value = cls._to_known_field(
+                unknown_field, new_document[unknown_field]
+            )
             if known_field:
                 new_document.setdefault(known_field.name, {}).update(field_value)
             elif not cls._skip_unknown_fields:
-                errors.update({unknown_field: ['Unknown field']})
+                errors.update({unknown_field: ["Unknown field"]})
 
         for field in cls.__fields__:
             errors.update(field.validate_insert(new_document))
@@ -1486,14 +1697,18 @@ class CRUDModel:
         Remove entries for unknown fields.
         """
         field_names = [field.name for field in cls.__fields__]
-        unknown_fields = [field_name for field_name in document if field_name not in field_names]
+        unknown_fields = [
+            field_name for field_name in document if field_name not in field_names
+        ]
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._to_known_field(unknown_field, document[unknown_field])
+            known_field, field_value = cls._to_known_field(
+                unknown_field, document[unknown_field]
+            )
             del document[unknown_field]
             if known_field:
                 document.setdefault(known_field.name, {}).update(field_value)
             elif unknown_field not in cls._skip_log_for_unknown_fields:
-                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f"Skipping unknown field {unknown_field}.")
 
     @classmethod
     def deserialize_insert(cls, document: dict):
@@ -1513,7 +1728,7 @@ class CRUDModel:
                 document[field.name] = cls._increment(*field.get_counter(document))
 
     @classmethod
-    def _increment(cls, counter_name: str, counter_category: str=None) -> int:
+    def _increment(cls, counter_name: str, counter_category: str = None) -> int:
         """
         Increment a counter by one.
 
@@ -1521,16 +1736,23 @@ class CRUDModel:
         :param counter_category: Category storing those counters. Default to model table name.
         :return: New counter value.
         """
-        counter_key = {'_id': counter_category if counter_category else cls.__collection__.name}
-        counter_update = {'$inc': {f'{counter_name}.counter': 1},
-                          '$set': {f'{counter_name}.last_update_time': datetime.datetime.utcnow()}}
-        counter_element = cls.__counters__.find_one_and_update(counter_key, counter_update,
-                                                               return_document=pymongo.ReturnDocument.AFTER,
-                                                               upsert=True)
-        return counter_element[counter_name]['counter']
+        counter_key = {
+            "_id": counter_category if counter_category else cls.__collection__.name
+        }
+        counter_update = {
+            "$inc": {f"{counter_name}.counter": 1},
+            "$set": {f"{counter_name}.last_update_time": datetime.datetime.utcnow()},
+        }
+        counter_element = cls.__counters__.find_one_and_update(
+            counter_key,
+            counter_update,
+            return_document=pymongo.ReturnDocument.AFTER,
+            upsert=True,
+        )
+        return counter_element[counter_name]["counter"]
 
     @classmethod
-    def _get_counter(cls, counter_name: str, counter_category: str=None) -> int:
+    def _get_counter(cls, counter_name: str, counter_category: str = None) -> int:
         """
         Get current counter value.
 
@@ -1538,9 +1760,11 @@ class CRUDModel:
         :param counter_category: Category storing those counters. Default to model table name.
         :return: Counter value or 0 if not existing.
         """
-        counter_key = {'_id': counter_category if counter_category else cls.__collection__.name}
+        counter_key = {
+            "_id": counter_category if counter_category else cls.__collection__.name
+        }
         counter_element = cls.__counters__.find_one(counter_key)
-        return counter_element[counter_name]['counter'] if counter_element else 0
+        return counter_element[counter_name]["counter"] if counter_element else 0
 
     @classmethod
     def reset_counters(cls):
@@ -1559,10 +1783,13 @@ class CRUDModel:
 
         :param counter_name: Name of the counter to reset. Will be created at 0 if not existing yet.
         """
-        counter_key = {'_id': cls.__collection__.name}
-        counter_update = {'$set': {
-            f'{counter_name}.counter': 0, f'{counter_name}.last_update_time': datetime.datetime.utcnow()
-        }}
+        counter_key = {"_id": cls.__collection__.name}
+        counter_update = {
+            "$set": {
+                f"{counter_name}.counter": 0,
+                f"{counter_name}.last_update_time": datetime.datetime.utcnow(),
+            }
+        }
         cls.__counters__.find_one_and_update(counter_key, counter_update, upsert=True)
         return
 
@@ -1582,13 +1809,15 @@ class CRUDModel:
 
         try:
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug(f'Updating {document}...')
+                cls.logger.debug(f"Updating {document}...")
             previous_document, new_document = cls._update_one(document)
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug(f'Document updated to {new_document}.')
+                cls.logger.debug(f"Document updated to {new_document}.")
             return cls.serialize(previous_document), cls.serialize(new_document)
         except pymongo.errors.DuplicateKeyError:
-            raise ValidationFailed(cls.serialize(document), message='This document already exists.')
+            raise ValidationFailed(
+                cls.serialize(document), message="This document already exists."
+            )
 
     @classmethod
     def update_all(cls, documents: List[dict]) -> (List[dict], List[dict]):
@@ -1599,10 +1828,10 @@ class CRUDModel:
         :returns A tuple containing previous documents (first item) and new documents (second item).
         """
         if not documents:
-            raise ValidationFailed([], message='No data provided.')
+            raise ValidationFailed([], message="No data provided.")
 
         if not isinstance(documents, list):
-            raise ValidationFailed(documents, message='Must be a list.')
+            raise ValidationFailed(documents, message="Must be a list.")
 
         new_documents = copy.deepcopy(documents)
 
@@ -1612,17 +1841,21 @@ class CRUDModel:
 
         try:
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug(f'Updating {new_documents}...')
+                cls.logger.debug(f"Updating {new_documents}...")
             previous_documents, updated_documents = cls._update_many(new_documents)
             if cls.logger.isEnabledFor(logging.DEBUG):
-                cls.logger.debug(f'Documents updated to {updated_documents}.')
-            return [cls.serialize(document) for document in previous_documents], \
-                   [cls.serialize(document) for document in updated_documents]
+                cls.logger.debug(f"Documents updated to {updated_documents}.")
+            return (
+                [cls.serialize(document) for document in previous_documents],
+                [cls.serialize(document) for document in updated_documents],
+            )
         except pymongo.errors.BulkWriteError as e:
             raise ValidationFailed(documents, message=str(e.details))
         except pymongo.errors.DuplicateKeyError:
-            raise ValidationFailed([cls.serialize(document) for document in documents],
-                                   message='One document already exists.')
+            raise ValidationFailed(
+                [cls.serialize(document) for document in documents],
+                message="One document already exists.",
+            )
 
     @classmethod
     def validate_and_deserialize_update(cls, documents: List[dict]) -> dict:
@@ -1634,7 +1867,9 @@ class CRUDModel:
                 errors[index] = document_errors
                 continue
 
-            if not errors:  # Skip deserialization in case errors were found as it will stop
+            if (
+                not errors
+            ):  # Skip deserialization in case errors were found as it will stop
                 cls.deserialize_update(document)
 
         return errors
@@ -1650,26 +1885,38 @@ class CRUDModel:
         Entry would be composed of a field name associated to a list of error messages.
         """
         if document is None:
-            return {'': ['No data provided.']}
+            return {"": ["No data provided."]}
 
         if not isinstance(document, dict):
-            raise ValidationFailed(document, message='Must be a dictionary.')
+            raise ValidationFailed(document, message="Must be a dictionary.")
 
         new_document = copy.deepcopy(document)
 
         errors = {}
 
-        updated_field_names = [field.name for field in cls.__fields__ if field.name in new_document]
-        unknown_fields = [field_name for field_name in new_document if field_name not in updated_field_names]
+        updated_field_names = [
+            field.name for field in cls.__fields__ if field.name in new_document
+        ]
+        unknown_fields = [
+            field_name
+            for field_name in new_document
+            if field_name not in updated_field_names
+        ]
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._to_known_field(unknown_field, new_document[unknown_field])
+            known_field, field_value = cls._to_known_field(
+                unknown_field, new_document[unknown_field]
+            )
             if known_field:
                 new_document.setdefault(known_field.name, {}).update(field_value)
             elif not cls._skip_unknown_fields:
-                errors.update({unknown_field: ['Unknown field']})
+                errors.update({unknown_field: ["Unknown field"]})
 
         # Also ensure that primary keys will contain a valid value
-        updated_fields = [field for field in cls.__fields__ if field.name in new_document or field.is_primary_key]
+        updated_fields = [
+            field
+            for field in cls.__fields__
+            if field.name in new_document or field.is_primary_key
+        ]
         for field in updated_fields:
             errors.update(field.validate_update(new_document))
 
@@ -1684,17 +1931,25 @@ class CRUDModel:
         :param document: Updated version (partial) of a Mongo document.
         Each entry if composed of a field name associated to a value.
         """
-        updated_field_names = [field.name for field in cls.__fields__ if field.name in document]
-        unknown_fields = [field_name for field_name in document if field_name not in updated_field_names]
+        updated_field_names = [
+            field.name for field in cls.__fields__ if field.name in document
+        ]
+        unknown_fields = [
+            field_name
+            for field_name in document
+            if field_name not in updated_field_names
+        ]
         known_fields = {}
 
         for unknown_field in unknown_fields:
-            known_field, field_value = cls._to_known_field(unknown_field, document[unknown_field])
+            known_field, field_value = cls._to_known_field(
+                unknown_field, document[unknown_field]
+            )
             del document[unknown_field]
             if known_field:
                 known_fields.setdefault(known_field.name, {}).update(field_value)
             elif unknown_field not in cls._skip_log_for_unknown_fields:
-                cls.logger.warning(f'Skipping unknown field {unknown_field}.')
+                cls.logger.warning(f"Skipping unknown field {unknown_field}.")
 
         document_without_dot_notation = {**document, **known_fields}
         # Deserialize dot notation values
@@ -1702,10 +1957,16 @@ class CRUDModel:
             # Ensure that every provided field will be provided as deserialization might rely on another field
             field.deserialize_update(document_without_dot_notation)
             # Put back deserialized values as dot notation fields
-            for inner_field_name, value in document_without_dot_notation[field.name].items():
-                document[f'{field.name}.{inner_field_name}'] = value
+            for inner_field_name, value in document_without_dot_notation[
+                field.name
+            ].items():
+                document[f"{field.name}.{inner_field_name}"] = value
 
-        updated_fields = [field for field in cls.__fields__ if field.name in document or field.is_primary_key]
+        updated_fields = [
+            field
+            for field in cls.__fields__
+            if field.name in document or field.is_primary_key
+        ]
         for field in updated_fields:
             field.deserialize_update(document)
 
@@ -1726,12 +1987,12 @@ class CRUDModel:
 
         if cls.logger.isEnabledFor(logging.DEBUG):
             if filters:
-                cls.logger.debug(f'Removing documents corresponding to {filters}...')
+                cls.logger.debug(f"Removing documents corresponding to {filters}...")
             else:
-                cls.logger.debug(f'Removing all documents...')
+                cls.logger.debug(f"Removing all documents...")
         nb_removed = cls._delete_many(filters)
         if cls.logger.isEnabledFor(logging.DEBUG):
-            cls.logger.debug(f'{nb_removed} documents removed.')
+            cls.logger.debug(f"{nb_removed} documents removed.")
         return nb_removed
 
     @classmethod
@@ -1767,8 +2028,11 @@ class CRUDModel:
         if not previous_document:
             raise ModelCouldNotBeFound(document_keys)
 
-        new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
-                                                              return_document=pymongo.ReturnDocument.AFTER)
+        new_document = cls.__collection__.find_one_and_update(
+            document_keys,
+            {"$set": document},
+            return_document=pymongo.ReturnDocument.AFTER,
+        )
         if cls.audit_model:
             cls.audit_model.audit_update(new_document)
         return previous_document, new_document
@@ -1783,8 +2047,11 @@ class CRUDModel:
             if not previous_document:
                 raise ModelCouldNotBeFound(document_keys)
 
-            new_document = cls.__collection__.find_one_and_update(document_keys, {'$set': document},
-                                                                  return_document=pymongo.ReturnDocument.AFTER)
+            new_document = cls.__collection__.find_one_and_update(
+                document_keys,
+                {"$set": document},
+                return_document=pymongo.ReturnDocument.AFTER,
+            )
             previous_documents.append(previous_document)
             new_documents.append(new_document)
             if cls.audit_model:
@@ -1802,22 +2069,27 @@ class CRUDModel:
     @classmethod
     def _to_primary_keys_model(cls, document: dict) -> dict:
         # TODO Compute primary key field names only once
-        primary_key_field_names = [field.name for field in cls.__fields__ if field.is_primary_key]
-        return {field_name: value for field_name, value in document.items() if
-                field_name in primary_key_field_names}
+        primary_key_field_names = [
+            field.name for field in cls.__fields__ if field.is_primary_key
+        ]
+        return {
+            field_name: value
+            for field_name, value in document.items()
+            if field_name in primary_key_field_names
+        }
 
     @classmethod
     def query_get_parser(cls):
         query_get_parser = cls._query_parser()
-        query_get_parser.add_argument('limit', type=inputs.positive)
-        query_get_parser.add_argument('offset', type=inputs.natural)
+        query_get_parser.add_argument("limit", type=inputs.positive)
+        query_get_parser.add_argument("offset", type=inputs.natural)
         return query_get_parser
 
     @classmethod
     def query_get_history_parser(cls):
         query_get_hist_parser = cls._query_parser()
-        query_get_hist_parser.add_argument('limit', type=inputs.positive)
-        query_get_hist_parser.add_argument('offset', type=inputs.natural)
+        query_get_hist_parser.add_argument("limit", type=inputs.positive)
+        query_get_hist_parser.add_argument("offset", type=inputs.natural)
         return query_get_hist_parser
 
     @classmethod
@@ -1836,42 +2108,42 @@ class CRUDModel:
         return query_parser
 
     @classmethod
-    def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=''):
+    def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=""):
         if isinstance(field, DictColumn):
             # Describe every dict column field as dot notation
             for inner_field in field._default_description_model().__fields__:
-                cls._add_field_to_query_parser(query_parser, inner_field, f'{field.name}.')
+                cls._add_field_to_query_parser(
+                    query_parser, inner_field, f"{field.name}."
+                )
         elif isinstance(field, ListColumn):
             # Note that List of dict or list of list might be wrongly parsed
             query_parser.add_argument(
-                f'{prefix}{field.name}',
+                f"{prefix}{field.name}",
                 required=field.is_required,
                 type=_get_python_type(field.list_item_column),
-                action='append',
-                store_missing=not field.allow_none_as_filter
+                action="append",
+                store_missing=not field.allow_none_as_filter,
             )
         elif field.field_type == list:
             query_parser.add_argument(
-                f'{prefix}{field.name}',
+                f"{prefix}{field.name}",
                 required=field.is_required,
                 type=str,  # Consider anything as valid, thus consider as str in query
-                action='append',
-                store_missing=not field.allow_none_as_filter
+                action="append",
+                store_missing=not field.allow_none_as_filter,
             )
         else:
             query_parser.add_argument(
-                f'{prefix}{field.name}',
+                f"{prefix}{field.name}",
                 required=field.is_required,
                 type=_get_python_type(field),
-                action='append',  # Allow to provide multiple values in queries
-                store_missing=not field.allow_none_as_filter
+                action="append",  # Allow to provide multiple values in queries
+                store_missing=not field.allow_none_as_filter,
             )
 
     @classmethod
     def description_dictionary(cls) -> dict:
-        description = {
-            'collection': cls.__tablename__,
-        }
+        description = {"collection": cls.__tablename__}
         for field in cls.__fields__:
             description[field.name] = field.name
         return description
@@ -1898,14 +2170,19 @@ class CRUDModel:
 
     @classmethod
     def _flask_restplus_fields(cls, namespace) -> dict:
-        return {field.name: cls._to_flask_restplus_field(namespace, field) for field in cls.__fields__}
+        return {
+            field.name: cls._to_flask_restplus_field(namespace, field)
+            for field in cls.__fields__
+        }
 
     @classmethod
     def _to_flask_restplus_field(cls, namespace, field: Column):
         if isinstance(field, DictColumn):
-            dict_fields = field._default_description_model()._flask_restplus_fields(namespace)
+            dict_fields = field._default_description_model()._flask_restplus_fields(
+                namespace
+            )
             if dict_fields:
-                dict_model = namespace.model('_'.join(dict_fields), dict_fields)
+                dict_model = namespace.model("_".join(dict_fields), dict_fields)
                 # Nested field cannot contains nothing
                 return flask_restplus_fields.Nested(
                     dict_model,
@@ -2023,22 +2300,27 @@ class CRUDModel:
     @classmethod
     def flask_restplus_description_fields(cls) -> dict:
         exported_fields = {
-            'collection': flask_restplus_fields.String(required=True, example='collection',
-                                                       description='Collection name'),
+            "collection": flask_restplus_fields.String(
+                required=True, example="collection", description="Collection name"
+            )
         }
 
-        exported_fields.update({
-            field.name: flask_restplus_fields.String(
-                required=field.is_required,
-                example='column',
-                description=field.description,
-            )
-            for field in cls.__fields__
-        })
+        exported_fields.update(
+            {
+                field.name: flask_restplus_fields.String(
+                    required=field.is_required,
+                    example="column",
+                    description=field.description,
+                )
+                for field in cls.__fields__
+            }
+        )
         return exported_fields
 
 
-def _load(database_connection_url: str, create_models_func: callable, **kwargs) -> pymongo.database.Database:
+def _load(
+    database_connection_url: str, create_models_func: callable, **kwargs
+) -> pymongo.database.Database:
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
@@ -2050,21 +2332,24 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs) 
     """
     logger.info(f'Connecting to "{database_connection_url}" ...')
     database_name = os.path.basename(database_connection_url)
-    if database_connection_url.startswith('mongomock'):
+    if database_connection_url.startswith("mongomock"):
         import mongomock  # This is a test dependency only
+
         client = mongomock.MongoClient(**kwargs)
     else:
         # Connect is false to avoid thread-race when connecting upon creation of MongoClient (No servers found yet)
-        client = pymongo.MongoClient(database_connection_url, connect=kwargs.pop('connect', False), **kwargs)
-    if '?' in database_name:  # Remove server options from the database name if any
-        database_name = database_name[:database_name.index('?')]
-    logger.info(f'Connecting to {database_name} database...')
+        client = pymongo.MongoClient(
+            database_connection_url, connect=kwargs.pop("connect", False), **kwargs
+        )
+    if "?" in database_name:  # Remove server options from the database name if any
+        database_name = database_name[: database_name.index("?")]
+    logger.info(f"Connecting to {database_name} database...")
     base = client[database_name]
     server_info = client.server_info()
     if server_info:
-        logger.debug(f'Server information: {server_info}')
-        _server_versions.setdefault(base.name, server_info.get('version', ''))
-    logger.debug(f'Creating models...')
+        logger.debug(f"Server information: {server_info}")
+        _server_versions.setdefault(base.name, server_info.get("version", ""))
+    logger.debug(f"Creating models...")
     create_models_func(base)
     return base
 
@@ -2089,11 +2374,11 @@ def _reset_collection(base: pymongo.database.Database, collection: str) -> None:
     """
     logger.info(f'Resetting all data related to "{collection}" collection...')
     nb_removed = base[collection].delete_many({}).deleted_count
-    logger.info(f'{nb_removed} records deleted.')
+    logger.info(f"{nb_removed} records deleted.")
 
     logger.info(f'Resetting counters."{collection}".')
-    nb_removed = base['counters'].delete_many({'_id': collection}).deleted_count
-    logger.info(f'{nb_removed} counter records deleted')
+    nb_removed = base["counters"].delete_many({"_id": collection}).deleted_count
+    logger.info(f"{nb_removed} counter records deleted")
 
 
 def _dump(base: pymongo.database.Database, dump_path: str) -> None:
@@ -2104,11 +2389,11 @@ def _dump(base: pymongo.database.Database, dump_path: str) -> None:
     :param dump_path: directory name of where to store all the collections dumps.
     If the directory doesn't exist, it will be created (Mandatory).
     """
-    logger.debug(f'dumping collections as bson...')
+    logger.debug(f"dumping collections as bson...")
     pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
     for collection in base.list_collection_names():
-        dump_file = os.path.join(dump_path, f'{collection}.bson')
-        logger.debug(f'dumping collection {collection} in {dump_file}')
+        dump_file = os.path.join(dump_path, f"{collection}.bson")
+        logger.debug(f"dumping collection {collection} in {dump_file}")
         documents = base[collection].find({})
         if documents.count() > 0:
             with open(dump_file, "w") as output:
@@ -2122,20 +2407,21 @@ def _restore(base: pymongo.database.Database, restore_path: str) -> None:
     :param base: database object as returned by the _load method (Mandatory).
     :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
     """
-    logger.debug(f'restoring collections dumped as bson...')
+    logger.debug(f"restoring collections dumped as bson...")
     collections = [
         os.path.splitext(collection)[0]
         for collection in os.listdir(restore_path)
-        if os.path.isfile(os.path.join(restore_path, collection)) and os.path.splitext(collection)[1] == '.bson'
+        if os.path.isfile(os.path.join(restore_path, collection))
+        and os.path.splitext(collection)[1] == ".bson"
     ]
     for collection in collections:
-        restore_file = os.path.join(restore_path, f'{collection}.bson')
+        restore_file = os.path.join(restore_path, f"{collection}.bson")
         with open(restore_file, "r") as input:
             documents = loads(input.read())
             if len(documents) > 0:
-                logger.debug(f'drop all records from collection {collection} if any')
+                logger.debug(f"drop all records from collection {collection} if any")
                 base[collection].delete_many({})
-                logger.debug(f'import {restore_file} into collection {collection}')
+                logger.debug(f"import {restore_file} into collection {collection}")
                 base[collection].insert_many(documents)
 
 
@@ -2147,24 +2433,30 @@ def _health_details(base: pymongo.database.Database) -> (str, dict):
     :return: A tuple with a string providing the status (pass, warn, fail), and the details.
     """
     try:
-        response = base.command('ping')
-        return 'pass', {
-            f'{base.name}:ping': {
-                'componentType': 'datastore',
-                'observedValue': response,
-                'status': 'pass',
-                'time': datetime.datetime.utcnow().isoformat()
-            }
-        }
+        response = base.command("ping")
+        return (
+            "pass",
+            {
+                f"{base.name}:ping": {
+                    "componentType": "datastore",
+                    "observedValue": response,
+                    "status": "pass",
+                    "time": datetime.datetime.utcnow().isoformat(),
+                }
+            },
+        )
     except Exception as e:
-        return 'fail', {
-            f'{base.name}:ping': {
-                'componentType': 'datastore',
-                'status': 'fail',
-                'time': datetime.datetime.utcnow().isoformat(),
-                'output': str(e)
-            }
-        }
+        return (
+            "fail",
+            {
+                f"{base.name}:ping": {
+                    "componentType": "datastore",
+                    "status": "fail",
+                    "time": datetime.datetime.utcnow().isoformat(),
+                    "output": str(e),
+                }
+            },
+        )
 
 
 def _get_python_type(field: Column) -> callable:

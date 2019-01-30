@@ -22,6 +22,7 @@ class CRUDModel:
     _session class property must be specified in Model.
     Calling load_from(...) will provide you one.
     """
+
     _session = None
     audit_model = None
 
@@ -59,12 +60,12 @@ class CRUDModel:
         """
         query = cls._session.query(cls)
 
-        order_by = filters.pop('order_by', [])
+        order_by = filters.pop("order_by", [])
         if order_by:
             query = query.order_by(*order_by)
 
-        query_limit = filters.pop('limit', None)
-        query_offset = filters.pop('offset', None)
+        query_limit = filters.pop("limit", None)
+        query_offset = filters.pop("offset", None)
 
         for column_name, value in filters.items():
             if value is not None:
@@ -91,9 +92,9 @@ class CRUDModel:
         """
         :raises Exception: Explaining that the database could not be reached.
         """
-        logger.exception('Database could not be reached.')
+        logger.exception("Database could not be reached.")
         cls._session.close()  # Force connection close to properly re-establish it on next request
-        raise Exception('Database could not be reached.')
+        raise Exception("Database could not be reached.")
 
     @classmethod
     def get(cls, **filters) -> dict:
@@ -107,7 +108,9 @@ class CRUDModel:
                     if not value:
                         continue
                     if len(value) > 1:
-                        raise ValidationFailed(filters, {column_name: ['Only one value must be queried.']})
+                        raise ValidationFailed(
+                            filters, {column_name: ["Only one value must be queried."]}
+                        )
                     value = value[0]
                 query = query.filter(getattr(cls, column_name) == value)
         try:
@@ -116,7 +119,9 @@ class CRUDModel:
             return cls.schema().dump(model).data
         except exc.MultipleResultsFound:
             cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
-            raise ValidationFailed(filters, message='More than one result: Consider another filtering.')
+            raise ValidationFailed(
+                filters, message="More than one result: Consider another filtering."
+            )
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
 
@@ -136,7 +141,7 @@ class CRUDModel:
         :returns The inserted models formatted as a list of dictionaries.
         """
         if not rows:
-            raise ValidationFailed({}, message='No data provided.')
+            raise ValidationFailed({}, message="No data provided.")
         try:
             models, errors = cls.schema().load(rows, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
@@ -166,12 +171,12 @@ class CRUDModel:
         :returns The inserted model formatted as a dictionary.
         """
         if not row:
-            raise ValidationFailed({}, message='No data provided.')
+            raise ValidationFailed({}, message="No data provided.")
         try:
             model, errors = cls.schema().load(row, session=cls._session)
         except exc.sa_exc.DBAPIError:
-            logger.exception('Database could not be reached.')
-            raise Exception('Database could not be reached.')
+            logger.exception("Database could not be reached.")
+            raise Exception("Database could not be reached.")
         if errors:
             raise ValidationFailed(row, errors)
         try:
@@ -197,7 +202,7 @@ class CRUDModel:
         and new models formatted as a list of dictionaries (second item).
         """
         if not rows:
-            raise ValidationFailed({}, message='No data provided.')
+            raise ValidationFailed({}, message="No data provided.")
         previous_rows = []
         new_rows = []
         new_models = []
@@ -209,7 +214,9 @@ class CRUDModel:
             if not previous_model:
                 raise ModelCouldNotBeFound(row)
             previous_row = _model_field_values(previous_model)
-            new_model, errors = cls.schema().load(row, instance=previous_model, partial=True, session=cls._session)
+            new_model, errors = cls.schema().load(
+                row, instance=previous_model, partial=True, session=cls._session
+            )
             if errors:
                 raise ValidationFailed(row, errors)
             new_row = _model_field_values(new_model)
@@ -242,7 +249,7 @@ class CRUDModel:
         and new model formatted as a dictionary (second item).
         """
         if not row:
-            raise ValidationFailed({}, message='No data provided.')
+            raise ValidationFailed({}, message="No data provided.")
         try:
             previous_model = cls.schema().get_instance(row)
         except exc.sa_exc.DBAPIError:
@@ -250,7 +257,9 @@ class CRUDModel:
         if not previous_model:
             raise ModelCouldNotBeFound(row)
         previous_row = _model_field_values(previous_model)
-        new_model, errors = cls.schema().load(row, instance=previous_model, partial=True, session=cls._session)
+        new_model, errors = cls.schema().load(
+            row, instance=previous_model, partial=True, session=cls._session
+        )
         if errors:
             raise ValidationFailed(row, errors)
         new_row = _model_field_values(new_model)
@@ -285,7 +294,7 @@ class CRUDModel:
                         query = query.filter(getattr(cls, column_name) == value)
             if cls.audit_model:
                 cls.audit_model.audit_remove(**filters)
-            nb_removed = query.delete(synchronize_session='fetch')
+            nb_removed = query.delete(synchronize_session="fetch")
             cls._session.commit()
             return nb_removed
         except exc.sa_exc.DBAPIError:
@@ -318,32 +327,40 @@ class CRUDModel:
         return schema
 
     @classmethod
-    def _enrich_schema_field(cls, marshmallow_field: marshmallow_fields.Field, sql_alchemy_field: Column):
+    def _enrich_schema_field(
+        cls, marshmallow_field: marshmallow_fields.Field, sql_alchemy_field: Column
+    ):
         # Default value
-        defaults = [column.default.arg for column in sql_alchemy_field.columns if column.default]
+        defaults = [
+            column.default.arg for column in sql_alchemy_field.columns if column.default
+        ]
         if defaults:
-            marshmallow_field.metadata['sqlalchemy_default'] = defaults[0]
+            marshmallow_field.metadata["sqlalchemy_default"] = defaults[0]
 
         # Auto incremented field
-        autoincrement = [column.autoincrement for column in sql_alchemy_field.columns if column.autoincrement]
+        autoincrement = [
+            column.autoincrement
+            for column in sql_alchemy_field.columns
+            if column.autoincrement
+        ]
         if autoincrement and isinstance(autoincrement[0], bool):
-            marshmallow_field.metadata['sqlalchemy_autoincrement'] = autoincrement[0]
+            marshmallow_field.metadata["sqlalchemy_autoincrement"] = autoincrement[0]
 
     @classmethod
     def query_get_parser(cls) -> reqparse.RequestParser:
         query_get_parser = cls._query_parser()
-        query_get_parser.add_argument('limit', type=inputs.positive)
-        query_get_parser.add_argument('order_by', type=str, action='append')
+        query_get_parser.add_argument("limit", type=inputs.positive)
+        query_get_parser.add_argument("order_by", type=str, action="append")
         if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_parser.add_argument('offset', type=inputs.natural)
+            query_get_parser.add_argument("offset", type=inputs.natural)
         return query_get_parser
 
     @classmethod
     def query_get_history_parser(cls) -> reqparse.RequestParser:
         query_get_hist_parser = cls._query_parser()
-        query_get_hist_parser.add_argument('limit', type=inputs.positive)
+        query_get_hist_parser.add_argument("limit", type=inputs.positive)
         if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_hist_parser.add_argument('offset', type=inputs.natural)
+            query_get_hist_parser.add_argument("offset", type=inputs.natural)
         return query_get_hist_parser
 
     @classmethod
@@ -362,7 +379,7 @@ class CRUDModel:
                 marshmallow_field.name,
                 required=False,
                 type=_get_python_type(marshmallow_field),
-                action='append'
+                action="append",
             )
         return query_parser
 
@@ -376,12 +393,10 @@ class CRUDModel:
 
     @classmethod
     def description_dictionary(cls) -> Dict[str, str]:
-        description = {
-            'table': cls.__tablename__,
-        }
+        description = {"table": cls.__tablename__}
 
-        if hasattr(cls, 'table_args__'):
-            description['schema'] = cls.table_args__.get('schema')
+        if hasattr(cls, "table_args__"):
+            description["schema"] = cls.table_args__.get("schema")
 
         mapper = inspect(cls)
         for column in mapper.attrs:
@@ -415,10 +430,10 @@ class CRUDModel:
             marshmallow_field.name: _get_rest_plus_type(marshmallow_field)(
                 required=marshmallow_field.required,
                 example=_get_example(marshmallow_field),
-                description=marshmallow_field.metadata.get('description', None),
+                description=marshmallow_field.metadata.get("description", None),
                 enum=_get_choices(marshmallow_field),
                 default=_get_default_value(marshmallow_field),
-                readonly=_is_read_only_value(marshmallow_field)
+                readonly=_is_read_only_value(marshmallow_field),
             )
             for marshmallow_field in cls.schema().fields.values()
         }
@@ -430,21 +445,26 @@ class CRUDModel:
     @classmethod
     def flask_restplus_description_fields(cls) -> dict:
         exported_fields = {
-            'table': flask_restplus_fields.String(required=True, example='table', description='Table name'),
+            "table": flask_restplus_fields.String(
+                required=True, example="table", description="Table name"
+            )
         }
 
-        if hasattr(cls, 'table_args__'):
-            exported_fields['schema'] = flask_restplus_fields.String(required=True, example='schema',
-                                                                     description='Table schema')
-
-        exported_fields.update({
-            marshmallow_field.name: flask_restplus_fields.String(
-                required=marshmallow_field.required,
-                example='column',
-                description=marshmallow_field.metadata.get('description', None),
+        if hasattr(cls, "table_args__"):
+            exported_fields["schema"] = flask_restplus_fields.String(
+                required=True, example="schema", description="Table schema"
             )
-            for marshmallow_field in cls.schema().fields.values()
-        })
+
+        exported_fields.update(
+            {
+                marshmallow_field.name: flask_restplus_fields.String(
+                    required=marshmallow_field.required,
+                    example="column",
+                    description=marshmallow_field.metadata.get("description", None),
+                )
+                for marshmallow_field in cls.schema().fields.values()
+            }
+        )
         return exported_fields
 
     @classmethod
@@ -453,6 +473,7 @@ class CRUDModel:
         Call this method to add audit to a model.
         """
         from pycommon_database.audit_sqlalchemy import _create_from
+
         cls.audit_model = _create_from(cls)
 
 
@@ -467,17 +488,21 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
     :return SQLAlchemy base.
     """
     database_connection_url = _clean_database_url(database_connection_url)
-    logger.info(f'Connecting to {database_connection_url}...')
-    logger.debug(f'Creating engine...')
+    logger.info(f"Connecting to {database_connection_url}...")
+    logger.debug(f"Creating engine...")
     if _in_memory(database_connection_url):
-        engine = create_engine(database_connection_url, poolclass=StaticPool, connect_args={'check_same_thread': False})
+        engine = create_engine(
+            database_connection_url,
+            poolclass=StaticPool,
+            connect_args={"check_same_thread": False},
+        )
     else:
-        kwargs.setdefault('pool_recycle', 60)
+        kwargs.setdefault("pool_recycle", 60)
         engine = create_engine(database_connection_url, **kwargs)
     _prepare_engine(engine)
-    logger.debug(f'Creating base...')
+    logger.debug(f"Creating base...")
     base = declarative_base(bind=engine)
-    logger.debug(f'Creating models...')
+    logger.debug(f"Creating models...")
     model_classes = create_models_func(base)
     if _can_retrieve_metadata(database_connection_url):
         all_view_names = _get_view_names(engine, base.metadata.schema)
@@ -488,17 +513,19 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
             for table_name, table_or_view in all_tables_and_views.items()
             if table_name not in all_view_names
         }
-        logger.debug(f'Creating tables...')
-        if _in_memory(database_connection_url) and hasattr(base.metadata, '_schemas'):
+        logger.debug(f"Creating tables...")
+        if _in_memory(database_connection_url) and hasattr(base.metadata, "_schemas"):
             if len(base.metadata._schemas) > 1:
                 raise MultiSchemaNotSupported()
             elif len(base.metadata._schemas) == 1:
-                engine.execute(f"ATTACH DATABASE ':memory:' AS {next(iter(base.metadata._schemas))};")
+                engine.execute(
+                    f"ATTACH DATABASE ':memory:' AS {next(iter(base.metadata._schemas))};"
+                )
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
-    logger.debug(f'Creating session...')
+    logger.debug(f"Creating session...")
     session = sessionmaker(bind=engine)()
-    logger.info(f'Connected to {database_connection_url}.')
+    logger.info(f"Connected to {database_connection_url}.")
     for model_class in model_classes:
         model_class._post_init(session)
     return base
@@ -509,10 +536,10 @@ def _reset(base) -> None:
     If the database was already created, then drop all tables and recreate them all.
     """
     if base:
-        logger.info(f'Resetting all data related to {base.metadata.bind.url}...')
+        logger.info(f"Resetting all data related to {base.metadata.bind.url}...")
         base.metadata.drop_all(bind=base.metadata.bind)
         base.metadata.create_all(bind=base.metadata.bind)
-        logger.info(f'All data related to {base.metadata.bind.url} reset.')
+        logger.info(f"All data related to {base.metadata.bind.url} reset.")
 
 
 def _model_field_values(model_instance) -> dict:
@@ -529,34 +556,35 @@ def _models_field_values(model_instances: list) -> List[dict]:
 
 class MultiSchemaNotSupported(Exception):
     def __init__(self):
-        Exception.__init__(self, 'SQLite does not manage multi-schemas..')
+        Exception.__init__(self, "SQLite does not manage multi-schemas..")
 
 
 def _clean_database_url(database_connection_url: str) -> str:
-    connection_details = database_connection_url.split(':///?odbc_connect=', maxsplit=1)
+    connection_details = database_connection_url.split(":///?odbc_connect=", maxsplit=1)
     if len(connection_details) == 2:
-        return f'{connection_details[0]}:///?odbc_connect={urllib.parse.quote_plus(connection_details[1])}'
+        return f"{connection_details[0]}:///?odbc_connect={urllib.parse.quote_plus(connection_details[1])}"
     return database_connection_url
 
 
 def _can_retrieve_metadata(database_connection_url: str) -> bool:
-    return not (database_connection_url.startswith('sybase') or
-                database_connection_url.startswith('mssql'))
+    return not (
+        database_connection_url.startswith("sybase")
+        or database_connection_url.startswith("mssql")
+    )
 
 
 def _supports_offset(driver_name: str) -> bool:
-    return not (driver_name.startswith('sybase') or
-                driver_name.startswith('mssql'))
+    return not (driver_name.startswith("sybase") or driver_name.startswith("mssql"))
 
 
 def _in_memory(database_connection_url: str) -> bool:
-    return ':memory:' in database_connection_url
+    return ":memory:" in database_connection_url
 
 
 def _prepare_engine(engine):
-    if engine.url.drivername.startswith('sybase'):
-        engine.dialect.identifier_preparer.initial_quote = '['
-        engine.dialect.identifier_preparer.final_quote = ']'
+    if engine.url.drivername.startswith("sybase"):
+        engine.dialect.identifier_preparer.initial_quote = "["
+        engine.dialect.identifier_preparer.final_quote = "]"
 
 
 def _get_view_names(engine, schema) -> list:
@@ -592,7 +620,9 @@ def _get_rest_plus_type(marshmallow_field):
     if isinstance(marshmallow_field, marshmallow_fields.Field):
         return flask_restplus_fields.String
 
-    raise Exception(f'Flask RestPlus field type cannot be guessed for {marshmallow_field} field.')
+    raise Exception(
+        f"Flask RestPlus field type cannot be guessed for {marshmallow_field} field."
+    )
 
 
 def _get_example(marshmallow_field) -> str:
@@ -612,11 +642,19 @@ def _get_choices(marshmallow_field):
 
 
 def _get_default_value(marshmallow_field):
-    return marshmallow_field.metadata.get('sqlalchemy_default', None) if marshmallow_field else None
+    return (
+        marshmallow_field.metadata.get("sqlalchemy_default", None)
+        if marshmallow_field
+        else None
+    )
 
 
 def _is_read_only_value(marshmallow_field) -> bool:
-    return marshmallow_field.metadata.get('sqlalchemy_autoincrement', None) if marshmallow_field else None
+    return (
+        marshmallow_field.metadata.get("sqlalchemy_autoincrement", None)
+        if marshmallow_field
+        else None
+    )
 
 
 def _get_default_example(marshmallow_field) -> str:
@@ -624,21 +662,21 @@ def _get_default_example(marshmallow_field) -> str:
     Return an Example value corresponding to this SQL Alchemy Marshmallow field.
     """
     if isinstance(marshmallow_field, marshmallow_fields.Integer):
-        return '0'
+        return "0"
     if isinstance(marshmallow_field, marshmallow_fields.Number):
-        return '0.0'
+        return "0.0"
     if isinstance(marshmallow_field, marshmallow_fields.Boolean):
-        return 'true'
+        return "true"
     if isinstance(marshmallow_field, marshmallow_fields.Date):
-        return '2017-09-24'
+        return "2017-09-24"
     if isinstance(marshmallow_field, marshmallow_fields.DateTime):
-        return '2017-09-24T15:36:09'
+        return "2017-09-24T15:36:09"
     if isinstance(marshmallow_field, marshmallow_fields.Time):
-        return '15:36:09'
+        return "15:36:09"
     if isinstance(marshmallow_field, marshmallow_fields.List):
-        return 'xxxx'
+        return "xxxx"
 
-    return 'sample_value'
+    return "sample_value"
 
 
 def _get_python_type(marshmallow_field):
@@ -665,7 +703,9 @@ def _get_python_type(marshmallow_field):
     if isinstance(marshmallow_field, marshmallow_fields.Field):
         return str
 
-    raise Exception(f'Python field type cannot be guessed for {marshmallow_field} field.')
+    raise Exception(
+        f"Python field type cannot be guessed for {marshmallow_field} field."
+    )
 
 
 def _health_details(base) -> (str, dict):
@@ -692,22 +732,28 @@ def _health_details(base) -> (str, dict):
     :return: A tuple with a string providing the status (pass, warn, fail), and the details.
     """
     try:
-        result = base.metadata.bind.engine.execute('SELECT 1')
+        result = base.metadata.bind.engine.execute("SELECT 1")
         result.close()
-        return 'pass', {
-            f'{base.metadata.bind.engine.name}:select': {
-                'componentType': 'datastore',
-                'observedValue': '',
-                'status': 'pass',
-                'time': datetime.datetime.utcnow().isoformat()
-            }
-        }
+        return (
+            "pass",
+            {
+                f"{base.metadata.bind.engine.name}:select": {
+                    "componentType": "datastore",
+                    "observedValue": "",
+                    "status": "pass",
+                    "time": datetime.datetime.utcnow().isoformat(),
+                }
+            },
+        )
     except Exception as e:
-        return 'fail', {
-            f'{base.metadata.bind.engine.name}:select': {
-                'componentType': 'datastore',
-                'status': 'fail',
-                'time': datetime.datetime.utcnow().isoformat(),
-                'output': str(e)
-            }
-        }
+        return (
+            "fail",
+            {
+                f"{base.metadata.bind.engine.name}:select": {
+                    "componentType": "datastore",
+                    "status": "fail",
+                    "time": datetime.datetime.utcnow().isoformat(),
+                    "output": str(e),
+                }
+            },
+        )
