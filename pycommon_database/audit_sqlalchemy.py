@@ -37,7 +37,7 @@ def _create_from(model):
         audit_user = Column(String)
         audit_date_utc = Column(DateTime)
         audit_action = Column(
-            Enum(*[action.value for action in Action], name="action_type")
+            Enum(*[action.value for action in Action], name=f"audit_{model.__tablename__}_action_type")
         )
 
         @classmethod
