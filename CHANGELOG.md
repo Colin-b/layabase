@@ -6,13 +6,11 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-
-
-
-## Version 13.15.1 (2019-01-31) ##
+## Version 13.15.1 (2019-02-08) ##
 
 ### Bug fixes ###
-- [SQLALchemy/postgres] In case of multiple audit tables creation, the name of the enum action was the same for all tables. Resulting in an error at table creation.
+
+- [SQLAlchemy] In case of multiple audit tables creation, the name of the enum action was the same for all tables. Resulting in an error at table creation.
 
 ### Enhancements ###
 
