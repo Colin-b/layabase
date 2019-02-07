@@ -43,7 +43,7 @@ setup(
     packages=find_packages(exclude=["test"]),
     install_requires=[
         # Used to handle errors
-        "pycommon-error==2.15.0"
+        "pycommon-error==2.16.0"
     ],
     extras_require=extra_requirements,
 )
