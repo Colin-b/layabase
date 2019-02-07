@@ -9,7 +9,8 @@ with open(os.path.join(this_dir, "README.md"), "r") as f:
 extra_requirements = {
     "testing": [
         # Used to provide testing help
-        "pycommon-test==5.0.1"
+        "pycommon-test==5.0.1",
+        "mongomock==3.14.0",
     ],
     "mongo": [
         "pymongo[tls]==3.7.2",
