@@ -1,3 +1,3 @@
 @Library('jenkins-lib') _
 
-pythonModulePipeline('pycommon_database', 50)
+pythonModulePipeline('pycommon_database', 91)
