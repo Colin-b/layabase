@@ -667,7 +667,6 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
                 sqlalchemy.String, default="Test value"
             )
 
-
         class TestDateModel(database_sqlalchemy.CRUDModel, base):
             __tablename__ = "date_table_name"
 
@@ -681,7 +680,9 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
         class TestInheritanceModel(database_sqlalchemy.CRUDModel, Inherited, base):
             __tablename__ = "inheritance_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+            key = sqlalchemy.Column(
+                sqlalchemy.Integer, primary_key=True, autoincrement=True
+            )
             mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
         TestInheritanceModel.audit()
@@ -704,7 +705,13 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
         cls.TestInheritanceController.namespace(TestAPI)
         cls.TestLikeOperatorController.model(TestLikeOperatorModel)
         cls.TestLikeOperatorController.namespace(TestAPI)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestInheritanceModel, TestLikeOperatorModel]
+        return [
+            TestModel,
+            TestAutoIncrementModel,
+            TestDateModel,
+            TestInheritanceModel,
+            TestLikeOperatorModel,
+        ]
 
     def setUp(self):
         logger.info(f"-------------------------------")
@@ -830,69 +837,72 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
 
     def test_get_like_operator_double_star(self):
         self.TestLikeOperatorController.post_many(
-                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"}]
-            )
+            [{"key": "my_key"}, {"key": "my_key2"}, {"key": "my_ey"}]
+        )
         self.assertEqual(
             [{"key": "my_key"}, {"key": "my_key2"}],
-            self.TestLikeOperatorController.get(
-                {"key": "*y_k*"}
-            )
+            self.TestLikeOperatorController.get({"key": "*y_k*"}),
         )
 
     def test_get_like_operator_star_at_start(self):
         self.TestLikeOperatorController.post_many(
-                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"}]
-            )
+            [{"key": "my_key"}, {"key": "my_key2"}, {"key": "my_ey"}, {"key": "my_k"}]
+        )
         self.assertEqual(
-            [{"key": "my_k"}],
-            self.TestLikeOperatorController.get(
-                {"key": "*y_k"}
-            )
+            [{"key": "my_k"}], self.TestLikeOperatorController.get({"key": "*y_k"})
         )
 
     def test_get_like_operator_star_at_end(self):
         self.TestLikeOperatorController.post_many(
-                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"},{"key": "y_key"}]
-            )
+            [
+                {"key": "my_key"},
+                {"key": "my_key2"},
+                {"key": "my_ey"},
+                {"key": "my_k"},
+                {"key": "y_key"},
+            ]
+        )
         self.assertEqual(
-            [{"key": "y_key"}],
-            self.TestLikeOperatorController.get(
-                {"key": "y_k*"}
-            )
+            [{"key": "y_key"}], self.TestLikeOperatorController.get({"key": "y_k*"})
         )
 
     def test_get_like_operator_no_star(self):
         self.TestLikeOperatorController.post_many(
-                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"},{"key": "y_key"}]
-            )
+            [
+                {"key": "my_key"},
+                {"key": "my_key2"},
+                {"key": "my_ey"},
+                {"key": "my_k"},
+                {"key": "y_key"},
+            ]
+        )
         self.assertEqual(
-            [{"key": "my_key"}],
-            self.TestLikeOperatorController.get(
-                {"key": "my_key"}
-            )
+            [{"key": "my_key"}], self.TestLikeOperatorController.get({"key": "my_key"})
         )
 
     def test_get_like_operator_no_star_no_result(self):
         self.TestLikeOperatorController.post_many(
-                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"},{"key": "y_key"}]
-            )
-        self.assertEqual(
-            [],
-            self.TestLikeOperatorController.get(
-                {"key": "y_k"}
-            )
+            [
+                {"key": "my_key"},
+                {"key": "my_key2"},
+                {"key": "my_ey"},
+                {"key": "my_k"},
+                {"key": "y_key"},
+            ]
         )
+        self.assertEqual([], self.TestLikeOperatorController.get({"key": "y_k"}))
 
     def test_get_no_like_operator(self):
         self.TestController.post_many(
-                [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 1},{"key": "my_ey", "mandatory": 1},{"key": "my_k", "mandatory": 1},{"key": "y_key", "mandatory": 1}]
-            )
-        self.assertEqual(
-            [],
-            self.TestController.get(
-                {"key": "*y_k*"}
-            )
+            [
+                {"key": "my_key", "mandatory": 1},
+                {"key": "my_key2", "mandatory": 1},
+                {"key": "my_ey", "mandatory": 1},
+                {"key": "my_k", "mandatory": 1},
+                {"key": "y_key", "mandatory": 1},
+            ]
         )
+        self.assertEqual([], self.TestController.get({"key": "*y_k*"}))
 
     def test_post_with_optional_is_valid(self):
         self.assertEqual(

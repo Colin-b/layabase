@@ -303,3 +303,15 @@ all_audit_models_as_dict_list = MyController.get_audit()
 filtered_audit_models_as_dict_list = MyController.get_audit(value='value1')
 ```
 
+Contributing
+------------
+
+Everyone is free to contribute on this project.
+
+Before creating an issue please make sure that it was not already reported.
+
+Project follow "Black" code formatting: https://black.readthedocs.io/en/stable/
+
+To integrate it within Pycharm: https://black.readthedocs.io/en/stable/editor_integration.html#pycharm
+
+To add the pre-commit hook, after the installation run: **pre-commit install**

@@ -74,8 +74,14 @@ class CRUDModel:
                     if value:
                         query = query.filter(getattr(cls, column_name).in_(value))
                 else:
-                    if cls.interpret_star_character and isinstance(value, str) and "*" in value:
-                        query = query.filter(getattr(cls, column_name).like(value.replace('*', '%')))
+                    if (
+                        cls.interpret_star_character
+                        and isinstance(value, str)
+                        and "*" in value
+                    ):
+                        query = query.filter(
+                            getattr(cls, column_name).like(value.replace("*", "%"))
+                        )
                     else:
                         query = query.filter(getattr(cls, column_name) == value)
 
@@ -329,7 +335,6 @@ class CRUDModel:
                 cls._enrich_schema_field(schema_field, attr)
 
         return schema
-
 
     @classmethod
     def _enrich_schema_field(
