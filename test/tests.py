@@ -1689,6 +1689,9 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
     class TestController(database.CRUDController):
         pass
 
+    class Test2Controller(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -1696,6 +1699,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         revert_now()
         cls._db = database.load("sqlite:///:memory:", cls._create_models)
         cls.TestController.namespace(TestAPI)
+        cls.Test2Controller.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -1703,8 +1707,6 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
 
     @classmethod
     def _create_models(cls, base):
-        logger.info("Declare model class...")
-
         class TestModel(database_sqlalchemy.CRUDModel, base):
             __tablename__ = "sample_table_name"
 
@@ -1712,10 +1714,20 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
             optional = sqlalchemy.Column(sqlalchemy.String)
 
-        logger.info("Save model class...")
         TestModel.audit()
+
+        class Test2Model(database_sqlalchemy.CRUDModel, base):
+            __tablename__ = "sample2_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+            optional = sqlalchemy.Column(sqlalchemy.String)
+
+        Test2Model.audit()
+
         cls.TestController.model(TestModel)
-        return [TestModel]
+        cls.Test2Controller.model(Test2Model)
+        return [TestModel, Test2Model]
 
     def setUp(self):
         logger.info(f"-------------------------------")
@@ -1728,7 +1740,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
 
     def test_get_all_without_data_returns_empty_list(self):
         self.assertEqual([], self.TestController.get({}))
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_get_parser_fields_order(self):
         self.assertEqual(
@@ -1765,46 +1777,46 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.post(None)
         self.assertEqual({"": ["No data provided."]}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many(None)
         self.assertEqual({"": ["No data provided."]}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post({})
         self.assertEqual({"": ["No data provided."]}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_with_empty_list_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([])
         self.assertEqual({"": ["No data provided."]}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_put_with_nothing_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.put(None)
         self.assertEqual({"": ["No data provided."]}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_put_with_empty_dict_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.put({})
         self.assertEqual({"": ["No data provided."]}, cm.exception.errors)
         self.assertEqual({}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_delete_without_nothing_do_not_fail(self):
         self.assertEqual(0, self.TestController.delete({}))
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_without_mandatory_field_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -1813,7 +1825,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             {"mandatory": ["Missing data for required field."]}, cm.exception.errors
         )
         self.assertEqual({"key": "my_key"}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_without_mandatory_field_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -1823,7 +1835,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             cm.exception.errors,
         )
         self.assertEqual([{"key": "my_key"}], cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -1832,7 +1844,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             {"key": ["Missing data for required field."]}, cm.exception.errors
         )
         self.assertEqual({"mandatory": 1}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_without_key_is_invalid(self):
         with self.assertRaises(Exception) as cm:
@@ -1841,21 +1853,21 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             {0: {"key": ["Missing data for required field."]}}, cm.exception.errors
         )
         self.assertEqual([{"mandatory": 1}], cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post({"key": 256, "mandatory": 1})
         self.assertEqual({"key": ["Not a valid string."]}, cm.exception.errors)
         self.assertEqual({"key": 256, "mandatory": 1}, cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_post_many_with_wrong_type_is_invalid(self):
         with self.assertRaises(Exception) as cm:
             self.TestController.post_many([{"key": 256, "mandatory": 1}])
         self.assertEqual({0: {"key": ["Not a valid string."]}}, cm.exception.errors)
         self.assertEqual([{"key": 256, "mandatory": 1}], cm.exception.received_data)
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_put_with_wrong_type_is_invalid(self):
         self.TestController.post({"key": "value1", "mandatory": 1})
@@ -1866,6 +1878,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             {"key": "value1", "mandatory": "invalid_value"}, cm.exception.received_data
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -1876,7 +1889,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": None,
                     "revision": 1,
                 }
-            ]
+            ],
         )
 
     def test_post_without_optional_is_valid(self):
@@ -1885,6 +1898,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.post({"key": "my_key", "mandatory": 1}),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -1895,7 +1909,42 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": None,
                     "revision": 1,
                 }
-            ]
+            ],
+        )
+
+    def test_post_on_a_second_model_without_optional_is_valid(self):
+        self.TestController.post({"key": "my_key", "mandatory": 1})
+        self.assertEqual(
+            {"optional": None, "mandatory": 1, "key": "my_key"},
+            self.Test2Controller.post({"key": "my_key", "mandatory": 1}),
+        )
+        self._check_audit(
+            self.Test2Controller,
+            [
+                {
+                    "audit_action": "I",
+                    "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                    "audit_user": "",
+                    "key": "my_key",
+                    "mandatory": 1,
+                    "optional": None,
+                    "revision": 1,
+                }
+            ],
+        )
+        self._check_audit(
+            self.TestController,
+            [
+                {
+                    "audit_action": "I",
+                    "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                    "audit_user": "",
+                    "key": "my_key",
+                    "mandatory": 1,
+                    "optional": None,
+                    "revision": 1,
+                }
+            ],
         )
 
     def test_post_many_without_optional_is_valid(self):
@@ -1904,6 +1953,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.post_many([{"key": "my_key", "mandatory": 1}]),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -1914,11 +1964,13 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": None,
                     "revision": 1,
                 }
-            ]
+            ],
         )
 
-    def _check_audit(self, expected_audit, filter_audit={}):
-        audit = self.TestController.get_audit(filter_audit)
+    def _check_audit(self, controller, expected_audit, filter_audit=None):
+        if not filter_audit:
+            filter_audit = {}
+        audit = controller.get_audit(filter_audit)
         audit = [
             {key: audit_line[key] for key in sorted(audit_line.keys())}
             for audit_line in audit
@@ -1942,6 +1994,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             ),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -1952,7 +2005,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value",
                     "revision": 1,
                 }
-            ]
+            ],
         )
 
     def test_post_many_with_optional_is_valid(self):
@@ -1963,6 +2016,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             ),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -1973,7 +2027,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value",
                     "revision": 1,
                 }
-            ]
+            ],
         )
 
     def test_post_with_unknown_field_is_valid(self):
@@ -1990,6 +2044,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             ),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2000,7 +2055,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value",
                     "revision": 1,
                 }
-            ]
+            ],
         )
 
     def test_post_many_with_unknown_field_is_valid(self):
@@ -2019,6 +2074,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             ),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2029,7 +2085,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value",
                     "revision": 1,
                 }
-            ]
+            ],
         )
 
     def test_get_without_filter_is_retrieving_the_only_item(self):
@@ -2041,6 +2097,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.get({}),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2051,7 +2108,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value1",
                     "revision": 1,
                 }
-            ]
+            ],
         )
 
     def test_get_without_filter_is_retrieving_everything_with_multiple_posts(self):
@@ -2069,6 +2126,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.get({}),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2088,7 +2146,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value2",
                     "revision": 2,
                 },
-            ]
+            ],
         )
 
     def test_get_without_filter_is_retrieving_everything(self):
@@ -2106,6 +2164,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.get({}),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2125,7 +2184,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value2",
                     "revision": 2,
                 },
-            ]
+            ],
         )
 
     def test_get_with_filter_is_retrieving_subset(self):
@@ -2140,6 +2199,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.get({"optional": "my_value1"}),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2159,7 +2219,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value2",
                     "revision": 2,
                 },
-            ]
+            ],
         )
 
     def test_put_is_updating(self):
@@ -2178,6 +2238,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.get({"mandatory": 1}),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2197,7 +2258,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value",
                     "revision": 2,
                 },
-            ]
+            ],
         )
 
     def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(self):
@@ -2207,6 +2268,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         self.TestController.put({"key": "my_key1", "optional": "my_value"})
         self.assertEqual([], self.TestController.get({"optional": "my_value1"}))
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2226,7 +2288,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value",
                     "revision": 2,
                 },
-            ]
+            ],
         )
 
     def test_delete_with_filter_is_removing_the_proper_row(self):
@@ -2242,6 +2304,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             self.TestController.get({}),
         )
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2270,7 +2333,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value1",
                     "revision": 3,
                 },
-            ]
+            ],
         )
 
     def test_audit_filter_on_model_is_returning_only_selected_data(self):
@@ -2280,6 +2343,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         self.TestController.put({"key": "my_key1", "mandatory": 2})
         self.TestController.delete({"key": "my_key1"})
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2319,6 +2383,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         self.TestController.put({"key": "my_key1", "mandatory": 2})
         self.TestController.delete({"key": "my_key1"})
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "U",
@@ -2343,6 +2408,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
         self.assertEqual(2, self.TestController.delete({}))
         self.assertEqual([], self.TestController.get({}))
         self._check_audit(
+            self.TestController,
             [
                 {
                     "audit_action": "I",
@@ -2380,7 +2446,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
                     "optional": "my_value2",
                     "revision": 4,
                 },
-            ]
+            ],
         )
 
     def test_query_get_parser(self):
@@ -2395,7 +2461,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             },
             parser_types(self.TestController.query_get_parser),
         )
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_query_get_audit_parser(self):
         self.assertEqual(
@@ -2413,14 +2479,14 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             },
             parser_types(self.TestController.query_get_audit_parser),
         )
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_query_delete_parser(self):
         self.assertEqual(
             {"key": str, "mandatory": int, "optional": str},
             parser_types(self.TestController.query_delete_parser),
         )
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_get_response_model(self):
         self.assertEqual("TestModel", self.TestController.get_response_model.name)
@@ -2428,7 +2494,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             {"key": "String", "mandatory": "Integer", "optional": "String"},
             self.TestController.get_response_model.fields_flask_type,
         )
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
     def test_get_audit_response_model(self):
         self.assertEqual(
@@ -2446,7 +2512,7 @@ class SQLAlchemyCRUDControllerAuditTest(unittest.TestCase):
             },
             self.TestController.get_audit_response_model.fields_flask_type,
         )
-        self._check_audit([])
+        self._check_audit(self.TestController, [])
 
 
 class SQLAlchemyFlaskRestPlusModelsTest(unittest.TestCase):

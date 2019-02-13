@@ -36,8 +36,12 @@ def _create_from(model):
 
         audit_user = Column(String)
         audit_date_utc = Column(DateTime)
+        # Enum is created with a table specific name to avoid conflict in PostGreSQL (as enum is created outside table)
         audit_action = Column(
-            Enum(*[action.value for action in Action], name=f"audit_{model.__tablename__}_action_type")
+            Enum(
+                *[action.value for action in Action],
+                name=f"audit_{model.__tablename__}_action_type",
+            )
         )
 
         @classmethod
