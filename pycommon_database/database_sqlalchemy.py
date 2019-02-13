@@ -25,6 +25,7 @@ class CRUDModel:
 
     _session = None
     audit_model = None
+    interpret_star_character = False
 
     @classmethod
     def _post_init(cls, session):
@@ -73,7 +74,10 @@ class CRUDModel:
                     if value:
                         query = query.filter(getattr(cls, column_name).in_(value))
                 else:
-                    query = query.filter(getattr(cls, column_name) == value)
+                    if cls.interpret_star_character == True and isinstance(value, str) and "*" in value:
+                        query = query.filter(getattr(cls, column_name).like(value.replace('*', '%')))
+                    else:
+                        query = query.filter(getattr(cls, column_name) == value)
 
         if query_limit:
             query = query.limit(query_limit)
@@ -475,6 +479,14 @@ class CRUDModel:
         from pycommon_database.audit_sqlalchemy import _create_from
 
         cls.audit_model = _create_from(cls)
+
+    @classmethod
+    def interpret_star_character(cls) -> None:
+        """
+        Call this method to interpret star character for LIKE operator.
+        """
+
+        cls.interpret_star_character = True
 
 
 def _load(database_connection_url: str, create_models_func: callable, **kwargs):

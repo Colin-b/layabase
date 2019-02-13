@@ -31,6 +31,16 @@ By providing this model to a controller class, you will automatically have flask
 
 Every feature provided by a model if exposed via the controller class so that you never have to manipulate the model yourself.
 
+## Installation ##
+pycommon_database is easiest to use when installed into a virtual environment using the setup.py:
+```python
+pip install -e .
+```
+Then you can start it by running the server.py:
+```python
+python pycommon_database/database.py
+```
+
 ## Relational databases (non-Mongo) ##
 
 SQLAlchemy is the underlying framework used to manipulate relational databases.
@@ -291,3 +301,4 @@ all_audit_models_as_dict_list = MyController.get_audit()
 
 filtered_audit_models_as_dict_list = MyController.get_audit(value='value1')
 ```
+

@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.16.0 (2019-02-07) ##
+
+### Enhancements ###
+
+- [SQLAlchemy] Added like operator
+
+
 ## Version 13.15.0 (2019-01-29) ##
 
 ### Enhancements ###

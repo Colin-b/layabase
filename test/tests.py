@@ -627,6 +627,9 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
     class TestInheritanceController(database.CRUDController):
         pass
 
+    class TestLikeOperatorController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -682,6 +685,13 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
 
         TestInheritanceModel.audit()
 
+        class TestLikeOperatorModel(database_sqlalchemy.CRUDModel, base):
+            __tablename__ = "like_operator_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+
+        TestLikeOperatorModel.interpret_star_character()
+
         logger.info("Save model class...")
         cls.TestController.model(TestModel)
         cls.TestController.namespace(TestAPI)
@@ -691,7 +701,9 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
         cls.TestDateController.namespace(TestAPI)
         cls.TestInheritanceController.model(TestInheritanceModel)
         cls.TestInheritanceController.namespace(TestAPI)
-        return [TestModel, TestAutoIncrementModel, TestDateModel, TestInheritanceModel]
+        cls.TestLikeOperatorController.model(TestLikeOperatorModel)
+        cls.TestLikeOperatorController.namespace(TestAPI)
+        return [TestModel, TestAutoIncrementModel, TestDateModel, TestInheritanceModel, TestLikeOperatorModel]
 
     def setUp(self):
         logger.info(f"-------------------------------")
@@ -813,6 +825,72 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
             self.TestController.post_many(
                 [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
             ),
+        )
+
+    def test_get_like_operator_double_star(self):
+        self.TestLikeOperatorController.post_many(
+                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"}]
+            )
+        self.assertEqual(
+            [{"key": "my_key"}, {"key": "my_key2"}],
+            self.TestLikeOperatorController.get(
+                {"key": "*y_k*"}
+            )
+        )
+
+    def test_get_like_operator_star_at_start(self):
+        self.TestLikeOperatorController.post_many(
+                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"}]
+            )
+        self.assertEqual(
+            [{"key": "my_k"}],
+            self.TestLikeOperatorController.get(
+                {"key": "*y_k"}
+            )
+        )
+
+    def test_get_like_operator_star_at_end(self):
+        self.TestLikeOperatorController.post_many(
+                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"},{"key": "y_key"}]
+            )
+        self.assertEqual(
+            [{"key": "y_key"}],
+            self.TestLikeOperatorController.get(
+                {"key": "y_k*"}
+            )
+        )
+
+    def test_get_like_operator_no_star(self):
+        self.TestLikeOperatorController.post_many(
+                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"},{"key": "y_key"}]
+            )
+        self.assertEqual(
+            [{"key": "my_key"}],
+            self.TestLikeOperatorController.get(
+                {"key": "my_key"}
+            )
+        )
+
+    def test_get_like_operator_no_star_no_result(self):
+        self.TestLikeOperatorController.post_many(
+                [{"key": "my_key"}, {"key": "my_key2"},{"key": "my_ey"},{"key": "my_k"},{"key": "y_key"}]
+            )
+        self.assertEqual(
+            [],
+            self.TestLikeOperatorController.get(
+                {"key": "y_k"}
+            )
+        )
+
+    def test_get_no_like_operator(self):
+        self.TestController.post_many(
+                [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 1},{"key": "my_ey", "mandatory": 1},{"key": "my_k", "mandatory": 1},{"key": "y_key", "mandatory": 1}]
+            )
+        self.assertEqual(
+            [],
+            self.TestController.get(
+                {"key": "*y_k*"}
+            )
         )
 
     def test_post_with_optional_is_valid(self):

@@ -252,8 +252,9 @@ class CRUDController:
         if not cls._model:
             raise ControllerModelNotSet(cls)
         if not isinstance(request_arguments, dict):
-            raise ValidationFailed(request_arguments, message="Must be a dictionary.")
+            raise ValidationFailed(request_arguments, message='Must be a dictionary.')
         return cls._model.get_all(**request_arguments)
+
 
     @classmethod
     def get_one(cls, request_arguments: dict) -> dict:
