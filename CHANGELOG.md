@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.16.0 (2019-02-13) ##
+
+### Enhancements ###
+
+- [SQLAlchemy] It is now possible to perform GET queries using * as LIKE
+
 ## Version 13.15.0 (2019-01-29) ##
 
 ### Enhancements ###
