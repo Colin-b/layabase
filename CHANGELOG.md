@@ -10,8 +10,7 @@ List all changes in various categories:
 
 ### Enhancements ###
 
-- [SQLAlchemy] Added like operator
-
+- [SQLAlchemy] It is now possible to perform GET queries using * as LIKE
 
 ## Version 13.15.0 (2019-01-29) ##
 
