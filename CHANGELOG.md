@@ -6,11 +6,19 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 13.15.1 (2019-02-08) ##
+## Version 13.16.1 (2019-02-14) ##
 
 ### Bug fixes ###
 
 - [SQLAlchemy] In case of multiple audit tables creation, the name of the enum action was the same for all tables. Resulting in an error at table creation.
+
+## Version 13.16.0 (2019-02-13) ##
+
+### Enhancements ###
+
+- [SQLAlchemy] It is now possible to perform GET queries using * as LIKE
+
+## Version 13.15.0 (2019-01-29) ##
 
 ### Enhancements ###
 

@@ -32,6 +32,16 @@ By providing this model to a controller class, you will automatically have flask
 
 Every feature provided by a model if exposed via the controller class so that you never have to manipulate the model yourself.
 
+## Installation ##
+
+pycommon_database is easiest to work with when installed into a virtual environment using the setup.py.
+
+To install all test required dependencies, use the following command:
+
+```python
+pip install -e .[testing]
+```
+
 ## Relational databases (non-Mongo) ##
 
 SQLAlchemy is the underlying framework used to manipulate relational databases.
@@ -292,3 +302,16 @@ all_audit_models_as_dict_list = MyController.get_audit()
 
 filtered_audit_models_as_dict_list = MyController.get_audit(value='value1')
 ```
+
+Contributing
+------------
+
+Everyone is free to contribute on this project.
+
+Before creating an issue please make sure that it was not already reported.
+
+Project follow "Black" code formatting: https://black.readthedocs.io/en/stable/
+
+To integrate it within Pycharm: https://black.readthedocs.io/en/stable/editor_integration.html#pycharm
+
+To add the pre-commit hook, after the installation run: **pre-commit install**
