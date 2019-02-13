@@ -330,6 +330,7 @@ class CRUDModel:
 
         return schema
 
+
     @classmethod
     def _enrich_schema_field(
         cls, marshmallow_field: marshmallow_fields.Field, sql_alchemy_field: Column

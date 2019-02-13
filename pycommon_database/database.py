@@ -84,6 +84,7 @@ def reset(base):
         database_sqlalchemy._reset(base)
 
 
+
 def dump(base, dump_path: str):
     """
     Dump the content of all the collections part of the provided database in the provided path.

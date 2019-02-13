@@ -667,6 +667,7 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
                 sqlalchemy.String, default="Test value"
             )
 
+
         class TestDateModel(database_sqlalchemy.CRUDModel, base):
             __tablename__ = "date_table_name"
 
