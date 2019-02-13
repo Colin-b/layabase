@@ -6,7 +6,7 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
-## Version 13.16.0 (2019-02-07) ##
+## Version 13.16.0 (2019-02-13) ##
 
 ### Enhancements ###
 
