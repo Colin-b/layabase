@@ -487,7 +487,7 @@ class CRUDModel:
         cls.audit_model = _create_from(cls)
 
     @classmethod
-    def interpret_star_character(cls) -> None:
+    def interpret_star_character_as_like(cls) -> None:
         """
         Call this method to interpret star character for LIKE operator.
         """

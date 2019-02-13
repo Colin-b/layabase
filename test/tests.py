@@ -692,7 +692,7 @@ class SQLAlchemyCRUDControllerTest(unittest.TestCase):
 
             key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-        TestLikeOperatorModel.interpret_star_character()
+        TestLikeOperatorModel.interpret_star_character_as_like()
 
         logger.info("Save model class...")
         cls.TestController.model(TestModel)
