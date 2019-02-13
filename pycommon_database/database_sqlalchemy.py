@@ -74,7 +74,7 @@ class CRUDModel:
                     if value:
                         query = query.filter(getattr(cls, column_name).in_(value))
                 else:
-                    if cls.interpret_star_character == True and isinstance(value, str) and "*" in value:
+                    if cls.interpret_star_character and isinstance(value, str) and "*" in value:
                         query = query.filter(getattr(cls, column_name).like(value.replace('*', '%')))
                     else:
                         query = query.filter(getattr(cls, column_name) == value)
