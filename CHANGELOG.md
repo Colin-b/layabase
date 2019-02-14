@@ -6,6 +6,12 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.16.1 (2019-02-14) ##
+
+### Bug fixes ###
+
+- [SQLAlchemy] In case of multiple audit tables creation, the name of the enum action was the same for all tables. Resulting in an error at table creation.
+
 ## Version 13.16.0 (2019-02-13) ##
 
 ### Enhancements ###
