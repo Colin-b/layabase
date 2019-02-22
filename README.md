@@ -39,7 +39,7 @@ pycommon_database is easiest to work with when installed into a virtual environm
 To install all test required dependencies, use the following command:
 
 ```python
-pip install -e .[testing]
+python -m pip install -e .[testing]
 ```
 
 ## Relational databases (non-Mongo) ##

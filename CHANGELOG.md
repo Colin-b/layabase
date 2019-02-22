@@ -6,6 +6,13 @@ List all changes in various categories:
 * Bug fixes
 * Known issues
 
+## Version 13.17.0 (2019-02-22) ##
+
+### Enhancements ###
+
+- Update dependencies to latest version (pycommon_test 5.1.0, pycommon_error 2.17.0).
+- Update dependencies to latest version (marshmallow 2.18.1, SQLAlchemy 1.2.18, marshmallow_sqlalchemy 0.16.0).
+
 ## Version 13.16.1 (2019-02-14) ##
 
 ### Bug fixes ###
