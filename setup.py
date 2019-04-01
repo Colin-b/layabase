@@ -9,8 +9,8 @@ with open(os.path.join(this_dir, "README.md"), "r") as f:
 extra_requirements = {
     "testing": [
         # Used to provide testing help
-        "pycommon-test==5.1.1",
-        "mongomock==3.15.0",
+        "pycommon-test==5.2.0",
+        "mongomock==3.16.0",
     ],
     "mongo": [
         "pymongo[tls]==3.7.2",
@@ -19,9 +19,9 @@ extra_requirements = {
     ],
     # Used to Manage Non-Mongo Database
     "sqlalchemy": [
-        "marshmallow==2.18.1",
-        "SQLAlchemy==1.2.18",
-        "marshmallow_sqlalchemy==0.16.0",
+        "marshmallow==2.19.2",
+        "SQLAlchemy==1.3.1",
+        "marshmallow_sqlalchemy==0.16.1",
     ],
 }
 
@@ -35,7 +35,7 @@ extra_requirements["testing"] += [
 
 setup(
     name="pycommon_database",
-    version=open("pycommon_database/_version.py")
+    version=open("pycommon_database/version.py")
     .readlines()[-1]
     .split()[-1]
     .strip("\"'"),
@@ -47,4 +47,9 @@ setup(
         "pycommon-error==2.17.0"
     ],
     extras_require=extra_requirements,
+    python_requires=">=3.6",
+    project_urls={
+        "Changelog": "https://github.tools.digital.engie.com/GEM-Py/pycommon-database/blob/development/CHANGELOG.md",
+        "Issues": "https://github.tools.digital.engie.com/GEM-Py/pycommon-database/issues",
+    },
 )
