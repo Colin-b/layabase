@@ -8,7 +8,7 @@ from marshmallow import validate
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
-from sqlalchemy import create_engine, inspect, Column
+from sqlalchemy import create_engine, inspect, Column, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import StaticPool
@@ -63,7 +63,12 @@ class CRUDModel:
 
         order_by = filters.pop("order_by", [])
         if order_by:
-            query = query.order_by(*order_by)
+            query = query.order_by(
+                *[
+                    text(column) if isinstance(column, str) else column
+                    for column in order_by
+                ]
+            )
 
         query_limit = filters.pop("limit", None)
         query_offset = filters.pop("offset", None)
