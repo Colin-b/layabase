@@ -1249,7 +1249,6 @@ class CRUDModel:
             cls._server_version = _server_versions.get(base.name, "")
             if not skip_update_indexes:
                 cls.update_indexes()
-            cls.update_indexes()
         if audit:
             from pycommon_database.audit_mongo import _create_from
 
