@@ -231,7 +231,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
     @classmethod
     def _create_models(cls, base):
         logger.info("Declare model class...")
-
         class TestModel(
             database_mongo.CRUDModel, base=base, table_name="sample_table_name"
         ):
@@ -6023,6 +6022,41 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             ],
             self.TestSecondController.get({}),
         )
+
+
+class MongoCRUD2Entities1CollectionTestController(database.CRUDController):
+    pass
+
+
+class MongoCRUD2Entities1CollectionTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls._db = database.load("mongomock", lambda x: x)
+
+    @classmethod
+    def tearDownClass(cls):
+        database.reset(cls._db)
+
+    @unittest.skip
+    def test_2entities_on_same_collection_without_pk2(self):
+        class TestEntitySameCollection1(
+            database_mongo.CRUDModel, base=self._db, table_name="sample_table_name_2entities"
+        ):
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        MongoCRUD2Entities1CollectionTestController.model(TestEntitySameCollection1)
+
+        class TestEntitySameCollection2(
+            database_mongo.CRUDModel, base=self._db, table_name="sample_table_name_2entities"
+        ):
+            pass
+
+        TestEntitySameCollection1.add({'key': 1, 'mandatory': 2})
+        TestEntitySameCollection2.add({'key': 1, 'mandatory': 3})
+        entities = TestEntitySameCollection1.get_all(key=1)
 
 
 if __name__ == "__main__":
