@@ -6025,10 +6025,6 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
         )
 
 
-class MongoCRUD2Entities1CollectionTestController(database.CRUDController):
-    pass
-
-
 class MongoCRUD2Entities1CollectionTest(unittest.TestCase):
 
     def setUp(self):
