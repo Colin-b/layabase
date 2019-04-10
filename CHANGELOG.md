@@ -626,7 +626,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.18.0...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.19.0...HEAD
+[13.18.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.17.0...v13.18.0
 [13.17.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.16.1...v13.17.0
 [13.16.1]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.16.0...v13.16.1
 [13.16.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.15.0...v13.16.0
