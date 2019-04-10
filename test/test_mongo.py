@@ -6066,6 +6066,9 @@ class MongoCRUD2Entities1CollectionTest(unittest.TestCase):
         ):
             pass
 
+        TestEntitySameCollection1.add({'key': '3', 'mandatory': 2})
+        self.assertEqual(len(TestEntitySameCollection1.get_all()), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
