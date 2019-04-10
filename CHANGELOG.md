@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [13.19.0] - 2019-04-10
 ### Added
-- Add option to skip index update. This is used when 2 entites are mapped on the same collection, and these entites have a different field declaration (bizref use case)
+- [Mongo] Add option to skip index update. This is used when 2 entites are mapped on the same collection, and these entites have a different field declaration (bizref use case)
 
 ## [13.18.0] - 2019-03-01
 ### Changed
@@ -626,7 +626,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.17.0...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.18.0...HEAD
 [13.17.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.16.1...v13.17.0
 [13.16.1]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.16.0...v13.16.1
 [13.16.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-server/compare/v13.15.0...v13.16.0
