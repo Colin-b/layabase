@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [13.19.0] - 2019-04-10
+### Added
+- Add option to skip index update. This is used when 2 entites are mapped on the same collection, and these entites have a different field declaration (bizref use case)
+
 ## [13.18.0] - 2019-03-01
 ### Changed
 - Update pycommon-test to version 5.2.0
