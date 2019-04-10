@@ -1232,6 +1232,7 @@ class CRUDModel:
         cls._skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
         cls._skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
         skip_name_check = kwargs.pop("skip_name_check", False)
+        skip_update_indexes = kwargs.pop('skip_update_indexes', False)
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         cls.logger = logging.getLogger(f"{__name__}.{table_name}")
@@ -1246,6 +1247,8 @@ class CRUDModel:
             cls.__collection__ = base[cls.__tablename__]
             cls.__counters__ = base["counters"]
             cls._server_version = _server_versions.get(base.name, "")
+            if not skip_update_indexes:
+                cls.update_indexes()
             cls.update_indexes()
         if audit:
             from pycommon_database.audit_mongo import _create_from
