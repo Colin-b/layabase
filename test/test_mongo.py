@@ -8,10 +8,11 @@ import unittest
 from threading import Thread
 from typing import List, Dict
 
-from flask_restplus import fields as flask_rest_plus_fields, inputs
+import pymongo
+from flask_restplus import inputs
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
+from pycommon_test import mock_now
 from pycommon_test.flask_restplus_mock import TestAPI
-from pycommon_test import mock_now, revert_now
 
 logging.basicConfig(
     format="%(asctime)s [%(threadName)s] [%(levelname)s] [%(name)s] %(message)s",
@@ -231,7 +232,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
     @classmethod
     def _create_models(cls, base):
         logger.info("Declare model class...")
-
         class TestModel(
             database_mongo.CRUDModel, base=base, table_name="sample_table_name"
         ):
@@ -6023,6 +6023,51 @@ class MongoCRUDControllerBackupTest(unittest.TestCase):
             ],
             self.TestSecondController.get({}),
         )
+
+
+class MongoCRUD2Entities1CollectionTest(unittest.TestCase):
+
+    def setUp(self):
+        self._db = database.load("mongomock", lambda x: x)
+
+    def tearDown(self):
+        database.reset(self._db)
+
+    def test_2entities_on_same_collection_without_pk(self):
+        class TestEntitySameCollection1(
+            versioning_mongo.VersionedCRUDModel, base=self._db, table_name="sample_table_name_2entities"
+        ):
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        TestEntitySameCollection1.add({'key': '1', 'mandatory': 2})
+        TestEntitySameCollection1.add({'key': '2', 'mandatory': 2})
+
+        with self.assertRaises(pymongo.errors.DuplicateKeyError):
+            class TestEntitySameCollection2(
+                versioning_mongo.VersionedCRUDModel, base=self._db, table_name="sample_table_name_2entities"
+            ):
+                pass
+
+    def test_2entities_on_same_collection_with_pk(self):
+        class TestEntitySameCollection1(
+            versioning_mongo.VersionedCRUDModel, base=self._db, table_name="sample_table_name_2entities"
+        ):
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
+
+        TestEntitySameCollection1.add({'key': '1', 'mandatory': 2})
+        TestEntitySameCollection1.add({'key': '2', 'mandatory': 2})
+
+        class TestEntitySameCollection2(
+            versioning_mongo.VersionedCRUDModel, base=self._db, table_name="sample_table_name_2entities", skip_update_indexes=True
+        ):
+            pass
+
+        TestEntitySameCollection1.add({'key': '3', 'mandatory': 2})
+        self.assertEqual(len(TestEntitySameCollection1.get_all()), 3)
 
 
 if __name__ == "__main__":
