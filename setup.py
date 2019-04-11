@@ -9,7 +9,7 @@ with open(os.path.join(this_dir, "README.md"), "r") as f:
 extra_requirements = {
     "testing": [
         # Used to provide testing help
-        "pycommon-test==5.2.0",
+        "pycommon-test==5.3.0",
         "mongomock==3.16.0",
     ],
     "mongo": [
@@ -20,8 +20,8 @@ extra_requirements = {
     # Used to Manage Non-Mongo Database
     "sqlalchemy": [
         "marshmallow==2.19.2",
-        "SQLAlchemy==1.3.1",
-        "marshmallow_sqlalchemy==0.16.1",
+        "SQLAlchemy==1.3.2",
+        "marshmallow_sqlalchemy==0.16.2",
     ],
 }
 
@@ -44,7 +44,7 @@ setup(
     packages=find_packages(exclude=["test"]),
     install_requires=[
         # Used to handle errors
-        "pycommon-error==2.17.0"
+        "pycommon-error==2.18.0"
     ],
     extras_require=extra_requirements,
     python_requires=">=3.6",

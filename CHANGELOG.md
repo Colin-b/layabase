@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [13.20.0] - 2019-04-11
+### Changed
+- Update pycommon-test to version 5.3.0
+- Update SQLAlchemy to version 1.3.2
+- Update marshmallow_sqlalchemy to version 0.16.2
+- Update pycommon-error to version 2.18.0
+
 ## [13.19.0] - 2019-04-10
 ### Added
 - [Mongo] Add option to skip index update. This is used when 2 entites are mapped on the same collection, and these entites have a different field declaration (bizref use case)
