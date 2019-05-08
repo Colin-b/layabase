@@ -1,6 +1,7 @@
 import os
 
 from setuptools import setup, find_packages
+from pycommon_database.version import __version__
 
 this_dir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_dir, "README.md"), "r") as f:
@@ -35,10 +36,7 @@ extra_requirements["testing"] += [
 
 setup(
     name="pycommon_database",
-    version=open("pycommon_database/version.py")
-    .readlines()[-1]
-    .split()[-1]
-    .strip("\"'"),
+    version=__version__,
     description="Common Database handling",
     long_description=long_description,
     packages=find_packages(exclude=["test"]),
