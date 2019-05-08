@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [13.21.0] - 2019-05-08
+### Changed
+- Update pycommon_test to version 6.0.0
+- Update pymongo to version 3.8.0
+- Update pycommon_error to version 2.19.0
+- Update SQLAlchemy to version 1.3.3
+- Update marshmallow_sqlalchemy to version 0.16.3
+- Send release notification to Slack ETRM #corps_pycommon channel
+
+### Added
+- Add a contributing doc.
+
 ## [13.20.0] - 2019-04-11
 ### Changed
 - Update pycommon-test to version 5.3.0
