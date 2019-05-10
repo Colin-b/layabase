@@ -195,6 +195,9 @@ class MongoCRUDControllerTest(unittest.TestCase):
     class TestDictRequiredNonNullableVersionedController(database.CRUDController):
         pass
 
+    class TestSupportForComparisonSignsController(database.CRUDController):
+        pass
+
     _db = None
 
     @classmethod
@@ -224,6 +227,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestNoneInsertController.namespace(TestAPI)
         cls.TestNoneRetrieveController.namespace(TestAPI)
         cls.TestNoneNotInsertedController.namespace(TestAPI)
+        cls.TestSupportForComparisonSignsController.namespace(TestAPI)
 
     @classmethod
     def tearDownClass(cls):
@@ -464,6 +468,14 @@ class MongoCRUDControllerTest(unittest.TestCase):
             key = database_mongo.Column(int, is_primary_key=True)
             my_dict = database_mongo.Column(dict, is_required=True)
 
+        class TestSupportForComparisonSignsModel(
+            database_mongo.CRUDModel, base=base, table_name="int_and_float"
+        ):
+            int_value = database_mongo.Column(int)
+            float_value = database_mongo.Column(float)
+            date_value = database_mongo.Column(datetime.date)
+            datetime_value = database_mongo.Column(datetime.datetime)
+
         logger.info("Save model class...")
         cls.TestController.model(TestModel)
         cls.TestStrictController.model(TestStrictModel)
@@ -492,6 +504,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         cls.TestNoneNotInsertedController.model(TestNoneNotInsertedModel)
         cls.TestNoneInsertController.model(TestNoneInsertModel)
         cls.TestNoneRetrieveController.model(TestNoneRetrieveModel)
+        cls.TestSupportForComparisonSignsController.model(TestSupportForComparisonSignsModel)
         return [
             TestModel,
             TestStrictModel,
@@ -514,6 +527,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
             TestIntAndFloatModel,
             TestDictInDictModel,
             TestNoneInsertModel,
+            TestSupportForComparisonSignsModel,
         ]
 
     def setUp(self):
@@ -4138,6 +4152,175 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 "optional": "String",
             },
             self.TestController.get_model_description_response_model.fields_flask_type,
+        )
+
+    def test_get_is_valid_with_int_str_appended_by_less_than_sign_in_int_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
+        self.assertEqual(
+            [
+                {"int_value": 122, "float_value": None, "date_value": None, "datetime_value": None},
+                {"int_value": 123, "float_value": None, "date_value": None, "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": "<124"}),
+        )
+
+    def test_get_is_valid_with_float_str_appended_by_less_than_sign_in_float_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": 0.9, "date_value": None, "datetime_value": None},
+                {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"float_value": "<1.1"}),
+        )
+
+    def test_get_is_valid_with_date_str_appended_by_less_than_sign_in_date_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"date_value": "2019-01-01"}, {"date_value": "2019-01-02"}, {"date_value": "2019-01-03"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": "2019-01-01", "datetime_value": None},
+                {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"date_value": "<2019-01-03"}),
+        )
+
+    def test_get_is_valid_with_datetime_str_appended_by_less_than_sign_in_datetime_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"datetime_value": "2019-01-01T23:59:59"}, {"datetime_value": "2019-01-02T23:59:59"}, {"datetime_value": "2019-01-03T23:59:59"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-01T23:59:59"},
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": "<2019-01-03T23:59:59"}),
+        )
+
+    def test_get_is_valid_with_int_str_appended_by_greater_than_sign_in_int_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
+        self.assertEqual(
+            [
+                {"int_value": 123, "float_value": None, "date_value": None, "datetime_value": None},
+                {"int_value": 124, "float_value": None, "date_value": None, "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": ">122"}),
+        )
+
+    def test_get_is_valid_with_float_str_appended_by_greater_than_sign_in_float_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
+                {"int_value": None, "float_value": 1.1, "date_value": None, "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"float_value": ">0.9"}),
+        )
+
+    def test_get_is_valid_with_date_str_appended_by_greater_than_sign_in_date_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"date_value": "2019-01-01"}, {"date_value": "2019-01-02"}, {"date_value": "2019-01-03"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
+                {"int_value": None, "float_value": None, "date_value": "2019-01-03", "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"date_value": ">2019-01-01"}),
+        )
+
+    def test_get_is_valid_with_datetime_str_appended_by_greater_than_sign_in_datetime_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"datetime_value": "2019-01-01T23:59:59"}, {"datetime_value": "2019-01-02T23:59:59"}, {"datetime_value": "2019-01-03T23:59:59"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-03T23:59:59"},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": ">2019-01-01T23:59:59"}),
+        )
+
+    def test_get_is_valid_with_int_str_appended_by_less_than_or_equal_sign_in_int_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
+        self.assertEqual(
+            [
+                {"int_value": 122, "float_value": None, "date_value": None, "datetime_value": None},
+                {"int_value": 123, "float_value": None, "date_value": None, "datetime_value": None},
+                {"int_value": 124, "float_value": None, "date_value": None, "datetime_value": None},
+
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": "<=124"}),
+        )
+
+    def test_get_is_valid_with_float_str_appended_by_less_than_or_equal_sign_in_float_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": 0.9, "date_value": None, "datetime_value": None},
+                {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
+                {"int_value": None, "float_value": 1.1, "date_value": None, "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"float_value": "<=1.1"}),
+        )
+
+    def test_get_is_valid_with_date_str_appended_by_less_than_or_equal_sign_in_date_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"date_value": "2019-01-01"}, {"date_value": "2019-01-02"}, {"date_value": "2019-01-03"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": "2019-01-01", "datetime_value": None},
+                {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
+                {"int_value": None, "float_value": None, "date_value": "2019-01-03", "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"date_value": "<=2019-01-03"}),
+        )
+
+    def test_get_is_valid_with_datetime_str_appended_by_less_than_or_equal_sign_in_datetime_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"datetime_value": "2019-01-01T23:59:59"}, {"datetime_value": "2019-01-02T23:59:59"}, {"datetime_value": "2019-01-03T23:59:59"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-01T23:59:59"},
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-03T23:59:59"},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": "<=2019-01-03T23:59:59"}),
+        )
+
+    def test_get_is_valid_with_int_str_appended_by_greater_than_or_equal_sign_in_int_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
+        self.assertEqual(
+            [
+                {"int_value": 122, "float_value": None, "date_value": None, "datetime_value": None},
+                {"int_value": 123, "float_value": None, "date_value": None, "datetime_value": None},
+                {"int_value": 124, "float_value": None, "date_value": None, "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": ">=122"}),
+        )
+
+    def test_get_is_valid_with_float_str_appended_by_greater_than_or_equal_sign_in_float_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": 0.9, "date_value": None, "datetime_value": None},
+                {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
+                {"int_value": None, "float_value": 1.1, "date_value": None, "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"float_value": ">=0.9"}),
+        )
+
+    def test_get_is_valid_with_date_str_appended_by_greater_than_or_equal_sign_in_date_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"date_value": "2019-01-01"}, {"date_value": "2019-01-02"}, {"date_value": "2019-01-03"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": "2019-01-01", "datetime_value": None},
+                {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
+                {"int_value": None, "float_value": None, "date_value": "2019-01-03", "datetime_value": None},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"date_value": ">=2019-01-01"}),
+        )
+
+    def test_get_is_valid_with_datetime_str_appended_by_greater_than_or_equal_sign_in_datetime_column(self):
+        self.TestSupportForComparisonSignsController.post_many([{"datetime_value": "2019-01-01T23:59:59"}, {"datetime_value": "2019-01-02T23:59:59"}, {"datetime_value": "2019-01-03T23:59:59"}])
+        self.assertEqual(
+            [
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-01T23:59:59"},
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
+                {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-03T23:59:59"},
+            ],
+            self.TestSupportForComparisonSignsController.get_one({"int_value": ">=2019-01-01T23:59:59"}),
         )
 
 
