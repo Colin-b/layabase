@@ -306,11 +306,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                if value.startswith('<=') or value.startswith('>='):
-                    value = value[2:]
-                elif value.startswith('<') or value.startswith('>'):
-                    value = value[1:]
-                value = iso8601.parse_date(value)
+                value = iso8601.parse_date(self.remove_comparison_signs_if_exists(value))
             except iso8601.ParseError:
                 return {self.name: ["Not a valid datetime."]}
 
@@ -325,11 +321,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                if value.startswith('<=') or value.startswith('>='):
-                    value = value[2:]
-                elif value.startswith('<') or value.startswith('>'):
-                    value = value[1:]
-                value = iso8601.parse_date(value).date()
+                value = iso8601.parse_date(self.remove_comparison_signs_if_exists(value)).date()
             except iso8601.ParseError:
                 return {self.name: ["Not a valid date."]}
 
@@ -452,11 +444,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                if value.startswith('<=') or value.startswith('>='):
-                    value = value[2:]
-                elif value.startswith('<') or value.startswith('>'):
-                    value = value[1:]
-                value = int(value)
+                value = int(self.remove_comparison_signs_if_exists(value))
             except ValueError:
                 return {self.name: [f"Not a valid int."]}
         if isinstance(value, int):
@@ -488,11 +476,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                if value.startswith('<=') or value.startswith('>='):
-                    value = value[2:]
-                elif value.startswith('<') or value.startswith('>'):
-                    value = value[1:]
-                value = float(value)
+                value = float(self.remove_comparison_signs_if_exists(value))
             except ValueError:
                 return {self.name: [f"Not a valid float."]}
         elif isinstance(value, int):
@@ -528,6 +512,13 @@ class Column:
             return {self.name: [f"Not a valid {self.field_type.__name__}."]}
 
         return {}
+
+    def remove_comparison_signs_if_exists(self, value):
+        if value.startswith('<=') or value.startswith('>='):
+            value = value[2:]
+        elif value.startswith('<') or value.startswith('>'):
+            value = value[1:]
+        return value
 
     def deserialize_query(self, filters: dict):
         """
