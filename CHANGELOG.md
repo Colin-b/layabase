@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [13.22.0] - 2019-05-13
+### Added
+- [Mongo] Add support for <, >, <= and >= when selecting documents from the database.
+
 ## [13.21.0] - 2019-05-08
 ### Changed
 - Update pycommon_test to version 6.0.0
