@@ -306,6 +306,10 @@ class Column:
         """
         if isinstance(value, str):
             try:
+                if value.startswith('<=') or value.startswith('>='):
+                    value = value[2:]
+                elif value.startswith('<') or value.startswith('>'):
+                    value = value[1:]
                 value = iso8601.parse_date(value)
             except iso8601.ParseError:
                 return {self.name: ["Not a valid datetime."]}
@@ -321,6 +325,10 @@ class Column:
         """
         if isinstance(value, str):
             try:
+                if value.startswith('<=') or value.startswith('>='):
+                    value = value[2:]
+                elif value.startswith('<') or value.startswith('>'):
+                    value = value[1:]
                 value = iso8601.parse_date(value).date()
             except iso8601.ParseError:
                 return {self.name: ["Not a valid date."]}
@@ -444,6 +452,10 @@ class Column:
         """
         if isinstance(value, str):
             try:
+                if value.startswith('<=') or value.startswith('>='):
+                    value = value[2:]
+                elif value.startswith('<') or value.startswith('>'):
+                    value = value[1:]
                 value = int(value)
             except ValueError:
                 return {self.name: [f"Not a valid int."]}
@@ -476,6 +488,10 @@ class Column:
         """
         if isinstance(value, str):
             try:
+                if value.startswith('<=') or value.startswith('>='):
+                    value = value[2:]
+                elif value.startswith('<') or value.startswith('>'):
+                    value = value[1:]
                 value = float(value)
             except ValueError:
                 return {self.name: [f"Not a valid float."]}
@@ -610,7 +626,16 @@ class Column:
             return None
 
         if isinstance(value, str):
-            value = iso8601.parse_date(value)
+            if value.startswith('<='):
+                value = {"$lte": iso8601.parse_date(value[2:])}
+            elif value.startswith('>='):
+                value = {"$gte": iso8601.parse_date(value[2:])}
+            elif value.startswith('<'):
+                value = {"$lt": iso8601.parse_date(value[1:])}
+            elif value.startswith('>'):
+                value = {"$gt": iso8601.parse_date(value[1:])}
+            else:
+                value = iso8601.parse_date(value)
 
         return value
 
@@ -625,7 +650,16 @@ class Column:
             return None
 
         if isinstance(value, str):
-            value = iso8601.parse_date(value)
+            if value.startswith('<='):
+                value = {"$lte": iso8601.parse_date(value[2:])}
+            elif value.startswith('>='):
+                value = {"$gte": iso8601.parse_date(value[2:])}
+            elif value.startswith('<'):
+                value = {"$lt": iso8601.parse_date(value[1:])}
+            elif value.startswith('>'):
+                value = {"$gt": iso8601.parse_date(value[1:])}
+            else:
+                value = iso8601.parse_date(value)
         elif isinstance(value, datetime.date):
             # dates cannot be stored in Mongo, use datetime instead
             if not isinstance(value, datetime.datetime):
@@ -682,7 +716,16 @@ class Column:
             return None
 
         if isinstance(value, str):
-            value = int(value)
+            if value.startswith('<='):
+                value = {"$lte": int(value[2:])}
+            elif value.startswith('>='):
+                value = {"$gte": int(value[2:])}
+            elif value.startswith('<'):
+                value = {"$lt": int(value[1:])}
+            elif value.startswith('>'):
+                value = {"$gt": int(value[1:])}
+            else:
+                value = int(value)
 
         return value
 
@@ -697,7 +740,16 @@ class Column:
             return None
 
         if isinstance(value, str):
-            value = float(value)
+            if value.startswith('<='):
+                value = {"$lte": float(value[2:])}
+            elif value.startswith('>='):
+                value = {"$gte": float(value[2:])}
+            elif value.startswith('<'):
+                value = {"$lt": float(value[1:])}
+            elif value.startswith('>'):
+                value = {"$gt": float(value[1:])}
+            else:
+                value = float(value)
 
         return value
 

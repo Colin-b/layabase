@@ -4161,7 +4161,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": 122, "float_value": None, "date_value": None, "datetime_value": None},
                 {"int_value": 123, "float_value": None, "date_value": None, "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": "<124"}),
+            self.TestSupportForComparisonSignsController.get({"int_value": "<124"}),
         )
 
     def test_get_is_valid_with_float_str_appended_by_less_than_sign_in_float_column(self):
@@ -4171,7 +4171,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": 0.9, "date_value": None, "datetime_value": None},
                 {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"float_value": "<1.1"}),
+            self.TestSupportForComparisonSignsController.get({"float_value": "<1.1"}),
         )
 
     def test_get_is_valid_with_date_str_appended_by_less_than_sign_in_date_column(self):
@@ -4181,7 +4181,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": "2019-01-01", "datetime_value": None},
                 {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"date_value": "<2019-01-03"}),
+            self.TestSupportForComparisonSignsController.get({"date_value": "<2019-01-03"}),
         )
 
     def test_get_is_valid_with_datetime_str_appended_by_less_than_sign_in_datetime_column(self):
@@ -4191,7 +4191,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-01T23:59:59"},
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": "<2019-01-03T23:59:59"}),
+            self.TestSupportForComparisonSignsController.get({"datetime_value": "<2019-01-03T23:59:59"}),
         )
 
     def test_get_is_valid_with_int_str_appended_by_greater_than_sign_in_int_column(self):
@@ -4201,7 +4201,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": 123, "float_value": None, "date_value": None, "datetime_value": None},
                 {"int_value": 124, "float_value": None, "date_value": None, "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": ">122"}),
+            self.TestSupportForComparisonSignsController.get({"int_value": ">122"}),
         )
 
     def test_get_is_valid_with_float_str_appended_by_greater_than_sign_in_float_column(self):
@@ -4211,7 +4211,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
                 {"int_value": None, "float_value": 1.1, "date_value": None, "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"float_value": ">0.9"}),
+            self.TestSupportForComparisonSignsController.get({"float_value": ">0.9"}),
         )
 
     def test_get_is_valid_with_date_str_appended_by_greater_than_sign_in_date_column(self):
@@ -4221,7 +4221,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
                 {"int_value": None, "float_value": None, "date_value": "2019-01-03", "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"date_value": ">2019-01-01"}),
+            self.TestSupportForComparisonSignsController.get({"date_value": ">2019-01-01"}),
         )
 
     def test_get_is_valid_with_datetime_str_appended_by_greater_than_sign_in_datetime_column(self):
@@ -4231,7 +4231,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-03T23:59:59"},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": ">2019-01-01T23:59:59"}),
+            self.TestSupportForComparisonSignsController.get({"datetime_value": ">2019-01-01T23:59:59"}),
         )
 
     def test_get_is_valid_with_int_str_appended_by_less_than_or_equal_sign_in_int_column(self):
@@ -4243,7 +4243,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": 124, "float_value": None, "date_value": None, "datetime_value": None},
 
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": "<=124"}),
+            self.TestSupportForComparisonSignsController.get({"int_value": "<=124"}),
         )
 
     def test_get_is_valid_with_float_str_appended_by_less_than_or_equal_sign_in_float_column(self):
@@ -4254,7 +4254,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
                 {"int_value": None, "float_value": 1.1, "date_value": None, "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"float_value": "<=1.1"}),
+            self.TestSupportForComparisonSignsController.get({"float_value": "<=1.1"}),
         )
 
     def test_get_is_valid_with_date_str_appended_by_less_than_or_equal_sign_in_date_column(self):
@@ -4265,7 +4265,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
                 {"int_value": None, "float_value": None, "date_value": "2019-01-03", "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"date_value": "<=2019-01-03"}),
+            self.TestSupportForComparisonSignsController.get({"date_value": "<=2019-01-03"}),
         )
 
     def test_get_is_valid_with_datetime_str_appended_by_less_than_or_equal_sign_in_datetime_column(self):
@@ -4276,7 +4276,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-03T23:59:59"},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": "<=2019-01-03T23:59:59"}),
+            self.TestSupportForComparisonSignsController.get({"datetime_value": "<=2019-01-03T23:59:59"}),
         )
 
     def test_get_is_valid_with_int_str_appended_by_greater_than_or_equal_sign_in_int_column(self):
@@ -4287,7 +4287,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": 123, "float_value": None, "date_value": None, "datetime_value": None},
                 {"int_value": 124, "float_value": None, "date_value": None, "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": ">=122"}),
+            self.TestSupportForComparisonSignsController.get({"int_value": ">=122"}),
         )
 
     def test_get_is_valid_with_float_str_appended_by_greater_than_or_equal_sign_in_float_column(self):
@@ -4298,7 +4298,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": 1.0, "date_value": None, "datetime_value": None},
                 {"int_value": None, "float_value": 1.1, "date_value": None, "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"float_value": ">=0.9"}),
+            self.TestSupportForComparisonSignsController.get({"float_value": ">=0.9"}),
         )
 
     def test_get_is_valid_with_date_str_appended_by_greater_than_or_equal_sign_in_date_column(self):
@@ -4309,7 +4309,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": "2019-01-02", "datetime_value": None},
                 {"int_value": None, "float_value": None, "date_value": "2019-01-03", "datetime_value": None},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"date_value": ">=2019-01-01"}),
+            self.TestSupportForComparisonSignsController.get({"date_value": ">=2019-01-01"}),
         )
 
     def test_get_is_valid_with_datetime_str_appended_by_greater_than_or_equal_sign_in_datetime_column(self):
@@ -4320,7 +4320,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-02T23:59:59"},
                 {"int_value": None, "float_value": None, "date_value": None, "datetime_value": "2019-01-03T23:59:59"},
             ],
-            self.TestSupportForComparisonSignsController.get_one({"int_value": ">=2019-01-01T23:59:59"}),
+            self.TestSupportForComparisonSignsController.get({"datetime_value": ">=2019-01-01T23:59:59"}),
         )
 
 
