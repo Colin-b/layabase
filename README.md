@@ -118,7 +118,7 @@ from pycommon_database.database_mongo import CRUDModel, Column
 
 pymongo_database = None  # pymongo database instance
 
-class MyModel(CRUDModel, pymongo_database, "related collection name"):
+class MyModel(CRUDModel, base=pymongo_database, table_name="related collection name"):
 
     key = Column(str, is_primary_key=True)
     dict_value = Column(dict)
@@ -133,7 +133,7 @@ from pycommon_database.database_mongo import CRUDModel, Column
 
 pymongo_database = None  # pymongo database instance
 
-class MyModel(CRUDModel, pymongo_database, "related collection name"):
+class MyModel(CRUDModel, base=pymongo_database, table_name="related collection name"):
 
     key = Column()
 ```
