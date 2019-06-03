@@ -116,7 +116,9 @@ Extending pycommon_database.database_mongo.CRUDModel will provides C.R.U.D. meth
 ```python
 from pycommon_database.database_mongo import CRUDModel, Column
 
-class MyModel(CRUDModel):
+pymongo_database = None  # pymongo database instance
+
+class MyModel(CRUDModel, pymongo_database, "related collection name"):
 
     key = Column(str, is_primary_key=True)
     dict_value = Column(dict)
@@ -129,7 +131,9 @@ Fields containing string can be described using pycommon_database.database_mongo
 ```python
 from pycommon_database.database_mongo import CRUDModel, Column
 
-class MyModel(CRUDModel):
+pymongo_database = None  # pymongo database instance
+
+class MyModel(CRUDModel, pymongo_database, "related collection name"):
 
     key = Column()
 ```
@@ -257,7 +261,7 @@ and use the following connection string: "mongomock" instead of a real mongodb c
 ```python
 import pycommon_database
 
-def create_models(base):
+def create_models(database):
     my_model_class = None  # It should be a model class
     return [my_model_class]  # It should be a list containing all the models that should be linked
 
