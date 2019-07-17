@@ -11,7 +11,7 @@ from typing import List, Dict
 import pymongo
 from flask_restplus import inputs
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
-from pycommon_test import mock_now
+from pycommon_test import mock_now, revert_now
 from pycommon_test.flask_restplus_mock import TestAPI
 
 logging.basicConfig(
@@ -202,7 +202,6 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        mock_now()
         cls._db = database.load("mongomock", cls._create_models)
         cls.TestController.namespace(TestAPI)
         cls.TestStrictController.namespace(TestAPI)
@@ -538,10 +537,13 @@ class MongoCRUDControllerTest(unittest.TestCase):
 
     def tearDown(self):
         self._db.command = self.initial_command
+        revert_now()
+        super().tearDown()
         logger.info(f"End of {self._testMethodName}")
         logger.info(f"-------------------------------")
 
     def test_health_details_failure(self):
+        mock_now()
         def fail_ping(*args):
             raise Exception("Unable to ping")
 
@@ -562,6 +564,7 @@ class MongoCRUDControllerTest(unittest.TestCase):
         )
 
     def test_health_details_success(self):
+        mock_now()
         self.assertEqual(
             (
                 "pass",
