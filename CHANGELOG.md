@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [13.22.0] - 2019-07-19
+### Changed
+- Update mongomock to version 3.17.0
+- Update marshmallow to version 2.19.5
+- Update SQLAlchemy to version 1.3.5
+- Update marshmallow_sqlalchemy to version 0.17.0
+- Update pycommon_error to version 2.20.0
+
 ## [13.21.0] - 2019-05-08
 ### Changed
 - Update pycommon_test to version 6.0.0
@@ -645,7 +653,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.19.0...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.22.0...HEAD
+[13.22.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.21.0...v13.22.0
+[13.21.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.20.0...v13.21.0
+[13.20.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.19.0...v13.20.0
 [13.19.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.18.0...v13.19.0
 [13.18.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.17.0...v13.18.0
 [13.17.0]: https://github.tools.digital.engie.com/GEM-Py/pycommon-database/compare/v13.16.1...v13.17.0
