@@ -3,32 +3,10 @@ import re
 import pytest
 
 from pycommon_database import database, database_mongo
-from test.flask_restplus_mock import TestAPI
 
 
 class TestController(database.CRUDController):
     pass
-
-
-def _create_models(base):
-    class TestModel(
-        database_mongo.CRUDModel, base=base, table_name="sample_table_name"
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        mandatory = database_mongo.Column(int, is_nullable=False)
-        optional = database_mongo.Column(str)
-
-    return [TestModel]
-
-
-@pytest.fixture
-def db():
-    _db = database.load("mongomock", _create_models)
-    TestController.namespace(TestAPI)
-
-    yield _db
-
-    database.reset(_db)
 
 
 def test_model_method_without_setting_model():
@@ -54,29 +32,35 @@ def test_namespace_method_without_setting_model():
     )
 
 
-def test_counters_table_name_is_forbidden(db):
-    with pytest.raises(Exception) as exception_info:
-
-        class TestModel(database_mongo.CRUDModel, base=db, table_name="counters"):
+def test_counters_table_name_is_forbidden():
+    def create_models(base):
+        class TestModel(database_mongo.CRUDModel, base=base, table_name="counters"):
             key = database_mongo.Column(str)
+
+    with pytest.raises(Exception) as exception_info:
+        database.load("mongomock", create_models)
 
     assert "counters is a reserved collection name." == str(exception_info.value)
 
 
-def test_audit_table_name_is_forbidden(db):
-    with pytest.raises(Exception) as exception_info:
-
-        class TestModel(database_mongo.CRUDModel, base=db, table_name="audit"):
+def test_audit_table_name_is_forbidden():
+    def create_models(base):
+        class TestModel(database_mongo.CRUDModel, base=base, table_name="audit"):
             key = database_mongo.Column(str)
+
+    with pytest.raises(Exception) as exception_info:
+        database.load("mongomock", create_models)
 
     assert "audit is a reserved collection name." == str(exception_info.value)
 
 
-def test_audit_prefixed_table_name_is_forbidden(db):
-    with pytest.raises(Exception) as exception_info:
-
-        class TestModel(database_mongo.CRUDModel, base=db, table_name="audit_toto"):
+def test_audit_prefixed_table_name_is_forbidden():
+    def create_models(base):
+        class TestModel(database_mongo.CRUDModel, base=base, table_name="audit_toto"):
             key = database_mongo.Column(str)
+
+    with pytest.raises(Exception) as exception_info:
+        database.load("mongomock", create_models)
 
     assert "audit_toto is a reserved collection name." == str(exception_info.value)
 
