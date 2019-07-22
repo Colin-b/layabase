@@ -39,7 +39,7 @@ pycommon_database is easiest to work with when installed into a virtual environm
 To install all test required dependencies, use the following command:
 
 ```python
-python -m pip install -e .[testing]
+python -m pip install .[testing]
 ```
 
 ## Relational databases (non-Mongo) ##
@@ -105,6 +105,8 @@ PyMongo is the underlying framework used to manipulate MongoDB.
 
 To create a representation of a collection you will need to extend pycommon_database.database_mongo.CRUDModel
 
+To link your model to the underlying collection, you will need to provide a connection string.
+
 ### Mongo model ###
 
 Extending pycommon_database.database_mongo.CRUDModel will provides C.R.U.D. methods on your Mongo model.
@@ -114,7 +116,9 @@ Extending pycommon_database.database_mongo.CRUDModel will provides C.R.U.D. meth
 ```python
 from pycommon_database.database_mongo import CRUDModel, Column
 
-class MyModel(CRUDModel):
+pymongo_database = None  # pymongo database instance
+
+class MyModel(CRUDModel, base=pymongo_database, table_name="related collection name"):
 
     key = Column(str, is_primary_key=True)
     dict_value = Column(dict)
@@ -127,7 +131,9 @@ Fields containing string can be described using pycommon_database.database_mongo
 ```python
 from pycommon_database.database_mongo import CRUDModel, Column
 
-class MyModel(CRUDModel):
+pymongo_database = None  # pymongo database instance
+
+class MyModel(CRUDModel, base=pymongo_database, table_name="related collection name"):
 
     key = Column()
 ```
@@ -237,6 +243,31 @@ updated_model_as_dict = MyModel.update({'key': 'key1', 'dict_value': {'dict_key'
 nb_removed_models = MyModel.remove(key='key1')
 ```
 
+### Link to a Mongo database ###
+
+Mongo specific dependencies must be installed, use the following command:
+
+```python
+python -m pip install .[mongo]
+```
+
+Note that to link to a fake Mongo database (in-memory), you can install the following package as well:
+```python
+python -m pip install mongomock
+```
+
+and use the following connection string: "mongomock" instead of a real mongodb connection string.
+
+```python
+import pycommon_database
+
+def create_models(database):
+    my_model_class = None  # It should be a model class
+    return [my_model_class]  # It should be a list containing all the models that should be linked
+
+pycommon_database.load("mongodb://host:port/server_name", create_models)
+```
+
 ## CRUD Controller ##
 
 Extending pycommon_database.database.CRUDController will provides C.R.U.D. methods on your controller.
@@ -301,4 +332,11 @@ description = MyController.get_model_description()
 all_audit_models_as_dict_list = MyController.get_audit()
 
 filtered_audit_models_as_dict_list = MyController.get_audit(value='value1')
+```
+
+## How to install
+1. [python 3.7+](https://www.python.org/downloads/) must be installed
+2. Use pip to install module:
+```sh
+python -m pip install pycommon_database -i https://all-team-remote:tBa%40W%29tvB%5E%3C%3B2Jm3@artifactory.tools.digital.engie.com/artifactory/api/pypi/all-team-pypi-prod/simple
 ```
