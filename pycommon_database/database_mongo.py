@@ -306,7 +306,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                value = iso8601.parse_date(self.remove_comparison_signs_if_exists(value))
+                value = iso8601.parse_date(self._remove_comparison_signs_if_exists(value))
             except iso8601.ParseError:
                 return {self.name: ["Not a valid datetime."]}
 
@@ -321,7 +321,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                value = iso8601.parse_date(self.remove_comparison_signs_if_exists(value)).date()
+                value = iso8601.parse_date(self._remove_comparison_signs_if_exists(value)).date()
             except iso8601.ParseError:
                 return {self.name: ["Not a valid date."]}
 
@@ -444,7 +444,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                value = int(self.remove_comparison_signs_if_exists(value))
+                value = int(self._remove_comparison_signs_if_exists(value))
             except ValueError:
                 return {self.name: [f"Not a valid int."]}
         if isinstance(value, int):
@@ -476,7 +476,7 @@ class Column:
         """
         if isinstance(value, str):
             try:
-                value = float(self.remove_comparison_signs_if_exists(value))
+                value = float(self._remove_comparison_signs_if_exists(value))
             except ValueError:
                 return {self.name: [f"Not a valid float."]}
         elif isinstance(value, int):
@@ -513,7 +513,8 @@ class Column:
 
         return {}
 
-    def remove_comparison_signs_if_exists(self, value):
+    @staticmethod
+    def _remove_comparison_signs_if_exists(value):
         if value.startswith('<=') or value.startswith('>='):
             value = value[2:]
         elif value.startswith('<') or value.startswith('>'):
@@ -616,19 +617,7 @@ class Column:
         if value is None:
             return None
 
-        if isinstance(value, str):
-            if value.startswith('<='):
-                value = {"$lte": iso8601.parse_date(value[2:])}
-            elif value.startswith('>='):
-                value = {"$gte": iso8601.parse_date(value[2:])}
-            elif value.startswith('<'):
-                value = {"$lt": iso8601.parse_date(value[1:])}
-            elif value.startswith('>'):
-                value = {"$gt": iso8601.parse_date(value[1:])}
-            else:
-                value = iso8601.parse_date(value)
-
-        return value
+        return self._deserialize_comparison_signs_if_exists(value, iso8601.parse_date)
 
     def _deserialize_date(self, value):
         """
@@ -641,16 +630,7 @@ class Column:
             return None
 
         if isinstance(value, str):
-            if value.startswith('<='):
-                value = {"$lte": iso8601.parse_date(value[2:])}
-            elif value.startswith('>='):
-                value = {"$gte": iso8601.parse_date(value[2:])}
-            elif value.startswith('<'):
-                value = {"$lt": iso8601.parse_date(value[1:])}
-            elif value.startswith('>'):
-                value = {"$gt": iso8601.parse_date(value[1:])}
-            else:
-                value = iso8601.parse_date(value)
+            value = self._deserialize_comparison_signs_if_exists(value, iso8601.parse_date)
         elif isinstance(value, datetime.date):
             # dates cannot be stored in Mongo, use datetime instead
             if not isinstance(value, datetime.datetime):
@@ -706,19 +686,7 @@ class Column:
         if value is None:
             return None
 
-        if isinstance(value, str):
-            if value.startswith('<='):
-                value = {"$lte": int(value[2:])}
-            elif value.startswith('>='):
-                value = {"$gte": int(value[2:])}
-            elif value.startswith('<'):
-                value = {"$lt": int(value[1:])}
-            elif value.startswith('>'):
-                value = {"$gt": int(value[1:])}
-            else:
-                value = int(value)
-
-        return value
+        return self._deserialize_comparison_signs_if_exists(value, int)
 
     def _deserialize_float(self, value):
         """
@@ -730,19 +698,7 @@ class Column:
         if value is None:
             return None
 
-        if isinstance(value, str):
-            if value.startswith('<='):
-                value = {"$lte": float(value[2:])}
-            elif value.startswith('>='):
-                value = {"$gte": float(value[2:])}
-            elif value.startswith('<'):
-                value = {"$lt": float(value[1:])}
-            elif value.startswith('>'):
-                value = {"$gt": float(value[1:])}
-            else:
-                value = float(value)
-
-        return value
+        return self._deserialize_comparison_signs_if_exists(value, float)
 
     def _deserialize_str(self, value):
         """
@@ -756,6 +712,21 @@ class Column:
 
         if not isinstance(value, str):
             value = str(value)
+
+        return value
+
+    def _deserialize_comparison_signs_if_exists(self, value, cast_func):
+        if isinstance(value, str):
+            if value.startswith('<='):
+                value = {"$lte": cast_func(value[2:])}
+            elif value.startswith('>='):
+                value = {"$gte": cast_func(value[2:])}
+            elif value.startswith('<'):
+                value = {"$lt": cast_func(value[1:])}
+            elif value.startswith('>'):
+                value = {"$gt": cast_func(value[1:])}
+            else:
+                value = cast_func(value)
 
         return value
 
