@@ -1,24 +1,7 @@
-import datetime
-import enum
-import tempfile
-import unittest
-from typing import List, Dict
-
 import pymongo
 import pytest
-from flask_restplus import inputs
-from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 
 from pycommon_database import database, database_mongo, versioning_mongo
-from test.flask_restplus_mock import TestAPI
-
-
-def parser_types(flask_parser) -> dict:
-    return {arg.name: arg.type for arg in flask_parser.args}
-
-
-def parser_actions(flask_parser) -> dict:
-    return {arg.name: arg.action for arg in flask_parser.args}
 
 
 def test_str_column_cannot_auto_increment():
@@ -91,11 +74,6 @@ def test_no_create_models_function_is_invalid():
         str(exception_info.value)
         == "A method allowing to create related models must be provided."
     )
-
-
-class EnumTest(enum.Enum):
-    Value1 = 1
-    Value2 = 2
 
 
 @pytest.fixture
