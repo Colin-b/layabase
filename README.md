@@ -336,7 +336,7 @@ filtered_audit_models_as_dict_list = MyController.get_audit(value='value1')
 
 ## How to install
 1. [python 3.7+](https://www.python.org/downloads/) must be installed
-2. Use pip to install trs module:
+2. Use pip to install module:
 ```sh
 python -m pip install pycommon_database -i https://all-team-remote:tBa%40W%29tvB%5E%3C%3B2Jm3@artifactory.tools.digital.engie.com/artifactory/api/pypi/all-team-pypi-prod/simple
 ```
