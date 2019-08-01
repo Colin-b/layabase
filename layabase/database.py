@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from pycommon_error.validation import ValidationFailed
+from layaberr.validation import ValidationFailed
 
 logger = logging.getLogger(__name__)
 

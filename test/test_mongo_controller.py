@@ -6,7 +6,7 @@ from threading import Thread
 
 import pytest
 from flask_restplus import inputs
-from pycommon_error.validation import ValidationFailed
+from layaberr.validation import ValidationFailed
 
 from layabase import database, database_mongo, versioning_mongo
 from test.flask_restplus_mock import TestAPI

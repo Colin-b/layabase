@@ -3,7 +3,7 @@ from typing import List, Dict
 
 import pymongo
 from flask_restplus import inputs
-from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
 
 from layabase.database_mongo import CRUDModel, Column, IndexType
 
