@@ -5,7 +5,7 @@ import pymongo
 from flask_restplus import inputs
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 
-from pycommon_database.database_mongo import CRUDModel, Column, IndexType
+from layabase.database_mongo import CRUDModel, Column, IndexType
 
 logger = logging.getLogger(__name__)
 

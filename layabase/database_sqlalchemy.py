@@ -487,7 +487,7 @@ class CRUDModel:
         """
         Call this method to add audit to a model.
         """
-        from pycommon_database.audit_sqlalchemy import _create_from
+        from layabase.audit_sqlalchemy import _create_from
 
         cls.audit_model = _create_from(cls)
 

@@ -1,7 +1,7 @@
 import sqlalchemy
 import pytest
 
-from pycommon_database import database, database_sqlalchemy
+from layabase import database, database_sqlalchemy
 
 
 @pytest.fixture

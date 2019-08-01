@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from pycommon_database import database
+from layabase import database
 
 
 class TestController(database.CRUDController):

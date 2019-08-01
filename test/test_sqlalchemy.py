@@ -3,7 +3,7 @@ import sqlalchemy
 from flask_restplus import fields as flask_rest_plus_fields, inputs
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 
-from pycommon_database import database, database_sqlalchemy
+from layabase import database, database_sqlalchemy
 
 
 def test_rest_plus_type_for_string_field_is_string():

@@ -7,7 +7,7 @@ import pytest
 from flask_restplus import inputs
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 
-from pycommon_database import database, database_mongo, versioning_mongo
+from layabase import database, database_mongo, versioning_mongo
 from test.flask_restplus_mock import TestAPI
 
 

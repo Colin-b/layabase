@@ -4,9 +4,9 @@ import enum
 import copy
 from typing import Type
 
-from pycommon_database.database_mongo import Column, CRUDModel
-from pycommon_database.audit import current_user_name
-from pycommon_database.versioning_mongo import VersionedCRUDModel
+from layabase.database_mongo import Column, CRUDModel
+from layabase.audit import current_user_name
+from layabase.versioning_mongo import VersionedCRUDModel
 
 logger = logging.getLogger(__name__)
 

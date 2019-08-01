@@ -1250,7 +1250,7 @@ class CRUDModel:
             if not skip_update_indexes:
                 cls.update_indexes()
         if audit:
-            from pycommon_database.audit_mongo import _create_from
+            from layabase.audit_mongo import _create_from
 
             cls.audit_model = _create_from(cls, base)
         else:

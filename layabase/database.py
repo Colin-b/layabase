@@ -55,13 +55,13 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
         raise NoRelatedModels()
 
     if _is_mongo(database_connection_url):
-        import pycommon_database.database_mongo as database_mongo
+        import layabase.database_mongo as database_mongo
 
         return database_mongo._load(
             database_connection_url, create_models_func, **kwargs
         )
 
-    import pycommon_database.database_sqlalchemy as database_sqlalchemy
+    import layabase.database_sqlalchemy as database_sqlalchemy
 
     return database_sqlalchemy._load(
         database_connection_url, create_models_func, **kwargs
@@ -75,11 +75,11 @@ def reset(base):
     :param base: database object as returned by the load function (Mandatory).
     """
     if hasattr(base, "is_mongos"):
-        import pycommon_database.database_mongo as database_mongo
+        import layabase.database_mongo as database_mongo
 
         database_mongo._reset(base)
     else:
-        import pycommon_database.database_sqlalchemy as database_sqlalchemy
+        import layabase.database_sqlalchemy as database_sqlalchemy
 
         database_sqlalchemy._reset(base)
 
@@ -99,7 +99,7 @@ def dump(base, dump_path: str):
         raise NoPathProvided()
 
     if hasattr(base, "is_mongos"):
-        import pycommon_database.database_mongo as database_mongo
+        import layabase.database_mongo as database_mongo
 
         database_mongo._dump(base, dump_path)
 
@@ -119,7 +119,7 @@ def restore(base, restore_path: str):
         raise NoPathProvided()
 
     if hasattr(base, "is_mongos"):
-        import pycommon_database.database_mongo as database_mongo
+        import layabase.database_mongo as database_mongo
 
         database_mongo._restore(base, restore_path)
 
@@ -136,11 +136,11 @@ def health_details(base) -> (str, dict):
         raise NoDatabaseProvided()
 
     if hasattr(base, "is_mongos"):
-        import pycommon_database.database_mongo as database_mongo
+        import layabase.database_mongo as database_mongo
 
         return database_mongo._health_details(base)
     else:
-        import pycommon_database.database_sqlalchemy as database_sqlalchemy
+        import layabase.database_sqlalchemy as database_sqlalchemy
 
         return database_sqlalchemy._health_details(base)
 

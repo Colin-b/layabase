@@ -4,7 +4,7 @@ import pytest
 import sqlalchemy
 from flask_restplus import inputs
 
-from pycommon_database import database, database_sqlalchemy
+from layabase import database, database_sqlalchemy
 from test.flask_restplus_mock import TestAPI
 
 
