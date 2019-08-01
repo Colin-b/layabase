@@ -16,7 +16,7 @@ from bson.errors import BSONError
 from bson.json_util import dumps, loads
 from bson.objectid import ObjectId
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
-from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
 
 logger = logging.getLogger(__name__)
 
