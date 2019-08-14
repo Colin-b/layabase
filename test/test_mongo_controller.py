@@ -365,6 +365,7 @@ def _create_models(base):
     TestNoneNotInsertedController.model(TestNoneNotInsertedModel)
     TestNoneInsertController.model(TestNoneInsertModel)
     TestNoneRetrieveController.model(TestNoneRetrieveModel)
+
     return [
         TestModel,
         TestStrictModel,
@@ -3534,3 +3535,76 @@ def test_get_model_description_response_model(db):
         "mandatory": "String",
         "optional": "String",
     } == TestController.get_model_description_response_model.fields_flask_type
+
+
+def test_int_column_with_min_value_not_int_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            int_field = database_mongo.Column(int, min_value='test', max_value=999)
+    assert "Minimum value should be of <class 'int'> type." == exception_info.value.args[0]
+
+
+def test_int_column_with_max_value_not_int_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            int_field = database_mongo.Column(int, min_value=100, max_value='test')
+    assert "Maximum value should be of <class 'int'> type." == exception_info.value.args[0]
+
+
+def test_int_column_with_max_value_smaller_than_min_value_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            int_field = database_mongo.Column(int, min_value=100, max_value=50)
+    assert "Maximum value should be superior or equals to minimum value" == exception_info.value.args[0]
+
+
+def test_int_column_with_negative_min_length_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            int_field = database_mongo.Column(int, min_length=-100, max_value=50)
+    assert "Minimum length should be positive" == exception_info.value.args[0]
+
+
+def test_int_column_with_negative_max_length_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            int_field = database_mongo.Column(int, min_length=100, max_length=-100)
+    assert "Maximum length should be positive" == exception_info.value.args[0]
+
+
+def test_column_with_index_type_and_is_primary_key_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique, is_primary_key=True)
+    assert "Primary key fields are supposed to be indexed as unique." == exception_info.value.args[0]
+
+
+def test_int_column_with_max_length_smaller_than_min_length_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            int_field = database_mongo.Column(int, min_length=100, max_length=50)
+    assert "Maximum length should be superior or equals to minimum length" == exception_info.value.args[0]
+
+
+def test_int_column_with_not_int_example_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        class TestInvalidParametersModel(
+            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
+        ):
+            int_field = database_mongo.Column(int, example="test")
+    assert "Example must be of field type." == exception_info.value.args[0]
+
