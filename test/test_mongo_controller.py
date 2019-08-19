@@ -117,6 +117,10 @@ class TestDictRequiredNonNullableVersionedController(database.CRUDController):
     pass
 
 
+class TestChoicesController(database.CRUDController):
+    pass
+
+
 def _create_models(base):
     class TestModel(
         database_mongo.CRUDModel, base=base, table_name="sample_table_name"
@@ -217,7 +221,11 @@ def _create_models(base):
         list_field = database_mongo.Column(
             list, min_length=2, max_length=3, example=["my", "test"]
         )
+        dict_field = database_mongo.Column(
+            dict, min_length=2, max_length=3, example={"my": 1, "test": 2}
+        )
         int_field = database_mongo.Column(int, min_value=100, max_value=999)
+        float_field = database_mongo.Column(float, min_value=1.25, max_value=1.75)
 
     class TestUnvalidatedListAndDictModel(
         database_mongo.CRUDModel, base=base, table_name="list_and_dict_table_name"
@@ -340,6 +348,22 @@ def _create_models(base):
         key = database_mongo.Column(int, is_primary_key=True)
         my_dict = database_mongo.Column(dict, is_required=True)
 
+    class TestChoicesModel(
+        database_mongo.CRUDModel, base=base, table_name="choices_table_name"
+    ):
+        key = database_mongo.Column(
+            int, is_primary_key=True, should_auto_increment=True
+        )
+        int_choices_field = database_mongo.Column(
+            int, description="Test Documentation", choices=[1, 2, 3]
+        )
+        str_choices_field = database_mongo.Column(
+            str, description="Test Documentation", choices=["one", "two", "three"]
+        )
+        float_choices_field = database_mongo.Column(
+            float, description="Test Documentation", choices=[1.25, 1.5, 1.75]
+        )
+
     TestController.model(TestModel)
     TestStrictController.model(TestStrictModel)
     TestAutoIncrementController.model(TestAutoIncrementModel)
@@ -365,6 +389,7 @@ def _create_models(base):
     TestNoneNotInsertedController.model(TestNoneNotInsertedModel)
     TestNoneInsertController.model(TestNoneInsertModel)
     TestNoneRetrieveController.model(TestNoneRetrieveModel)
+    TestChoicesController.model(TestChoicesModel)
 
     return [
         TestModel,
@@ -388,6 +413,7 @@ def _create_models(base):
         TestIntAndFloatModel,
         TestDictInDictModel,
         TestNoneInsertModel,
+        TestChoicesModel,
     ]
 
 
@@ -2055,31 +2081,50 @@ def test_post_list_of_str_is_sorted(db):
 
 def test_within_limits_is_valid(db):
     assert {
+               'dict_field': {"my":1, "test":2},
         "int_field": 100,
+               'float_field': 1.3,
         "key": "111",
         "list_field": ["1", "2", "3"],
     } == TestLimitsController.post(
-        {"key": "111", "list_field": ["1", "2", "3"], "int_field": 100}
+        {'dict_field': {"my":1, "test":2},"key": "111", "list_field": ["1", "2", "3"], "int_field": 100,'float_field': 1.3}
     )
 
 
-def test_outside_limits_is_invalid(db):
+def test_outside_upper_limits_is_invalid(db):
     with pytest.raises(Exception) as exception_info:
         TestLimitsController.post(
-            {"key": "11", "list_field": ["1", "2", "3", "4", "5"], "int_field": 1000}
+            {"key": "11111", "list_field": ["1", "2", "3", "4", "5"], "int_field": 1000, "float_field": 1.1,"dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4}}
         )
     assert {
         "int_field": ['Value "1000" is too big. Maximum value is 999.'],
-        "key": ['Value "11" is too small. Minimum length is 3.'],
+        "key": ['Value "11111" is too big. Maximum length is 4.'],
+               'float_field': ['Value "1.1" is too small. Minimum value is 1.25.'],
         "list_field": [
             "['1', '2', '3', '4', '5'] contains too many values. Maximum length is 3."
         ],
+               'dict_field': ["{'my': 1, 'test': 2, 'is': 3, 'invalid': 4} contains too many values. Maximum length is 3."]
     } == exception_info.value.errors
     assert {
         "int_field": 1000,
-        "key": "11",
+               "float_field": 1.1,
+        "key": "11111",
         "list_field": ["1", "2", "3", "4", "5"],
+               "dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4}
     } == exception_info.value.received_data
+
+
+def test_outside_lower_limits_is_invalid(db):
+    with pytest.raises(Exception) as exception_info:
+        TestLimitsController.post(
+            {"key": "11", "list_field": ["1"], "int_field": 99, "dict_field": {"my": 1}, "float_field": 2.1}
+        )
+    assert {'dict_field': ["{'my': 1} does not contains enough values. Minimum length is 2."],
+ 'int_field': ['Value "99" is too small. Minimum value is 100.'],
+            'float_field': ['Value "2.1" is too big. Maximum value is 1.75.'],
+ 'key': ['Value "11" is too small. Minimum length is 3.'],
+ 'list_field': ["['1'] does not contains enough values. Minimum length is 2."]} == exception_info.value.errors
+    assert {"key": "11", "list_field": ["1"], "int_field": 99, "dict_field": {"my": 1}, "float_field": 2.1} == exception_info.value.received_data
 
 
 def test_post_optional_missing_list_of_dict_is_valid(db):
@@ -3299,37 +3344,51 @@ def test_get_response_model_with_list_of_dict(db):
 def test_get_response_model_with_limits(db):
     assert "TestLimitsModel" == TestLimitsController.get_response_model.name
     assert {
+               'dict_field':  'Raw',
         "int_field": "Integer",
+               'float_field': 'Float',
         "key": "String",
         "list_field": ("List", {"list_field_inner": "String"}),
     } == TestLimitsController.get_response_model.fields_flask_type
     assert {
+               'dict_field': None,
         "int_field": None,
+               'float_field': None,
         "key": None,
         "list_field": (None, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_description
     assert {
+               'dict_field': None,
         "int_field": None,
+               'float_field': None,
         "key": None,
         "list_field": (None, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_enum
     assert {
+               'dict_field': {'my': 1, 'test': 2},
         "int_field": 100,
+               'float_field': 1.4,
         "key": "XXX",
         "list_field": (["my", "test"], {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_example
     assert {
+               'dict_field': None,
         "int_field": None,
+               'float_field': None,
         "key": None,
         "list_field": (None, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_default
     assert {
+               'dict_field': False,
         "int_field": False,
+               'float_field': False,
         "key": False,
         "list_field": (False, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_required
     assert {
+               'dict_field': False,
         "int_field": False,
+               'float_field': False,
         "key": False,
         "list_field": (False, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_readonly
@@ -3537,74 +3596,25 @@ def test_get_model_description_response_model(db):
     } == TestController.get_model_description_response_model.fields_flask_type
 
 
-def test_int_column_with_min_value_not_int_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            int_field = database_mongo.Column(int, min_value='test', max_value=999)
-    assert "Minimum value should be of <class 'int'> type." == exception_info.value.args[0]
+def test_get_with_required_field_as_None_is_invalid(db):
+    TestUnvalidatedListAndDictController.post(
+        {
+            "dict_field": {"any_key": 5},
+            "float_key": 1,
+            "list_field": [22, "33", 44.55, True],
+        }
+    )
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestUnvalidatedListAndDictController.get({"dict_field": None})
+    assert exception_info.value.errors == {'dict_field': ['Missing data for required field.']}
+    assert {"dict_field": None} == exception_info.value.received_data
 
 
-def test_int_column_with_max_value_not_int_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            int_field = database_mongo.Column(int, min_value=100, max_value='test')
-    assert "Maximum value should be of <class 'int'> type." == exception_info.value.args[0]
-
-
-def test_int_column_with_max_value_smaller_than_min_value_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            int_field = database_mongo.Column(int, min_value=100, max_value=50)
-    assert "Maximum value should be superior or equals to minimum value" == exception_info.value.args[0]
-
-
-def test_int_column_with_negative_min_length_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            int_field = database_mongo.Column(int, min_length=-100, max_value=50)
-    assert "Minimum length should be positive" == exception_info.value.args[0]
-
-
-def test_int_column_with_negative_max_length_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            int_field = database_mongo.Column(int, min_length=100, max_length=-100)
-    assert "Maximum length should be positive" == exception_info.value.args[0]
-
-
-def test_column_with_index_type_and_is_primary_key_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique, is_primary_key=True)
-    assert "Primary key fields are supposed to be indexed as unique." == exception_info.value.args[0]
-
-
-def test_int_column_with_max_length_smaller_than_min_length_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            int_field = database_mongo.Column(int, min_length=100, max_length=50)
-    assert "Maximum length should be superior or equals to minimum length" == exception_info.value.args[0]
-
-
-def test_int_column_with_not_int_example_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
-        class TestInvalidParametersModel(
-            database_mongo.CRUDModel, base="base", table_name="invalid_parameters_table_name"
-        ):
-            int_field = database_mongo.Column(int, example="test")
-    assert "Example must be of field type." == exception_info.value.args[0]
-
+def test_post_with_choices_field_with_a_value_not_in_choices_list_is_invalid(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestChoicesController.post(
+            {"key": 1, "int_choices_field": 4, "str_choices_field": 'four', "float_choices_field": 2.5}
+        )
+    assert exception_info.value.errors == {'float_choices_field': ['Value "2.5" is not within [1.25, 1.5, 1.75].'],'int_choices_field': ['Value "4" is not within [1, 2, 3].'],
+ 'str_choices_field': ['Value "four" is not within [\'one\', \'two\', \'three\'].']}
+    assert {'int_choices_field': 4, 'key': 1, 'str_choices_field': 'four', "float_choices_field": 2.5} == exception_info.value.received_data
