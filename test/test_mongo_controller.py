@@ -2081,50 +2081,80 @@ def test_post_list_of_str_is_sorted(db):
 
 def test_within_limits_is_valid(db):
     assert {
-               'dict_field': {"my":1, "test":2},
+        "dict_field": {"my": 1, "test": 2},
         "int_field": 100,
-               'float_field': 1.3,
+        "float_field": 1.3,
         "key": "111",
         "list_field": ["1", "2", "3"],
     } == TestLimitsController.post(
-        {'dict_field': {"my":1, "test":2},"key": "111", "list_field": ["1", "2", "3"], "int_field": 100,'float_field': 1.3}
+        {
+            "dict_field": {"my": 1, "test": 2},
+            "key": "111",
+            "list_field": ["1", "2", "3"],
+            "int_field": 100,
+            "float_field": 1.3,
+        }
     )
 
 
 def test_outside_upper_limits_is_invalid(db):
     with pytest.raises(Exception) as exception_info:
         TestLimitsController.post(
-            {"key": "11111", "list_field": ["1", "2", "3", "4", "5"], "int_field": 1000, "float_field": 1.1,"dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4}}
+            {
+                "key": "11111",
+                "list_field": ["1", "2", "3", "4", "5"],
+                "int_field": 1000,
+                "float_field": 1.1,
+                "dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4},
+            }
         )
     assert {
         "int_field": ['Value "1000" is too big. Maximum value is 999.'],
         "key": ['Value "11111" is too big. Maximum length is 4.'],
-               'float_field': ['Value "1.1" is too small. Minimum value is 1.25.'],
+        "float_field": ['Value "1.1" is too small. Minimum value is 1.25.'],
         "list_field": [
             "['1', '2', '3', '4', '5'] contains too many values. Maximum length is 3."
         ],
-               'dict_field': ["{'my': 1, 'test': 2, 'is': 3, 'invalid': 4} contains too many values. Maximum length is 3."]
+        "dict_field": [
+            "{'my': 1, 'test': 2, 'is': 3, 'invalid': 4} contains too many values. Maximum length is 3."
+        ],
     } == exception_info.value.errors
     assert {
         "int_field": 1000,
-               "float_field": 1.1,
+        "float_field": 1.1,
         "key": "11111",
         "list_field": ["1", "2", "3", "4", "5"],
-               "dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4}
+        "dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4},
     } == exception_info.value.received_data
 
 
 def test_outside_lower_limits_is_invalid(db):
     with pytest.raises(Exception) as exception_info:
         TestLimitsController.post(
-            {"key": "11", "list_field": ["1"], "int_field": 99, "dict_field": {"my": 1}, "float_field": 2.1}
+            {
+                "key": "11",
+                "list_field": ["1"],
+                "int_field": 99,
+                "dict_field": {"my": 1},
+                "float_field": 2.1,
+            }
         )
-    assert {'dict_field': ["{'my': 1} does not contains enough values. Minimum length is 2."],
- 'int_field': ['Value "99" is too small. Minimum value is 100.'],
-            'float_field': ['Value "2.1" is too big. Maximum value is 1.75.'],
- 'key': ['Value "11" is too small. Minimum length is 3.'],
- 'list_field': ["['1'] does not contains enough values. Minimum length is 2."]} == exception_info.value.errors
-    assert {"key": "11", "list_field": ["1"], "int_field": 99, "dict_field": {"my": 1}, "float_field": 2.1} == exception_info.value.received_data
+    assert {
+        "dict_field": [
+            "{'my': 1} does not contains enough values. Minimum length is 2."
+        ],
+        "int_field": ['Value "99" is too small. Minimum value is 100.'],
+        "float_field": ['Value "2.1" is too big. Maximum value is 1.75.'],
+        "key": ['Value "11" is too small. Minimum length is 3.'],
+        "list_field": ["['1'] does not contains enough values. Minimum length is 2."],
+    } == exception_info.value.errors
+    assert {
+        "key": "11",
+        "list_field": ["1"],
+        "int_field": 99,
+        "dict_field": {"my": 1},
+        "float_field": 2.1,
+    } == exception_info.value.received_data
 
 
 def test_post_optional_missing_list_of_dict_is_valid(db):
@@ -3344,51 +3374,51 @@ def test_get_response_model_with_list_of_dict(db):
 def test_get_response_model_with_limits(db):
     assert "TestLimitsModel" == TestLimitsController.get_response_model.name
     assert {
-               'dict_field':  'Raw',
+        "dict_field": "Raw",
         "int_field": "Integer",
-               'float_field': 'Float',
+        "float_field": "Float",
         "key": "String",
         "list_field": ("List", {"list_field_inner": "String"}),
     } == TestLimitsController.get_response_model.fields_flask_type
     assert {
-               'dict_field': None,
+        "dict_field": None,
         "int_field": None,
-               'float_field': None,
+        "float_field": None,
         "key": None,
         "list_field": (None, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_description
     assert {
-               'dict_field': None,
+        "dict_field": None,
         "int_field": None,
-               'float_field': None,
+        "float_field": None,
         "key": None,
         "list_field": (None, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_enum
     assert {
-               'dict_field': {'my': 1, 'test': 2},
+        "dict_field": {"my": 1, "test": 2},
         "int_field": 100,
-               'float_field': 1.4,
+        "float_field": 1.4,
         "key": "XXX",
         "list_field": (["my", "test"], {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_example
     assert {
-               'dict_field': None,
+        "dict_field": None,
         "int_field": None,
-               'float_field': None,
+        "float_field": None,
         "key": None,
         "list_field": (None, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_default
     assert {
-               'dict_field': False,
+        "dict_field": False,
         "int_field": False,
-               'float_field': False,
+        "float_field": False,
         "key": False,
         "list_field": (False, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_required
     assert {
-               'dict_field': False,
+        "dict_field": False,
         "int_field": False,
-               'float_field': False,
+        "float_field": False,
         "key": False,
         "list_field": (False, {"list_field_inner": None}),
     } == TestLimitsController.get_response_model.fields_readonly
@@ -3606,15 +3636,30 @@ def test_get_with_required_field_as_None_is_invalid(db):
     )
     with pytest.raises(ValidationFailed) as exception_info:
         TestUnvalidatedListAndDictController.get({"dict_field": None})
-    assert exception_info.value.errors == {'dict_field': ['Missing data for required field.']}
+    assert exception_info.value.errors == {
+        "dict_field": ["Missing data for required field."]
+    }
     assert {"dict_field": None} == exception_info.value.received_data
 
 
 def test_post_with_choices_field_with_a_value_not_in_choices_list_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestChoicesController.post(
-            {"key": 1, "int_choices_field": 4, "str_choices_field": 'four', "float_choices_field": 2.5}
+            {
+                "key": 1,
+                "int_choices_field": 4,
+                "str_choices_field": "four",
+                "float_choices_field": 2.5,
+            }
         )
-    assert exception_info.value.errors == {'float_choices_field': ['Value "2.5" is not within [1.25, 1.5, 1.75].'],'int_choices_field': ['Value "4" is not within [1, 2, 3].'],
- 'str_choices_field': ['Value "four" is not within [\'one\', \'two\', \'three\'].']}
-    assert {'int_choices_field': 4, 'key': 1, 'str_choices_field': 'four', "float_choices_field": 2.5} == exception_info.value.received_data
+    assert exception_info.value.errors == {
+        "float_choices_field": ['Value "2.5" is not within [1.25, 1.5, 1.75].'],
+        "int_choices_field": ['Value "4" is not within [1, 2, 3].'],
+        "str_choices_field": ["Value \"four\" is not within ['one', 'two', 'three']."],
+    }
+    assert {
+        "int_choices_field": 4,
+        "key": 1,
+        "str_choices_field": "four",
+        "float_choices_field": 2.5,
+    } == exception_info.value.received_data
