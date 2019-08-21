@@ -76,6 +76,80 @@ def test_no_create_models_function_is_invalid():
     )
 
 
+def test_dots_are_forbidden_in_column_name():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(name="te.st")
+    assert (
+        str(exception_info.value)
+        == "te.st is not a valid name. Dots are not allowed in Mongo field names."
+    )
+
+
+def test_fields_should_be_provided_in_dict_column():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.DictColumn(fields=None, is_nullable=False)
+    assert str(exception_info.value) == "fields or get_fields must be provided."
+
+
+def test_int_column_with_min_value_not_int_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(int, min_value="test", max_value=999)
+    assert str(exception_info.value) == "Minimum value should be of <class 'int'> type."
+
+
+def test_int_column_with_max_value_not_int_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(int, min_value=100, max_value="test")
+    assert str(exception_info.value) == "Maximum value should be of <class 'int'> type."
+
+
+def test_int_column_with_max_value_smaller_than_min_value_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(int, min_value=100, max_value=50)
+    assert (
+        str(exception_info.value)
+        == "Maximum value should be superior or equals to minimum value"
+    )
+
+
+def test_int_column_with_negative_min_length_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(int, min_length=-100, max_value=50)
+    assert str(exception_info.value) == "Minimum length should be positive"
+
+
+def test_int_column_with_negative_max_length_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(int, min_length=100, max_length=-100)
+    assert str(exception_info.value) == "Maximum length should be positive"
+
+
+def test_column_with_index_type_and_is_primary_key_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(
+            int, index_type=database_mongo.IndexType.Unique, is_primary_key=True
+        )
+    assert (
+        str(exception_info.value)
+        == "Primary key fields are supposed to be indexed as unique."
+    )
+
+
+def test_int_column_with_max_length_smaller_than_min_length_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(int, min_length=100, max_length=50)
+    assert (
+        str(exception_info.value)
+        == "Maximum length should be superior or equals to minimum length"
+    )
+
+
+def test_int_column_with_not_int_example_is_invalid():
+    with pytest.raises(Exception) as exception_info:
+        database_mongo.Column(int, example="test", counter=100, choices=[1, 2])
+    assert str(exception_info.value) == "Example must be of field type."
+
+
 @pytest.fixture
 def db():
     _db = database.load("mongomock", lambda x: x)
