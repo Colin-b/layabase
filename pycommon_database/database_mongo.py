@@ -18,6 +18,8 @@ from bson.objectid import ObjectId
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 
+from pycommon_database import ComparisonSigns
+
 logger = logging.getLogger(__name__)
 
 
@@ -184,7 +186,9 @@ class Column:
         self.name = name
         if "_id" == self.name:
             self.field_type = ObjectId
-        self._validate_value = self._get_value_validation_function()
+        self._validate_query = self._get_query_validation_function()
+        self._validate_insert = self._get_insert_validation_function()
+        self._validate_update = self._get_insert_validation_function()
         self._deserialize_value = self._get_value_deserialization_function()
         return self
 
@@ -233,10 +237,10 @@ class Column:
         if isinstance(value, list) and self.field_type != list:
             errors = {}
             for value_in_list in value:
-                errors.update(self._validate_value(value_in_list))
+                errors.update(self._validate_query(value_in_list))
             return errors
         else:
-            return self._validate_value(value)
+            return self._validate_query(value)
 
     def validate_insert(self, document: dict) -> dict:
         """
@@ -253,7 +257,7 @@ class Column:
             if not self._is_nullable_on_insert:
                 return {self.name: ["Missing data for required field."]}
             return {}
-        return self._validate_value(value)
+        return self._validate_insert(value)
 
     def validate_update(self, document: dict) -> dict:
         """
@@ -270,9 +274,34 @@ class Column:
             if not self._is_nullable_on_update:
                 return {self.name: ["Missing data for required field."]}
             return {}
-        return self._validate_value(value)
+        return self._validate_update(value)
 
-    def _get_value_validation_function(self) -> callable:
+    def _get_query_validation_function(self) -> callable:
+        """
+        Return the function used to validate values on this field.
+        """
+        if self.field_type == datetime.datetime:
+            return self._validate_query_date_time
+        elif issubclass(datetime.date, self.field_type):
+            return self._validate_query_date
+        elif isinstance(self.field_type, enum.EnumMeta):
+            return self._validate_enum
+        elif self.field_type == ObjectId:
+            return self._validate_object_id
+        elif self.field_type == str:
+            return self._validate_str
+        elif self.field_type == list:
+            return self._validate_list
+        elif self.field_type == dict:
+            return self._validate_dict
+        elif self.field_type == int:
+            return self._validate_query_int
+        elif self.field_type == float:
+            return self._validate_query_float
+        else:
+            return self._validate_type
+
+    def _get_insert_validation_function(self) -> callable:
         """
         Return the function used to validate values on this field.
         """
@@ -300,13 +329,12 @@ class Column:
     def _validate_date_time(self, value) -> dict:
         """
         Validate this value for this datetime field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
         if isinstance(value, str):
             try:
-                value = iso8601.parse_date(self._remove_comparison_signs_if_exists(value))
+                value = iso8601.parse_date(value)
             except iso8601.ParseError:
                 return {self.name: ["Not a valid datetime."]}
 
@@ -315,17 +343,47 @@ class Column:
     def _validate_date(self, value) -> dict:
         """
         Validate this value for this date field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
         if isinstance(value, str):
             try:
-                value = iso8601.parse_date(self._remove_comparison_signs_if_exists(value)).date()
+                value = iso8601.parse_date(value).date()
             except iso8601.ParseError:
                 return {self.name: ["Not a valid date."]}
 
         return self._validate_type(value)
+
+    def _validate_query_date_time(self, value) -> dict:
+        """
+        Validate this value for this datetime field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, tuple):
+            value = self._validate_comparison_tuple(value)
+
+        return self._validate_date_time(value)
+
+    def _validate_query_date(self, value) -> dict:
+        """
+        Validate this value for this date field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        if isinstance(value, tuple):
+            value = self._validate_comparison_tuple(value)
+
+        return self._validate_date(value)
+
+    def _validate_comparison_tuple(self, value):
+        if value[0] not in ComparisonSigns:
+            raise Exception(
+                "First element of the tuple should be a memeber of ComparisonSigns"
+            )
+        return value[1]
 
     def _validate_enum(self, value) -> dict:
         """
@@ -438,13 +496,12 @@ class Column:
     def _validate_int(self, value) -> dict:
         """
         Validate this value for this int field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
         if isinstance(value, str):
             try:
-                value = int(self._remove_comparison_signs_if_exists(value))
+                value = int(value)
             except ValueError:
                 return {self.name: [f"Not a valid int."]}
         if isinstance(value, int):
@@ -470,13 +527,12 @@ class Column:
     def _validate_float(self, value) -> dict:
         """
         Validate this value for this float field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
         if isinstance(value, str):
             try:
-                value = float(self._remove_comparison_signs_if_exists(value))
+                value = float(value)
             except ValueError:
                 return {self.name: [f"Not a valid float."]}
         elif isinstance(value, int):
@@ -501,6 +557,16 @@ class Column:
 
         return self._validate_type(value)
 
+    def _validate_query_int(self, value) -> dict:
+        if isinstance(value, tuple):
+            value = self._validate_comparison_tuple(value)
+        return self._validate_int(value)
+
+    def _validate_query_float(self, value) -> dict:
+        if isinstance(value, tuple):
+            value = self._validate_comparison_tuple(value)
+        return self._validate_float(value)
+
     def _validate_type(self, value) -> dict:
         """
         Validate this value according to the expected field type.
@@ -512,14 +578,6 @@ class Column:
             return {self.name: [f"Not a valid {self.field_type.__name__}."]}
 
         return {}
-
-    @staticmethod
-    def _remove_comparison_signs_if_exists(value):
-        if value.startswith('<=') or value.startswith('>='):
-            value = value[2:]
-        elif value.startswith('<') or value.startswith('>'):
-            value = value[1:]
-        return value
 
     def deserialize_query(self, filters: dict):
         """
@@ -614,23 +672,38 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
+        comparison_sign = None
+        if isinstance(value, tuple):
+            (comparison_sign, value) = value
 
-        return self._deserialize_comparison_signs_if_exists(value, iso8601.parse_date)
-
-    def _deserialize_date(self, value):
-        """
-        Convert this field value to the proper value that can be inserted in Mongo.
-
-        :param value: Received field value.
-        :return Mongo valid value.
-        """
         if value is None:
             return None
 
         if isinstance(value, str):
-            value = self._deserialize_comparison_signs_if_exists(value, iso8601.parse_date)
+            value = iso8601.parse_date(value)
+
+        if comparison_sign:
+            value = self._deserialize_comparison_signs_if_exists(
+                (comparison_sign, value)
+            )
+
+        return value
+
+    def _deserialize_date(self, value):
+        """
+        Convert this field value to the proper value that can be inserted in Mongo.
+        :param value: Received field value.
+        :return Mongo valid value.
+        """
+        comparison_sign = None
+        if isinstance(value, tuple):
+            (comparison_sign, value) = value
+
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            value = iso8601.parse_date(value)
         elif isinstance(value, datetime.date):
             # dates cannot be stored in Mongo, use datetime instead
             if not isinstance(value, datetime.datetime):
@@ -640,6 +713,11 @@ class Column:
                 value = datetime.datetime.combine(
                     value.date(), datetime.datetime.min.time()
                 )
+
+        if comparison_sign:
+            value = self._deserialize_comparison_signs_if_exists(
+                (comparison_sign, value)
+            )
 
         return value
 
@@ -683,10 +761,22 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
+        comparison_sign = None
+        if isinstance(value, tuple):
+            (comparison_sign, value) = value
+
         if value is None:
             return None
 
-        return self._deserialize_comparison_signs_if_exists(value, int)
+        if isinstance(value, str):
+            value = int(value)
+
+        if comparison_sign:
+            value = self._deserialize_comparison_signs_if_exists(
+                (comparison_sign, value)
+            )
+
+        return value
 
     def _deserialize_float(self, value):
         """
@@ -695,10 +785,22 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
+        comparison_sign = None
+        if isinstance(value, tuple):
+            (comparison_sign, value) = value
+
         if value is None:
             return None
 
-        return self._deserialize_comparison_signs_if_exists(value, float)
+        if isinstance(value, str):
+            value = float(value)
+
+        if comparison_sign:
+            value = self._deserialize_comparison_signs_if_exists(
+                (comparison_sign, value)
+            )
+
+        return value
 
     def _deserialize_str(self, value):
         """
@@ -715,20 +817,8 @@ class Column:
 
         return value
 
-    def _deserialize_comparison_signs_if_exists(self, value, cast_func):
-        if isinstance(value, str):
-            if value.startswith('<='):
-                value = {"$lte": cast_func(value[2:])}
-            elif value.startswith('>='):
-                value = {"$gte": cast_func(value[2:])}
-            elif value.startswith('<'):
-                value = {"$lt": cast_func(value[1:])}
-            elif value.startswith('>'):
-                value = {"$gt": cast_func(value[1:])}
-            else:
-                value = cast_func(value)
-
-        return value
+    def _deserialize_comparison_signs_if_exists(self, value):
+        return {value[0].mongo_name: value[1]}
 
     def serialize(self, document: dict):
         """
@@ -1246,7 +1336,7 @@ class CRUDModel:
         cls._skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
         cls._skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
         skip_name_check = kwargs.pop("skip_name_check", False)
-        skip_update_indexes = kwargs.pop('skip_update_indexes', False)
+        skip_update_indexes = kwargs.pop("skip_update_indexes", False)
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         cls.logger = logging.getLogger(f"{__name__}.{table_name}")
@@ -2482,9 +2572,9 @@ def _get_python_type(field: Column) -> callable:
     if field.field_type == bool:
         return inputs.boolean
     if field.field_type == datetime.date:
-        return inputs.date_from_iso8601
+        return _validate_date
     if field.field_type == datetime.datetime:
-        return inputs.datetime_from_iso8601
+        return _validate_date_time
     if isinstance(field.field_type, enum.EnumMeta):
         return str
     if field.field_type == dict:
@@ -2493,5 +2583,58 @@ def _get_python_type(field: Column) -> callable:
         return json.loads
     if field.field_type == ObjectId:
         return str
+    if field.field_type == float:
+        return _validate_float
+    if field.field_type == float:
+        return _validate_int
 
     return field.field_type
+
+
+def _validate_float(value):
+    if isinstance(value, str):
+        value = _remove_comparison_signs_if_exists(value)
+        if isinstance(value, tuple):
+            return value[0], float(value[1])
+
+    return float(value)
+
+
+def _validate_int(value):
+    if isinstance(value, str):
+        value = _remove_comparison_signs_if_exists(value)
+        if isinstance(value, tuple):
+            return value[0], int(value[1])
+
+    return int(value)
+
+
+def _validate_date_time(value):
+    if isinstance(value, str):
+        value = _remove_comparison_signs_if_exists(value)
+        if isinstance(value, tuple):
+            return value[0], iso8601.parse_date(value[1])
+
+    return iso8601.parse_date(value)
+
+
+def _validate_date(value):
+    if isinstance(value, str):
+        value = _remove_comparison_signs_if_exists(value)
+        if isinstance(value, tuple):
+            return value[0], iso8601.parse_date(value[1]).date()
+
+    return iso8601.parse_date(value).date()
+
+
+def _remove_comparison_signs_if_exists(value):
+    if value.startswith(ComparisonSigns.LowerOrEqual.sign):
+        return ComparisonSigns.LowerOrEqual, value[2:]
+    elif value.startswith(ComparisonSigns.GreaterOrEqual.sign):
+        return ComparisonSigns.GreaterOrEqual, value[2:]
+    elif value.startswith(ComparisonSigns.Lower.sign):
+        return ComparisonSigns.Lower, value[1:]
+    elif value.startswith(ComparisonSigns.Greater.sign):
+        return ComparisonSigns.Greater, value[1:]
+
+    return value

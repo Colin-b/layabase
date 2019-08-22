@@ -1,9 +1,22 @@
+import enum
 import logging
 from typing import List
 
 from pycommon_error.validation import ValidationFailed
 
 logger = logging.getLogger(__name__)
+
+
+@enum.unique
+class ComparisonSigns(enum.Enum):
+    Greater = (">", "$gt")
+    GreaterOrEqual = (">=", "$gte")
+    Lower = ("<", "$lt")
+    LowerOrEqual = ("<=", "$lte")
+
+    def __init__(self, sign, mongo_name):
+        self.sign = sign
+        self.mongo_name = mongo_name
 
 
 def _is_mongo(database_connection_url: str) -> bool:
