@@ -1,7 +1,8 @@
 import datetime
 import enum
 
-from layaberr.validation import ValidationFailed
+from layaberr import ValidationFailed
+from marshmallow import ValidationError
 from sqlalchemy import Column, DateTime, Enum, String, inspect, Integer
 
 from layabase.audit import current_user_name
@@ -77,9 +78,10 @@ def _create_from(model):
             row["audit_user"] = current_user_name()
             row["audit_date_utc"] = datetime.datetime.utcnow().isoformat()
             row["audit_action"] = action.value
-            row_model, errors = cls.schema().load(row, session=cls._session)
-            if errors:
-                raise ValidationFailed(row, errors)
+            try:
+                row_model = cls.schema().load(row, session=cls._session)
+            except ValidationError as e:
+                raise ValidationFailed(row, e.messages)
             # Let any error be handled by the caller (main model), same for commit
             cls._session.add(row_model)
 

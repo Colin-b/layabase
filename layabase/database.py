@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from layaberr.validation import ValidationFailed
+from layaberr import ValidationFailed
 
 logger = logging.getLogger(__name__)
 

@@ -525,12 +525,12 @@ def test_put_is_updating_date(db):
     assert (
         {
             "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59+00:00",
+            "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         },
         {
             "date_str": "2018-06-01",
-            "datetime_str": "1989-12-31T01:00:00+00:00",
+            "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         },
     ) == TestDateController.put(
@@ -543,7 +543,7 @@ def test_put_is_updating_date(db):
     assert [
         {
             "date_str": "2018-06-01",
-            "datetime_str": "1989-12-31T01:00:00+00:00",
+            "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         }
     ] == TestDateController.get({"date_str": "2018-06-01"})
@@ -557,14 +557,13 @@ def test_get_date_is_handled_for_valid_date(db):
             "datetime_str": "2016-09-23T23:59:59",
         }
     )
-    d = datetime.datetime.strptime("2017-05-15", "%Y-%m-%d").date()
     assert [
         {
             "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59+00:00",
+            "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == TestDateController.get({"date_str": d})
+    ] == TestDateController.get({"date_str": datetime.date(2017, 5, 15)})
 
 
 def test_get_date_is_handled_for_unused_date(db):
@@ -587,14 +586,13 @@ def test_get_date_is_handled_for_valid_datetime(db):
             "datetime_str": "2016-09-23T23:59:59",
         }
     )
-    dt = datetime.datetime.strptime("2016-09-23T23:59:59", "%Y-%m-%dT%H:%M:%S")
     assert [
         {
             "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59+00:00",
+            "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == TestDateController.get({"datetime_str": dt})
+    ] == TestDateController.get({"datetime_str": datetime.datetime(2016, 9, 23, 23, 59, 59)})
 
 
 def test_get_date_is_handled_for_unused_datetime(db):
