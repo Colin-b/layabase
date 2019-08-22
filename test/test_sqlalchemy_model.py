@@ -1,6 +1,6 @@
 import pytest
 import sqlalchemy
-from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 
 from layabase import database, database_sqlalchemy

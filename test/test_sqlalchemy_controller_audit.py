@@ -215,7 +215,7 @@ def test_put_with_wrong_type_is_invalid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "value1",
                 "mandatory": 1,
@@ -235,7 +235,7 @@ def test_post_without_optional_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -256,7 +256,7 @@ def test_post_on_a_second_model_without_optional_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -270,7 +270,7 @@ def test_post_on_a_second_model_without_optional_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -290,7 +290,7 @@ def test_post_many_without_optional_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -332,7 +332,7 @@ def test_post_with_optional_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -354,7 +354,7 @@ def test_post_many_with_optional_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -384,7 +384,7 @@ def test_post_with_unknown_field_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -414,7 +414,7 @@ def test_post_many_with_unknown_field_is_valid(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key",
                 "mandatory": 1,
@@ -435,7 +435,7 @@ def test_get_without_filter_is_retrieving_the_only_item(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -458,7 +458,7 @@ def test_get_without_filter_is_retrieving_everything_with_multiple_posts(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -467,7 +467,7 @@ def test_get_without_filter_is_retrieving_everything_with_multiple_posts(db):
             },
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key2",
                 "mandatory": 2,
@@ -494,7 +494,7 @@ def test_get_without_filter_is_retrieving_everything(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -503,7 +503,7 @@ def test_get_without_filter_is_retrieving_everything(db):
             },
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key2",
                 "mandatory": 2,
@@ -525,7 +525,7 @@ def test_get_with_filter_is_retrieving_subset(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -534,7 +534,7 @@ def test_get_with_filter_is_retrieving_subset(db):
             },
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key2",
                 "mandatory": 2,
@@ -559,7 +559,7 @@ def test_put_is_updating(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -568,7 +568,7 @@ def test_put_is_updating(db):
             },
             {
                 "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -588,7 +588,7 @@ def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -597,7 +597,7 @@ def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db):
             },
             {
                 "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -620,7 +620,7 @@ def test_delete_with_filter_is_removing_the_proper_row(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -629,7 +629,7 @@ def test_delete_with_filter_is_removing_the_proper_row(db):
             },
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key2",
                 "mandatory": 2,
@@ -638,7 +638,7 @@ def test_delete_with_filter_is_removing_the_proper_row(db):
             },
             {
                 "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -658,7 +658,7 @@ def test_audit_filter_on_model_is_returning_only_selected_data(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -667,7 +667,7 @@ def test_audit_filter_on_model_is_returning_only_selected_data(db):
             },
             {
                 "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 2,
@@ -676,7 +676,7 @@ def test_audit_filter_on_model_is_returning_only_selected_data(db):
             },
             {
                 "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 2,
@@ -697,7 +697,7 @@ def test_audit_filter_on_audit_model_is_returning_only_selected_data(db):
         [
             {
                 "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 2,
@@ -719,7 +719,7 @@ def test_delete_without_filter_is_removing_everything(db):
         [
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -728,7 +728,7 @@ def test_delete_without_filter_is_removing_everything(db):
             },
             {
                 "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key2",
                 "mandatory": 2,
@@ -737,7 +737,7 @@ def test_delete_without_filter_is_removing_everything(db):
             },
             {
                 "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key1",
                 "mandatory": 1,
@@ -746,7 +746,7 @@ def test_delete_without_filter_is_removing_everything(db):
             },
             {
                 "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?\+00:00",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
                 "audit_user": "",
                 "key": "my_key2",
                 "mandatory": 2,
