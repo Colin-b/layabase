@@ -4,7 +4,7 @@ import urllib.parse
 from typing import List, Dict
 
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
-from marshmallow import validate
+from marshmallow import validate, ValidationError, EXCLUDE
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from layaberr import ValidationFailed, ModelCouldNotBeFound
@@ -39,7 +39,7 @@ class CRUDModel:
         Return all models formatted as a list of dictionaries.
         """
         rows = cls.get_all_models(**filters)
-        return cls.schema().dump(rows, many=True).data
+        return cls.schema().dump(rows, many=True)
 
     @classmethod
     def get_history(cls, **filters) -> List[dict]:
@@ -131,7 +131,7 @@ class CRUDModel:
         try:
             model = query.one_or_none()
             cls._session.close()
-            return cls.schema().dump(model).data
+            return cls.schema().dump(model)
         except exc.MultipleResultsFound:
             cls._session.rollback()  # SQLAlchemy state is not coherent with the reality if not rollback
             raise ValidationFailed(
@@ -158,11 +158,11 @@ class CRUDModel:
         if not rows:
             raise ValidationFailed({}, message="No data provided.")
         try:
-            models, errors = cls.schema().load(rows, many=True, session=cls._session)
+            models = cls.schema().load(rows, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
-        if errors:
-            raise ValidationFailed(rows, errors)
+        except ValidationError as e:
+            raise ValidationFailed(rows, e.messages)
         try:
             cls._session.add_all(models)
             if cls.audit_model:
@@ -188,12 +188,12 @@ class CRUDModel:
         if not row:
             raise ValidationFailed({}, message="No data provided.")
         try:
-            model, errors = cls.schema().load(row, session=cls._session)
+            model = cls.schema().load(row, session=cls._session)
         except exc.sa_exc.DBAPIError:
             logger.exception("Database could not be reached.")
             raise Exception("Database could not be reached.")
-        if errors:
-            raise ValidationFailed(row, errors)
+        except ValidationError as e:
+            raise ValidationFailed(row, e.messages)
         try:
             cls._session.add(model)
             if cls.audit_model:
@@ -229,11 +229,12 @@ class CRUDModel:
             if not previous_model:
                 raise ModelCouldNotBeFound(row)
             previous_row = _model_field_values(previous_model)
-            new_model, errors = cls.schema().load(
-                row, instance=previous_model, partial=True, session=cls._session
-            )
-            if errors:
-                raise ValidationFailed(row, errors)
+            try:
+                new_model = cls.schema().load(
+                    row, instance=previous_model, partial=True, session=cls._session
+                )
+            except ValidationError as e:
+                raise ValidationFailed(row, e.messages)
             new_row = _model_field_values(new_model)
 
             previous_rows.append(previous_row)
@@ -272,11 +273,12 @@ class CRUDModel:
         if not previous_model:
             raise ModelCouldNotBeFound(row)
         previous_row = _model_field_values(previous_model)
-        new_model, errors = cls.schema().load(
-            row, instance=previous_model, partial=True, session=cls._session
-        )
-        if errors:
-            raise ValidationFailed(row, errors)
+        try:
+            new_model = cls.schema().load(
+                row, instance=previous_model, partial=True, session=cls._session
+            )
+        except ValidationError as e:
+            raise ValidationFailed(row, e.messages)
         new_row = _model_field_values(new_model)
         try:
             cls._session.add(new_model)
@@ -331,6 +333,7 @@ class CRUDModel:
             class Meta:
                 model = cls
                 ordered = True
+                unknown = EXCLUDE
 
         schema = Schema(session=cls._session)
         mapper = inspect(cls)
@@ -567,14 +570,14 @@ def _reset(base) -> None:
 
 def _model_field_values(model_instance) -> dict:
     """Return model fields values (with the proper type) as a dictionary."""
-    return model_instance.schema().dump(model_instance).data
+    return model_instance.schema().dump(model_instance)
 
 
 def _models_field_values(model_instances: list) -> List[dict]:
     """Return models fields values (with the proper type) as a list of dictionaries."""
     if not model_instances:
         return []
-    return model_instances[0].schema().dump(model_instances, many=True).data
+    return model_instances[0].schema().dump(model_instances, many=True)
 
 
 class MultiSchemaNotSupported(Exception):
