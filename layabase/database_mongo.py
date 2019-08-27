@@ -16,7 +16,9 @@ from bson.errors import BSONError
 from bson.json_util import dumps, loads
 from bson.objectid import ObjectId
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
-from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr import ValidationFailed, ModelCouldNotBeFound
+
+from layabase.database import ComparisonSigns
 
 from layabase.database import ComparisonSigns
 

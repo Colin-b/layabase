@@ -1,7 +1,7 @@
 import datetime
 import enum
 
-from layaberr.validation import ValidationFailed
+from layaberr import ValidationFailed
 from sqlalchemy import Column, DateTime, Enum, String, inspect, Integer
 
 from layabase.audit import current_user_name

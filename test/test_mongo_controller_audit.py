@@ -5,7 +5,7 @@ from typing import List, Dict
 
 import pytest
 from flask_restplus import inputs
-from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import database, database_mongo, versioning_mongo
 from layabase.database_mongo import _validate_int, _validate_date_time

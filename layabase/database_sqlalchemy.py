@@ -7,7 +7,7 @@ from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from marshmallow import validate
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
-from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr import ValidationFailed, ModelCouldNotBeFound
 from sqlalchemy import create_engine, inspect, Column, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc

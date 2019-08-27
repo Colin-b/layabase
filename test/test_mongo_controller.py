@@ -8,8 +8,9 @@ from pytest import fixture
 from pytest_layab import *
 
 import pytest
-from layaberr.validation import ValidationFailed
 from flask_restplus import inputs, reqparse
+from flask_restplus import inputs
+from layaberr import ValidationFailed
 
 from layabase import database, database_mongo, versioning_mongo
 from layabase.database import ComparisonSigns
@@ -123,6 +124,10 @@ class TestDictRequiredNonNullableVersionedController(database.CRUDController):
 
 
 class TestSupportForComparisonSignsController(database.CRUDController):
+    pass
+
+
+class TestChoicesController(database.CRUDController):
     pass
 
 
@@ -357,6 +362,22 @@ def _create_models(base):
         date_value = database_mongo.Column(datetime.date)
         datetime_value = database_mongo.Column(datetime.datetime)
 
+    class TestChoicesModel(
+        database_mongo.CRUDModel, base=base, table_name="choices_table_name"
+    ):
+        key = database_mongo.Column(
+            int, is_primary_key=True, should_auto_increment=True
+        )
+        int_choices_field = database_mongo.Column(
+            int, description="Test Documentation", choices=[1, 2, 3]
+        )
+        str_choices_field = database_mongo.Column(
+            str, description="Test Documentation", choices=["one", "two", "three"]
+        )
+        float_choices_field = database_mongo.Column(
+            float, description="Test Documentation", choices=[1.25, 1.5, 1.75]
+        )
+
     TestController.model(TestModel)
     TestStrictController.model(TestStrictModel)
     TestAutoIncrementController.model(TestAutoIncrementModel)
@@ -383,6 +404,9 @@ def _create_models(base):
     TestNoneInsertController.model(TestNoneInsertModel)
     TestNoneRetrieveController.model(TestNoneRetrieveModel)
     TestSupportForComparisonSignsController.model(TestSupportForComparisonSignsModel)
+    TestChoicesController.model(TestChoicesModel)
+
+    TestSupportForComparisonSignsController.model(TestSupportForComparisonSignsModel)
     return [
         TestModel,
         TestStrictModel,
@@ -405,6 +429,8 @@ def _create_models(base):
         TestIntAndFloatModel,
         TestDictInDictModel,
         TestNoneInsertModel,
+        TestSupportForComparisonSignsModel,
+        TestChoicesModel,
         TestSupportForComparisonSignsModel,
     ]
 
