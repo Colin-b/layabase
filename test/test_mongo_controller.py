@@ -3,12 +3,8 @@ import enum
 import json
 import re
 from threading import Thread
-import requests
-from pytest import fixture
-from pytest_layab import *
 
 import pytest
-from flask_restplus import inputs, reqparse
 from flask_restplus import inputs
 from layaberr import ValidationFailed
 
@@ -125,6 +121,7 @@ class TestDictRequiredNonNullableVersionedController(database.CRUDController):
 
 class TestSupportForComparisonSignsController(database.CRUDController):
     pass
+
 
 class TestChoicesController(database.CRUDController):
     pass
@@ -4409,7 +4406,8 @@ def app():
         pass
 
     return application
-  
+
+
 def test_get_with_required_field_as_None_is_invalid(db):
     TestUnvalidatedListAndDictController.post(
         {
