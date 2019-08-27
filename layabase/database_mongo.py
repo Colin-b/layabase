@@ -186,8 +186,8 @@ class Column:
         if "_id" == self.name:
             self.field_type = ObjectId
         self._validate_query = self._get_query_validation_function()
-        self._validate_insert = self._get_insert_validation_function()
-        self._validate_update = self._get_insert_validation_function()
+        self._validate_insert = self._get_insert_update_validation_function()
+        self._validate_update = self._get_insert_update_validation_function()
         self._deserialize_value = self._get_value_deserialization_function()
         return self
 
@@ -300,7 +300,7 @@ class Column:
         else:
             return self._validate_type
 
-    def _get_insert_validation_function(self) -> callable:
+    def _get_insert_update_validation_function(self) -> callable:
         """
         Return the function used to validate values on this field.
         """
@@ -361,7 +361,7 @@ class Column:
         Entry would be composed of the field name associated to a list of error messages.
         """
         if isinstance(value, tuple):
-            value = self._validate_comparison_tuple(value)
+            value = value[1]
 
         return self._validate_date_time(value)
 
@@ -373,16 +373,9 @@ class Column:
         Entry would be composed of the field name associated to a list of error messages.
         """
         if isinstance(value, tuple):
-            value = self._validate_comparison_tuple(value)
+            value = value[1]
 
         return self._validate_date(value)
-
-    def _validate_comparison_tuple(self, value):
-        if value[0] not in ComparisonSigns:
-            raise Exception(
-                "First element of the tuple should be a memeber of ComparisonSigns"
-            )
-        return value[1]
 
     def _validate_enum(self, value) -> dict:
         """
@@ -558,12 +551,12 @@ class Column:
 
     def _validate_query_int(self, value) -> dict:
         if isinstance(value, tuple):
-            value = self._validate_comparison_tuple(value)
+            value = value[1]
         return self._validate_int(value)
 
     def _validate_query_float(self, value) -> dict:
         if isinstance(value, tuple):
-            value = self._validate_comparison_tuple(value)
+            value = value[1]
         return self._validate_float(value)
 
     def _validate_type(self, value) -> dict:
@@ -600,16 +593,12 @@ class Column:
                     or_filter = filters.setdefault("$or", [])
                     or_filter.append({self.name: {"$exists": False}})
                     or_filter.append({self.name: {"$in": mongo_values}})
-                elif (
-                    all(isinstance(n, tuple) for n in value)
-                    and self.field_type != tuple
-                ):
+                elif all(isinstance(n, tuple) for n in value):
                     all_filters = {}
                     for a in mongo_values:
                         all_filters.update(a)
                     filters[self.name] = all_filters
                 else:
-                    # {'int_value': {'$gte': 122, '$lt': 124}}
                     filters[self.name] = {"$in": mongo_values}
         else:
             mongo_value = self._deserialize_value(value)
@@ -680,9 +669,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign = None
-        if isinstance(value, tuple):
-            (comparison_sign, value) = value
+        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -691,9 +678,7 @@ class Column:
             value = iso8601.parse_date(value)
 
         if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(
-                (comparison_sign, value)
-            )
+            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -703,9 +688,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign = None
-        if isinstance(value, tuple):
-            (comparison_sign, value) = value
+        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -723,9 +706,7 @@ class Column:
                 )
 
         if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(
-                (comparison_sign, value)
-            )
+            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -769,9 +750,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign = None
-        if isinstance(value, tuple):
-            (comparison_sign, value) = value
+        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -780,9 +759,7 @@ class Column:
             value = int(value)
 
         if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(
-                (comparison_sign, value)
-            )
+            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -793,9 +770,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign = None
-        if isinstance(value, tuple):
-            (comparison_sign, value) = value
+        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -804,9 +779,7 @@ class Column:
             value = float(value)
 
         if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(
-                (comparison_sign, value)
-            )
+            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -825,8 +798,9 @@ class Column:
 
         return value
 
-    def _deserialize_comparison_signs_if_exists(self, value):
-        return {value[0].mongo_name: value[1]}
+    @staticmethod
+    def _deserialize_comparison_signs_if_exists(comparison_sign, value):
+        return {comparison_sign.mongo_name: value}
 
     def serialize(self, document: dict):
         """
