@@ -601,7 +601,16 @@ class Column:
                     or_filter = filters.setdefault("$or", [])
                     or_filter.append({self.name: {"$exists": False}})
                     or_filter.append({self.name: {"$in": mongo_values}})
+                elif (
+                    all(isinstance(n, tuple) for n in value)
+                    and self.field_type != tuple
+                ):
+                    all_filters = {}
+                    for a in mongo_values:
+                        all_filters.update(a)
+                    filters[self.name] = all_filters
                 else:
+                    # {'int_value': {'$gte': 122, '$lt': 124}}
                     filters[self.name] = {"$in": mongo_values}
         else:
             mongo_value = self._deserialize_value(value)
@@ -2585,7 +2594,7 @@ def _get_python_type(field: Column) -> callable:
         return str
     if field.field_type == float:
         return _validate_float
-    if field.field_type == float:
+    if field.field_type == int:
         return _validate_int
 
     return field.field_type

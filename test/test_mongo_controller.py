@@ -3,9 +3,12 @@ import enum
 import json
 import re
 from threading import Thread
+import requests
+from pytest import fixture
+from pytest_layab import *
 
 import pytest
-from flask_restplus import inputs
+from flask_restplus import inputs, reqparse
 from pycommon_error.validation import ValidationFailed
 
 from pycommon_database import (
@@ -14,6 +17,7 @@ from pycommon_database import (
     versioning_mongo,
     ComparisonSigns,
 )
+from pycommon_database.database_mongo import _validate_int
 from test.flask_restplus_mock import TestAPI
 
 
@@ -3076,7 +3080,7 @@ def test_delete_without_filter_is_removing_everything(db):
 def test_query_get_parser(db):
     assert {
         "key": str,
-        "mandatory": int,
+        "mandatory": _validate_int,
         "optional": str,
         "limit": inputs.positive,
         "offset": inputs.natural,
@@ -3103,7 +3107,7 @@ def test_query_get_parser_with_list_of_dict(db):
 def test_query_get_parser_with_dict(db):
     assert {
         "dict_col.first_key": str,
-        "dict_col.second_key": int,
+        "dict_col.second_key": _validate_int,
         "key": str,
         "limit": inputs.positive,
         "offset": inputs.natural,
@@ -3118,7 +3122,7 @@ def test_query_get_parser_with_dict(db):
 
 
 def test_query_delete_parser(db):
-    assert {"key": str, "mandatory": int, "optional": str} == parser_types(
+    assert {"key": str, "mandatory": _validate_int, "optional": str} == parser_types(
         TestController.query_delete_parser
     )
 
@@ -3139,7 +3143,7 @@ def test_query_delete_parser_with_list_of_dict(db):
 def test_query_rollback_parser(db):
     assert {
         "dict_field.first_key": str,
-        "dict_field.second_key": int,
+        "dict_field.second_key": _validate_int,
         "key": str,
         "revision": inputs.positive,
     } == parser_types(TestVersionedController.query_rollback_parser)
@@ -3154,7 +3158,7 @@ def test_query_rollback_parser(db):
 def test_query_delete_parser_with_dict(db):
     assert {
         "dict_col.first_key": str,
-        "dict_col.second_key": int,
+        "dict_col.second_key": _validate_int,
         "key": str,
     } == parser_types(TestDictController.query_delete_parser)
     assert {
@@ -4020,3 +4024,302 @@ def test_get_is_valid_with_datetime_and_greater_than_or_equal_sign_as_tuple_in_d
             )
         }
     )
+
+
+def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_column(db):
+    TestSupportForComparisonSignsController.post_many(
+        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}]
+    )
+    assert [
+        {
+            "int_value": 122,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "int_value": 123,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+    ] == TestSupportForComparisonSignsController.get(
+        {
+            "int_value": [
+                (ComparisonSigns.GreaterOrEqual, 122),
+                (ComparisonSigns.Lower, 124),
+            ]
+        }
+    )
+
+
+def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_column(
+    db
+):
+    TestSupportForComparisonSignsController.post_many(
+        [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
+    )
+    assert [
+        {
+            "int_value": None,
+            "float_value": 1.0,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "int_value": None,
+            "float_value": 1.1,
+            "date_value": None,
+            "datetime_value": None,
+        },
+    ] == TestSupportForComparisonSignsController.get(
+        {
+            "float_value": [
+                (ComparisonSigns.Greater, 0.9),
+                (ComparisonSigns.LowerOrEqual, 1.1),
+            ]
+        }
+    )
+
+
+def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_column(
+    db
+):
+    TestSupportForComparisonSignsController.post_many(
+        [
+            {"date_value": "2019-01-01"},
+            {"date_value": "2019-01-02"},
+            {"date_value": "2019-01-03"},
+        ]
+    )
+    assert [
+        {
+            "int_value": None,
+            "float_value": None,
+            "date_value": "2019-01-02",
+            "datetime_value": None,
+        }
+    ] == TestSupportForComparisonSignsController.get(
+        {
+            "date_value": [
+                (ComparisonSigns.Greater, datetime.date(2019, 1, 1)),
+                (ComparisonSigns.Lower, datetime.date(2019, 1, 3)),
+            ]
+        }
+    )
+
+
+def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_datetime_column(
+    db
+):
+    TestSupportForComparisonSignsController.post_many(
+        [
+            {"datetime_value": "2019-01-01T23:59:59"},
+            {"datetime_value": "2019-01-02T23:59:59"},
+            {"datetime_value": "2019-01-03T23:59:59"},
+        ]
+    )
+    assert [
+        {
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-01T23:59:59",
+        },
+        {
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-02T23:59:59",
+        },
+        {
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-03T23:59:59",
+        },
+    ] == TestSupportForComparisonSignsController.get(
+        {
+            "datetime_value": [
+                (
+                    ComparisonSigns.GreaterOrEqual,
+                    datetime.datetime(2019, 1, 1, 23, 59, 59),
+                ),
+                (
+                    ComparisonSigns.LowerOrEqual,
+                    datetime.datetime(2019, 1, 3, 23, 59, 59),
+                ),
+            ]
+        }
+    )
+
+
+def test_query_with_int_and_less_than_sign_in_int_column_returns_tuple(client, db):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?int_value=<1")
+    args = query_get_parser.parse_args()
+    assert args["int_value"] == [(ComparisonSigns.Lower, 1)]
+
+
+def test_query_with_int_and_greater_than_sign_in_int_column_returns_tuple(client, db):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?int_value=>1")
+    args = query_get_parser.parse_args()
+    assert args["int_value"] == [(ComparisonSigns.Greater, 1)]
+
+
+def test_query_with_int_and_less_than_or_equal_sign_in_int_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?int_value=<=1")
+    args = query_get_parser.parse_args()
+    assert args["int_value"] == [(ComparisonSigns.LowerOrEqual, 1)]
+
+
+def test_query_with_int_and_greater_than_or_equal_sign_in_int_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?int_value=>=1")
+    args = query_get_parser.parse_args()
+    assert args["int_value"] == [(ComparisonSigns.GreaterOrEqual, 1)]
+
+
+def test_query_with_float_and_less_than_sign_in_float_column_returns_tuple(client, db):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?float_value=<0.9")
+    args = query_get_parser.parse_args()
+    assert args["float_value"] == [(ComparisonSigns.Lower, 0.9)]
+
+
+def test_query_with_float_and_greater_than_sign_in_float_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?float_value=>0.9")
+    args = query_get_parser.parse_args()
+    assert args["float_value"] == [(ComparisonSigns.Greater, 0.9)]
+
+
+def test_query_with_float_and_less_than_or_equal_sign_in_float_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?float_value=<=0.9")
+    args = query_get_parser.parse_args()
+    assert args["float_value"] == [(ComparisonSigns.LowerOrEqual, 0.9)]
+
+
+def test_query_with_float_and_greater_than_or_equal_sign_in_float_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?float_value=>=0.9")
+    args = query_get_parser.parse_args()
+    assert args["float_value"] == [(ComparisonSigns.GreaterOrEqual, 0.9)]
+
+
+def test_query_with_date_and_less_than_sign_in_date_column_returns_tuple(client, db):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?date_value=<2019-01-01")
+    args = query_get_parser.parse_args()
+    assert args["date_value"] == [(ComparisonSigns.Lower, datetime.date(2019, 1, 1))]
+
+
+def test_query_with_date_and_greater_than_sign_in_date_column_returns_tuple(client, db):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?date_value=>2019-01-01")
+    args = query_get_parser.parse_args()
+    assert args["date_value"] == [(ComparisonSigns.Greater, datetime.date(2019, 1, 1))]
+
+
+def test_query_with_date_and_less_than_or_equal_sign_in_date_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?date_value=<=2019-01-01")
+    args = query_get_parser.parse_args()
+    assert args["date_value"] == [
+        (ComparisonSigns.LowerOrEqual, datetime.date(2019, 1, 1))
+    ]
+
+
+def test_query_with_date_and_greater_than_or_equal_sign_in_date_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?date_value=>=2019-01-01")
+    args = query_get_parser.parse_args()
+    assert args["date_value"] == [
+        (ComparisonSigns.GreaterOrEqual, datetime.date(2019, 1, 1))
+    ]
+
+
+def test_query_with_datetime_and_less_than_sign_in_datetime_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?datetime_value=<2019-01-02T23:59:59")
+    args = query_get_parser.parse_args()
+    assert args["datetime_value"] == [
+        (
+            ComparisonSigns.Lower,
+            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
+        )
+    ]
+
+
+def test_query_with_datetime_and_greater_than_sign_in_datetime_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?datetime_value=>2019-01-02T23:59:59")
+    args = query_get_parser.parse_args()
+    assert args["datetime_value"] == [
+        (
+            ComparisonSigns.Greater,
+            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
+        )
+    ]
+
+
+def test_query_with_datetime_and_less_than_or_equal_sign_in_datetime_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?datetime_value=<=2019-01-02T23:59:59")
+    args = query_get_parser.parse_args()
+    assert args["datetime_value"] == [
+        (
+            ComparisonSigns.LowerOrEqual,
+            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
+        )
+    ]
+
+
+def test_query_with_datetime_and_greater_than_or_equal_sign_in_datetime_column_returns_tuple(
+    client, db
+):
+    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
+    client.get("/test?datetime_value=>=2019-01-02T23:59:59")
+    args = query_get_parser.parse_args()
+    assert args["datetime_value"] == [
+        (
+            ComparisonSigns.GreaterOrEqual,
+            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
+        )
+    ]
+
+
+@pytest.fixture
+def app():
+    import flask
+
+    application = flask.Flask(__name__)
+
+    @application.route("/testt")
+    def tt():
+        pass
+
+    return application

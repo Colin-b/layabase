@@ -8,6 +8,7 @@ from flask_restplus import inputs
 from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
 
 from pycommon_database import database, database_mongo, versioning_mongo
+from pycommon_database.database_mongo import _validate_date_time, _validate_int
 from test.flask_restplus_mock import TestAPI
 
 
@@ -195,7 +196,7 @@ def test_audited_table_name_is_forbidden(db):
 def test_get_parser_fields_order(db):
     assert {
         "key": str,
-        "mandatory": int,
+        "mandatory": _validate_int,
         "optional": str,
         "limit": inputs.positive,
         "offset": inputs.natural,
@@ -205,16 +206,16 @@ def test_get_parser_fields_order(db):
 def test_get_versioned_audit_parser_fields(db):
     assert {
         "audit_action": str,
-        "audit_date_utc": inputs.datetime_from_iso8601,
+        "audit_date_utc": _validate_date_time,
         "audit_user": str,
         "limit": inputs.positive,
         "offset": inputs.natural,
-        "revision": int,
+        "revision": _validate_int,
     } == parser_types(TestVersionedController.query_get_audit_parser)
 
 
 def test_delete_parser_fields_order(db):
-    assert {"key": str, "mandatory": int, "optional": str} == parser_types(
+    assert {"key": str, "mandatory": _validate_int, "optional": str} == parser_types(
         TestController.query_delete_parser
     )
 
@@ -1439,7 +1440,7 @@ def test_delete_without_filter_is_removing_everything(db):
 def test_query_get_parser(db):
     assert {
         "key": str,
-        "mandatory": int,
+        "mandatory": _validate_int,
         "optional": str,
         "limit": inputs.positive,
         "offset": inputs.natural,
@@ -1450,20 +1451,20 @@ def test_query_get_parser(db):
 def test_query_get_audit_parser(db):
     assert {
         "audit_action": str,
-        "audit_date_utc": inputs.datetime_from_iso8601,
+        "audit_date_utc": _validate_date_time,
         "audit_user": str,
         "key": str,
-        "mandatory": int,
+        "mandatory": _validate_int,
         "optional": str,
         "limit": inputs.positive,
         "offset": inputs.natural,
-        "revision": int,
+        "revision": _validate_int,
     } == parser_types(TestController.query_get_audit_parser)
     _check_audit(TestController, [])
 
 
 def test_query_delete_parser(db):
-    assert {"key": str, "mandatory": int, "optional": str} == parser_types(
+    assert {"key": str, "mandatory": _validate_int, "optional": str} == parser_types(
         TestController.query_delete_parser
     )
     _check_audit(TestController, [])
