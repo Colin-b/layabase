@@ -16,9 +16,9 @@ from bson.errors import BSONError
 from bson.json_util import dumps, loads
 from bson.objectid import ObjectId
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
-from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
 
-from pycommon_database import ComparisonSigns
+from layabase.database import ComparisonSigns
 
 logger = logging.getLogger(__name__)
 
@@ -1363,13 +1363,13 @@ class CRUDModel:
             if not skip_update_indexes:
                 cls.update_indexes()
         if audit:
-            from pycommon_database.audit_mongo import _create_from
+            from layabase.audit_mongo import _create_from
 
             cls.audit_model = _create_from(cls, base)
         else:
             cls.audit_model = (
-                None
-            )  # Ensure no circular reference when creating the audit
+                None  # Ensure no circular reference when creating the audit
+            )
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:

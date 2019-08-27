@@ -1,8 +1,10 @@
-<h2 align="center">Python Common Database Module</h2>
+<h2 align="center">Database for layab</h2>
 
 <p align="center">
-<a href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-<a href='https://pse.tools.digital.engie.com/drm-all.gem/job/team/view/Python%20modules/job/pycommon_database/job/master/'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/pycommon_database/master'></a>
+<a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+<a href='https://pse.tools.digital.engie.com/drm-all.gem/job/team/view/Python%20modules/job/layabase/job/master/'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/layabase/master'></a>
+<a href='https://pse.tools.digital.engie.com/drm-all.gem/job/team/view/Python%20modules/job/layabase/job/master/cobertura/'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/layabase/master&config=testCoverage'></a>
+<a href='https://pse.tools.digital.engie.com/drm-all.gem/job/team/view/Python%20modules/job/layabase/job/master/lastSuccessfulBuild/testReport/'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/layabase/master&config=testCount'></a>
 </p>
 
 Query your databases easily and transparently thanks to this module providing helpers on top of most brilliant python
@@ -34,7 +36,7 @@ Every feature provided by a model if exposed via the controller class so that yo
 
 ## Installation ##
 
-pycommon_database is easiest to work with when installed into a virtual environment using the setup.py.
+layabase is easiest to work with when installed into a virtual environment using the setup.py.
 
 To install all test required dependencies, use the following command:
 
@@ -46,17 +48,17 @@ python -m pip install .[testing]
 
 SQLAlchemy is the underlying framework used to manipulate relational databases.
 
-To create a representation of a table you will need to extend pycommon_database.database_sqlalchemy.CRUDModel
+To create a representation of a table you will need to extend layabase.database_sqlalchemy.CRUDModel
 
 ### SQLAlchemy model ###
 
-Extending pycommon_database.database_sqlalchemy.CRUDModel will provides C.R.U.D. methods on your SQLAlchemy model.
+Extending layabase.database_sqlalchemy.CRUDModel will provides C.R.U.D. methods on your SQLAlchemy model.
 
 #### Model definition ####
 
 ```python
 from sqlalchemy import Column, String
-from pycommon_database.database_sqlalchemy import CRUDModel
+from layabase.database_sqlalchemy import CRUDModel
 
 base = None  # Base is provided when calling load method
 
@@ -103,18 +105,18 @@ nb_removed_models = MyModel.remove(key='key1')
 
 PyMongo is the underlying framework used to manipulate MongoDB.
 
-To create a representation of a collection you will need to extend pycommon_database.database_mongo.CRUDModel
+To create a representation of a collection you will need to extend layabase.database_mongo.CRUDModel
 
 To link your model to the underlying collection, you will need to provide a connection string.
 
 ### Mongo model ###
 
-Extending pycommon_database.database_mongo.CRUDModel will provides C.R.U.D. methods on your Mongo model.
+Extending layabase.database_mongo.CRUDModel will provides C.R.U.D. methods on your Mongo model.
 
 #### Model definition ####
 
 ```python
-from pycommon_database.database_mongo import CRUDModel, Column
+from layabase.database_mongo import CRUDModel, Column
 
 pymongo_database = None  # pymongo database instance
 
@@ -126,10 +128,10 @@ class MyModel(CRUDModel, base=pymongo_database, table_name="related collection n
 
 ##### String fields #####
 
-Fields containing string can be described using pycommon_database.database_mongo.Column
+Fields containing string can be described using layabase.database_mongo.Column
 
 ```python
-from pycommon_database.database_mongo import CRUDModel, Column
+from layabase.database_mongo import CRUDModel, Column
 
 pymongo_database = None  # pymongo database instance
 
@@ -204,11 +206,11 @@ The following parameters can also be provided when creating a column of string t
 
 ##### Dictionary fields #####
 
-Fields containing a dictionary can be described using pycommon_database.database_mongo.DictColumn
+Fields containing a dictionary can be described using layabase.database_mongo.DictColumn
 
 ##### List fields #####
 
-Fields containing a list can be described using pycommon_database.database_mongo.ListColumn
+Fields containing a list can be described using layabase.database_mongo.ListColumn
 
 #### Retrieving data ####
 
@@ -259,18 +261,18 @@ python -m pip install mongomock
 and use the following connection string: "mongomock" instead of a real mongodb connection string.
 
 ```python
-import pycommon_database
+import layabase
 
 def create_models(database):
     my_model_class = None  # It should be a model class
     return [my_model_class]  # It should be a list containing all the models that should be linked
 
-pycommon_database.load("mongodb://host:port/server_name", create_models)
+layabase.load("mongodb://host:port/server_name", create_models)
 ```
 
 ## CRUD Controller ##
 
-Extending pycommon_database.database.CRUDController will provides C.R.U.D. methods on your controller.
+Extending layabase.CRUDController will provides C.R.U.D. methods on your controller.
 
 It returns you JSON ready to be sent to your client.
 
@@ -279,7 +281,7 @@ It also allows you to manage audit.
 ### Controller definition ###
 
 ```python
-from pycommon_database.database import CRUDController
+from layabase import CRUDController
 
 class MyController(CRUDController):
     pass
@@ -338,5 +340,5 @@ filtered_audit_models_as_dict_list = MyController.get_audit(value='value1')
 1. [python 3.7+](https://www.python.org/downloads/) must be installed
 2. Use pip to install module:
 ```sh
-python -m pip install pycommon_database -i https://all-team-remote:tBa%40W%29tvB%5E%3C%3B2Jm3@artifactory.tools.digital.engie.com/artifactory/api/pypi/all-team-pypi-prod/simple
+python -m pip install layabase -i https://all-team-remote:tBa%40W%29tvB%5E%3C%3B2Jm3@artifactory.tools.digital.engie.com/artifactory/api/pypi/all-team-pypi-prod/simple
 ```

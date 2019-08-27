@@ -1,9 +1,9 @@
 import pytest
 import sqlalchemy
-from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
 
 
-from pycommon_database import database, database_sqlalchemy
+from layabase import database, database_sqlalchemy
 
 
 class SaveModel:

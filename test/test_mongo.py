@@ -1,7 +1,7 @@
 import pymongo
 import pytest
 
-from pycommon_database import database, database_mongo, versioning_mongo
+from layabase import database, database_mongo, versioning_mongo
 
 
 def test_str_column_cannot_auto_increment():

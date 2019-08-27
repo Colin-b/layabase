@@ -5,10 +5,10 @@ from typing import List, Dict
 
 import pytest
 from flask_restplus import inputs
-from pycommon_error.validation import ValidationFailed, ModelCouldNotBeFound
+from layaberr.validation import ValidationFailed, ModelCouldNotBeFound
 
-from pycommon_database import database, database_mongo, versioning_mongo
-from pycommon_database.database_mongo import _validate_date_time, _validate_int
+from layabase import database, database_mongo, versioning_mongo
+from layabase.database_mongo import _validate_int, _validate_date_time
 from test.flask_restplus_mock import TestAPI
 
 

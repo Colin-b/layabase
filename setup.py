@@ -36,24 +36,21 @@ extra_requirements["testing"] += [
 ]
 
 setup(
-    name="pycommon_database",
-    version=open("pycommon_database/version.py")
-    .readlines()[-1]
-    .split()[-1]
-    .strip("\"'"),
-    description="Common Database handling",
+    name="layabase",
+    version=open("layabase/version.py").readlines()[-1].split()[-1].strip("\"'"),
+    description="Database for layab",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=["test"]),
     install_requires=[
         # Used to handle errors
-        "pycommon_error==2.20.0"
+        "layaberr==1.0.0"
     ],
     extras_require=extra_requirements,
     python_requires=">=3.6",
     project_urls={
-        "Changelog": "https://github.tools.digital.engie.com/GEM-Py/pycommon_database/blob/development/CHANGELOG.md",
-        "Issues": "https://github.tools.digital.engie.com/GEM-Py/pycommon_database/issues",
+        "Changelog": "https://github.tools.digital.engie.com/GEM-Py/layabase/blob/development/CHANGELOG.md",
+        "Issues": "https://github.tools.digital.engie.com/GEM-Py/layabase/issues",
     },
     license="MIT",
     classifiers=[

@@ -2,7 +2,7 @@ import tempfile
 
 import pytest
 
-from pycommon_database import database, database_mongo
+from layabase import database, database_mongo
 from test.flask_restplus_mock import TestAPI
 
 
