@@ -9,7 +9,6 @@ with open(os.path.join(this_dir, "README.md"), "r") as f:
 extra_requirements = {
     "testing": [
         # Used to run test cases
-        "pytest==5.1.1",
         "pytest-flask==0.15.0",
         # Used to manage testing of Mongo
         "mongomock==3.17.0",
