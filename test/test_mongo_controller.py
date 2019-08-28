@@ -4110,31 +4110,31 @@ def test_get_is_valid_with_datetime_and_greater_than_or_equal_sign_as_tuple_in_d
 
 
 def test_get_is_invalid_with_int_and_unknown_as_tuple_in_int_column(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(KeyError) as exception_info:
         TestSupportForComparisonSignsController.get({"int_value": ("test", 124)})
-    assert str(exception_info.value) == "'str' object has no attribute 'mongo_name'"
+    assert str(exception_info.value) == "'test'"
 
 
 def test_get_is_invalid_with_float_and_unknown_as_tuple_in_float_column(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(KeyError) as exception_info:
         TestSupportForComparisonSignsController.get({"float_value": ("test", 1.1)})
-    assert str(exception_info.value) == "'str' object has no attribute 'mongo_name'"
+    assert str(exception_info.value) == "'test'"
 
 
 def test_get_is_invalid_with_date_and_unknown_as_tuple_in_date_column(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(KeyError) as exception_info:
         TestSupportForComparisonSignsController.get(
             {"date_value": ("test", datetime.date(2019, 1, 3))}
         )
-    assert str(exception_info.value) == "'str' object has no attribute 'mongo_name'"
+    assert str(exception_info.value) == "'test'"
 
 
 def test_get_is_invalid_with_datetime_and_unknown_as_tuple_in_datetime_column(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(KeyError) as exception_info:
         TestSupportForComparisonSignsController.get(
             {"datetime_value": ("test", datetime.datetime(2019, 1, 3, 23, 59, 59))}
         )
-    assert str(exception_info.value) == "'str' object has no attribute 'mongo_name'"
+    assert str(exception_info.value) == "'test'"
 
 
 def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_column(db):

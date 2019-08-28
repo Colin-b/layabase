@@ -1,6 +1,6 @@
 import enum
 import logging
-from typing import List
+from typing import List, Union
 
 from layaberr import ValidationFailed
 
@@ -9,14 +9,33 @@ logger = logging.getLogger(__name__)
 
 @enum.unique
 class ComparisonSigns(enum.Enum):
-    Greater = (">", "$gt")
-    GreaterOrEqual = (">=", "$gte")
-    Lower = ("<", "$lt")
-    LowerOrEqual = ("<=", "$lte")
+    GreaterOrEqual = ">="
+    Greater = ">"
+    LowerOrEqual = "<="
+    Lower = "<"
 
-    def __init__(self, sign, mongo_name):
-        self.sign = sign
-        self.mongo_name = mongo_name
+    def __init__(self, value: str):
+        self.length = len(value)
+
+    @classmethod
+    def deserialize(cls, value: str) -> Union[tuple, str]:
+        """
+        Convert a string representation of a sign and its value to tuple. Handle the fact that there may not be a sign.
+
+        >>> ComparisonSigns.deserialize("test")
+        'test'
+
+        >>> ComparisonSigns.deserialize(">=test")
+        (<ComparisonSigns.GreaterOrEqual: '>='>, 'test')
+
+        >>> ComparisonSigns.deserialize("<test")
+        (<ComparisonSigns.Lower: '<'>, 'test')
+        """
+        for sign in cls:
+            if value.startswith(sign.value):
+                return sign, value[sign.length :]
+
+        return value
 
 
 def _is_mongo(database_connection_url: str) -> bool:

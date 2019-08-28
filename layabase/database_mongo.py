@@ -22,6 +22,14 @@ from layabase.database import ComparisonSigns
 logger = logging.getLogger(__name__)
 
 
+operators = {
+    ComparisonSigns.Greater: "$gt",
+    ComparisonSigns.GreaterOrEqual: "$gte",
+    ComparisonSigns.Lower: "$lt",
+    ComparisonSigns.LowerOrEqual: "$lte",
+}
+
+
 @enum.unique
 class IndexType(enum.IntEnum):
     Unique = 1
@@ -669,7 +677,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
+        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -688,7 +696,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
+        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -750,7 +758,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
+        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -770,7 +778,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        (comparison_sign, value) = value if isinstance(value, tuple) else (None, value)
+        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
 
         if value is None:
             return None
@@ -800,7 +808,7 @@ class Column:
 
     @staticmethod
     def _deserialize_comparison_signs_if_exists(comparison_sign, value):
-        return {comparison_sign.mongo_name: value}
+        return {operators[comparison_sign]: value}
 
     def serialize(self, document: dict):
         """
@@ -1340,9 +1348,8 @@ class CRUDModel:
 
             cls.audit_model = _create_from(cls, base)
         else:
-            cls.audit_model = (
-                None  # Ensure no circular reference when creating the audit
-            )
+            # Ensure no circular reference when creating the audit
+            cls.audit_model = None
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
@@ -2575,7 +2582,7 @@ def _get_python_type(field: Column) -> callable:
 
 def _validate_float(value):
     if isinstance(value, str):
-        value = _remove_comparison_signs_if_exists(value)
+        value = ComparisonSigns.deserialize(value)
         if isinstance(value, tuple):
             return value[0], float(value[1])
 
@@ -2584,7 +2591,7 @@ def _validate_float(value):
 
 def _validate_int(value):
     if isinstance(value, str):
-        value = _remove_comparison_signs_if_exists(value)
+        value = ComparisonSigns.deserialize(value)
         if isinstance(value, tuple):
             return value[0], int(value[1])
 
@@ -2593,7 +2600,7 @@ def _validate_int(value):
 
 def _validate_date_time(value):
     if isinstance(value, str):
-        value = _remove_comparison_signs_if_exists(value)
+        value = ComparisonSigns.deserialize(value)
         if isinstance(value, tuple):
             return value[0], iso8601.parse_date(value[1])
 
@@ -2602,21 +2609,8 @@ def _validate_date_time(value):
 
 def _validate_date(value):
     if isinstance(value, str):
-        value = _remove_comparison_signs_if_exists(value)
+        value = ComparisonSigns.deserialize(value)
         if isinstance(value, tuple):
             return value[0], iso8601.parse_date(value[1]).date()
 
     return iso8601.parse_date(value).date()
-
-
-def _remove_comparison_signs_if_exists(value):
-    if value.startswith(ComparisonSigns.LowerOrEqual.sign):
-        return ComparisonSigns.LowerOrEqual, value[2:]
-    elif value.startswith(ComparisonSigns.GreaterOrEqual.sign):
-        return ComparisonSigns.GreaterOrEqual, value[2:]
-    elif value.startswith(ComparisonSigns.Lower.sign):
-        return ComparisonSigns.Lower, value[1:]
-    elif value.startswith(ComparisonSigns.Greater.sign):
-        return ComparisonSigns.Greater, value[1:]
-
-    return value
