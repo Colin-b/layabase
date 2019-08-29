@@ -601,22 +601,23 @@ class Column:
                     or_filter = filters.setdefault("$or", [])
                     or_filter.append({self.name: {"$exists": False}})
                     or_filter.append({self.name: {"$in": mongo_values}})
-                elif any(isinstance(n, tuple) for n in value):
-                    # <class 'dict'>: {'first_key': {'$in': [1]}}
+                else:
                     mongo_filters = {}
                     other_values = []
-                    for idx, val in enumerate(value):
-                        if isinstance(val, tuple):
-                            mongo_filters.update(mongo_values[idx])
+                    for val in mongo_values:
+                        if isinstance(val, dict):
+                            mongo_filters.update(val)
                         else:
-                            other_values.append(mongo_values[idx])
+                            other_values.append(val)
 
-                    or_filter = filters.setdefault("$or", [])
-                    or_filter.append({self.name: mongo_filters})
-                    if other_values:
-                        or_filter.append({self.name: {"$in": other_values}})
-                else:
-                    filters[self.name] = {"$in": mongo_values}
+                    if mongo_filters and other_values:
+                        or_filter = filters.setdefault("$or", [])
+                        or_filter.append({self.name: mongo_filters})
+                        or_filter.append({self.name: {"$in": mongo_values}})
+                    else:
+                        filters[self.name] = (
+                            {"$in": other_values} if other_values else mongo_filters
+                        )
         else:
             mongo_value = self._deserialize_value(value)
             if self.get_default_value(filters) == mongo_value:
