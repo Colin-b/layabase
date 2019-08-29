@@ -4423,6 +4423,42 @@ def test_query_with_datetime_and_greater_than_or_equal_sign_in_datetime_column_r
     ]
 
 
+def test_get_is_valid_with_int_range_and_value_out_of_range_using_comparison_signs_as_tuple_in_int_column(
+    db,
+):
+    TestSupportForComparisonSignsController.post_many(
+        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}, {"int_value": 125}]
+    )
+    assert [
+        {
+            "int_value": 122,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "int_value": 123,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "int_value": 125,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+    ] == TestSupportForComparisonSignsController.get(
+        {
+            "int_value": [
+                (ComparisonSigns.GreaterOrEqual, 122),
+                (ComparisonSigns.Lower, 124),
+                125,
+            ]
+        }
+    )
+
+
 @pytest.fixture
 def app():
     import flask

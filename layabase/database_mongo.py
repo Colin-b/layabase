@@ -22,7 +22,7 @@ from layabase.database import ComparisonSigns
 logger = logging.getLogger(__name__)
 
 
-operators = {
+_operators = {
     ComparisonSigns.Greater: "$gt",
     ComparisonSigns.GreaterOrEqual: "$gte",
     ComparisonSigns.Lower: "$lt",
@@ -601,11 +601,20 @@ class Column:
                     or_filter = filters.setdefault("$or", [])
                     or_filter.append({self.name: {"$exists": False}})
                     or_filter.append({self.name: {"$in": mongo_values}})
-                elif all(isinstance(n, tuple) for n in value):
-                    all_filters = {}
-                    for a in mongo_values:
-                        all_filters.update(a)
-                    filters[self.name] = all_filters
+                elif any(isinstance(n, tuple) for n in value):
+                    # <class 'dict'>: {'first_key': {'$in': [1]}}
+                    mongo_filters = {}
+                    other_values = []
+                    for idx, val in enumerate(value):
+                        if isinstance(val, tuple):
+                            mongo_filters.update(mongo_values[idx])
+                        else:
+                            other_values.append(mongo_values[idx])
+
+                    or_filter = filters.setdefault("$or", [])
+                    or_filter.append({self.name: mongo_filters})
+                    if other_values:
+                        or_filter.append({self.name: {"$in": other_values}})
                 else:
                     filters[self.name] = {"$in": mongo_values}
         else:
@@ -808,7 +817,7 @@ class Column:
 
     @staticmethod
     def _deserialize_comparison_signs_if_exists(comparison_sign, value):
-        return {operators[comparison_sign]: value}
+        return {_operators[comparison_sign]: value}
 
     def serialize(self, document: dict):
         """
@@ -2589,6 +2598,13 @@ def _validate_float(value):
     return float(value)
 
 
+_validate_float.__schema__ = {
+    "collectionFormat": "multi",
+    "type": "array",
+    "items": {"type": "string"},
+}
+
+
 def _validate_int(value):
     if isinstance(value, str):
         value = ComparisonSigns.deserialize(value)
@@ -2596,6 +2612,13 @@ def _validate_int(value):
             return value[0], int(value[1])
 
     return int(value)
+
+
+_validate_int.__schema__ = {
+    "collectionFormat": "multi",
+    "type": "array",
+    "items": {"type": "string"},
+}
 
 
 def _validate_date_time(value):
@@ -2607,6 +2630,13 @@ def _validate_date_time(value):
     return iso8601.parse_date(value)
 
 
+_validate_date_time.__schema__ = {
+    "collectionFormat": "multi",
+    "type": "array",
+    "items": {"type": "string"},
+}
+
+
 def _validate_date(value):
     if isinstance(value, str):
         value = ComparisonSigns.deserialize(value)
@@ -2614,3 +2644,10 @@ def _validate_date(value):
             return value[0], iso8601.parse_date(value[1]).date()
 
     return iso8601.parse_date(value).date()
+
+
+_validate_date.__schema__ = {
+    "collectionFormat": "multi",
+    "type": "array",
+    "items": {"type": "string"},
+}
