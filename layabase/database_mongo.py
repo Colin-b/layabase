@@ -583,6 +583,10 @@ class Column:
 
         return {}
 
+    @staticmethod
+    def _deserialize_comparison_signs_if_exists(comparison_sign, value):
+        return {_operators[comparison_sign]: value}
+
     def deserialize_query(self, filters: dict):
         """
         Update this field value within provided filters to a value that can be queried in Mongo.
@@ -609,8 +613,8 @@ class Column:
                     mongo_filters = {}
                     other_values = []
                     for val in mongo_values:
-                        if isinstance(val, dict):
-                            mongo_filters.update(val)
+                        if isinstance(val, tuple):
+                            mongo_filters.update({_operators[val[0]]: val[1]})
                         else:
                             other_values.append(val)
 
@@ -629,7 +633,10 @@ class Column:
                 or_filter.append({self.name: {"$exists": False}})
                 or_filter.append({self.name: mongo_value})
             else:
-                filters[self.name] = mongo_value
+                if isinstance(mongo_value, tuple):
+                    filters[self.name] = {_operators[mongo_value[0]]: mongo_value[1]}
+                else:
+                    filters[self.name] = mongo_value
 
     def deserialize_insert(self, document: dict):
         """
@@ -691,16 +698,11 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
-
         if value is None:
             return None
 
         if isinstance(value, str):
             value = iso8601.parse_date(value)
-
-        if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -710,8 +712,6 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
-
         if value is None:
             return None
 
@@ -726,9 +726,6 @@ class Column:
                 value = datetime.datetime.combine(
                     value.date(), datetime.datetime.min.time()
                 )
-
-        if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -772,16 +769,11 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
-
         if value is None:
             return None
 
         if isinstance(value, str):
             value = int(value)
-
-        if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -792,16 +784,11 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        comparison_sign, value = value if isinstance(value, tuple) else (None, value)
-
         if value is None:
             return None
 
         if isinstance(value, str):
             value = float(value)
-
-        if comparison_sign:
-            value = self._deserialize_comparison_signs_if_exists(comparison_sign, value)
 
         return value
 
@@ -819,10 +806,6 @@ class Column:
             value = str(value)
 
         return value
-
-    @staticmethod
-    def _deserialize_comparison_signs_if_exists(comparison_sign, value):
-        return {_operators[comparison_sign]: value}
 
     def serialize(self, document: dict):
         """

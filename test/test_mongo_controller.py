@@ -3709,7 +3709,7 @@ def test_get_is_valid_with_date_and_less_than_sign_as_tuple_in_date_column(db):
             "datetime_value": None,
         },
     ] == TestSupportForComparisonSignsController.get(
-        {"date_value": (ComparisonSigns.Lower, datetime.date(2019, 1, 3))}
+        {"date_value": (ComparisonSigns.Lower, datetime.datetime(2019, 1, 3, 0, 0, 0))}
     )
 
 
@@ -3810,7 +3810,12 @@ def test_get_is_valid_with_date_and_greater_than_sign_as_tuple_in_date_column(db
             "datetime_value": None,
         },
     ] == TestSupportForComparisonSignsController.get(
-        {"date_value": (ComparisonSigns.Greater, datetime.date(2019, 1, 1))}
+        {
+            "date_value": (
+                ComparisonSigns.Greater,
+                datetime.datetime(2019, 1, 1, 0, 0, 0),
+            )
+        }
     )
 
 
@@ -3933,7 +3938,12 @@ def test_get_is_valid_with_date_and_less_than_or_equal_sign_as_tuple_in_date_col
             "datetime_value": None,
         },
     ] == TestSupportForComparisonSignsController.get(
-        {"date_value": (ComparisonSigns.LowerOrEqual, datetime.date(2019, 1, 3))}
+        {
+            "date_value": (
+                ComparisonSigns.LowerOrEqual,
+                datetime.datetime(2019, 1, 3, 0, 0, 0),
+            )
+        }
     )
 
 
@@ -4066,7 +4076,12 @@ def test_get_is_valid_with_date_and_greater_than_or_equal_sign_as_tuple_in_date_
             "datetime_value": None,
         },
     ] == TestSupportForComparisonSignsController.get(
-        {"date_value": (ComparisonSigns.GreaterOrEqual, datetime.date(2019, 1, 1))}
+        {
+            "date_value": (
+                ComparisonSigns.GreaterOrEqual,
+                datetime.datetime(2019, 1, 1, 0, 0, 0),
+            )
+        }
     )
 
 
@@ -4213,8 +4228,8 @@ def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_co
     ] == TestSupportForComparisonSignsController.get(
         {
             "date_value": [
-                (ComparisonSigns.Greater, datetime.date(2019, 1, 1)),
-                (ComparisonSigns.Lower, datetime.date(2019, 1, 3)),
+                (ComparisonSigns.Greater, datetime.datetime(2019, 1, 1, 0, 0, 0)),
+                (ComparisonSigns.Lower, datetime.datetime(2019, 1, 3, 0, 0, 0)),
             ]
         }
     )
