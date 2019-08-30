@@ -2637,7 +2637,7 @@ def _validate_date(value):
 
         # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
-            return value[0], iso8601.parse_date(value[1]).date()
+            return value[0], iso8601.parse_date(value[1])
 
     return iso8601.parse_date(value).date()
 
