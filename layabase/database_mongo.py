@@ -368,6 +368,7 @@ class Column:
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             value = value[1]
 
@@ -380,6 +381,7 @@ class Column:
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             value = value[1]
 
@@ -558,11 +560,13 @@ class Column:
         return self._validate_type(value)
 
     def _validate_query_int(self, value) -> dict:
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             value = value[1]
         return self._validate_int(value)
 
     def _validate_query_float(self, value) -> dict:
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             value = value[1]
         return self._validate_float(value)
@@ -2593,6 +2597,8 @@ def _get_python_type(field: Column) -> callable:
 def _validate_float(value):
     if isinstance(value, str):
         value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             return value[0], float(value[1])
 
@@ -2609,6 +2615,8 @@ _validate_float.__schema__ = {
 def _validate_int(value):
     if isinstance(value, str):
         value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             return value[0], int(value[1])
 
@@ -2625,6 +2633,8 @@ _validate_int.__schema__ = {
 def _validate_date_time(value):
     if isinstance(value, str):
         value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             return value[0], iso8601.parse_date(value[1])
 
@@ -2641,6 +2651,8 @@ _validate_date_time.__schema__ = {
 def _validate_date(value):
     if isinstance(value, str):
         value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
         if isinstance(value, tuple):
             return value[0], iso8601.parse_date(value[1]).date()
 
