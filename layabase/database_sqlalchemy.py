@@ -772,14 +772,29 @@ def _health_details(base) -> (str, dict):
             },
         )
     except Exception as e:
-        return (
-            "fail",
-            {
-                f"{base.metadata.bind.engine.name}:select": {
-                    "componentType": "datastore",
-                    "status": "fail",
-                    "time": datetime.datetime.utcnow().isoformat(),
-                    "output": str(e),
-                }
-            },
-        )
+        try:
+            result = base.metadata.bind.engine.execute("SELECT 1 FROM DUAL")
+            result.close()
+            return (
+                "pass",
+                {
+                    f"{base.metadata.bind.engine.name}:select": {
+                        "componentType": "datastore",
+                        "observedValue": "",
+                        "status": "pass",
+                        "time": datetime.datetime.utcnow().isoformat(),
+                    }
+                },
+            )
+        except Exception as f:
+            return (
+                "fail",
+                {
+                    f"{base.metadata.bind.engine.name}:select": {
+                        "componentType": "datastore",
+                        "status": "fail",
+                        "time": datetime.datetime.utcnow().isoformat(),
+                        "output": str(e) + ' / ' + str(f),
+                    }
+                },
+            )

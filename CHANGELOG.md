@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2019-09-09
+### Changed
+- Add support for Oracle database in _health_details by selecting FROM DUAL
+
 ## [1.1.0] - 2019-08-22
 ### Changed
 - Update CONTRIBUTING documentation to explain how to retrieve pre-commit via pip.
