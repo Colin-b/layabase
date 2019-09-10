@@ -6,9 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.0] - 2019-09-09
+## [1.1.1] - 2019-09-10
+### Fixed
+- Allow to check health on Oracle database.
+
 ### Changed
-- Add support for Oracle database in _health_details by selecting FROM DUAL
+- Update pytest to version 5.1.2
+- Update marshmallow to version 3.0.3
+- Update SQLAlchemy to version 1.3.8
+- Update marshmallow_sqlalchemy to version 0.19.0
 
 ## [1.1.0] - 2019-08-22
 ### Changed
@@ -23,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/GEM-Py/layabase/compare/v1.1.0...HEAD
-[1.1.0]:https://github.tools.digital.engie.com/GEM-Py/layabase/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.tools.digital.engie.com/GEM-Py/layabase/releases/tag/v1.0.0
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.1.1...HEAD
+[1.1.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.1.0...v1.1.1
+[1.1.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.tools.digital.engie.com/gempy/layabase/releases/tag/v1.0.0
