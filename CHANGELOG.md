@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update CONTRIBUTING documentation to explain how to retrieve pre-commit via pip.
 - Update layaberr to version 2.0.0
 - Update pytest to version 5.1.1
-- Update pymongo to version 3.9.0
+- Update [pymongo](https://api.mongodb.com/python/3.9.0/changelog.html) to version 3.9.0
 - Update [SQLAlchemy](https://docs.sqlalchemy.org/en/13/changelog/index.html) to version 1.3.7
 - Update [marshmallow](https://marshmallow.readthedocs.io/en/latest/changelog.html) to version 3.0.0
 
