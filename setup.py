@@ -20,9 +20,9 @@ extra_requirements = {
     ],
     # Used to Manage Non-Mongo Database
     "sqlalchemy": [
-        "marshmallow==3.0.0",
-        "SQLAlchemy==1.3.7",
-        "marshmallow_sqlalchemy==0.17.0",
+        "marshmallow==3.0.3",
+        "SQLAlchemy==1.3.8",
+        "marshmallow_sqlalchemy==0.19.0",
     ],
 }
 
@@ -36,7 +36,10 @@ extra_requirements["testing"] += [
 
 setup(
     name="layabase",
-    version=open("layabase/version.py").readlines()[-1].split()[-1].strip("\"'"),
+    version=open("layabase/version.py")
+    .readlines()[-1]
+    .split()[-1]
+    .strip("\"'"),
     description="Database for layab",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -48,8 +51,8 @@ setup(
     extras_require=extra_requirements,
     python_requires=">=3.6",
     project_urls={
-        "Changelog": "https://github.tools.digital.engie.com/GEM-Py/layabase/blob/development/CHANGELOG.md",
-        "Issues": "https://github.tools.digital.engie.com/GEM-Py/layabase/issues",
+        "Changelog": "https://github.tools.digital.engie.com/gempy/layabase/blob/development/CHANGELOG.md",
+        "Issues": "https://github.tools.digital.engie.com/gempy/layabase/issues",
     },
     license="MIT",
     classifiers=[

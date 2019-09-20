@@ -736,38 +736,32 @@ def _get_python_type(marshmallow_field):
 
 def _health_details(base) -> (str, dict):
     """
-    Return Health details for this SqlAlchemy database connection.
-    Some detail on the method used:
-    https://docs.sqlalchemy.org/en/latest/core/connections.html
-
-    shorthand way by using the execute() method of Engine itself:
-
-    result = engine.execute("select username from users")
-    for row in result:
-        print("username:", row['username'])
-    Where above, the execute() method acquires a new Connection on its own, executes the statement with that object, and returns the ResultProxy. In this case, the ResultProxy contains a special flag known as close_with_result, which indicates that when its underlying DBAPI cursor is closed, the Connection object itself is also closed, which again returns the DBAPI connection to the connection pool, releasing transactional resources.
-
-    If the ResultProxy potentially has rows remaining, it can be instructed to close out its resources explicitly:
-
-    result.close()
-    If the ResultProxy has pending rows remaining and is dereferenced by the application without being closed, Python garbage collection will ultimately close out the cursor as well as trigger a return of the pooled DBAPI connection resource to the pool (SQLAlchemy achieves this by the usage of weakref callbacks - never the __del__ method) - however it’s never a good idea to rely upon Python garbage collection to manage resources.
-
-    Our example above illustrated the execution of a textual SQL string. The execute() method can of course accommodate more than that, including the variety of SQL expression constructs described in SQL Expression Language Tutorial.
+    Return Health details for this SqlAlchemy database.
 
     :param base: database object as returned by the _load method (Mandatory).
     :return: A tuple with a string providing the status (pass, warn, fail), and the details.
     """
     try:
-        result = base.metadata.bind.engine.execute("SELECT 1")
-        result.close()
+        if base.metadata.bind.dialect.do_ping(base.metadata.bind.connect().connection):
+            return (
+                "pass",
+                {
+                    f"{base.metadata.bind.engine.name}:select": {
+                        "componentType": "datastore",
+                        "observedValue": "",
+                        "status": "pass",
+                        "time": datetime.datetime.utcnow().isoformat(),
+                    }
+                },
+            )
         return (
-            "pass",
+            "fail",
             {
                 f"{base.metadata.bind.engine.name}:select": {
                     "componentType": "datastore",
-                    "observedValue": "",
-                    "status": "pass",
+                    "status": "fail",
                     "time": datetime.datetime.utcnow().isoformat(),
+                    "output": "Unable to ping database.",
                 }
             },
         )
