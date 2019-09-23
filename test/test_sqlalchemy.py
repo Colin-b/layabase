@@ -5,18 +5,6 @@ from flask_restplus import inputs
 from layabase import database, database_sqlalchemy
 
 
-def test_rest_plus_type_for_none_field_cannot_be_guessed():
-    with pytest.raises(Exception) as exception_info:
-        database_sqlalchemy._get_rest_plus_type(None)
-    assert "Flask RestPlus field type cannot be guessed for None field." == str(
-        exception_info.value
-    )
-
-
-def test_rest_plus_example_for_none_field_is_sample_value():
-    assert "sample_value" == database_sqlalchemy._get_example(None)
-
-
 def test_none_connection_string_is_invalid():
     with pytest.raises(Exception) as exception_info:
         database.load(None, None)
@@ -157,11 +145,3 @@ def test_python_type_for_sqlalchemy_datetime_field_is_datetime(db):
 def test_python_type_for_sqlalchemy_float_field_is_float(db):
     field = SaveModel._model.schema().fields["float_column"]
     assert float == database_sqlalchemy._get_python_type(field)
-
-
-def test_python_type_for_sqlalchemy_none_field_cannot_be_guessed():
-    with pytest.raises(Exception) as exception_info:
-        database_sqlalchemy._get_python_type(None)
-    assert "Python field type cannot be guessed for None field." == str(
-        exception_info.value
-    )

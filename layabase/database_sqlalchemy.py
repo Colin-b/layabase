@@ -621,8 +621,8 @@ def _get_view_names(engine, schema) -> list:
 def _get_rest_plus_type(marshmallow_field):
     """
     Return the Flask RestPlus field type (as a class) corresponding to this SQL Alchemy Marshmallow field.
-
-    :raises Exception if field type is not managed yet.
+    Default to String field.
+    TODO Faster to use a dict from type to field ?
     """
     if isinstance(marshmallow_field, marshmallow_fields.String):
         return flask_restplus_fields.String
@@ -642,13 +642,9 @@ def _get_rest_plus_type(marshmallow_field):
         return flask_restplus_fields.DateTime
     if isinstance(marshmallow_field, marshmallow_fields.Time):
         return flask_restplus_fields.DateTime
-    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
-    if isinstance(marshmallow_field, marshmallow_fields.Field):
-        return flask_restplus_fields.String
 
-    raise Exception(
-        f"Flask RestPlus field type cannot be guessed for {marshmallow_field} field."
-    )
+    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
+    return flask_restplus_fields.String
 
 
 def _get_example(marshmallow_field) -> str:
@@ -709,7 +705,7 @@ def _get_python_type(marshmallow_field):
     """
     Return the Python type corresponding to this SQL Alchemy Marshmallow field.
 
-    :raises Exception if field type is not managed yet.
+    Default to str,
     """
     if isinstance(marshmallow_field, marshmallow_fields.String):
         return str
@@ -725,13 +721,9 @@ def _get_python_type(marshmallow_field):
         return inputs.datetime_from_iso8601
     if isinstance(marshmallow_field, marshmallow_fields.List):
         return list
-    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
-    if isinstance(marshmallow_field, marshmallow_fields.Field):
-        return str
 
-    raise Exception(
-        f"Python field type cannot be guessed for {marshmallow_field} field."
-    )
+    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
+    return str
 
 
 def _health_details(base) -> (str, dict):
