@@ -1,30 +1,8 @@
 import pytest
 import sqlalchemy
-from flask_restplus import fields as flask_rest_plus_fields, inputs
-from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
+from flask_restplus import inputs
 
 from layabase import database, database_sqlalchemy
-
-
-def test_rest_plus_type_for_decimal_field_is_fixed():
-    field = marshmallow_fields.Decimal()
-    assert flask_rest_plus_fields.Fixed == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
-def test_rest_plus_type_for_number_field_is_decimal():
-    field = marshmallow_fields.Number()
-    assert flask_rest_plus_fields.Decimal == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
-def test_rest_plus_type_for_field_field_is_string():
-    field = marshmallow_fields.Field()
-    assert flask_rest_plus_fields.String == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
 
 
 def test_rest_plus_type_for_none_field_cannot_be_guessed():
@@ -33,16 +11,6 @@ def test_rest_plus_type_for_none_field_cannot_be_guessed():
     assert "Flask RestPlus field type cannot be guessed for None field." == str(
         exception_info.value
     )
-
-
-def test_rest_plus_example_for_decimal_field_is_decimal():
-    field = marshmallow_fields.Decimal()
-    assert "0.0" == database_sqlalchemy._get_example(field)
-
-
-def test_rest_plus_example_for_number_field_is_decimal():
-    field = marshmallow_fields.Number()
-    assert "0.0" == database_sqlalchemy._get_example(field)
 
 
 def test_rest_plus_example_for_none_field_is_sample_value():
