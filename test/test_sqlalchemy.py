@@ -1,28 +1,6 @@
-import pytest
 import sqlalchemy
-from flask_restplus import inputs
 
 from layabase import database, database_sqlalchemy
-
-
-def test_none_connection_string_is_invalid():
-    with pytest.raises(Exception) as exception_info:
-        database.load(None, None)
-    assert "A database connection URL must be provided." == str(exception_info.value)
-
-
-def test_empty_connection_string_is_invalid():
-    with pytest.raises(Exception) as exception_info:
-        database.load("", None)
-    assert "A database connection URL must be provided." == str(exception_info.value)
-
-
-def test_no_create_models_function_is_invalid():
-    with pytest.raises(Exception) as exception_info:
-        database.load("sqlite:///:memory:", None)
-    assert "A method allowing to create related models must be provided." == str(
-        exception_info.value
-    )
 
 
 def test_models_are_added_to_metadata():
@@ -89,59 +67,3 @@ def test_real_database_is_not_considered_as_in_memory():
     assert not database_sqlalchemy._in_memory(
         "sybase+pyodbc:///?odbc_connect=TEST%3DVALUE%3BTEST2%3DVALUE2"
     )
-
-
-class SaveModel:
-    pass
-
-
-def _create_models(base):
-    class TestModel(database_sqlalchemy.CRUDModel, base):
-        __tablename__ = "sample_table_name"
-
-        string_column = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        integer_column = sqlalchemy.Column(sqlalchemy.Integer)
-        boolean_column = sqlalchemy.Column(sqlalchemy.Boolean)
-        date_column = sqlalchemy.Column(sqlalchemy.Date)
-        datetime_column = sqlalchemy.Column(sqlalchemy.DateTime)
-        float_column = sqlalchemy.Column(sqlalchemy.Float)
-
-    SaveModel._model = TestModel
-    return [TestModel]
-
-
-@pytest.fixture
-def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
-    yield _db
-    database.reset(_db)
-
-
-def test_python_type_for_sqlalchemy_string_field_is_string(db):
-    field = SaveModel._model.schema().fields["string_column"]
-    assert str == database_sqlalchemy._get_python_type(field)
-
-
-def test_python_type_for_sqlalchemy_integer_field_is_integer(db):
-    field = SaveModel._model.schema().fields["integer_column"]
-    assert int == database_sqlalchemy._get_python_type(field)
-
-
-def test_python_type_for_sqlalchemy_boolean_field_is_boolean(db):
-    field = SaveModel._model.schema().fields["boolean_column"]
-    assert inputs.boolean == database_sqlalchemy._get_python_type(field)
-
-
-def test_python_type_for_sqlalchemy_date_field_is_date(db):
-    field = SaveModel._model.schema().fields["date_column"]
-    assert inputs.date_from_iso8601 == database_sqlalchemy._get_python_type(field)
-
-
-def test_python_type_for_sqlalchemy_datetime_field_is_datetime(db):
-    field = SaveModel._model.schema().fields["datetime_column"]
-    assert inputs.datetime_from_iso8601 == database_sqlalchemy._get_python_type(field)
-
-
-def test_python_type_for_sqlalchemy_float_field_is_float(db):
-    field = SaveModel._model.schema().fields["float_column"]
-    assert float == database_sqlalchemy._get_python_type(field)
