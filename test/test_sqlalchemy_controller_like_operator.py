@@ -1,8 +1,9 @@
 import pytest
 import sqlalchemy
+import flask
+import flask_restplus
 
 from layabase import database, database_sqlalchemy
-from test.flask_restplus_mock import TestAPI
 
 
 class TestLikeOperatorController(database.CRUDController):
@@ -24,9 +25,20 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
-    TestLikeOperatorController.namespace(TestAPI)
     yield _db
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestLikeOperatorController.namespace(namespace)
+
+    return application
 
 
 def test_get_like_operator_double_star(db):

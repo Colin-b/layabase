@@ -2,14 +2,11 @@ import re
 
 import pytest
 import sqlalchemy
-from flask_restplus import inputs
+import flask
+import flask_restplus
+from layaberr import ValidationFailed
 
 from layabase import database, database_sqlalchemy
-from test.flask_restplus_mock import TestAPI
-
-
-def parser_types(flask_parser) -> dict:
-    return {arg.name: arg.type for arg in flask_parser.args}
 
 
 class TestController(database.CRUDController):
@@ -47,10 +44,66 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
-    TestController.namespace(TestAPI)
-    Test2Controller.namespace(TestAPI)
     yield _db
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestController.namespace(namespace)
+    Test2Controller.namespace(namespace)
+
+    @namespace.route("/test")
+    class TestResource(flask_restplus.Resource):
+        @namespace.expect(TestController.query_get_parser)
+        @namespace.marshal_with(TestController.get_response_model)
+        def get(self):
+            return []
+
+        @namespace.expect(TestController.json_post_model)
+        def post(self):
+            return []
+
+        @namespace.expect(TestController.json_put_model)
+        def put(self):
+            return []
+
+        @namespace.expect(TestController.query_delete_parser)
+        def delete(self):
+            return []
+
+    @namespace.route("/test/description")
+    class TestDescriptionResource(flask_restplus.Resource):
+        @namespace.marshal_with(TestController.get_model_description_response_model)
+        def get(self):
+            return {}
+
+    @namespace.route("/test/audit")
+    class TestAuditResource(flask_restplus.Resource):
+        @namespace.expect(TestController.query_get_audit_parser)
+        @namespace.marshal_with(TestController.get_audit_response_model)
+        def get(self):
+            return []
+
+    @namespace.route("/test_parsers")
+    class TestParsersResource(flask_restplus.Resource):
+        def get(self):
+            return TestController.query_get_parser.parse_args()
+
+        def delete(self):
+            return TestController.query_delete_parser.parse_args()
+
+    @namespace.route("/test_audit_parser")
+    class TestAuditParserResource(flask_restplus.Resource):
+        def get(self):
+            return TestController.query_get_audit_parser.parse_args()
+
+    return application
 
 
 def test_get_all_without_data_returns_empty_list(db):
@@ -58,44 +111,320 @@ def test_get_all_without_data_returns_empty_list(db):
     _check_audit(TestController, [])
 
 
-def test_get_parser_fields_order(db):
-    assert ["key", "mandatory", "optional", "limit", "order_by", "offset"] == [
-        arg.name for arg in TestController.query_get_parser.args
-    ]
-
-
-def test_delete_parser_fields_order(db):
-    assert ["key", "mandatory", "optional"] == [
-        arg.name for arg in TestController.query_delete_parser.args
-    ]
-
-
-def test_post_model_fields_order(db):
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.json_post_model.fields_flask_type
-
-
-def test_put_model_fields_order(db):
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.json_put_model.fields_flask_type
-
-
-def test_get_response_model_fields_order(db):
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.get_response_model.fields_flask_type
+def test_open_api_definition(client):
+    response = client.get("/swagger.json")
+    assert response.json == {
+        "swagger": "2.0",
+        "basePath": "/",
+        "paths": {
+            "/test": {
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestModel"},
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/TestModel"},
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "order_by",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestModel"},
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+            },
+            "/test/audit": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/AuditTestModel"},
+                        }
+                    },
+                    "operationId": "get_test_audit_resource",
+                    "parameters": [
+                        {
+                            "name": "revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_user",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_date_utc",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_action",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "order_by",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
+                    "tags": ["Test"],
+                }
+            },
+            "/test/description": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/TestModelDescription"},
+                        }
+                    },
+                    "operationId": "get_test_description_resource",
+                    "parameters": [
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        }
+                    ],
+                    "tags": ["Test"],
+                }
+            },
+            "/test_audit_parser": {
+                "get": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "get_test_audit_parser_resource",
+                    "tags": ["Test"],
+                }
+            },
+            "/test_parsers": {
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "get_test_parsers_resource",
+                    "tags": ["Test"],
+                },
+            },
+        },
+        "info": {"title": "API", "version": "1.0"},
+        "produces": ["application/json"],
+        "consumes": ["application/json"],
+        "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": "0"},
+                    "optional": {"type": "string", "example": "sample_value"},
+                },
+                "type": "object",
+            },
+            "TestModelDescription": {
+                "required": ["key", "mandatory", "table"],
+                "properties": {
+                    "table": {
+                        "type": "string",
+                        "description": "Table name",
+                        "example": "table",
+                    },
+                    "key": {"type": "string", "example": "column"},
+                    "mandatory": {"type": "string", "example": "column"},
+                    "optional": {"type": "string", "example": "column"},
+                },
+                "type": "object",
+            },
+            "AuditTestModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "revision": {"type": "integer", "readOnly": True, "example": "0"},
+                    "audit_user": {"type": "string", "example": "sample_value"},
+                    "audit_date_utc": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "audit_action": {
+                        "type": "string",
+                        "example": "I",
+                        "enum": ["I", "U", "D"],
+                    },
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": "0"},
+                    "optional": {"type": "string", "example": "sample_value"},
+                },
+                "type": "object",
+            },
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
+    }
+    _check_audit(TestController, [])
 
 
 def test_post_with_nothing_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post(None)
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert {} == exception_info.value.received_data
@@ -103,7 +432,7 @@ def test_post_with_nothing_is_invalid(db):
 
 
 def test_post_many_with_nothing_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many(None)
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert {} == exception_info.value.received_data
@@ -111,7 +440,7 @@ def test_post_many_with_nothing_is_invalid(db):
 
 
 def test_post_with_empty_dict_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({})
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert {} == exception_info.value.received_data
@@ -119,7 +448,7 @@ def test_post_with_empty_dict_is_invalid(db):
 
 
 def test_post_many_with_empty_list_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([])
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert {} == exception_info.value.received_data
@@ -127,7 +456,7 @@ def test_post_many_with_empty_list_is_invalid(db):
 
 
 def test_put_with_nothing_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.put(None)
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert {} == exception_info.value.received_data
@@ -135,7 +464,7 @@ def test_put_with_nothing_is_invalid(db):
 
 
 def test_put_with_empty_dict_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({})
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert {} == exception_info.value.received_data
@@ -148,7 +477,7 @@ def test_delete_without_nothing_do_not_fail(db):
 
 
 def test_post_without_mandatory_field_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": "my_key"})
     assert {
         "mandatory": ["Missing data for required field."]
@@ -158,7 +487,7 @@ def test_post_without_mandatory_field_is_invalid(db):
 
 
 def test_post_many_without_mandatory_field_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": "my_key"}])
     assert {
         0: {"mandatory": ["Missing data for required field."]}
@@ -168,7 +497,7 @@ def test_post_many_without_mandatory_field_is_invalid(db):
 
 
 def test_post_without_key_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"mandatory": 1})
     assert {"key": ["Missing data for required field."]} == exception_info.value.errors
     assert {"mandatory": 1} == exception_info.value.received_data
@@ -176,7 +505,7 @@ def test_post_without_key_is_invalid(db):
 
 
 def test_post_many_without_key_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"mandatory": 1}])
     assert {
         0: {"key": ["Missing data for required field."]}
@@ -186,7 +515,7 @@ def test_post_many_without_key_is_invalid(db):
 
 
 def test_post_with_wrong_type_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": 256, "mandatory": 1})
     assert {"key": ["Not a valid string."]} == exception_info.value.errors
     assert {"key": 256, "mandatory": 1} == exception_info.value.received_data
@@ -194,7 +523,7 @@ def test_post_with_wrong_type_is_invalid(db):
 
 
 def test_post_many_with_wrong_type_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": 256, "mandatory": 1}])
     assert {0: {"key": ["Not a valid string."]}} == exception_info.value.errors
     assert [{"key": 256, "mandatory": 1}] == exception_info.value.received_data
@@ -203,7 +532,7 @@ def test_post_many_with_wrong_type_is_invalid(db):
 
 def test_put_with_wrong_type_is_invalid(db):
     TestController.post({"key": "value1", "mandatory": 1})
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({"key": "value1", "mandatory": "invalid_value"})
     assert {"mandatory": ["Not a valid integer."]} == exception_info.value.errors
     assert {
@@ -757,60 +1086,38 @@ def test_delete_without_filter_is_removing_everything(db):
     )
 
 
-def test_query_get_parser(db):
-    assert {
-        "key": str,
-        "mandatory": int,
-        "optional": str,
-        "limit": inputs.positive,
-        "order_by": str,
-        "offset": inputs.natural,
-    } == parser_types(TestController.query_get_parser)
-    _check_audit(TestController, [])
-
-
-def test_query_get_audit_parser(db):
-    assert {
-        "audit_action": str,
-        "audit_date_utc": inputs.datetime_from_iso8601,
-        "audit_user": str,
-        "key": str,
-        "mandatory": int,
-        "optional": str,
-        "limit": inputs.positive,
-        "order_by": str,
-        "offset": inputs.natural,
-        "revision": int,
-    } == parser_types(TestController.query_get_audit_parser)
-    _check_audit(TestController, [])
-
-
-def test_query_delete_parser(db):
-    assert {"key": str, "mandatory": int, "optional": str} == parser_types(
-        TestController.query_delete_parser
+def test_query_get_parser(client):
+    response = client.get(
+        "/test_parsers?key=12&mandatory=123&optional=1234&limit=1&order_by=key&offset=0"
     )
-    _check_audit(TestController, [])
+    assert response.json == {
+        "key": ["12"],
+        "mandatory": [123],
+        "optional": ["1234"],
+        "limit": 1,
+        "order_by": ["key"],
+        "offset": 0,
+    }
 
 
-def test_get_response_model(db):
-    assert "TestModel" == TestController.get_response_model.name
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.get_response_model.fields_flask_type
-    _check_audit(TestController, [])
+def test_query_get_audit_parser(client):
+    response = client.get(
+        "/test_audit_parser?key=12&mandatory=123&optional=1234&limit=1&order_by=key&offset=0&audit_action=I&audit_user=test&revision=1"
+    )
+    assert response.json == {
+        "key": ["12"],
+        "mandatory": [123],
+        "optional": ["1234"],
+        "limit": 1,
+        "order_by": ["key"],
+        "offset": 0,
+        "audit_action": ["I"],
+        "audit_date_utc": None,
+        "audit_user": ["test"],
+        "revision": [1],
+    }
 
 
-def test_get_audit_response_model(db):
-    assert "AuditTestModel" == TestController.get_audit_response_model.name
-    assert {
-        "audit_action": "String",
-        "audit_date_utc": "DateTime",
-        "audit_user": "String",
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-        "revision": "Integer",
-    } == TestController.get_audit_response_model.fields_flask_type
-    _check_audit(TestController, [])
+def test_query_delete_parser(client):
+    response = client.delete("/test_parsers?key=12&mandatory=123&optional=1234")
+    assert response.json == {"key": ["12"], "mandatory": [123], "optional": ["1234"]}

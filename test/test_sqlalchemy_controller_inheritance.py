@@ -1,8 +1,9 @@
 import pytest
 import sqlalchemy
+import flask
+import flask_restplus
 
 from layabase import database, database_sqlalchemy
-from test.flask_restplus_mock import TestAPI
 
 
 class TestInheritanceController(database.CRUDController):
@@ -30,9 +31,20 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
-    TestInheritanceController.namespace(TestAPI)
     yield _db
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestInheritanceController.namespace(namespace)
+
+    return application
 
 
 def test_inheritance_does_not_throw_errors(db):
