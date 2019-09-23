@@ -6,39 +6,6 @@ from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from layabase import database, database_sqlalchemy
 
 
-def test_rest_plus_type_for_string_field_is_string():
-    field = marshmallow_fields.String()
-    assert flask_rest_plus_fields.String == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
-def test_rest_plus_type_for_int_field_is_integer():
-    field = marshmallow_fields.Integer()
-    assert flask_rest_plus_fields.Integer == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
-def test_rest_plus_type_for_bool_field_is_boolean():
-    field = marshmallow_fields.Boolean()
-    assert flask_rest_plus_fields.Boolean == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
-def test_rest_plus_type_for_date_field_is_date():
-    field = marshmallow_fields.Date()
-    assert flask_rest_plus_fields.Date == database_sqlalchemy._get_rest_plus_type(field)
-
-
-def test_rest_plus_type_for_datetime_field_is_datetime():
-    field = marshmallow_fields.DateTime()
-    assert flask_rest_plus_fields.DateTime == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
 def test_rest_plus_type_for_decimal_field_is_fixed():
     field = marshmallow_fields.Decimal()
     assert flask_rest_plus_fields.Fixed == database_sqlalchemy._get_rest_plus_type(
@@ -46,23 +13,9 @@ def test_rest_plus_type_for_decimal_field_is_fixed():
     )
 
 
-def test_rest_plus_type_for_float_field_is_float():
-    field = marshmallow_fields.Float()
-    assert flask_rest_plus_fields.Float == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
 def test_rest_plus_type_for_number_field_is_decimal():
     field = marshmallow_fields.Number()
     assert flask_rest_plus_fields.Decimal == database_sqlalchemy._get_rest_plus_type(
-        field
-    )
-
-
-def test_rest_plus_type_for_time_field_is_datetime():
-    field = marshmallow_fields.Time()
-    assert flask_rest_plus_fields.DateTime == database_sqlalchemy._get_rest_plus_type(
         field
     )
 
@@ -82,49 +35,14 @@ def test_rest_plus_type_for_none_field_cannot_be_guessed():
     )
 
 
-def test_rest_plus_example_for_string_field():
-    field = marshmallow_fields.String()
-    assert "sample_value" == database_sqlalchemy._get_example(field)
-
-
-def test_rest_plus_example_for_int_field_is_integer():
-    field = marshmallow_fields.Integer()
-    assert "0" == database_sqlalchemy._get_example(field)
-
-
-def test_rest_plus_example_for_bool_field_is_true():
-    field = marshmallow_fields.Boolean()
-    assert "true" == database_sqlalchemy._get_example(field)
-
-
-def test_rest_plus_example_for_date_field_is_iso8601():
-    field = marshmallow_fields.Date()
-    assert "2017-09-24" == database_sqlalchemy._get_example(field)
-
-
-def test_rest_plus_example_for_datetime_field_is_iso8601():
-    field = marshmallow_fields.DateTime()
-    assert "2017-09-24T15:36:09" == database_sqlalchemy._get_example(field)
-
-
 def test_rest_plus_example_for_decimal_field_is_decimal():
     field = marshmallow_fields.Decimal()
-    assert "0.0" == database_sqlalchemy._get_example(field)
-
-
-def test_rest_plus_example_for_float_field_is_float():
-    field = marshmallow_fields.Float()
     assert "0.0" == database_sqlalchemy._get_example(field)
 
 
 def test_rest_plus_example_for_number_field_is_decimal():
     field = marshmallow_fields.Number()
     assert "0.0" == database_sqlalchemy._get_example(field)
-
-
-def test_rest_plus_example_for_time_field_is_iso8601():
-    field = marshmallow_fields.Time()
-    assert "15:36:09" == database_sqlalchemy._get_example(field)
 
 
 def test_rest_plus_example_for_none_field_is_sample_value():
@@ -241,18 +159,6 @@ def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
     database.reset(_db)
-
-
-def test_field_declaration_order_is_kept_in_schema(db):
-    fields = SaveModel._model.schema().fields
-    assert [
-        "string_column",
-        "integer_column",
-        "boolean_column",
-        "date_column",
-        "datetime_column",
-        "float_column",
-    ] == [field_name for field_name in fields]
 
 
 def test_python_type_for_sqlalchemy_string_field_is_string(db):

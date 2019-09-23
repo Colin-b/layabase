@@ -1,5 +1,3 @@
-import datetime
-
 import flask
 import flask_restplus
 import pytest
@@ -8,20 +6,19 @@ import sqlalchemy
 from layabase import database, database_sqlalchemy
 
 
-class TestDateController(database.CRUDController):
+class TestBooleanController(database.CRUDController):
     pass
 
 
 def _create_models(base):
-    class TestDateModel(database_sqlalchemy.CRUDModel, base):
-        __tablename__ = "date_table_name"
+    class TestBooleanModel(database_sqlalchemy.CRUDModel, base):
+        __tablename__ = "bool_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        date_str = sqlalchemy.Column(sqlalchemy.Date)
-        datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
+        bool_field = sqlalchemy.Column(sqlalchemy.Boolean)
 
-    TestDateController.model(TestDateModel)
-    return [TestDateModel]
+    TestBooleanController.model(TestBooleanModel)
+    return [TestBooleanModel]
 
 
 @pytest.fixture
@@ -38,24 +35,24 @@ def app(db):
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestDateController.namespace(namespace)
+    TestBooleanController.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestDateController.query_get_parser)
-        @namespace.marshal_with(TestDateController.get_response_model)
+        @namespace.expect(TestBooleanController.query_get_parser)
+        @namespace.marshal_with(TestBooleanController.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestDateController.json_post_model)
+        @namespace.expect(TestBooleanController.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestDateController.json_put_model)
+        @namespace.expect(TestBooleanController.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestDateController.query_delete_parser)
+        @namespace.expect(TestBooleanController.query_delete_parser)
         def delete(self):
             return []
 
@@ -68,18 +65,9 @@ def test_open_api_definition(client):
         "basePath": "/",
         "consumes": ["application/json"],
         "definitions": {
-            "TestDateModel": {
+            "TestBooleanModel": {
                 "properties": {
-                    "date_str": {
-                        "example": "2017-09-24",
-                        "format": "date",
-                        "type": "string",
-                    },
-                    "datetime_str": {
-                        "example": "2017-09-24T15:36:09",
-                        "format": "date-time",
-                        "type": "string",
-                    },
+                    "bool_field": {"example": "true", "type": "boolean"},
                     "key": {"example": "sample_value", "type": "string"},
                 },
                 "required": ["key"],
@@ -101,18 +89,9 @@ def test_open_api_definition(client):
                         },
                         {
                             "collectionFormat": "multi",
-                            "format": "date",
                             "in": "query",
-                            "items": {"type": "string"},
-                            "name": "date_str",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "format": "date-time",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "datetime_str",
+                            "items": {"type": "boolean"},
+                            "name": "bool_field",
                             "type": "array",
                         },
                     ],
@@ -131,18 +110,9 @@ def test_open_api_definition(client):
                         },
                         {
                             "collectionFormat": "multi",
-                            "format": "date",
                             "in": "query",
-                            "items": {"type": "string"},
-                            "name": "date_str",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "format": "date-time",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "datetime_str",
+                            "items": {"type": "boolean"},
+                            "name": "bool_field",
                             "type": "array",
                         },
                         {
@@ -176,7 +146,7 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                            "schema": {"$ref": "#/definitions/TestBooleanModel"},
                         }
                     },
                     "tags": ["Test"],
@@ -188,7 +158,7 @@ def test_open_api_definition(client):
                             "in": "body",
                             "name": "payload",
                             "required": True,
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                            "schema": {"$ref": "#/definitions/TestBooleanModel"},
                         }
                     ],
                     "responses": {"200": {"description": "Success"}},
@@ -201,7 +171,7 @@ def test_open_api_definition(client):
                             "in": "body",
                             "name": "payload",
                             "required": True,
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                            "schema": {"$ref": "#/definitions/TestBooleanModel"},
                         }
                     ],
                     "responses": {"200": {"description": "Success"}},
@@ -217,98 +187,3 @@ def test_open_api_definition(client):
         "swagger": "2.0",
         "tags": [{"name": "Test"}],
     }
-
-
-def test_put_is_updating_date(db):
-    TestDateController.post(
-        {
-            "key": "my_key1",
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-        }
-    )
-    assert (
-        {
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-            "key": "my_key1",
-        },
-        {
-            "date_str": "2018-06-01",
-            "datetime_str": "1989-12-31T01:00:00",
-            "key": "my_key1",
-        },
-    ) == TestDateController.put(
-        {
-            "key": "my_key1",
-            "date_str": "2018-06-01",
-            "datetime_str": "1989-12-31T01:00:00",
-        }
-    )
-    assert [
-        {
-            "date_str": "2018-06-01",
-            "datetime_str": "1989-12-31T01:00:00",
-            "key": "my_key1",
-        }
-    ] == TestDateController.get({"date_str": "2018-06-01"})
-
-
-def test_get_date_is_handled_for_valid_date(db):
-    TestDateController.post(
-        {
-            "key": "my_key1",
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-        }
-    )
-    assert [
-        {
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-            "key": "my_key1",
-        }
-    ] == TestDateController.get({"date_str": datetime.date(2017, 5, 15)})
-
-
-def test_get_date_is_handled_for_unused_date(db):
-    TestDateController.post(
-        {
-            "key": "my_key1",
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-        }
-    )
-    d = datetime.datetime.strptime("2016-09-23", "%Y-%m-%d").date()
-    assert [] == TestDateController.get({"date_str": d})
-
-
-def test_get_date_is_handled_for_valid_datetime(db):
-    TestDateController.post(
-        {
-            "key": "my_key1",
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-        }
-    )
-    assert [
-        {
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-            "key": "my_key1",
-        }
-    ] == TestDateController.get(
-        {"datetime_str": datetime.datetime(2016, 9, 23, 23, 59, 59)}
-    )
-
-
-def test_get_date_is_handled_for_unused_datetime(db):
-    TestDateController.post(
-        {
-            "key": "my_key1",
-            "date_str": "2017-05-15",
-            "datetime_str": "2016-09-23T23:59:59",
-        }
-    )
-    dt = datetime.datetime.strptime("2016-09-24T23:59:59", "%Y-%m-%dT%H:%M:%S")
-    assert [] == TestDateController.get({"datetime_str": dt})
