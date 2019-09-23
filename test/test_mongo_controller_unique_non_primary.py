@@ -1,16 +1,9 @@
-import datetime
 import enum
-import json
-import re
-from threading import Thread
 
 import pytest
-from flask_restplus import inputs
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo, versioning_mongo
-from layabase.database_mongo import _validate_int
-from test.flask_restplus_mock import TestAPI
 
 
 class EnumTest(enum.Enum):
@@ -73,12 +66,7 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestVersionedController.namespace(TestAPI)
-    TestVersionedUniqueNonPrimaryController.namespace(TestAPI)
-    TestUniqueNonPrimaryController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
 
 

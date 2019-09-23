@@ -1,10 +1,11 @@
 import enum
 
+import flask
+import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo
-from test.flask_restplus_mock import TestAPI
 
 
 class EnumTest(enum.Enum):
@@ -36,11 +37,39 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestAutoIncrementController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestAutoIncrementController.namespace(namespace)
+
+    @namespace.route("/test")
+    class TestResource(flask_restplus.Resource):
+        @namespace.expect(TestAutoIncrementController.query_get_parser)
+        @namespace.marshal_with(TestAutoIncrementController.get_response_model)
+        def get(self):
+            return []
+
+        @namespace.expect(TestAutoIncrementController.json_post_model)
+        def post(self):
+            return []
+
+        @namespace.expect(TestAutoIncrementController.json_put_model)
+        def put(self):
+            return []
+
+        @namespace.expect(TestAutoIncrementController.query_delete_parser)
+        def delete(self):
+            return []
+
+    return application
 
 
 class DateTimeModuleMock:
@@ -57,7 +86,7 @@ class DateTimeModuleMock:
     datetime = DateTimeMock
 
 
-def test_post_with_specified_incremented_field_is_ignored_and_valid(db):
+def test_post_with_specified_incremented_field_is_ignored_and_valid(client):
     assert {
         "optional_with_default": "Test value",
         "key": 1,
@@ -65,7 +94,7 @@ def test_post_with_specified_incremented_field_is_ignored_and_valid(db):
     } == TestAutoIncrementController.post({"key": "my_key", "enum_field": "Value1"})
 
 
-def test_post_with_enum_is_valid(db):
+def test_post_with_enum_is_valid(client):
     assert {
         "optional_with_default": "Test value",
         "key": 1,
@@ -75,7 +104,7 @@ def test_post_with_enum_is_valid(db):
     )
 
 
-def test_post_with_invalid_enum_choice_is_invalid(db):
+def test_post_with_invalid_enum_choice_is_invalid(client):
     with pytest.raises(ValidationFailed) as exception_info:
         TestAutoIncrementController.post(
             {"key": "my_key", "enum_field": "InvalidValue"}
@@ -86,7 +115,7 @@ def test_post_with_invalid_enum_choice_is_invalid(db):
     assert {"enum_field": "InvalidValue"} == exception_info.value.received_data
 
 
-def test_post_many_with_specified_incremented_field_is_ignored_and_valid(db):
+def test_post_many_with_specified_incremented_field_is_ignored_and_valid(client):
     assert [
         {"optional_with_default": "Test value", "enum_field": "Value1", "key": 1},
         {"optional_with_default": "Test value", "enum_field": "Value2", "key": 2},
@@ -98,45 +127,149 @@ def test_post_many_with_specified_incremented_field_is_ignored_and_valid(db):
     )
 
 
-def test_json_post_model_with_auto_increment_and_enum(db):
-    assert "TestAutoIncrementModel" == TestAutoIncrementController.json_post_model.name
-    assert {
-        "enum_field": "String",
-        "key": "Integer",
-        "optional_with_default": "String",
-    } == TestAutoIncrementController.json_post_model.fields_flask_type
-    assert {
-        "enum_field": None,
-        "key": None,
-        "optional_with_default": "Test value",
-    } == TestAutoIncrementController.json_post_model.fields_default
-
-
-def test_json_put_model_with_auto_increment_and_enum(db):
-    assert "TestAutoIncrementModel" == TestAutoIncrementController.json_put_model.name
-    assert {
-        "enum_field": "String",
-        "key": "Integer",
-        "optional_with_default": "String",
-    } == TestAutoIncrementController.json_put_model.fields_flask_type
-
-
-def test_get_response_model_with_enum(db):
-    assert (
-        "TestAutoIncrementModel" == TestAutoIncrementController.get_response_model.name
-    )
-    assert {
-        "enum_field": "String",
-        "key": "Integer",
-        "optional_with_default": "String",
-    } == TestAutoIncrementController.get_response_model.fields_flask_type
-    assert {
-        "enum_field": "Test Documentation",
-        "key": None,
-        "optional_with_default": None,
-    } == TestAutoIncrementController.get_response_model.fields_description
-    assert {
-        "enum_field": ["Value1", "Value2"],
-        "key": None,
-        "optional_with_default": None,
-    } == TestAutoIncrementController.get_response_model.fields_enum
+def test_open_api_definition(client):
+    response = client.get("/swagger.json")
+    assert response.json == {
+        "basePath": "/",
+        "consumes": ["application/json"],
+        "definitions": {
+            "TestAutoIncrementModel": {
+                "properties": {
+                    "enum_field": {
+                        "description": "Test " "Documentation",
+                        "enum": ["Value1", "Value2"],
+                        "example": "Value1",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "key": {"example": 1, "readOnly": True, "type": "integer"},
+                    "optional_with_default": {
+                        "default": "Test " "value",
+                        "example": "Test " "value",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                },
+                "type": "object",
+            }
+        },
+        "info": {"title": "API", "version": "1.0"},
+        "paths": {
+            "/test": {
+                "delete": {
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "enum_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "optional_with_default",
+                            "type": "array",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "enum_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "optional_with_default",
+                            "type": "array",
+                        },
+                        {
+                            "exclusiveMinimum": True,
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "limit",
+                            "type": "integer",
+                        },
+                        {
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "offset",
+                            "type": "integer",
+                        },
+                        {
+                            "description": "An optional " "fields mask",
+                            "format": "mask",
+                            "in": "header",
+                            "name": "X-Fields",
+                            "type": "string",
+                        },
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
+                        }
+                    },
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+            }
+        },
+        "produces": ["application/json"],
+        "responses": {
+            "MaskError": {"description": "When any error occurs on mask"},
+            "ParseError": {"description": "When a mask can't be parsed"},
+        },
+        "swagger": "2.0",
+        "tags": [{"name": "Test"}],
+    }

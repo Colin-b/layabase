@@ -1,20 +1,12 @@
 import enum
 
+import flask
+import flask_restplus
 import pytest
 from flask_restplus import inputs
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo
-from layabase.database_mongo import _validate_int
-from test.flask_restplus_mock import TestAPI
-
-
-def parser_types(flask_parser) -> dict:
-    return {arg.name: arg.type for arg in flask_parser.args}
-
-
-def parser_actions(flask_parser) -> dict:
-    return {arg.name: arg.action for arg in flask_parser.args}
 
 
 class EnumTest(enum.Enum):
@@ -47,11 +39,30 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestDictController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestDictController.namespace(namespace)
+
+    @namespace.route("/test_parsers")
+    class TestParsersResource(flask_restplus.Resource):
+        @namespace.expect(TestDictController.query_get_parser)
+        def get(self):
+            return TestDictController.query_get_parser.parse_args()
+
+        @namespace.expect(TestDictController.query_delete_parser)
+        def delete(self):
+            return TestDictController.query_delete_parser.parse_args()
+
+    return application
 
 
 def test_post_dict_is_valid(db):
@@ -302,31 +313,25 @@ def test_post_dict_is_invalid(db):
     } == exception_info.value.received_data
 
 
-def test_query_get_parser_with_dict(db):
-    assert {
-        "dict_col.first_key": str,
-        "dict_col.second_key": _validate_int,
-        "key": str,
-        "limit": inputs.positive,
-        "offset": inputs.natural,
-    } == parser_types(TestDictController.query_get_parser)
-    assert {
-        "dict_col.first_key": "append",
-        "dict_col.second_key": "append",
-        "key": "append",
-        "limit": "store",
-        "offset": "store",
-    } == parser_actions(TestDictController.query_get_parser)
+def test_query_get_parser_with_dict(client):
+    response = client.get(
+        "/test_parsers?dict_col.first_key=2&dict_col.second_key=3&key=4&limit=1&offset=0"
+    )
+    assert response.json == {
+        "dict_col.first_key": ["2"],
+        "dict_col.second_key": [3],
+        "key": ["4"],
+        "limit": 1,
+        "offset": 0,
+    }
 
 
-def test_query_delete_parser_with_dict(db):
-    assert {
-        "dict_col.first_key": str,
-        "dict_col.second_key": _validate_int,
-        "key": str,
-    } == parser_types(TestDictController.query_delete_parser)
-    assert {
-        "dict_col.first_key": "append",
-        "dict_col.second_key": "append",
-        "key": "append",
-    } == parser_actions(TestDictController.query_delete_parser)
+def test_query_delete_parser_with_dict(client):
+    response = client.delete(
+        "/test_parsers?dict_col.first_key=2&dict_col.second_key=3&key=4"
+    )
+    assert response.json == {
+        "dict_col.first_key": ["2"],
+        "dict_col.second_key": [3],
+        "key": ["4"],
+    }

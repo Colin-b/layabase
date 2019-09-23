@@ -1,8 +1,9 @@
+import flask
+import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo
-from test.flask_restplus_mock import TestAPI
 
 
 class TestLimitsController(database.CRUDController):
@@ -31,11 +32,39 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestLimitsController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestLimitsController.namespace(namespace)
+
+    @namespace.route("/test")
+    class TestResource(flask_restplus.Resource):
+        @namespace.expect(TestLimitsController.query_get_parser)
+        @namespace.marshal_with(TestLimitsController.get_response_model)
+        def get(self):
+            return []
+
+        @namespace.expect(TestLimitsController.json_post_model)
+        def post(self):
+            return []
+
+        @namespace.expect(TestLimitsController.json_put_model)
+        def put(self):
+            return []
+
+        @namespace.expect(TestLimitsController.query_delete_parser)
+        def delete(self):
+            return []
+
+    return application
 
 
 class DateTimeModuleMock:
@@ -130,54 +159,197 @@ def test_outside_lower_limits_is_invalid(db):
     } == exception_info.value.received_data
 
 
-def test_get_response_model_with_limits(db):
-    assert "TestLimitsModel" == TestLimitsController.get_response_model.name
-    assert {
-        "dict_field": "Raw",
-        "int_field": "Integer",
-        "float_field": "Float",
-        "key": "String",
-        "list_field": ("List", {"list_field_inner": "String"}),
-    } == TestLimitsController.get_response_model.fields_flask_type
-    assert {
-        "dict_field": None,
-        "int_field": None,
-        "float_field": None,
-        "key": None,
-        "list_field": (None, {"list_field_inner": None}),
-    } == TestLimitsController.get_response_model.fields_description
-    assert {
-        "dict_field": None,
-        "int_field": None,
-        "float_field": None,
-        "key": None,
-        "list_field": (None, {"list_field_inner": None}),
-    } == TestLimitsController.get_response_model.fields_enum
-    assert {
-        "dict_field": {"my": 1, "test": 2},
-        "int_field": 100,
-        "float_field": 1.4,
-        "key": "XXX",
-        "list_field": (["my", "test"], {"list_field_inner": None}),
-    } == TestLimitsController.get_response_model.fields_example
-    assert {
-        "dict_field": None,
-        "int_field": None,
-        "float_field": None,
-        "key": None,
-        "list_field": (None, {"list_field_inner": None}),
-    } == TestLimitsController.get_response_model.fields_default
-    assert {
-        "dict_field": False,
-        "int_field": False,
-        "float_field": False,
-        "key": False,
-        "list_field": (False, {"list_field_inner": None}),
-    } == TestLimitsController.get_response_model.fields_required
-    assert {
-        "dict_field": False,
-        "int_field": False,
-        "float_field": False,
-        "key": False,
-        "list_field": (False, {"list_field_inner": None}),
-    } == TestLimitsController.get_response_model.fields_readonly
+def test_open_api_definition(client):
+    response = client.get("/swagger.json")
+    assert response.json == {
+        "basePath": "/",
+        "consumes": ["application/json"],
+        "definitions": {
+            "TestLimitsModel": {
+                "properties": {
+                    "dict_field": {
+                        "example": {"my": 1, "test": 2},
+                        "readOnly": False,
+                        "type": "object",
+                    },
+                    "float_field": {
+                        "example": 1.4,
+                        "maximum": 1.75,
+                        "minimum": 1.25,
+                        "readOnly": False,
+                        "type": "number",
+                    },
+                    "int_field": {
+                        "example": 100,
+                        "maximum": 999,
+                        "minimum": 100,
+                        "readOnly": False,
+                        "type": "integer",
+                    },
+                    "key": {
+                        "example": "XXX",
+                        "maxLength": 4,
+                        "minLength": 3,
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "list_field": {
+                        "example": ["my", "test"],
+                        "items": {"type": "string"},
+                        "maxItems": 3,
+                        "minItems": 2,
+                        "readOnly": False,
+                        "type": "array",
+                    },
+                },
+                "type": "object",
+            }
+        },
+        "info": {"title": "API", "version": "1.0"},
+        "paths": {
+            "/test": {
+                "delete": {
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "dict_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "float_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "int_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "list_field",
+                            "type": "array",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "dict_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "float_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "int_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "list_field",
+                            "type": "array",
+                        },
+                        {
+                            "exclusiveMinimum": True,
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "limit",
+                            "type": "integer",
+                        },
+                        {
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "offset",
+                            "type": "integer",
+                        },
+                        {
+                            "description": "An optional " "fields mask",
+                            "format": "mask",
+                            "in": "header",
+                            "name": "X-Fields",
+                            "type": "string",
+                        },
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
+                        }
+                    },
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+            }
+        },
+        "produces": ["application/json"],
+        "responses": {
+            "MaskError": {"description": "When any error occurs on mask"},
+            "ParseError": {"description": "When a mask can't be parsed"},
+        },
+        "swagger": "2.0",
+        "tags": [{"name": "Test"}],
+    }

@@ -3,7 +3,6 @@ import datetime
 import pytest
 
 from layabase import database, database_mongo, ComparisonSigns
-from test.flask_restplus_mock import TestAPI
 
 
 class TestSupportForComparisonSignsController(database.CRUDController):
@@ -27,15 +26,12 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestSupportForComparisonSignsController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
 
 
 @pytest.fixture
-def app():
+def app(db):
     import flask
     import flask_restplus
 
@@ -43,6 +39,7 @@ def app():
     api = flask_restplus.Api(application)
 
     namespace = api.namespace("TestNs")
+    TestSupportForComparisonSignsController.namespace(namespace)
 
     @namespace.route("/test")
     class APITest(flask_restplus.Resource):

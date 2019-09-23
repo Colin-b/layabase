@@ -1,19 +1,11 @@
 import enum
 import json
 
+import flask
+import flask_restplus
 import pytest
-from flask_restplus import inputs
 
 from layabase import database, database_mongo
-from test.flask_restplus_mock import TestAPI
-
-
-def parser_types(flask_parser) -> dict:
-    return {arg.name: arg.type for arg in flask_parser.args}
-
-
-def parser_actions(flask_parser) -> dict:
-    return {arg.name: arg.action for arg in flask_parser.args}
 
 
 class EnumTest(enum.Enum):
@@ -48,171 +40,287 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestListController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
 
 
-def test_json_post_model_with_list_of_dict(db):
-    assert "TestListModel" == TestListController.json_post_model.name
-    assert {
-        "bool_field": "Boolean",
-        "key": "String",
-        "list_field": (
-            "List",
-            {
-                "list_field_inner": (
-                    "Nested",
-                    {"first_key": "String", "second_key": "Integer"},
-                )
-            },
-        ),
-    } == TestListController.json_post_model.fields_flask_type
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {"list_field_inner": (None, {"first_key": None, "second_key": None})},
-        ),
-    } == TestListController.json_post_model.fields_description
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {
-                "list_field_inner": (
-                    None,
-                    {"first_key": ["Value1", "Value2"], "second_key": None},
-                )
-            },
-        ),
-    } == TestListController.json_post_model.fields_enum
-    assert {
-        "bool_field": True,
-        "key": "sample key",
-        "list_field": (
-            [{"first_key": "Value1", "second_key": 1}],
-            {
-                "list_field_inner": (
-                    {"first_key": "Value1", "second_key": 1},
-                    {"first_key": "Value1", "second_key": 1},
-                )
-            },
-        ),
-    } == TestListController.json_post_model.fields_example
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {
-                "list_field_inner": (
-                    {"first_key": None, "second_key": None},
-                    {"first_key": None, "second_key": None},
-                )
-            },
-        ),
-    } == TestListController.json_post_model.fields_default
-    assert {
-        "bool_field": False,
-        "key": False,
-        "list_field": (
-            False,
-            {"list_field_inner": (False, {"first_key": False, "second_key": False})},
-        ),
-    } == TestListController.json_post_model.fields_required
-    assert {
-        "bool_field": False,
-        "key": False,
-        "list_field": (
-            False,
-            {"list_field_inner": (False, {"first_key": False, "second_key": False})},
-        ),
-    } == TestListController.json_post_model.fields_readonly
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestListController.namespace(namespace)
+
+    @namespace.route("/test")
+    class TestResource(flask_restplus.Resource):
+        @namespace.expect(TestListController.query_get_parser)
+        @namespace.marshal_with(TestListController.get_response_model)
+        def get(self):
+            return []
+
+        @namespace.expect(TestListController.json_post_model)
+        def post(self):
+            return []
+
+        @namespace.expect(TestListController.json_put_model)
+        def put(self):
+            return []
+
+        @namespace.expect(TestListController.query_delete_parser)
+        def delete(self):
+            return []
+
+    @namespace.route("/test_parsers")
+    class TestParsersResource(flask_restplus.Resource):
+        @namespace.expect(TestListController.query_get_parser)
+        def get(self):
+            return TestListController.query_get_parser.parse_args()
+
+        @namespace.expect(TestListController.query_delete_parser)
+        def delete(self):
+            return TestListController.query_delete_parser.parse_args()
+
+    return application
 
 
-def test_json_put_model_with_list_of_dict(db):
-    assert "TestListModel" == TestListController.json_put_model.name
-    assert {
-        "bool_field": "Boolean",
-        "key": "String",
-        "list_field": (
-            "List",
-            {
-                "list_field_inner": (
-                    "Nested",
-                    {"first_key": "String", "second_key": "Integer"},
-                )
+def test_open_api_definition(client):
+    response = client.get("/swagger.json")
+    assert response.json == {
+        "basePath": "/",
+        "consumes": ["application/json"],
+        "definitions": {
+            "TestListModel": {
+                "properties": {
+                    "bool_field": {
+                        "example": True,
+                        "readOnly": False,
+                        "type": "boolean",
+                    },
+                    "key": {
+                        "example": "sample " "key",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "list_field": {
+                        "example": [{"first_key": "Value1", "second_key": 1}],
+                        "items": {
+                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                            "default": {"first_key": None, "second_key": None},
+                            "example": {"first_key": "Value1", "second_key": 1},
+                            "readOnly": False,
+                        },
+                        "readOnly": False,
+                        "type": "array",
+                    },
+                },
+                "type": "object",
             },
-        ),
-    } == TestListController.json_put_model.fields_flask_type
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {"list_field_inner": (None, {"first_key": None, "second_key": None})},
-        ),
-    } == TestListController.json_put_model.fields_description
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {
-                "list_field_inner": (
-                    None,
-                    {"first_key": ["Value1", "Value2"], "second_key": None},
-                )
+            "first_key_second_key": {
+                "properties": {
+                    "first_key": {
+                        "enum": ["Value1", "Value2"],
+                        "example": "Value1",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "second_key": {"example": 1, "readOnly": False, "type": "integer"},
+                },
+                "type": "object",
             },
-        ),
-    } == TestListController.json_put_model.fields_enum
-    assert {
-        "bool_field": True,
-        "key": "sample key",
-        "list_field": (
-            [{"first_key": "Value1", "second_key": 1}],
-            {
-                "list_field_inner": (
-                    {"first_key": "Value1", "second_key": 1},
-                    {"first_key": "Value1", "second_key": 1},
-                )
+        },
+        "info": {"title": "API", "version": "1.0"},
+        "paths": {
+            "/test": {
+                "delete": {
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "boolean"},
+                            "name": "bool_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "list_field",
+                            "type": "array",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "boolean"},
+                            "name": "bool_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "list_field",
+                            "type": "array",
+                        },
+                        {
+                            "exclusiveMinimum": True,
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "limit",
+                            "type": "integer",
+                        },
+                        {
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "offset",
+                            "type": "integer",
+                        },
+                        {
+                            "description": "An optional " "fields mask",
+                            "format": "mask",
+                            "in": "header",
+                            "name": "X-Fields",
+                            "type": "string",
+                        },
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/TestListModel"},
+                        }
+                    },
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestListModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestListModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
             },
-        ),
-    } == TestListController.json_put_model.fields_example
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {
-                "list_field_inner": (
-                    {"first_key": None, "second_key": None},
-                    {"first_key": None, "second_key": None},
-                )
+            "/test_parsers": {
+                "delete": {
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "boolean"},
+                            "name": "bool_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "list_field",
+                            "type": "array",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "operationId": "get_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "boolean"},
+                            "name": "bool_field",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "list_field",
+                            "type": "array",
+                        },
+                        {
+                            "exclusiveMinimum": True,
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "limit",
+                            "type": "integer",
+                        },
+                        {
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "offset",
+                            "type": "integer",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
             },
-        ),
-    } == TestListController.json_put_model.fields_default
-    assert {
-        "bool_field": False,
-        "key": False,
-        "list_field": (
-            False,
-            {"list_field_inner": (False, {"first_key": False, "second_key": False})},
-        ),
-    } == TestListController.json_put_model.fields_required
-    assert {
-        "bool_field": False,
-        "key": False,
-        "list_field": (
-            False,
-            {"list_field_inner": (False, {"first_key": False, "second_key": False})},
-        ),
-    } == TestListController.json_put_model.fields_readonly
+        },
+        "produces": ["application/json"],
+        "responses": {
+            "MaskError": {"description": "When any error occurs on mask"},
+            "ParseError": {"description": "When a mask can't be parsed"},
+        },
+        "swagger": "2.0",
+        "tags": [{"name": "Test"}],
+    }
 
 
 def test_post_list_of_dict_is_valid(db):
@@ -412,111 +520,23 @@ def test_put_without_optional_list_of_dict_is_valid(db):
     ) == TestListController.put({"key": "my_key", "bool_field": True})
 
 
-def test_query_get_parser_with_list_of_dict(db):
-    assert {
-        "bool_field": inputs.boolean,
-        "key": str,
-        "list_field": json.loads,
-        "limit": inputs.positive,
-        "offset": inputs.natural,
-    } == parser_types(TestListController.query_get_parser)
-    assert {
-        "bool_field": "append",
-        "key": "append",
-        "list_field": "append",
-        "limit": "store",
-        "offset": "store",
-    } == parser_actions(TestListController.query_get_parser)
+def test_query_get_parser_with_list_of_dict(client):
+    response = client.get(
+        "/test_parsers?bool_field=true&key=test&list_field=[1,2]&limit=1&offset=0"
+    )
+    assert response.json == {
+        "bool_field": [True],
+        "key": ["test"],
+        "limit": 1,
+        "list_field": [[1, 2]],
+        "offset": 0,
+    }
 
 
-def test_query_delete_parser_with_list_of_dict(db):
-    assert {
-        "bool_field": inputs.boolean,
-        "key": str,
-        "list_field": json.loads,
-    } == parser_types(TestListController.query_delete_parser)
-    assert {
-        "bool_field": "append",
-        "key": "append",
-        "list_field": "append",
-    } == parser_actions(TestListController.query_delete_parser)
-
-
-def test_get_response_model_with_list_of_dict(db):
-    assert "TestListModel" == TestListController.get_response_model.name
-    assert {
-        "bool_field": "Boolean",
-        "key": "String",
-        "list_field": (
-            "List",
-            {
-                "list_field_inner": (
-                    "Nested",
-                    {"first_key": "String", "second_key": "Integer"},
-                )
-            },
-        ),
-    } == TestListController.get_response_model.fields_flask_type
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {"list_field_inner": (None, {"first_key": None, "second_key": None})},
-        ),
-    } == TestListController.get_response_model.fields_description
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {
-                "list_field_inner": (
-                    None,
-                    {"first_key": ["Value1", "Value2"], "second_key": None},
-                )
-            },
-        ),
-    } == TestListController.get_response_model.fields_enum
-    assert {
-        "bool_field": True,
-        "key": "sample key",
-        "list_field": (
-            [{"first_key": "Value1", "second_key": 1}],
-            {
-                "list_field_inner": (
-                    {"first_key": "Value1", "second_key": 1},
-                    {"first_key": "Value1", "second_key": 1},
-                )
-            },
-        ),
-    } == TestListController.get_response_model.fields_example
-    assert {
-        "bool_field": None,
-        "key": None,
-        "list_field": (
-            None,
-            {
-                "list_field_inner": (
-                    {"first_key": None, "second_key": None},
-                    {"first_key": None, "second_key": None},
-                )
-            },
-        ),
-    } == TestListController.get_response_model.fields_default
-    assert {
-        "bool_field": False,
-        "key": False,
-        "list_field": (
-            False,
-            {"list_field_inner": (False, {"first_key": False, "second_key": False})},
-        ),
-    } == TestListController.get_response_model.fields_required
-    assert {
-        "bool_field": False,
-        "key": False,
-        "list_field": (
-            False,
-            {"list_field_inner": (False, {"first_key": False, "second_key": False})},
-        ),
-    } == TestListController.get_response_model.fields_readonly
+def test_query_delete_parser_with_list_of_dict(client):
+    response = client.delete("/test_parsers?bool_field=true&key=test&list_field=[1,2]")
+    assert response.json == {
+        "bool_field": [True],
+        "key": ["test"],
+        "list_field": [[1, 2]],
+    }

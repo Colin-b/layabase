@@ -1,8 +1,9 @@
+import flask
+import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo
-from test.flask_restplus_mock import TestAPI
 
 
 class TestChoicesController(database.CRUDController):
@@ -34,14 +35,23 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestChoicesController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
 
 
-def test_post_with_choices_field_with_a_value_not_in_choices_list_is_invalid(db):
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestChoicesController.namespace(namespace)
+
+    return application
+
+
+def test_post_with_choices_field_with_a_value_not_in_choices_list_is_invalid(client):
     with pytest.raises(ValidationFailed) as exception_info:
         TestChoicesController.post(
             {

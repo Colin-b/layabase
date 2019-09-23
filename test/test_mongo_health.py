@@ -3,16 +3,10 @@ import pytest
 from layabase import database, database_mongo
 
 
-def _create_models(base):
-    return []
-
-
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
-
+    _db = database.load("mongomock", lambda base: [])
     yield _db
-
     database.reset(_db)
 
 

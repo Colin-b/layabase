@@ -1,10 +1,11 @@
 import datetime
 
+import flask
+import flask_restplus
 import pytest
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import database, database_mongo
-from test.flask_restplus_mock import TestAPI
 
 
 class TestDateController(database.CRUDController):
@@ -27,11 +28,39 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestDateController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestDateController.namespace(namespace)
+
+    @namespace.route("/test")
+    class TestResource(flask_restplus.Resource):
+        @namespace.expect(TestDateController.query_get_parser)
+        @namespace.marshal_with(TestDateController.get_response_model)
+        def get(self):
+            return []
+
+        @namespace.expect(TestDateController.json_post_model)
+        def post(self):
+            return []
+
+        @namespace.expect(TestDateController.json_put_model)
+        def put(self):
+            return []
+
+        @namespace.expect(TestDateController.query_delete_parser)
+        def delete(self):
+            return []
+
+    return application
 
 
 def test_put_is_updating_date(db):
@@ -255,40 +284,152 @@ def test_get_date_is_handled_for_unused_datetime(db):
     assert [] == TestDateController.get({"datetime_str": dt})
 
 
-def test_get_response_model_with_date(db):
-    assert "TestDateModel" == TestDateController.get_response_model.name
-    assert {
-        "date_str": "Date",
-        "datetime_str": "DateTime",
-        "key": "String",
-    } == TestDateController.get_response_model.fields_flask_type
-    assert {
-        "date_str": None,
-        "datetime_str": None,
-        "key": None,
-    } == TestDateController.get_response_model.fields_description
-    assert {
-        "date_str": None,
-        "datetime_str": None,
-        "key": None,
-    } == TestDateController.get_response_model.fields_enum
-    assert {
-        "date_str": "2017-09-24",
-        "datetime_str": "2017-09-24T15:36:09",
-        "key": "sample key",
-    } == TestDateController.get_response_model.fields_example
-    assert {
-        "date_str": None,
-        "datetime_str": None,
-        "key": None,
-    } == TestDateController.get_response_model.fields_default
-    assert {
-        "date_str": False,
-        "datetime_str": False,
-        "key": False,
-    } == TestDateController.get_response_model.fields_required
-    assert {
-        "date_str": False,
-        "datetime_str": False,
-        "key": False,
-    } == TestDateController.get_response_model.fields_readonly
+def test_open_api_definition(client):
+    response = client.get("/swagger.json")
+    assert response.json == {
+        "basePath": "/",
+        "consumes": ["application/json"],
+        "definitions": {
+            "TestDateModel": {
+                "properties": {
+                    "date_str": {
+                        "example": "2017-09-24",
+                        "format": "date",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "datetime_str": {
+                        "example": "2017-09-24T15:36:09",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "key": {
+                        "example": "sample " "key",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                },
+                "type": "object",
+            }
+        },
+        "info": {"title": "API", "version": "1.0"},
+        "paths": {
+            "/test": {
+                "delete": {
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "date_str",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "datetime_str",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "date_str",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "datetime_str",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "string"},
+                            "name": "key",
+                            "type": "array",
+                        },
+                        {
+                            "exclusiveMinimum": True,
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "limit",
+                            "type": "integer",
+                        },
+                        {
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "offset",
+                            "type": "integer",
+                        },
+                        {
+                            "description": "An optional " "fields mask",
+                            "format": "mask",
+                            "in": "header",
+                            "name": "X-Fields",
+                            "type": "string",
+                        },
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                        }
+                    },
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+            }
+        },
+        "produces": ["application/json"],
+        "responses": {
+            "MaskError": {"description": "When any error occurs on mask"},
+            "ParseError": {"description": "When a mask can't be parsed"},
+        },
+        "swagger": "2.0",
+        "tags": [{"name": "Test"}],
+    }

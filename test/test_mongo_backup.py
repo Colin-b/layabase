@@ -36,25 +36,9 @@ def _create_models(base):
 
 
 @pytest.fixture
-def app():
-    application = flask.Flask(__name__)
-    application.testing = True
-    return application
-
-
-@pytest.fixture
-def api(app):
-    return flask_restplus.Api(app)
-
-
-@pytest.fixture
-def db(api):
+def db():
     _db = database.load("mongomock", _create_models)
-    TestController.namespace(api)
-    TestSecondController.namespace(api)
-
     yield _db
-
     database.reset(_db)
 
 

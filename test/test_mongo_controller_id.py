@@ -2,7 +2,6 @@ import pytest
 
 from layabase import database, database_mongo
 from layaberr import ValidationFailed
-from test.flask_restplus_mock import TestAPI
 
 
 class TestIdController(database.CRUDController):
@@ -21,10 +20,7 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestIdController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
 
 
