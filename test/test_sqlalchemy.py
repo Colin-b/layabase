@@ -97,12 +97,12 @@ def test_rest_plus_example_for_bool_field_is_true():
     assert "true" == database_sqlalchemy._get_example(field)
 
 
-def test_rest_plus_example_for_date_field_is_YYYY_MM_DD():
+def test_rest_plus_example_for_date_field_is_iso8601():
     field = marshmallow_fields.Date()
     assert "2017-09-24" == database_sqlalchemy._get_example(field)
 
 
-def test_rest_plus_example_for_datetime_field_is_YYYY_MM_DDTHH_MM_SS():
+def test_rest_plus_example_for_datetime_field_is_iso8601():
     field = marshmallow_fields.DateTime()
     assert "2017-09-24T15:36:09" == database_sqlalchemy._get_example(field)
 
@@ -122,7 +122,7 @@ def test_rest_plus_example_for_number_field_is_decimal():
     assert "0.0" == database_sqlalchemy._get_example(field)
 
 
-def test_rest_plus_example_for_time_field_is_HH_MM_SS():
+def test_rest_plus_example_for_time_field_is_iso8601():
     field = marshmallow_fields.Time()
     assert "15:36:09" == database_sqlalchemy._get_example(field)
 
