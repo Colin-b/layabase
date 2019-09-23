@@ -2,8 +2,6 @@ import datetime
 
 import pytest
 import sqlalchemy
-import flask
-import flask_restplus
 
 from layabase import database, database_sqlalchemy
 
@@ -29,18 +27,6 @@ def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
     database.reset(_db)
-
-
-@pytest.fixture
-def app(db):
-    application = flask.Flask(__name__)
-    application.testing = True
-    api = flask_restplus.Api(application)
-    namespace = api.namespace("Test", path="/")
-
-    TestDateController.namespace(namespace)
-
-    return application
 
 
 def test_put_is_updating_date(db):
