@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - You can now query mongo on something else than equality: >, >=, <, <=. Refer to documentation for details.
 
+### Deprecated
+- database.dump
+- database.restore
+- database.reset (in case of non testing purpose)
+
 ### Changed
 - As a result of the fact that it's possible to query on non-equality, the field type is now string for float, date, datetime and int within the OpenAPI definition
 - Update [marshmallow](https://marshmallow.readthedocs.io/en/latest/changelog.html) to version 3.2.0

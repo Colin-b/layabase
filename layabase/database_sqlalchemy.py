@@ -726,12 +726,12 @@ def _get_python_type(marshmallow_field):
     return str
 
 
-def _health_details(base) -> (str, dict):
+def _health_checks(base) -> (str, dict):
     """
-    Return Health details for this SqlAlchemy database.
+    Return Health checks for this SqlAlchemy database.
 
     :param base: database object as returned by the _load method (Mandatory).
-    :return: A tuple with a string providing the status (pass, warn, fail), and the details.
+    :return: A tuple with a string providing the status (pass, warn, fail), and the checks.
     """
     try:
         if base.metadata.bind.dialect.do_ping(base.metadata.bind.connect().connection):

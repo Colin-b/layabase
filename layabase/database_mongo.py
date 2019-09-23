@@ -2517,12 +2517,12 @@ def _restore(base: pymongo.database.Database, restore_path: str) -> None:
                 base[collection].insert_many(documents)
 
 
-def _health_details(base: pymongo.database.Database) -> (str, dict):
+def _health_checks(base: pymongo.database.Database) -> (str, dict):
     """
-    Return Health details for this Mongo database connection.
+    Return Health checks for this Mongo database connection.
 
     :param base: database object as returned by the _load method (Mandatory).
-    :return: A tuple with a string providing the status (pass, warn, fail), and the details.
+    :return: A tuple with a string providing the status (pass, warn, fail), and the checks.
     """
     try:
         response = base.command("ping")
