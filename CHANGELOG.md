@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - As a result of the fact that it's possible to query on non-equality, the field type is now string for float, date, datetime and int within the OpenAPI definition
 - Update [marshmallow](https://marshmallow.readthedocs.io/en/latest/changelog.html) to version 3.2.0
+- Update [mongomock](https://github.com/mongomock/mongomock/releases) to version 3.18.0
 
 ## [1.1.1] - 2019-09-10
 ### Fixed

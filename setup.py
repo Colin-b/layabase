@@ -11,7 +11,7 @@ extra_requirements = {
         # Used to run test cases
         "pytest-flask==0.15.0",
         # Used to manage testing of Mongo
-        "mongomock==3.17.0",
+        "mongomock==3.18.0",
     ],
     "mongo": [
         "pymongo[tls]==3.9.0",
@@ -36,10 +36,7 @@ extra_requirements["testing"] += [
 
 setup(
     name="layabase",
-    version=open("layabase/version.py")
-    .readlines()[-1]
-    .split()[-1]
-    .strip("\"'"),
+    version=open("layabase/version.py").readlines()[-1].split()[-1].strip("\"'"),
     description="Database for layab",
     long_description=long_description,
     long_description_content_type="text/markdown",
