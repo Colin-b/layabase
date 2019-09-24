@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.0] - 2019-09-24
+## [1.3.0] - 2019-09-25
 ### Added
 - [SQLAlchemy] It is now possible to mark a column as mandatory on query via info={'marshmallow': {"required_on_query": True}}
 
