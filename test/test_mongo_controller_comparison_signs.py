@@ -1,5 +1,8 @@
 import datetime
+import collections.abc
 
+import flask
+import flask_restplus
 import pytest
 
 from layabase import database, database_mongo, ComparisonSigns
@@ -32,20 +35,63 @@ def db():
 
 @pytest.fixture
 def app(db):
-    import flask
-    import flask_restplus
-
     application = flask.Flask(__name__)
+    application.testing = True
     api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
 
-    namespace = api.namespace("TestNs")
     TestSupportForComparisonSignsController.namespace(namespace)
 
     @namespace.route("/test")
-    class APITest(flask_restplus.Resource):
+    class TestResource(flask_restplus.Resource):
+        @namespace.expect(TestSupportForComparisonSignsController.query_get_parser)
+        @namespace.marshal_with(
+            TestSupportForComparisonSignsController.get_response_model
+        )
+        def get(self):
+            return []
+
+        @namespace.expect(TestSupportForComparisonSignsController.json_post_model)
+        def post(self):
+            return []
+
+        @namespace.expect(TestSupportForComparisonSignsController.json_put_model)
+        def put(self):
+            return []
+
+        @namespace.expect(TestSupportForComparisonSignsController.query_delete_parser)
+        def delete(self):
+            return []
+
+    @namespace.route("/test_parsers")
+    class TestParsersResource(flask_restplus.Resource):
         @namespace.expect(TestSupportForComparisonSignsController.query_get_parser)
         def get(self):
-            pass
+            return {
+                field: [
+                    str(value)
+                    if isinstance(value, datetime.date) or isinstance(value, tuple)
+                    else value
+                    for value in values
+                ]
+                if isinstance(values, collections.abc.Iterable)
+                else values
+                for field, values in TestSupportForComparisonSignsController.query_get_parser.parse_args().items()
+            }
+
+        @namespace.expect(TestSupportForComparisonSignsController.query_delete_parser)
+        def delete(self):
+            return {
+                field: [
+                    str(value)
+                    if isinstance(value, datetime.date) or isinstance(value, tuple)
+                    else value
+                    for value in values
+                ]
+                if isinstance(values, collections.abc.Iterable)
+                else values
+                for field, values in TestSupportForComparisonSignsController.query_delete_parser.parse_args().items()
+            }
 
     return application
 
@@ -1021,43 +1067,231 @@ def test_query_with_int_range_and_value_out_of_range_using_comparison_signs_in_i
     ]
 
 
-def test_swagger_content_is_as_expected(client):
+def test_open_api_definition(client):
     response = client.get("/swagger.json")
-    assert response.status_code == 200
-    expected = {
+    assert response.json == {
         "basePath": "/",
         "consumes": ["application/json"],
+        "definitions": {
+            "TestSupportForComparisonSignsModel": {
+                "properties": {
+                    "date_value": {
+                        "example": "2017-09-24",
+                        "format": "date",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "datetime_value": {
+                        "example": "2017-09-24T15:36:09",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "type": "string",
+                    },
+                    "float_value": {
+                        "example": 1.4,
+                        "readOnly": False,
+                        "type": "number",
+                    },
+                    "int_value": {"example": 1, "readOnly": False, "type": "integer"},
+                },
+                "type": "object",
+            }
+        },
         "info": {"title": "API", "version": "1.0"},
         "paths": {
-            "/TestNs/test": {
-                "get": {
-                    "operationId": "get_api_test",
+            "/test": {
+                "delete": {
+                    "operationId": "delete_test_resource",
                     "parameters": [
                         {
                             "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "string"},
+                            "items": {"type": "array"},
                             "name": "date_value",
                             "type": "array",
                         },
                         {
                             "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "string"},
+                            "items": {"type": "array"},
                             "name": "datetime_value",
                             "type": "array",
                         },
                         {
                             "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "string"},
+                            "items": {"type": "array"},
                             "name": "float_value",
                             "type": "array",
                         },
                         {
                             "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "string"},
+                            "items": {"type": "array"},
+                            "name": "int_value",
+                            "type": "array",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "date_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "datetime_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "float_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "int_value",
+                            "type": "array",
+                        },
+                        {
+                            "exclusiveMinimum": True,
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "limit",
+                            "type": "integer",
+                        },
+                        {
+                            "in": "query",
+                            "minimum": 0,
+                            "name": "offset",
+                            "type": "integer",
+                        },
+                        {
+                            "description": "An optional " "fields mask",
+                            "format": "mask",
+                            "in": "header",
+                            "name": "X-Fields",
+                            "type": "string",
+                        },
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                            },
+                        }
+                    },
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                            },
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "payload",
+                            "required": True,
+                            "schema": {
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                            },
+                        }
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+            },
+            "/test_parsers": {
+                "delete": {
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "date_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "datetime_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "float_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "int_value",
+                            "type": "array",
+                        },
+                    ],
+                    "responses": {"200": {"description": "Success"}},
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "operationId": "get_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "date_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "datetime_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
+                            "name": "float_value",
+                            "type": "array",
+                        },
+                        {
+                            "collectionFormat": "multi",
+                            "in": "query",
+                            "items": {"type": "array"},
                             "name": "int_value",
                             "type": "array",
                         },
@@ -1076,9 +1310,9 @@ def test_swagger_content_is_as_expected(client):
                         },
                     ],
                     "responses": {"200": {"description": "Success"}},
-                    "tags": ["TestNs"],
-                }
-            }
+                    "tags": ["Test"],
+                },
+            },
         },
         "produces": ["application/json"],
         "responses": {
@@ -1086,6 +1320,73 @@ def test_swagger_content_is_as_expected(client):
             "ParseError": {"description": "When a mask can't be parsed"},
         },
         "swagger": "2.0",
-        "tags": [{"name": "TestNs"}],
+        "tags": [{"name": "Test"}],
     }
-    assert response.json == expected
+
+
+def test_query_get_parser_without_signs(client):
+    response = client.get(
+        "/test_parsers?date_value=2019-02-25&datetime_value=2019-02-25T15:56:59&float_value=2.5&int_value=15&limit=1&offset=0"
+    )
+    assert response.json == {
+        "date_value": ["2019-02-25"],
+        "datetime_value": ["2019-02-25 15:56:59+00:00"],
+        "float_value": [2.5],
+        "int_value": [15],
+        "limit": 1,
+        "offset": 0,
+    }
+
+
+def test_query_delete_parser_without_signs(client):
+    response = client.delete(
+        "/test_parsers?date_value=2019-02-25&datetime_value=2019-02-25T15:56:59&float_value=2.5&int_value=15"
+    )
+    assert response.json == {
+        "date_value": ["2019-02-25"],
+        "datetime_value": ["2019-02-25 15:56:59+00:00"],
+        "float_value": [2.5],
+        "int_value": [15],
+    }
+
+
+def test_query_get_parser_with_signs(client):
+    response = client.get(
+        "/test_parsers?date_value=>=2019-02-25&datetime_value=<=2019-02-25T15:56:59&float_value=>2.5&int_value=<15&limit=1&offset=0"
+    )
+    assert response.json == {
+        "date_value": [
+            "(<ComparisonSigns.GreaterOrEqual: '>='>, "
+            "datetime.datetime(2019, 2, 25, 0, 0, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "datetime_value": [
+            "(<ComparisonSigns.LowerOrEqual: '<='>, "
+            "datetime.datetime(2019, 2, 25, 15, 56, 59, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "float_value": ["(<ComparisonSigns.Greater: '>'>, 2.5)"],
+        "int_value": ["(<ComparisonSigns.Lower: '<'>, 15)"],
+        "limit": 1,
+        "offset": 0,
+    }
+
+
+def test_query_delete_parser_with_signs(client):
+    response = client.delete(
+        "/test_parsers?date_value=>=2019-02-25&datetime_value=<=2019-02-25T15:56:59&float_value=>2.5&int_value=<15"
+    )
+    assert response.json == {
+        "date_value": [
+            "(<ComparisonSigns.GreaterOrEqual: '>='>, "
+            "datetime.datetime(2019, 2, 25, 0, 0, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "datetime_value": [
+            "(<ComparisonSigns.LowerOrEqual: '<='>, "
+            "datetime.datetime(2019, 2, 25, 15, 56, 59, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "float_value": ["(<ComparisonSigns.Greater: '>'>, 2.5)"],
+        "int_value": ["(<ComparisonSigns.Lower: '<'>, 15)"],
+    }
