@@ -2218,6 +2218,7 @@ class CRUDModel:
                 type=_get_python_type(field.list_item_column),
                 action="append",
                 store_missing=not field.allow_none_as_filter,
+                location="args",
             )
         elif field.field_type == list:
             query_parser.add_argument(
@@ -2226,6 +2227,7 @@ class CRUDModel:
                 type=str,  # Consider anything as valid, thus consider as str in query
                 action="append",
                 store_missing=not field.allow_none_as_filter,
+                location="args",
             )
         else:
             query_parser.add_argument(
@@ -2234,6 +2236,7 @@ class CRUDModel:
                 type=_get_python_type(field),
                 action="append",  # Allow to provide multiple values in queries
                 store_missing=not field.allow_none_as_filter,
+                location="args",
             )
 
     @classmethod
