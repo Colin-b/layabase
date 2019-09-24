@@ -818,23 +818,21 @@ def test_get_is_valid_with_int_range_and_multiple_values_out_of_range_using_comp
     )
 
 
-def test_query_with_int_and_less_than_sign_in_int_column_returns_tuple(client, db):
+def test_query_with_int_and_less_than_sign_in_int_column_returns_tuple(client):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?int_value=<1")
     args = query_get_parser.parse_args()
     assert args["int_value"] == [(ComparisonSigns.Lower, 1)]
 
 
-def test_query_with_int_and_greater_than_sign_in_int_column_returns_tuple(client, db):
+def test_query_with_int_and_greater_than_sign_in_int_column_returns_tuple(client):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?int_value=>1")
     args = query_get_parser.parse_args()
     assert args["int_value"] == [(ComparisonSigns.Greater, 1)]
 
 
-def test_query_with_int_and_less_than_or_equal_sign_in_int_column_returns_tuple(
-    client, db
-):
+def test_query_with_int_and_less_than_or_equal_sign_in_int_column_returns_tuple(client):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?int_value=<=1")
     args = query_get_parser.parse_args()
@@ -842,7 +840,7 @@ def test_query_with_int_and_less_than_or_equal_sign_in_int_column_returns_tuple(
 
 
 def test_query_with_int_and_greater_than_or_equal_sign_in_int_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?int_value=>=1")
@@ -850,16 +848,14 @@ def test_query_with_int_and_greater_than_or_equal_sign_in_int_column_returns_tup
     assert args["int_value"] == [(ComparisonSigns.GreaterOrEqual, 1)]
 
 
-def test_query_with_float_and_less_than_sign_in_float_column_returns_tuple(client, db):
+def test_query_with_float_and_less_than_sign_in_float_column_returns_tuple(client):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?float_value=<0.9")
     args = query_get_parser.parse_args()
     assert args["float_value"] == [(ComparisonSigns.Lower, 0.9)]
 
 
-def test_query_with_float_and_greater_than_sign_in_float_column_returns_tuple(
-    client, db
-):
+def test_query_with_float_and_greater_than_sign_in_float_column_returns_tuple(client):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?float_value=>0.9")
     args = query_get_parser.parse_args()
@@ -867,7 +863,7 @@ def test_query_with_float_and_greater_than_sign_in_float_column_returns_tuple(
 
 
 def test_query_with_float_and_less_than_or_equal_sign_in_float_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?float_value=<=0.9")
@@ -876,7 +872,7 @@ def test_query_with_float_and_less_than_or_equal_sign_in_float_column_returns_tu
 
 
 def test_query_with_float_and_greater_than_or_equal_sign_in_float_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?float_value=>=0.9")
@@ -884,7 +880,7 @@ def test_query_with_float_and_greater_than_or_equal_sign_in_float_column_returns
     assert args["float_value"] == [(ComparisonSigns.GreaterOrEqual, 0.9)]
 
 
-def test_query_with_date_and_less_than_sign_in_date_column_returns_tuple(client, db):
+def test_query_with_date_and_less_than_sign_in_date_column_returns_tuple(client):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?date_value=<2019-01-01")
     args = query_get_parser.parse_args()
@@ -896,7 +892,7 @@ def test_query_with_date_and_less_than_sign_in_date_column_returns_tuple(client,
     ]
 
 
-def test_query_with_date_and_greater_than_sign_in_date_column_returns_tuple(client, db):
+def test_query_with_date_and_greater_than_sign_in_date_column_returns_tuple(client):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?date_value=>2019-01-01")
     args = query_get_parser.parse_args()
@@ -909,7 +905,7 @@ def test_query_with_date_and_greater_than_sign_in_date_column_returns_tuple(clie
 
 
 def test_query_with_date_and_less_than_or_equal_sign_in_date_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?date_value=<=2019-01-01")
@@ -923,7 +919,7 @@ def test_query_with_date_and_less_than_or_equal_sign_in_date_column_returns_tupl
 
 
 def test_query_with_date_and_greater_than_or_equal_sign_in_date_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?date_value=>=2019-01-01")
@@ -937,7 +933,7 @@ def test_query_with_date_and_greater_than_or_equal_sign_in_date_column_returns_t
 
 
 def test_query_with_datetime_and_less_than_sign_in_datetime_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?datetime_value=<2019-01-02T23:59:59")
@@ -951,7 +947,7 @@ def test_query_with_datetime_and_less_than_sign_in_datetime_column_returns_tuple
 
 
 def test_query_with_datetime_and_greater_than_sign_in_datetime_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?datetime_value=>2019-01-02T23:59:59")
@@ -965,7 +961,7 @@ def test_query_with_datetime_and_greater_than_sign_in_datetime_column_returns_tu
 
 
 def test_query_with_datetime_and_less_than_or_equal_sign_in_datetime_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?datetime_value=<=2019-01-02T23:59:59")
@@ -979,7 +975,7 @@ def test_query_with_datetime_and_less_than_or_equal_sign_in_datetime_column_retu
 
 
 def test_query_with_datetime_and_greater_than_or_equal_sign_in_datetime_column_returns_tuple(
-    client, db
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?datetime_value=>=2019-01-02T23:59:59")
@@ -993,7 +989,7 @@ def test_query_with_datetime_and_greater_than_or_equal_sign_in_datetime_column_r
 
 
 def test_query_with_int_range_using_comparison_signs_in_int_column_returns_list_of_tuples(
-    db, client
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?int_value=>=122&int_value=<124")
@@ -1005,7 +1001,7 @@ def test_query_with_int_range_using_comparison_signs_in_int_column_returns_list_
 
 
 def test_query_with_float_range_using_comparison_signs_in_float_column_returns_list_of_tuples(
-    db, client
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?float_value=>0.9&float_value=<=1.1")
@@ -1017,7 +1013,7 @@ def test_query_with_float_range_using_comparison_signs_in_float_column_returns_l
 
 
 def test_query_with_date_range_using_comparison_signs_in_date_column_returns_list_of_tuples(
-    db, client
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?date_value=>2019-01-01&date_value=<2019-01-03")
@@ -1035,7 +1031,7 @@ def test_query_with_date_range_using_comparison_signs_in_date_column_returns_lis
 
 
 def test_query_with_datetime_range_using_comparison_signs_in_datetime_column_returns_list_of_tuples(
-    db, client
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get(
@@ -1055,7 +1051,7 @@ def test_query_with_datetime_range_using_comparison_signs_in_datetime_column_ret
 
 
 def test_query_with_int_range_and_value_out_of_range_using_comparison_signs_in_int_column_returns_list_of_tuples_and_values(
-    db, client
+    client,
 ):
     query_get_parser = TestSupportForComparisonSignsController.query_get_parser
     client.get("/test?int_value=>=122&int_value=<124&int_value=125")
