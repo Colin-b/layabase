@@ -162,194 +162,194 @@ def test_outside_lower_limits_is_invalid(db):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "TestLimitsModel": {
-                "properties": {
-                    "dict_field": {
-                        "example": {"my": 1, "test": 2},
-                        "readOnly": False,
-                        "type": "object",
-                    },
-                    "float_field": {
-                        "example": 1.4,
-                        "maximum": 1.75,
-                        "minimum": 1.25,
-                        "readOnly": False,
-                        "type": "number",
-                    },
-                    "int_field": {
-                        "example": 100,
-                        "maximum": 999,
-                        "minimum": 100,
-                        "readOnly": False,
-                        "type": "integer",
-                    },
-                    "key": {
-                        "example": "XXX",
-                        "maxLength": 4,
-                        "minLength": 3,
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "list_field": {
-                        "example": ["my", "test"],
-                        "items": {"type": "string"},
-                        "maxItems": 3,
-                        "minItems": 2,
-                        "readOnly": False,
-                        "type": "array",
-                    },
-                },
-                "type": "object",
-            }
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "delete": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "dict_field",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "float_field",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "int_field",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "key",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "list_field",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "dict_field",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "float_field",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "int_field",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "list_field",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {"$ref": "#/definitions/TestLimitsModel"},
                         }
                     },
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "operationId": "post_test_resource",
+                    "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
-                        }
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "operationId": "put_test_resource",
-                    "parameters": [
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
-                        }
+                            "name": "float_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
             }
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestLimitsModel": {
+                "properties": {
+                    "dict_field": {
+                        "type": "object",
+                        "readOnly": False,
+                        "example": {"my": 1, "test": 2},
+                    },
+                    "float_field": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                        "minimum": 1.25,
+                        "maximum": 1.75,
+                    },
+                    "int_field": {
+                        "type": "integer",
+                        "readOnly": False,
+                        "example": 100,
+                        "minimum": 100,
+                        "maximum": 999,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "XXX",
+                        "minLength": 3,
+                        "maxLength": 4,
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": ["my", "test"],
+                        "minItems": 2,
+                        "maxItems": 3,
+                        "items": {"type": "string"},
+                    },
+                },
+                "type": "object",
+            }
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }

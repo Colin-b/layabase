@@ -482,251 +482,251 @@ def test_query_delete_parser(client):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "TestModel": {
-                "properties": {
-                    "key": {
-                        "example": "sample key",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "mandatory": {"example": 1, "readOnly": False, "type": "integer"},
-                    "optional": {
-                        "example": "sample " "optional",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                },
-                "type": "object",
-            },
-            "TestModelDescription": {
-                "properties": {
-                    "collection": {
-                        "description": "Collection " "name",
-                        "example": "collection",
-                        "type": "string",
-                    },
-                    "key": {"example": "column", "type": "string"},
-                    "mandatory": {"example": "column", "type": "string"},
-                    "optional": {"example": "column", "type": "string"},
-                },
-                "required": ["collection"],
-                "type": "object",
-            },
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
-                "delete": {
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "mandatory",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "optional",
-                            "type": "array",
-                        },
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "mandatory",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "optional",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {"$ref": "#/definitions/TestModel"},
                         }
                     },
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "operationId": "post_test_resource",
+                    "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {"$ref": "#/definitions/TestModel"},
-                        }
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
                     ],
+                    "tags": ["Test"],
+                },
+                "delete": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
                     "tags": ["Test"],
                 },
                 "put": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
                             "name": "payload",
                             "required": True,
+                            "in": "body",
                             "schema": {"$ref": "#/definitions/TestModel"},
                         }
                     ],
+                    "tags": ["Test"],
+                },
+                "post": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestModel"},
+                        }
+                    ],
                     "tags": ["Test"],
                 },
             },
             "/test/description": {
                 "get": {
-                    "operationId": "get_test_description_resource",
-                    "parameters": [
-                        {
-                            "description": "An " "optional " "fields " "mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        }
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {"$ref": "#/definitions/TestModelDescription"},
                         }
                     },
+                    "operationId": "get_test_description_resource",
+                    "parameters": [
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        }
+                    ],
                     "tags": ["Test"],
                 }
             },
             "/test_parsers": {
-                "delete": {
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "mandatory",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "optional",
-                            "type": "array",
-                        },
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
                 "get": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "array"},
-                            "name": "mandatory",
                             "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
                             "items": {"type": "string"},
-                            "name": "optional",
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
                         },
                         {
-                            "exclusiveMinimum": True,
+                            "name": "optional",
                             "in": "query",
-                            "minimum": 0,
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
                             "name": "limit",
+                            "in": "query",
                             "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
                         },
                         {
-                            "in": "query",
-                            "minimum": 0,
                             "name": "offset",
+                            "in": "query",
                             "type": "integer",
+                            "minimum": 0,
                         },
                     ],
+                    "tags": ["Test"],
+                },
+                "delete": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
                     "tags": ["Test"],
                 },
             },
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "TestModelDescription": {
+                "required": ["collection"],
+                "properties": {
+                    "collection": {
+                        "type": "string",
+                        "description": "Collection name",
+                        "example": "collection",
+                    },
+                    "key": {"type": "string", "example": "column"},
+                    "mandatory": {"type": "string", "example": "column"},
+                    "optional": {"type": "string", "example": "column"},
+                },
+                "type": "object",
+            },
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }
 
 

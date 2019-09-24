@@ -65,134 +65,78 @@ def app(db):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "TestUnvalidatedListAndDictModel": {
-                "properties": {
-                    "dict_field": {
-                        "example": {
-                            "1st dict_field key": "1st " "dict_field " "sample",
-                            "2nd dict_field key": "2nd " "dict_field " "sample",
-                        },
-                        "readOnly": False,
-                        "type": "object",
-                    },
-                    "float_key": {"example": 1.4, "readOnly": False, "type": "number"},
-                    "float_with_default": {
-                        "default": 34,
-                        "example": 34,
-                        "readOnly": False,
-                        "type": "number",
-                    },
-                    "list_field": {
-                        "example": [
-                            "1st " "list_field " "sample",
-                            "2nd " "list_field " "sample",
-                        ],
-                        "items": {"type": "string"},
-                        "readOnly": False,
-                        "type": "array",
-                    },
-                },
-                "required": ["dict_field", "list_field"],
-                "type": "object",
-            }
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "delete": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
                             "required": True,
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "float_key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "float_with_default",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
                             "items": {"type": "string"},
-                            "name": "list_field",
-                            "required": True,
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_key",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_with_default",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "required": True,
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                     ],
+                    "tags": ["Test"],
+                },
+                "put": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel"
+                            },
+                        }
+                    ],
                     "tags": ["Test"],
                 },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "dict_field",
-                            "required": True,
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "float_key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "float_with_default",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "list_field",
-                            "required": True,
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
@@ -201,47 +145,100 @@ def test_open_api_definition(client):
                             },
                         }
                     },
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "operationId": "post_test_resource",
+                    "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
-                            "name": "payload",
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
                             "required": True,
-                            "schema": {
-                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel"
-                            },
-                        }
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "operationId": "put_test_resource",
-                    "parameters": [
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
-                            "in": "body",
-                            "name": "payload",
+                            "name": "float_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_with_default",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
                             "required": True,
-                            "schema": {
-                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel"
-                            },
-                        }
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
             }
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestUnvalidatedListAndDictModel": {
+                "required": ["dict_field", "list_field"],
+                "properties": {
+                    "dict_field": {
+                        "type": "object",
+                        "readOnly": False,
+                        "example": {
+                            "1st dict_field key": "1st dict_field sample",
+                            "2nd dict_field key": "2nd dict_field sample",
+                        },
+                    },
+                    "float_key": {"type": "number", "readOnly": False, "example": 1.4},
+                    "float_with_default": {
+                        "type": "number",
+                        "readOnly": False,
+                        "default": 34,
+                        "example": 34,
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
+                    },
+                },
+                "type": "object",
+            }
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }
 
 

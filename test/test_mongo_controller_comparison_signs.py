@@ -16,10 +16,12 @@ def _create_models(base):
     class TestSupportForComparisonSignsModel(
         database_mongo.CRUDModel, base=base, table_name="support_comparison_sign"
     ):
-        int_value = database_mongo.Column(int)
-        float_value = database_mongo.Column(float)
-        date_value = database_mongo.Column(datetime.date)
-        datetime_value = database_mongo.Column(datetime.datetime)
+        int_value = database_mongo.Column(int, allow_comparison_signs=True)
+        float_value = database_mongo.Column(float, allow_comparison_signs=True)
+        date_value = database_mongo.Column(datetime.date, allow_comparison_signs=True)
+        datetime_value = database_mongo.Column(
+            datetime.datetime, allow_comparison_signs=True
+        )
 
     TestSupportForComparisonSignsController.model(TestSupportForComparisonSignsModel)
 
@@ -1066,123 +1068,61 @@ def test_query_with_int_range_and_value_out_of_range_using_comparison_signs_in_i
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "TestSupportForComparisonSignsModel": {
-                "properties": {
-                    "date_value": {
-                        "example": "2017-09-24",
-                        "format": "date",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "datetime_value": {
-                        "example": "2017-09-24T15:36:09",
-                        "format": "date-time",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "float_value": {
-                        "example": 1.4,
-                        "readOnly": False,
-                        "type": "number",
-                    },
-                    "int_value": {"example": 1, "readOnly": False, "type": "integer"},
-                },
-                "type": "object",
-            }
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "delete": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "date_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
                             "type": "array",
+                            "items": {"type": "array"},
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "datetime_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
                             "type": "array",
+                            "items": {"type": "array"},
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "float_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
                             "type": "array",
+                            "items": {"type": "array"},
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "int_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
                             "type": "array",
+                            "items": {"type": "array"},
                         },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "date_value",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "datetime_value",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "float_value",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "int_value",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
@@ -1191,132 +1131,194 @@ def test_open_api_definition(client):
                             },
                         }
                     },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "name": "date_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
+                            "name": "datetime_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
+                            "name": "float_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
+                            "name": "int_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
                     "tags": ["Test"],
                 },
                 "post": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "post_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
                             "name": "payload",
                             "required": True,
+                            "in": "body",
                             "schema": {
                                 "$ref": "#/definitions/TestSupportForComparisonSignsModel"
                             },
                         }
                     ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
-                            },
-                        }
-                    ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
             },
             "/test_parsers": {
-                "delete": {
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "date_value",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "datetime_value",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "float_value",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "int_value",
-                            "type": "array",
-                        },
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
                 "get": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "date_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
                             "type": "array",
+                            "items": {"type": "array"},
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "datetime_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
                             "type": "array",
+                            "items": {"type": "array"},
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "float_value",
-                            "type": "array",
-                        },
-                        {
+                            "in": "query",
                             "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "int_value",
                             "type": "array",
+                            "items": {"type": "array"},
                         },
                         {
-                            "exclusiveMinimum": True,
+                            "name": "int_value",
                             "in": "query",
-                            "minimum": 0,
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
                             "name": "limit",
+                            "in": "query",
                             "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
                         },
                         {
-                            "in": "query",
-                            "minimum": 0,
                             "name": "offset",
+                            "in": "query",
                             "type": "integer",
+                            "minimum": 0,
                         },
                     ],
+                    "tags": ["Test"],
+                },
+                "delete": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "date_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
+                            "name": "datetime_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
+                            "name": "float_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                        {
+                            "name": "int_value",
+                            "in": "query",
+                            "collectionFormat": "multi",
+                            "type": "array",
+                            "items": {"type": "array"},
+                        },
+                    ],
                     "tags": ["Test"],
                 },
             },
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestSupportForComparisonSignsModel": {
+                "properties": {
+                    "date_value": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": False,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_value": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            }
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }
 
 

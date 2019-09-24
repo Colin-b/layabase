@@ -287,149 +287,153 @@ def test_get_date_is_handled_for_unused_datetime(db):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "TestDateModel": {
-                "properties": {
-                    "date_str": {
-                        "example": "2017-09-24",
-                        "format": "date",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "datetime_str": {
-                        "example": "2017-09-24T15:36:09",
-                        "format": "date-time",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "key": {
-                        "example": "sample " "key",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                },
-                "type": "object",
-            }
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "delete": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
                             "name": "date_str",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "array"},
-                            "name": "datetime_str",
                             "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
+                            "format": "date",
                             "items": {"type": "string"},
-                            "name": "key",
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
                             "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "date_str",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "datetime_str",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {"$ref": "#/definitions/TestDateModel"},
                         }
                     },
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "operationId": "post_test_resource",
+                    "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
-                        }
+                            "name": "date_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
                 "put": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
                             "name": "payload",
                             "required": True,
+                            "in": "body",
                             "schema": {"$ref": "#/definitions/TestDateModel"},
                         }
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
             }
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestDateModel": {
+                "properties": {
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": False,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                },
+                "type": "object",
+            }
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }

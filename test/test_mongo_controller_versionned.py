@@ -677,115 +677,69 @@ def test_rollback_multiple_rows_is_valid(db):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "TestVersionedModel_Versioned": {
-                "properties": {
-                    "dict_field": {
-                        "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
-                        "default": {"first_key": None, "second_key": None},
-                        "example": {"first_key": "Value1", "second_key": 1},
-                        "readOnly": False,
-                    },
-                    "key": {
-                        "example": "sample " "key",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                },
-                "required": ["dict_field"],
-                "type": "object",
-            },
-            "first_key_second_key": {
-                "properties": {
-                    "first_key": {
-                        "enum": ["Value1", "Value2"],
-                        "example": "Value1",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "second_key": {"example": 1, "readOnly": False, "type": "integer"},
-                },
-                "type": "object",
-            },
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
                 "delete": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "dict_field.first_key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "array"},
-                            "name": "dict_field.second_key",
                             "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
                             "items": {"type": "string"},
-                            "name": "key",
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field.second_key",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                     ],
+                    "tags": ["Test"],
+                },
+                "put": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestVersionedModel_Versioned"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestVersionedModel_Versioned"
+                            },
+                        }
+                    ],
                     "tags": ["Test"],
                 },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "dict_field.first_key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "dict_field.second_key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
@@ -794,85 +748,131 @@ def test_open_api_definition(client):
                             },
                         }
                     },
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "operationId": "post_test_resource",
+                    "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
-                            },
-                        }
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "operationId": "put_test_resource",
-                    "parameters": [
+                            "name": "dict_field.first_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
-                            },
-                        }
+                            "name": "dict_field.second_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
             },
             "/test_rollback_parser": {
                 "get": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_rollback_parser_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "dict_field.first_key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "array"},
-                            "name": "dict_field.second_key",
                             "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
                             "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
+                            "collectionFormat": "multi",
                         },
                         {
-                            "exclusiveMinimum": True,
+                            "name": "dict_field.second_key",
                             "in": "query",
-                            "minimum": 0,
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
                             "name": "revision",
-                            "required": True,
+                            "in": "query",
                             "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                            "required": True,
                         },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 }
             },
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestVersionedModel_Versioned": {
+                "required": ["dict_field"],
+                "properties": {
+                    "dict_field": {
+                        "readOnly": False,
+                        "default": {"first_key": None, "second_key": None},
+                        "example": {"first_key": "Value1", "second_key": 1},
+                        "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                },
+                "type": "object",
+            },
+            "first_key_second_key": {
+                "properties": {
+                    "first_key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "second_key": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }
 
 

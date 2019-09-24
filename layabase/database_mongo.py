@@ -95,6 +95,8 @@ class Column:
         Default to None (default sample will be generated).
         :param store_none: If field value should be stored if None and None is a valid value. Should be a boolean.
         Default to False (None values will not be stored to save space).
+        :param allow_comparison_signs: If field can be queries with ComparisonSign. Should be a boolean.
+        Default to False (only equality can be queried).
         """
         self.field_type = field_type or str
         name = kwargs.pop("name", None)
@@ -126,6 +128,7 @@ class Column:
         self._example = kwargs.pop("example", None)
         self._store_none: bool = bool(kwargs.pop("store_none", False))
         self.is_primary_key: bool = bool(kwargs.pop("is_primary_key", False))
+        self.allow_comparison_signs = bool(kwargs.pop("allow_comparison_signs", False))
         if self.is_primary_key:
             if self.index_type:
                 raise Exception(
@@ -369,7 +372,7 @@ class Column:
         Entry would be composed of the field name associated to a list of error messages.
         """
         # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
+        if self.allow_comparison_signs and isinstance(value, tuple):
             value = value[1]
 
         return self._validate_date_time(value)
@@ -382,7 +385,7 @@ class Column:
         Entry would be composed of the field name associated to a list of error messages.
         """
         # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
+        if self.allow_comparison_signs and isinstance(value, tuple):
             value = value[1]
 
         return self._validate_date(value)
@@ -561,13 +564,13 @@ class Column:
 
     def _validate_query_int(self, value) -> dict:
         # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
+        if self.allow_comparison_signs and isinstance(value, tuple):
             value = value[1]
         return self._validate_int(value)
 
     def _validate_query_float(self, value) -> dict:
         # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
+        if self.allow_comparison_signs and isinstance(value, tuple):
             value = value[1]
         return self._validate_float(value)
 
@@ -2558,9 +2561,15 @@ def _get_python_type(field: Column) -> callable:
     if field.field_type == bool:
         return inputs.boolean
     if field.field_type == datetime.date:
-        return _validate_date
+        return (
+            _validate_date if field.allow_comparison_signs else inputs.date_from_iso8601
+        )
     if field.field_type == datetime.datetime:
-        return _validate_date_time
+        return (
+            _validate_date_time
+            if field.allow_comparison_signs
+            else inputs.datetime_from_iso8601
+        )
     if isinstance(field.field_type, enum.EnumMeta):
         return str
     if field.field_type == dict:
@@ -2570,9 +2579,9 @@ def _get_python_type(field: Column) -> callable:
     if field.field_type == ObjectId:
         return str
     if field.field_type == float:
-        return _validate_float
+        return _validate_float if field.allow_comparison_signs else float
     if field.field_type == int:
-        return _validate_int
+        return _validate_int if field.allow_comparison_signs else int
 
     return field.field_type
 

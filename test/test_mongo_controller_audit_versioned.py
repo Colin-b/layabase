@@ -112,111 +112,32 @@ def test_get_versioned_audit_parser_fields(client):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "AuditModel": {
-                "properties": {
-                    "audit_action": {
-                        "enum": ["Insert", "Update", "Delete", "Rollback"],
-                        "example": "Insert",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "audit_date_utc": {
-                        "example": "2017-09-24T15:36:09",
-                        "format": "date-time",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "audit_user": {
-                        "example": "sample " "audit_user",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "revision": {"example": 1, "readOnly": False, "type": "integer"},
-                },
-                "type": "object",
-            },
-            "TestVersionedModel_Versioned": {
-                "properties": {
-                    "enum_fld": {
-                        "enum": ["Value1", "Value2"],
-                        "example": "Value1",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                    "key": {
-                        "example": "sample " "key",
-                        "readOnly": False,
-                        "type": "string",
-                    },
-                },
-                "type": "object",
-            },
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
                 "delete": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "enum_fld",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "key",
+                            "in": "query",
                             "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "enum_fld",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
@@ -225,159 +146,240 @@ def test_open_api_definition(client):
                             },
                         }
                     },
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "operationId": "post_test_resource",
+                    "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
-                            },
-                        }
+                            "name": "enum_fld",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
                 "put": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
                             "name": "payload",
                             "required": True,
+                            "in": "body",
                             "schema": {
                                 "$ref": "#/definitions/TestVersionedModel_Versioned"
                             },
                         }
                     ],
+                    "tags": ["Test"],
+                },
+                "post": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestVersionedModel_Versioned"
+                            },
+                        }
+                    ],
                     "tags": ["Test"],
                 },
             },
             "/test/audit": {
                 "get": {
-                    "operationId": "get_test_audit_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "audit_action",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "audit_date_utc",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "audit_user",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "array"},
-                            "name": "revision",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {"$ref": "#/definitions/AuditModel"},
                         }
                     },
+                    "operationId": "get_test_audit_resource",
+                    "parameters": [
+                        {
+                            "name": "audit_action",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_date_utc",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_user",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
                     "tags": ["Test"],
                 }
             },
             "/test_audit_parser": {
                 "get": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_audit_parser_resource",
                     "parameters": [
                         {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
                             "name": "audit_action",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
                             "in": "query",
-                            "items": {"type": "array"},
-                            "name": "audit_date_utc",
                             "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
                             "items": {"type": "string"},
-                            "name": "audit_user",
-                            "type": "array",
-                        },
-                        {
                             "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_date_utc",
                             "in": "query",
-                            "items": {"type": "array"},
-                            "name": "revision",
                             "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
-                            "exclusiveMinimum": True,
+                            "name": "audit_user",
                             "in": "query",
-                            "minimum": 0,
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
                             "name": "limit",
+                            "in": "query",
                             "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
                         },
                         {
-                            "in": "query",
-                            "minimum": 0,
                             "name": "offset",
+                            "in": "query",
                             "type": "integer",
+                            "minimum": 0,
                         },
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 }
             },
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestVersionedModel_Versioned": {
+                "properties": {
+                    "enum_fld": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                },
+                "type": "object",
+            },
+            "AuditModel": {
+                "properties": {
+                    "audit_action": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Insert",
+                        "enum": ["Insert", "Update", "Delete", "Rollback"],
+                    },
+                    "audit_date_utc": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "audit_user": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample audit_user",
+                    },
+                    "revision": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }
 
 
