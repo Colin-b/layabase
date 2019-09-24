@@ -2597,11 +2597,7 @@ def _validate_float(value):
     return float(value)
 
 
-_validate_float.__schema__ = {
-    "collectionFormat": "multi",
-    "type": "array",
-    "items": {"type": "string"},
-}
+_validate_float.__schema__ = {"type": "string"}
 
 
 def _validate_int(value):
@@ -2615,11 +2611,7 @@ def _validate_int(value):
     return int(value)
 
 
-_validate_int.__schema__ = {
-    "collectionFormat": "multi",
-    "type": "array",
-    "items": {"type": "string"},
-}
+_validate_int.__schema__ = {"type": "string"}
 
 
 def _validate_date_time(value):
@@ -2633,11 +2625,7 @@ def _validate_date_time(value):
     return iso8601.parse_date(value)
 
 
-_validate_date_time.__schema__ = {
-    "collectionFormat": "multi",
-    "type": "array",
-    "items": {"type": "string"},
-}
+_validate_date_time.__schema__ = {"type": "string"}
 
 
 def _validate_date(value):
@@ -2651,8 +2639,4 @@ def _validate_date(value):
     return iso8601.parse_date(value).date()
 
 
-_validate_date.__schema__ = {
-    "collectionFormat": "multi",
-    "type": "array",
-    "items": {"type": "string"},
-}
+_validate_date.__schema__ = {"type": "string"}

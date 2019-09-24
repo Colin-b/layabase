@@ -821,248 +821,335 @@ def test_get_is_valid_with_int_range_and_multiple_values_out_of_range_using_comp
 
 
 def test_query_with_int_and_less_than_sign_in_int_column_returns_tuple(client):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?int_value=<1")
-    args = query_get_parser.parse_args()
-    assert args["int_value"] == [(ComparisonSigns.Lower, 1)]
+    response = client.get("/test_parsers?int_value=<1")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": ["(<ComparisonSigns.Lower: '<'>, 1)"],
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_int_and_greater_than_sign_in_int_column_returns_tuple(client):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?int_value=>1")
-    args = query_get_parser.parse_args()
-    assert args["int_value"] == [(ComparisonSigns.Greater, 1)]
+    response = client.get("/test_parsers?int_value=>1")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": ["(<ComparisonSigns.Greater: '>'>, 1)"],
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_int_and_less_than_or_equal_sign_in_int_column_returns_tuple(client):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?int_value=<=1")
-    args = query_get_parser.parse_args()
-    assert args["int_value"] == [(ComparisonSigns.LowerOrEqual, 1)]
+    response = client.get("/test_parsers?int_value=<=1")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": ["(<ComparisonSigns.LowerOrEqual: '<='>, 1)"],
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_int_and_greater_than_or_equal_sign_in_int_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?int_value=>=1")
-    args = query_get_parser.parse_args()
-    assert args["int_value"] == [(ComparisonSigns.GreaterOrEqual, 1)]
+    response = client.get("/test_parsers?int_value=>=1")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": ["(<ComparisonSigns.GreaterOrEqual: '>='>, 1)"],
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_float_and_less_than_sign_in_float_column_returns_tuple(client):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?float_value=<0.9")
-    args = query_get_parser.parse_args()
-    assert args["float_value"] == [(ComparisonSigns.Lower, 0.9)]
+    response = client.get("/test_parsers?float_value=<0.9")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": ["(<ComparisonSigns.Lower: '<'>, 0.9)"],
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_float_and_greater_than_sign_in_float_column_returns_tuple(client):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?float_value=>0.9")
-    args = query_get_parser.parse_args()
-    assert args["float_value"] == [(ComparisonSigns.Greater, 0.9)]
+    response = client.get("/test_parsers?float_value=>0.9")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": ["(<ComparisonSigns.Greater: '>'>, 0.9)"],
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_float_and_less_than_or_equal_sign_in_float_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?float_value=<=0.9")
-    args = query_get_parser.parse_args()
-    assert args["float_value"] == [(ComparisonSigns.LowerOrEqual, 0.9)]
+    response = client.get("/test_parsers?float_value=<=0.9")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": ["(<ComparisonSigns.LowerOrEqual: '<='>, 0.9)"],
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_float_and_greater_than_or_equal_sign_in_float_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?float_value=>=0.9")
-    args = query_get_parser.parse_args()
-    assert args["float_value"] == [(ComparisonSigns.GreaterOrEqual, 0.9)]
+    response = client.get("/test_parsers?float_value=>=0.9")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": ["(<ComparisonSigns.GreaterOrEqual: '>='>, 0.9)"],
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_date_and_less_than_sign_in_date_column_returns_tuple(client):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?date_value=<2019-01-01")
-    args = query_get_parser.parse_args()
-    assert args["date_value"] == [
-        (
-            ComparisonSigns.Lower,
-            datetime.datetime(2019, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?date_value=<2019-01-01")
+    assert response.json == {
+        "date_value": [
+            "(<ComparisonSigns.Lower: '<'>, datetime.datetime(2019, 1, 1, "
+            "0, 0, tzinfo=datetime.timezone.utc))"
+        ],
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_date_and_greater_than_sign_in_date_column_returns_tuple(client):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?date_value=>2019-01-01")
-    args = query_get_parser.parse_args()
-    assert args["date_value"] == [
-        (
-            ComparisonSigns.Greater,
-            datetime.datetime(2019, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?date_value=>2019-01-01")
+    assert response.json == {
+        "date_value": [
+            "(<ComparisonSigns.Greater: '>'>, datetime.datetime(2019, 1, "
+            "1, 0, 0, tzinfo=datetime.timezone.utc))"
+        ],
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_date_and_less_than_or_equal_sign_in_date_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?date_value=<=2019-01-01")
-    args = query_get_parser.parse_args()
-    assert args["date_value"] == [
-        (
-            ComparisonSigns.LowerOrEqual,
-            datetime.datetime(2019, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?date_value=<=2019-01-01")
+    assert response.json == {
+        "date_value": [
+            "(<ComparisonSigns.LowerOrEqual: '<='>, "
+            "datetime.datetime(2019, 1, 1, 0, 0, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_date_and_greater_than_or_equal_sign_in_date_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?date_value=>=2019-01-01")
-    args = query_get_parser.parse_args()
-    assert args["date_value"] == [
-        (
-            ComparisonSigns.GreaterOrEqual,
-            datetime.datetime(2019, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?date_value=>=2019-01-01")
+    assert response.json == {
+        "date_value": [
+            "(<ComparisonSigns.GreaterOrEqual: '>='>, "
+            "datetime.datetime(2019, 1, 1, 0, 0, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_datetime_and_less_than_sign_in_datetime_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?datetime_value=<2019-01-02T23:59:59")
-    args = query_get_parser.parse_args()
-    assert args["datetime_value"] == [
-        (
-            ComparisonSigns.Lower,
-            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?datetime_value=<2019-01-02T23:59:59")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": [
+            "(<ComparisonSigns.Lower: '<'>, datetime.datetime(2019, 1, "
+            "2, 23, 59, 59, tzinfo=datetime.timezone.utc))"
+        ],
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_datetime_and_greater_than_sign_in_datetime_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?datetime_value=>2019-01-02T23:59:59")
-    args = query_get_parser.parse_args()
-    assert args["datetime_value"] == [
-        (
-            ComparisonSigns.Greater,
-            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?datetime_value=>2019-01-02T23:59:59")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": [
+            "(<ComparisonSigns.Greater: '>'>, datetime.datetime(2019, "
+            "1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc))"
+        ],
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_datetime_and_less_than_or_equal_sign_in_datetime_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?datetime_value=<=2019-01-02T23:59:59")
-    args = query_get_parser.parse_args()
-    assert args["datetime_value"] == [
-        (
-            ComparisonSigns.LowerOrEqual,
-            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?datetime_value=<=2019-01-02T23:59:59")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": [
+            "(<ComparisonSigns.LowerOrEqual: '<='>, "
+            "datetime.datetime(2019, 1, 2, 23, 59, 59, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_datetime_and_greater_than_or_equal_sign_in_datetime_column_returns_tuple(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?datetime_value=>=2019-01-02T23:59:59")
-    args = query_get_parser.parse_args()
-    assert args["datetime_value"] == [
-        (
-            ComparisonSigns.GreaterOrEqual,
-            datetime.datetime(2019, 1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc),
-        )
-    ]
+    response = client.get("/test_parsers?datetime_value=>=2019-01-02T23:59:59")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": [
+            "(<ComparisonSigns.GreaterOrEqual: '>='>, "
+            "datetime.datetime(2019, 1, 2, 23, 59, 59, "
+            "tzinfo=datetime.timezone.utc))"
+        ],
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_int_range_using_comparison_signs_in_int_column_returns_list_of_tuples(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?int_value=>=122&int_value=<124")
-    args = query_get_parser.parse_args()
-    assert args["int_value"] == [
-        (ComparisonSigns.GreaterOrEqual, 122),
-        (ComparisonSigns.Lower, 124),
-    ]
+    response = client.get("/test_parsers?int_value=>=122&int_value=<124")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": [
+            "(<ComparisonSigns.GreaterOrEqual: '>='>, 122)",
+            "(<ComparisonSigns.Lower: '<'>, 124)",
+        ],
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_float_range_using_comparison_signs_in_float_column_returns_list_of_tuples(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?float_value=>0.9&float_value=<=1.1")
-    args = query_get_parser.parse_args()
-    assert args["float_value"] == [
-        (ComparisonSigns.Greater, 0.9),
-        (ComparisonSigns.LowerOrEqual, 1.1),
-    ]
+    response = client.get("/test_parsers?float_value=>0.9&float_value=<=1.1")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": [
+            "(<ComparisonSigns.Greater: '>'>, 0.9)",
+            "(<ComparisonSigns.LowerOrEqual: '<='>, 1.1)",
+        ],
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_date_range_using_comparison_signs_in_date_column_returns_list_of_tuples(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?date_value=>2019-01-01&date_value=<2019-01-03")
-    args = query_get_parser.parse_args()
-    assert args["date_value"] == [
-        (
-            ComparisonSigns.Greater,
-            datetime.datetime(2019, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc),
-        ),
-        (
-            ComparisonSigns.Lower,
-            datetime.datetime(2019, 1, 3, 0, 0, 0, tzinfo=datetime.timezone.utc),
-        ),
-    ]
+    response = client.get("/test_parsers?date_value=>2019-01-01&date_value=<2019-01-03")
+    assert response.json == {
+        "date_value": [
+            "(<ComparisonSigns.Greater: '>'>, datetime.datetime(2019, 1, "
+            "1, 0, 0, tzinfo=datetime.timezone.utc))",
+            "(<ComparisonSigns.Lower: '<'>, datetime.datetime(2019, 1, 3, "
+            "0, 0, tzinfo=datetime.timezone.utc))",
+        ],
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_datetime_range_using_comparison_signs_in_datetime_column_returns_list_of_tuples(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get(
-        "/test?datetime_value=>=2019-01-01T23:59:59&datetime_value=<=2019-01-03T23:59:59"
+    response = client.get(
+        "/test_parsers?datetime_value=>=2019-01-01T23:59:59&datetime_value=<=2019-01-03T23:59:59"
     )
-    args = query_get_parser.parse_args()
-    assert args["datetime_value"] == [
-        (
-            ComparisonSigns.GreaterOrEqual,
-            datetime.datetime(2019, 1, 1, 23, 59, 59, tzinfo=datetime.timezone.utc),
-        ),
-        (
-            ComparisonSigns.LowerOrEqual,
-            datetime.datetime(2019, 1, 3, 23, 59, 59, tzinfo=datetime.timezone.utc),
-        ),
-    ]
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": [
+            "(<ComparisonSigns.GreaterOrEqual: '>='>, "
+            "datetime.datetime(2019, 1, 1, 23, 59, 59, "
+            "tzinfo=datetime.timezone.utc))",
+            "(<ComparisonSigns.LowerOrEqual: '<='>, "
+            "datetime.datetime(2019, 1, 3, 23, 59, 59, "
+            "tzinfo=datetime.timezone.utc))",
+        ],
+        "float_value": None,
+        "int_value": None,
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_query_with_int_range_and_value_out_of_range_using_comparison_signs_in_int_column_returns_list_of_tuples_and_values(
     client,
 ):
-    query_get_parser = TestSupportForComparisonSignsController.query_get_parser
-    client.get("/test?int_value=>=122&int_value=<124&int_value=125")
-    args = query_get_parser.parse_args()
-    assert args["int_value"] == [
-        (ComparisonSigns.GreaterOrEqual, 122),
-        (ComparisonSigns.Lower, 124),
-        125,
-    ]
+    response = client.get("/test_parsers?int_value=>=122&int_value=<124&int_value=125")
+    assert response.json == {
+        "date_value": None,
+        "datetime_value": None,
+        "float_value": None,
+        "int_value": [
+            "(<ComparisonSigns.GreaterOrEqual: '>='>, 122)",
+            "(<ComparisonSigns.Lower: '<'>, 124)",
+            125,
+        ],
+        "limit": None,
+        "offset": None,
+    }
 
 
 def test_open_api_definition(client):
@@ -1072,6 +1159,41 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "date_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -1087,38 +1209,18 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
+                "post": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+                    "operationId": "post_test_resource",
                     "parameters": [
                         {
-                            "name": "date_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
-                        },
-                        {
-                            "name": "datetime_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
-                        },
-                        {
-                            "name": "float_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
-                        },
-                        {
-                            "name": "int_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
-                        },
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -1136,30 +1238,30 @@ def test_open_api_definition(client):
                         {
                             "name": "date_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "datetime_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "float_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "int_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "limit",
@@ -1184,23 +1286,43 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "post": {
+            },
+            "/test_parsers": {
+                "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
+                    "operationId": "delete_test_parsers_resource",
                     "parameters": [
                         {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
-                            },
-                        }
+                            "name": "date_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
-            },
-            "/test_parsers": {
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -1208,30 +1330,30 @@ def test_open_api_definition(client):
                         {
                             "name": "date_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "datetime_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "float_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "int_value",
                             "in": "query",
-                            "collectionFormat": "multi",
                             "type": "array",
-                            "items": {"type": "array"},
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "limit",
@@ -1245,41 +1367,6 @@ def test_open_api_definition(client):
                             "in": "query",
                             "type": "integer",
                             "minimum": 0,
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "date_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
-                        },
-                        {
-                            "name": "datetime_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
-                        },
-                        {
-                            "name": "float_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
-                        },
-                        {
-                            "name": "int_value",
-                            "in": "query",
-                            "collectionFormat": "multi",
-                            "type": "array",
-                            "items": {"type": "array"},
                         },
                     ],
                     "tags": ["Test"],
