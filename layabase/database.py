@@ -150,7 +150,7 @@ def restore(base, restore_path: str):
     Restore in the provided database the content of all the collections dumped in the provided path as bson.
 
     :param base: database object returned from the load function (Mandatory).
-     Note that there is not support for non Mongo DBs
+     Note that there is no support for non Mongo DBs
     :param restore_path: directory name where the dumped bson files are stored. The filename will be used as the collection name
      (Mandatory).
     """
