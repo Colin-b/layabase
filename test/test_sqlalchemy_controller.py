@@ -77,6 +77,48 @@ def app(db):
     return application
 
 
+def test_get_without_providing_a_dictionary(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.get("")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "" == exception_info.value.received_data
+
+
+def test_get_one_without_providing_a_dictionary(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.get_one("")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "" == exception_info.value.received_data
+
+
+def test_get_last_without_providing_a_dictionary(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.get_last("")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "" == exception_info.value.received_data
+
+
+def test_get_history_without_providing_a_dictionary(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.get_history("")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "" == exception_info.value.received_data
+
+
+def test_delete_without_providing_a_dictionary(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.delete("")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "" == exception_info.value.received_data
+
+
+def test_rollback_without_providing_a_dictionary(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.rollback_to("")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "" == exception_info.value.received_data
+
+
 def test_get_all_without_data_returns_empty_list(db):
     assert [] == TestController.get({})
 
@@ -102,11 +144,22 @@ def test_post_with_empty_dict_is_invalid(db):
     assert {} == exception_info.value.received_data
 
 
+def test_post_without_providing_a_dictionary(client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.post("fail")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "fail" == exception_info.value.received_data
+
+
 def test_post_many_with_empty_list_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([])
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert {} == exception_info.value.received_data
+
+
+def test_get_audit_when_not_audited(db):
+    assert [] == TestController.get_audit({})
 
 
 def test_put_with_nothing_is_invalid(db):

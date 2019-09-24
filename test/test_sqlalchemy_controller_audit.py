@@ -106,6 +106,13 @@ def app(db):
     return application
 
 
+def test_get_audit_without_providing_a_dictionary(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.get_audit("")
+    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
+    assert "" == exception_info.value.received_data
+
+
 def test_get_all_without_data_returns_empty_list(db):
     assert [] == TestController.get({})
     _check_audit(TestController, [])
