@@ -1537,7 +1537,7 @@ class CRUDModel:
         documents = cls.__collection__.find(filters, skip=offset, limit=limit)
         if cls.logger.isEnabledFor(logging.DEBUG):
             cls.logger.debug(
-                f'{documents.count() if documents else "No corresponding"} documents retrieved.'
+                f'{len(list(documents)) if documents else "No corresponding"} documents retrieved.'
             )
         return [cls.serialize(document) for document in documents]
 
@@ -2489,8 +2489,8 @@ def _dump(base: pymongo.database.Database, dump_path: str) -> None:
     for collection in base.list_collection_names():
         dump_file = os.path.join(dump_path, f"{collection}.bson")
         logger.debug(f"dumping collection {collection} in {dump_file}")
-        documents = base[collection].find({})
-        if documents.count() > 0:
+        documents = list(base[collection].find({}))
+        if documents:
             with open(dump_file, "w") as output:
                 output.write(dumps(documents))
 
