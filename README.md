@@ -162,7 +162,7 @@ The following parameters can also be provided when creating a column of string t
     </tr>
     <tr>
         <td><strong>description</strong></td>
-        <td>Field description used in Swagger and in error messages. Should be a string value.</td>
+        <td>Field description used in OpenAPI definition and in error messages. Should be a string value.</td>
         <td>None</td>
     </tr>
     <tr>

@@ -17,8 +17,17 @@ from bson.json_util import dumps, loads
 from bson.objectid import ObjectId
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from layaberr import ValidationFailed, ModelCouldNotBeFound
+from layabase.database import ComparisonSigns
 
 logger = logging.getLogger(__name__)
+
+
+_operators = {
+    ComparisonSigns.Greater: "$gt",
+    ComparisonSigns.GreaterOrEqual: "$gte",
+    ComparisonSigns.Lower: "$lt",
+    ComparisonSigns.LowerOrEqual: "$lte",
+}
 
 
 @enum.unique
@@ -86,6 +95,8 @@ class Column:
         Default to None (default sample will be generated).
         :param store_none: If field value should be stored if None and None is a valid value. Should be a boolean.
         Default to False (None values will not be stored to save space).
+        :param allow_comparison_signs: If field can be queries with ComparisonSign. Should be a boolean.
+        Default to False (only equality can be queried).
         """
         self.field_type = field_type or str
         name = kwargs.pop("name", None)
@@ -117,6 +128,7 @@ class Column:
         self._example = kwargs.pop("example", None)
         self._store_none: bool = bool(kwargs.pop("store_none", False))
         self.is_primary_key: bool = bool(kwargs.pop("is_primary_key", False))
+        self.allow_comparison_signs = bool(kwargs.pop("allow_comparison_signs", False))
         if self.is_primary_key:
             if self.index_type:
                 raise Exception(
@@ -184,7 +196,9 @@ class Column:
         self.name = name
         if "_id" == self.name:
             self.field_type = ObjectId
-        self._validate_value = self._get_value_validation_function()
+        self._validate_query = self._get_query_validation_function()
+        self._validate_insert = self._get_insert_update_validation_function()
+        self._validate_update = self._get_insert_update_validation_function()
         self._deserialize_value = self._get_value_deserialization_function()
         return self
 
@@ -233,10 +247,10 @@ class Column:
         if isinstance(value, list) and self.field_type != list:
             errors = {}
             for value_in_list in value:
-                errors.update(self._validate_value(value_in_list))
+                errors.update(self._validate_query(value_in_list))
             return errors
         else:
-            return self._validate_value(value)
+            return self._validate_query(value)
 
     def validate_insert(self, document: dict) -> dict:
         """
@@ -253,7 +267,7 @@ class Column:
             if not self._is_nullable_on_insert:
                 return {self.name: ["Missing data for required field."]}
             return {}
-        return self._validate_value(value)
+        return self._validate_insert(value)
 
     def validate_update(self, document: dict) -> dict:
         """
@@ -270,9 +284,34 @@ class Column:
             if not self._is_nullable_on_update:
                 return {self.name: ["Missing data for required field."]}
             return {}
-        return self._validate_value(value)
+        return self._validate_update(value)
 
-    def _get_value_validation_function(self) -> callable:
+    def _get_query_validation_function(self) -> callable:
+        """
+        Return the function used to validate values on this field.
+        """
+        if self.field_type == datetime.datetime:
+            return self._validate_query_date_time
+        elif issubclass(datetime.date, self.field_type):
+            return self._validate_query_date
+        elif isinstance(self.field_type, enum.EnumMeta):
+            return self._validate_enum
+        elif self.field_type == ObjectId:
+            return self._validate_object_id
+        elif self.field_type == str:
+            return self._validate_str
+        elif self.field_type == list:
+            return self._validate_list
+        elif self.field_type == dict:
+            return self._validate_dict
+        elif self.field_type == int:
+            return self._validate_query_int
+        elif self.field_type == float:
+            return self._validate_query_float
+        else:
+            return self._validate_type
+
+    def _get_insert_update_validation_function(self) -> callable:
         """
         Return the function used to validate values on this field.
         """
@@ -300,7 +339,6 @@ class Column:
     def _validate_date_time(self, value) -> dict:
         """
         Validate this value for this datetime field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
@@ -315,7 +353,6 @@ class Column:
     def _validate_date(self, value) -> dict:
         """
         Validate this value for this date field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
@@ -326,6 +363,32 @@ class Column:
                 return {self.name: ["Not a valid date."]}
 
         return self._validate_type(value)
+
+    def _validate_query_date_time(self, value) -> dict:
+        """
+        Validate this value for this datetime field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if self.allow_comparison_signs and isinstance(value, tuple):
+            value = value[1]
+
+        return self._validate_date_time(value)
+
+    def _validate_query_date(self, value) -> dict:
+        """
+        Validate this value for this date field.
+
+        :return: Validation errors that might have occurred on this field. Empty if no error occurred.
+        Entry would be composed of the field name associated to a list of error messages.
+        """
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if self.allow_comparison_signs and isinstance(value, tuple):
+            value = value[1]
+
+        return self._validate_date(value)
 
     def _validate_enum(self, value) -> dict:
         """
@@ -438,7 +501,6 @@ class Column:
     def _validate_int(self, value) -> dict:
         """
         Validate this value for this int field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
@@ -470,7 +532,6 @@ class Column:
     def _validate_float(self, value) -> dict:
         """
         Validate this value for this float field.
-
         :return: Validation errors that might have occurred on this field. Empty if no error occurred.
         Entry would be composed of the field name associated to a list of error messages.
         """
@@ -501,6 +562,18 @@ class Column:
 
         return self._validate_type(value)
 
+    def _validate_query_int(self, value) -> dict:
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if self.allow_comparison_signs and isinstance(value, tuple):
+            value = value[1]
+        return self._validate_int(value)
+
+    def _validate_query_float(self, value) -> dict:
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if self.allow_comparison_signs and isinstance(value, tuple):
+            value = value[1]
+        return self._validate_float(value)
+
     def _validate_type(self, value) -> dict:
         """
         Validate this value according to the expected field type.
@@ -512,6 +585,10 @@ class Column:
             return {self.name: [f"Not a valid {self.field_type.__name__}."]}
 
         return {}
+
+    @staticmethod
+    def _deserialize_comparison_signs_if_exists(comparison_sign, value):
+        return {_operators[comparison_sign]: value}
 
     def deserialize_query(self, filters: dict):
         """
@@ -536,7 +613,22 @@ class Column:
                     or_filter.append({self.name: {"$exists": False}})
                     or_filter.append({self.name: {"$in": mongo_values}})
                 else:
-                    filters[self.name] = {"$in": mongo_values}
+                    mongo_filters = {}
+                    other_values = []
+                    for val in mongo_values:
+                        if isinstance(val, tuple):
+                            mongo_filters.update({_operators[val[0]]: val[1]})
+                        else:
+                            other_values.append(val)
+
+                    if mongo_filters and other_values:
+                        or_filter = filters.setdefault("$or", [])
+                        or_filter.append({self.name: mongo_filters})
+                        or_filter.append({self.name: {"$in": mongo_values}})
+                    else:
+                        filters[self.name] = (
+                            {"$in": other_values} if other_values else mongo_filters
+                        )
         else:
             mongo_value = self._deserialize_value(value)
             if self.get_default_value(filters) == mongo_value:
@@ -544,7 +636,10 @@ class Column:
                 or_filter.append({self.name: {"$exists": False}})
                 or_filter.append({self.name: mongo_value})
             else:
-                filters[self.name] = mongo_value
+                if isinstance(mongo_value, tuple):
+                    filters[self.name] = {_operators[mongo_value[0]]: mongo_value[1]}
+                else:
+                    filters[self.name] = mongo_value
 
     def deserialize_insert(self, document: dict):
         """
@@ -617,7 +712,6 @@ class Column:
     def _deserialize_date(self, value):
         """
         Convert this field value to the proper value that can be inserted in Mongo.
-
         :param value: Received field value.
         :return Mongo valid value.
         """
@@ -1232,7 +1326,7 @@ class CRUDModel:
         cls._skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
         cls._skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
         skip_name_check = kwargs.pop("skip_name_check", False)
-        skip_update_indexes = kwargs.pop('skip_update_indexes', False)
+        skip_update_indexes = kwargs.pop("skip_update_indexes", False)
         super().__init_subclass__(**kwargs)
         cls.__tablename__ = table_name
         cls.logger = logging.getLogger(f"{__name__}.{table_name}")
@@ -1254,9 +1348,8 @@ class CRUDModel:
 
             cls.audit_model = _create_from(cls, base)
         else:
-            cls.audit_model = (
-                None
-            )  # Ensure no circular reference when creating the audit
+            # Ensure no circular reference when creating the audit
+            cls.audit_model = None
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
@@ -1444,7 +1537,7 @@ class CRUDModel:
         documents = cls.__collection__.find(filters, skip=offset, limit=limit)
         if cls.logger.isEnabledFor(logging.DEBUG):
             cls.logger.debug(
-                f'{documents.count() if documents else "No corresponding"} documents retrieved.'
+                f'{len(list(documents)) if documents else "No corresponding"} documents retrieved.'
             )
         return [cls.serialize(document) for document in documents]
 
@@ -2396,8 +2489,8 @@ def _dump(base: pymongo.database.Database, dump_path: str) -> None:
     for collection in base.list_collection_names():
         dump_file = os.path.join(dump_path, f"{collection}.bson")
         logger.debug(f"dumping collection {collection} in {dump_file}")
-        documents = base[collection].find({})
-        if documents.count() > 0:
+        documents = list(base[collection].find({}))
+        if documents:
             with open(dump_file, "w") as output:
                 output.write(dumps(documents))
 
@@ -2427,12 +2520,12 @@ def _restore(base: pymongo.database.Database, restore_path: str) -> None:
                 base[collection].insert_many(documents)
 
 
-def _health_details(base: pymongo.database.Database) -> (str, dict):
+def _health_checks(base: pymongo.database.Database) -> (str, dict):
     """
-    Return Health details for this Mongo database connection.
+    Return Health checks for this Mongo database connection.
 
     :param base: database object as returned by the _load method (Mandatory).
-    :return: A tuple with a string providing the status (pass, warn, fail), and the details.
+    :return: A tuple with a string providing the status (pass, warn, fail), and the checks.
     """
     try:
         response = base.command("ping")
@@ -2468,9 +2561,15 @@ def _get_python_type(field: Column) -> callable:
     if field.field_type == bool:
         return inputs.boolean
     if field.field_type == datetime.date:
-        return inputs.date_from_iso8601
+        return (
+            _validate_date if field.allow_comparison_signs else inputs.date_from_iso8601
+        )
     if field.field_type == datetime.datetime:
-        return inputs.datetime_from_iso8601
+        return (
+            _validate_date_time
+            if field.allow_comparison_signs
+            else inputs.datetime_from_iso8601
+        )
     if isinstance(field.field_type, enum.EnumMeta):
         return str
     if field.field_type == dict:
@@ -2479,5 +2578,65 @@ def _get_python_type(field: Column) -> callable:
         return json.loads
     if field.field_type == ObjectId:
         return str
+    if field.field_type == float:
+        return _validate_float if field.allow_comparison_signs else float
+    if field.field_type == int:
+        return _validate_int if field.allow_comparison_signs else int
 
     return field.field_type
+
+
+def _validate_float(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], float(value[1])
+
+    return float(value)
+
+
+_validate_float.__schema__ = {"type": "string"}
+
+
+def _validate_int(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], int(value[1])
+
+    return int(value)
+
+
+_validate_int.__schema__ = {"type": "string"}
+
+
+def _validate_date_time(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], iso8601.parse_date(value[1])
+
+    return iso8601.parse_date(value)
+
+
+_validate_date_time.__schema__ = {"type": "string"}
+
+
+def _validate_date(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], iso8601.parse_date(value[1])
+
+    return iso8601.parse_date(value).date()
+
+
+_validate_date.__schema__ = {"type": "string"}

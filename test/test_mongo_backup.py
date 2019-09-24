@@ -1,9 +1,10 @@
 import tempfile
 
 import pytest
+import flask
+import flask_restplus
 
 from layabase import database, database_mongo
-from test.flask_restplus_mock import TestAPI
 
 
 class TestController(database.CRUDController):
@@ -37,11 +38,7 @@ def _create_models(base):
 @pytest.fixture
 def db():
     _db = database.load("mongomock", _create_models)
-    TestController.namespace(TestAPI)
-    TestSecondController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
 
 
