@@ -2,6 +2,7 @@ import pytest
 import sqlalchemy
 import flask
 import flask_restplus
+from layaberr import ValidationFailed
 
 from layabase import database, database_sqlalchemy
 
@@ -78,6 +79,45 @@ def test_query_get_parser_without_required_field(client):
         "errors": {"mandatory": "Missing required parameter in the query string"},
         "message": "Input payload validation failed",
     }
+
+
+def test_get_without_required_field(client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestRequiredController.get({})
+    assert exception_info.value.received_data == {}
+    assert exception_info.value.errors == {
+        "mandatory": ["Missing data for required field."]
+    }
+
+
+def test_get_with_required_field(client):
+    assert TestRequiredController.get({"mandatory": 1}) == []
+
+
+def test_get_one_without_required_field(client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestRequiredController.get_one({})
+    assert exception_info.value.received_data == {}
+    assert exception_info.value.errors == {
+        "mandatory": ["Missing data for required field."]
+    }
+
+
+def test_get_one_with_required_field(client):
+    assert TestRequiredController.get_one({"mandatory": 1}) == {}
+
+
+def test_delete_without_required_field(client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestRequiredController.delete({})
+    assert exception_info.value.received_data == {}
+    assert exception_info.value.errors == {
+        "mandatory": ["Missing data for required field."]
+    }
+
+
+def test_delete_with_required_field(client):
+    assert TestRequiredController.delete({"mandatory": 1}) == 0
 
 
 def test_query_get_parser_with_required_field(client):

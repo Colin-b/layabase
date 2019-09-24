@@ -59,6 +59,8 @@ class CRUDModel:
         """
         Return all SQLAlchemy models.
         """
+        cls._check_required_query_fields(filters)
+
         query = cls._session.query(cls)
 
         order_by = filters.pop("order_by", [])
@@ -116,6 +118,7 @@ class CRUDModel:
         """
         Return the model formatted as a dictionary.
         """
+        cls._check_required_query_fields(filters)
         query = cls._session.query(cls)
         for column_name, value in filters.items():
             if value is not None:
@@ -300,6 +303,7 @@ class CRUDModel:
 
         :returns Number of removed rows.
         """
+        cls._check_required_query_fields(filters)
         try:
             query = cls._session.query(cls)
             for column_name, value in filters.items():
@@ -413,10 +417,28 @@ class CRUDModel:
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
+        # TODO Replace with marshmallow_sqlalchemy.fields.get_primary_keys(cls)
         return [
             marshmallow_field.name
             for marshmallow_field in cls.schema().fields.values()
             if marshmallow_field.required
+        ]
+
+    @classmethod
+    def _check_required_query_fields(cls, filters):
+        for required_field in cls._get_required_query_fields():
+            if required_field not in filters:
+                raise ValidationFailed(
+                    filters,
+                    errors={required_field: ["Missing data for required field."]},
+                )
+
+    @classmethod
+    def _get_required_query_fields(cls) -> List[str]:
+        return [
+            marshmallow_field.name
+            for marshmallow_field in cls.schema().fields.values()
+            if marshmallow_field.metadata.get("required_on_query", False)
         ]
 
     @classmethod
