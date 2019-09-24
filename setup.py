@@ -9,9 +9,9 @@ with open(os.path.join(this_dir, "README.md"), "r") as f:
 extra_requirements = {
     "testing": [
         # Used to run test cases
-        "pytest==5.1.2",
+        "pytest-flask==0.15.0",
         # Used to manage testing of Mongo
-        "mongomock==3.17.0",
+        "mongomock==3.18.0",
     ],
     "mongo": [
         "pymongo[tls]==3.9.0",
@@ -20,7 +20,7 @@ extra_requirements = {
     ],
     # Used to Manage Non-Mongo Database
     "sqlalchemy": [
-        "marshmallow==3.0.3",
+        "marshmallow==3.2.0",
         "SQLAlchemy==1.3.8",
         "marshmallow_sqlalchemy==0.19.0",
     ],
@@ -36,10 +36,7 @@ extra_requirements["testing"] += [
 
 setup(
     name="layabase",
-    version=open("layabase/version.py")
-    .readlines()[-1]
-    .split()[-1]
-    .strip("\"'"),
+    version=open("layabase/version.py").readlines()[-1].split()[-1].strip("\"'"),
     description="Database for layab",
     long_description=long_description,
     long_description_content_type="text/markdown",

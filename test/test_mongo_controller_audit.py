@@ -1,54 +1,15 @@
 import datetime
-import enum
 import re
-from typing import List, Dict
 
+import flask
+import flask_restplus
 import pytest
-from flask_restplus import inputs
-from layaberr import ValidationFailed, ModelCouldNotBeFound
+from layaberr import ValidationFailed
 
-from layabase import database, database_mongo, versioning_mongo
-from test.flask_restplus_mock import TestAPI
-
-
-def parser_types(flask_parser) -> dict:
-    return {arg.name: arg.type for arg in flask_parser.args}
-
-
-class EnumTest(enum.Enum):
-    Value1 = 1
-    Value2 = 2
+from layabase import database, database_mongo
 
 
 class TestController(database.CRUDController):
-    pass
-
-
-class TestEnumController(database.CRUDController):
-    pass
-
-
-class TestVersionedController(database.CRUDController):
-    pass
-
-
-class TestVersionedNoRollbackAllowedController(database.CRUDController):
-    pass
-
-
-class TestPrimaryIntController(database.CRUDController):
-    pass
-
-
-class TestIntController(database.CRUDController):
-    pass
-
-
-class TestPrimaryIntVersionedController(database.CRUDController):
-    pass
-
-
-class TestAutoIncAuditVersionedController(database.CRUDController):
     pass
 
 
@@ -60,109 +21,69 @@ def _create_models(base):
         mandatory = database_mongo.Column(int, is_nullable=False)
         optional = database_mongo.Column(str)
 
-    class TestEnumModel(
-        database_mongo.CRUDModel, base=base, table_name="enum_table_name", audit=True
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        enum_fld = database_mongo.Column(EnumTest)
-
-    class TestPrimaryIntModel(
-        database_mongo.CRUDModel,
-        base=base,
-        table_name="prim_int_table_name",
-        audit=True,
-    ):
-        key = database_mongo.Column(
-            int, is_primary_key=True, should_auto_increment=True
-        )
-        other = database_mongo.Column()
-
-    class TestPrimaryIntVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="prim_int_version_table_name",
-        audit=True,
-    ):
-        key = database_mongo.Column(
-            int, is_primary_key=True, should_auto_increment=True
-        )
-        other = database_mongo.Column()
-
-    class TestAutoIncAuditVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="prim_int_auto_inc_version_table_name",
-        audit=True,
-    ):
-        key = database_mongo.Column(
-            int, is_primary_key=True, should_auto_increment=True
-        )
-        other = database_mongo.Column(int)
-
-    class TestIntModel(
-        database_mongo.CRUDModel, base=base, table_name="int_table_name", audit=True
-    ):
-        key = database_mongo.Column(int)
-
-    class TestVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="versioned_table_name",
-        audit=True,
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        enum_fld = database_mongo.Column(EnumTest)
-
-    class TestVersionedNoRollbackAllowedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="versioned_no_rollback_table_name",
-        audit=True,
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        enum_fld = database_mongo.Column(EnumTest)
-
-        @classmethod
-        def validate_rollback(
-            cls, filters: dict, future_documents: List[dict]
-        ) -> Dict[str, List[str]]:
-            return {"key": ["Rollback forbidden"]}
-
     TestController.model(TestModel)
-    TestEnumController.model(TestEnumModel)
-    TestPrimaryIntController.model(TestPrimaryIntModel)
-    TestIntController.model(TestIntModel)
-    TestPrimaryIntVersionedController.model(TestPrimaryIntVersionedModel)
-    TestVersionedController.model(TestVersionedModel)
-    TestVersionedNoRollbackAllowedController.model(TestVersionedNoRollbackAllowedModel)
-    TestAutoIncAuditVersionedController.model(TestAutoIncAuditVersionedModel)
-    return [
-        TestModel,
-        TestEnumModel,
-        TestPrimaryIntModel,
-        TestPrimaryIntVersionedModel,
-        TestVersionedModel,
-        TestIntModel,
-        TestAutoIncAuditVersionedModel,
-        TestVersionedNoRollbackAllowedModel,
-    ]
+    return [TestModel]
 
 
 @pytest.fixture
 def db():
     _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
-    TestController.namespace(TestAPI)
-    TestEnumController.namespace(TestAPI)
-    TestVersionedController.namespace(TestAPI)
-    TestVersionedNoRollbackAllowedController.namespace(TestAPI)
-    TestPrimaryIntController.namespace(TestAPI)
-    TestIntController.namespace(TestAPI)
-    TestPrimaryIntVersionedController.namespace(TestAPI)
-    TestAutoIncAuditVersionedController.namespace(TestAPI)
-
     yield _db
-
     database.reset(_db)
+
+
+@pytest.fixture
+def app(db):
+    application = flask.Flask(__name__)
+    application.testing = True
+    api = flask_restplus.Api(application)
+    namespace = api.namespace("Test", path="/")
+
+    TestController.namespace(namespace)
+
+    @namespace.route("/test")
+    class TestResource(flask_restplus.Resource):
+        @namespace.expect(TestController.query_get_parser)
+        @namespace.marshal_with(TestController.get_response_model)
+        def get(self):
+            return []
+
+        @namespace.expect(TestController.json_post_model)
+        def post(self):
+            return []
+
+        @namespace.expect(TestController.json_put_model)
+        def put(self):
+            return []
+
+        @namespace.expect(TestController.query_delete_parser)
+        def delete(self):
+            return []
+
+    @namespace.route("/test/audit")
+    class TestAuditResource(flask_restplus.Resource):
+        @namespace.expect(TestController.query_get_audit_parser)
+        @namespace.marshal_with(TestController.get_audit_response_model)
+        def get(self):
+            return []
+
+    @namespace.route("/test_audit_parser")
+    class TestAuditParserResource(flask_restplus.Resource):
+        @namespace.expect(TestController.query_get_audit_parser)
+        def get(self):
+            return TestController.query_get_audit_parser.parse_args()
+
+    @namespace.route("/test_parsers")
+    class TestParsersResource(flask_restplus.Resource):
+        @namespace.expect(TestController.query_get_parser)
+        def get(self):
+            return TestController.query_get_parser.parse_args()
+
+        @namespace.expect(TestController.query_delete_parser)
+        def delete(self):
+            return TestController.query_delete_parser.parse_args()
+
+    return application
 
 
 def test_get_all_without_data_returns_empty_list(db):
@@ -192,68 +113,414 @@ def test_audited_table_name_is_forbidden(db):
     )
 
 
-def test_get_parser_fields_order(db):
-    assert {
-        "key": str,
-        "mandatory": int,
-        "optional": str,
-        "limit": inputs.positive,
-        "offset": inputs.natural,
-    } == parser_types(TestController.query_get_parser)
-
-
-def test_get_versioned_audit_parser_fields(db):
-    assert {
-        "audit_action": str,
-        "audit_date_utc": inputs.datetime_from_iso8601,
-        "audit_user": str,
-        "limit": inputs.positive,
-        "offset": inputs.natural,
-        "revision": int,
-    } == parser_types(TestVersionedController.query_get_audit_parser)
-
-
-def test_delete_parser_fields_order(db):
-    assert {"key": str, "mandatory": int, "optional": str} == parser_types(
-        TestController.query_delete_parser
-    )
-
-
-def test_post_model_fields_order(db):
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.json_post_model.fields_flask_type
-
-
-def test_versioned_audit_get_response_model_fields(db):
-    assert {
-        "audit_action": "String",
-        "audit_date_utc": "DateTime",
-        "audit_user": "String",
-        "revision": "Integer",
-    } == TestVersionedController.get_audit_response_model.fields_flask_type
-
-
-def test_put_model_fields_order(db):
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.json_put_model.fields_flask_type
-
-
-def test_get_response_model_fields_order(db):
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.get_response_model.fields_flask_type
+def test_open_api_definition(client):
+    response = client.get("/swagger.json")
+    assert response.json == {
+        "swagger": "2.0",
+        "basePath": "/",
+        "paths": {
+            "/test": {
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestModel"},
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/TestModel"},
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {"$ref": "#/definitions/TestModel"},
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+            },
+            "/test/audit": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {"$ref": "#/definitions/AuditTestModel"},
+                        }
+                    },
+                    "operationId": "get_test_audit_resource",
+                    "parameters": [
+                        {
+                            "name": "audit_action",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_date_utc",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_user",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
+                    "tags": ["Test"],
+                }
+            },
+            "/test_audit_parser": {
+                "get": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "get_test_audit_parser_resource",
+                    "parameters": [
+                        {
+                            "name": "audit_action",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_date_utc",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_user",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                    ],
+                    "tags": ["Test"],
+                }
+            },
+            "/test_parsers": {
+                "get": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "get_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+            },
+        },
+        "info": {"title": "API", "version": "1.0"},
+        "produces": ["application/json"],
+        "consumes": ["application/json"],
+        "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "AuditTestModel": {
+                "properties": {
+                    "audit_action": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Insert",
+                        "enum": ["Insert", "Update", "Delete", "Rollback"],
+                    },
+                    "audit_date_utc": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "audit_user": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample audit_user",
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                    "revision": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
+    }
 
 
 def test_post_with_nothing_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post(None)
     assert {"": ["No data provided."]} == exception_info.value.errors
     assert not exception_info.value.received_data
@@ -319,7 +586,7 @@ def test_post_without_mandatory_field_is_invalid(db):
 
 
 def test_post_many_without_mandatory_field_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": "my_key"}])
     assert {
         0: {"mandatory": ["Missing data for required field."]}
@@ -329,7 +596,7 @@ def test_post_many_without_mandatory_field_is_invalid(db):
 
 
 def test_post_without_key_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"mandatory": 1})
     assert {"key": ["Missing data for required field."]} == exception_info.value.errors
     assert {"mandatory": 1} == exception_info.value.received_data
@@ -337,7 +604,7 @@ def test_post_without_key_is_invalid(db):
 
 
 def test_post_many_without_key_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"mandatory": 1}])
     assert {
         0: {"key": ["Missing data for required field."]}
@@ -347,7 +614,7 @@ def test_post_many_without_key_is_invalid(db):
 
 
 def test_post_with_wrong_type_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": datetime.date(2007, 12, 5), "mandatory": 1})
     assert {"key": ["Not a valid str."]} == exception_info.value.errors
     assert {
@@ -358,7 +625,7 @@ def test_post_with_wrong_type_is_invalid(db):
 
 
 def test_post_many_with_wrong_type_is_invalid(db):
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": datetime.date(2007, 12, 5), "mandatory": 1}])
     assert {0: {"key": ["Not a valid str."]}} == exception_info.value.errors
     assert [
@@ -369,7 +636,7 @@ def test_post_many_with_wrong_type_is_invalid(db):
 
 def test_put_with_wrong_type_is_invalid(db):
     TestController.post({"key": "value1", "mandatory": 1})
-    with pytest.raises(Exception) as exception_info:
+    with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({"key": "value1", "mandatory": "invalid_value"})
     assert {"mandatory": ["Not a valid int."]} == exception_info.value.errors
     assert {
@@ -392,209 +659,6 @@ def test_put_with_wrong_type_is_invalid(db):
     )
 
 
-def test_versioned_int_primary_key_is_reset_after_delete(db):
-    assert {
-        "key": 1,
-        "other": "test1",
-        "valid_since_revision": 1,
-        "valid_until_revision": -1,
-    } == TestPrimaryIntVersionedController.post({"other": "test1"})
-    assert 1 == TestPrimaryIntVersionedController.delete({})
-    assert {
-        "key": 1,
-        "other": "test1",
-        "valid_since_revision": 3,
-        "valid_until_revision": -1,
-    } == TestPrimaryIntVersionedController.post({"other": "test1"})
-    _check_audit(
-        TestPrimaryIntVersionedController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 1,
-                "table_name": "prim_int_version_table_name",
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 2,
-                "table_name": "prim_int_version_table_name",
-            },
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 3,
-                "table_name": "prim_int_version_table_name",
-            },
-        ],
-    )
-    assert [
-        {
-            "key": 1,
-            "other": "test1",
-            "valid_since_revision": 1,
-            "valid_until_revision": 2,
-        },
-        {
-            "key": 1,
-            "other": "test1",
-            "valid_since_revision": 3,
-            "valid_until_revision": -1,
-        },
-    ] == TestPrimaryIntVersionedController.get_history({})
-
-
-def test_auto_incremented_fields_are_not_incremented_on_post_failure(db):
-    assert {
-        "key": 1,
-        "other": 1,
-        "valid_since_revision": 1,
-        "valid_until_revision": -1,
-    } == TestAutoIncAuditVersionedController.post({"other": 1})
-
-    # Should not increment revision, nor the auto incremented key
-    with pytest.raises(ValidationFailed):
-        TestAutoIncAuditVersionedController.post({"other": "FAILED"})
-
-    assert {
-        "key": 2,
-        "other": 2,
-        "valid_since_revision": 2,
-        "valid_until_revision": -1,
-    } == TestAutoIncAuditVersionedController.post({"other": 2})
-
-
-def test_auto_incremented_fields_are_not_incremented_on_multi_post_failure(db):
-    assert [
-        {"key": 1, "other": 1, "valid_since_revision": 1, "valid_until_revision": -1}
-    ] == TestAutoIncAuditVersionedController.post_many([{"other": 1}])
-
-    # Should not increment revision, nor the auto incremented key
-    with pytest.raises(ValidationFailed):
-        TestAutoIncAuditVersionedController.post_many(
-            [{"other": 2}, {"other": "FAILED"}, {"other": 4}]
-        )
-
-    assert [
-        {
-            "key": 3,  # For performance reasons, deserialization is performed before checks on other doc (so first valid document incremented the counter)
-            "other": 5,
-            "valid_since_revision": 2,
-            "valid_until_revision": -1,
-        }
-    ] == TestAutoIncAuditVersionedController.post_many([{"other": 5}])
-
-
-def test_auto_incremented_fields_are_not_incremented_on_multi_post_failure(db):
-    assert [
-        {"key": 1, "other": 1, "valid_since_revision": 1, "valid_until_revision": -1}
-    ] == TestAutoIncAuditVersionedController.post_many([{"other": 1}])
-
-    # Should not increment revision
-    with pytest.raises(ValidationFailed):
-        TestAutoIncAuditVersionedController.put_many(
-            [{"other": 1}, {"other": "FAILED"}, {"other": 1}]
-        )
-
-    assert [
-        {"key": 2, "other": 5, "valid_since_revision": 2, "valid_until_revision": -1}
-    ] == TestAutoIncAuditVersionedController.post_many([{"other": 5}])
-
-
-def test_int_primary_key_is_reset_after_delete(db):
-    assert {"key": 1, "other": "test1"} == TestPrimaryIntController.post(
-        {"other": "test1"}
-    )
-    assert 1 == TestPrimaryIntController.delete({})
-    assert {"key": 1, "other": "test1"} == TestPrimaryIntController.post(
-        {"other": "test1"}
-    )
-    assert {"key": 2, "other": "test1"} == TestPrimaryIntController.post(
-        {"other": "test1"}
-    )
-    _check_audit(
-        TestPrimaryIntController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "other": "test1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "other": "test1",
-                "revision": 2,
-            },
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "other": "test1",
-                "revision": 3,
-            },
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 2,
-                "other": "test1",
-                "revision": 4,
-            },
-        ],
-    )
-
-
-def test_int_revision_is_not_reset_after_delete(db):
-    assert {"key": 1} == TestIntController.post({"key": 1})
-    assert 1 == TestIntController.delete({})
-    assert {"key": 1} == TestIntController.post({"key": 1})
-    assert {"key": 2} == TestIntController.post({"key": 2})
-    _check_audit(
-        TestIntController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "revision": 1,
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "revision": 2,
-            },
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "revision": 3,
-            },
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 2,
-                "revision": 4,
-            },
-        ],
-    )
-
-
 def test_post_without_optional_is_valid(db):
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == TestController.post(
         {"key": "my_key", "mandatory": 1}
@@ -611,265 +675,6 @@ def test_post_without_optional_is_valid(db):
                 "optional": None,
                 "revision": 1,
             }
-        ],
-    )
-
-
-def test_revision_not_shared_if_not_versioned(db):
-    assert {"optional": None, "mandatory": 1, "key": "my_key"} == TestController.post(
-        {"key": "my_key", "mandatory": 1}
-    )
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": None,
-                "revision": 1,
-            }
-        ],
-    )
-    _check_audit(
-        TestVersionedController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 1,
-                "table_name": "versioned_table_name",
-            }
-        ],
-    )
-
-
-def test_post_with_enum_is_valid(db):
-    assert {"enum_fld": "Value1", "key": "my_key"} == TestEnumController.post(
-        {"key": "my_key", "enum_fld": EnumTest.Value1}
-    )
-    _check_audit(
-        TestEnumController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "enum_fld": "Value1",
-                "key": "my_key",
-                "revision": 1,
-            }
-        ],
-    )
-
-
-def test_put_with_enum_is_valid(db):
-    assert {"enum_fld": "Value1", "key": "my_key"} == TestEnumController.post(
-        {"key": "my_key", "enum_fld": EnumTest.Value1}
-    )
-    assert (
-        {"enum_fld": "Value1", "key": "my_key"},
-        {"enum_fld": "Value2", "key": "my_key"},
-    ) == TestEnumController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    _check_audit(
-        TestEnumController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "enum_fld": "Value1",
-                "key": "my_key",
-                "revision": 1,
-            },
-            {
-                "audit_action": "Update",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "enum_fld": "Value2",
-                "key": "my_key",
-                "revision": 2,
-            },
-        ],
-    )
-
-
-def test_revision_on_versionned_audit_after_put_failure(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    with pytest.raises(ModelCouldNotBeFound):
-        TestVersionedController.put({"key": "my_key2", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    _check_audit(
-        TestVersionedController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 1,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 2,
-                "table_name": "versioned_table_name",
-            },
-        ],
-    )
-
-
-def test_versioned_audit_after_post_put_delete_rollback(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    TestVersionedController.rollback_to({"revision": 1})
-    _check_audit(
-        TestVersionedController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 1,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Update",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 2,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 3,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Rollback",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 4,
-                "table_name": "versioned_table_name",
-            },
-        ],
-    )
-
-
-def test_rollback_validation_custom(db):
-    TestVersionedNoRollbackAllowedController.post(
-        {"key": "my_key", "enum_fld": EnumTest.Value1}
-    )
-    TestVersionedNoRollbackAllowedController.put(
-        {"key": "my_key", "enum_fld": EnumTest.Value2}
-    )
-    TestVersionedNoRollbackAllowedController.delete({"key": "my_key"})
-    with pytest.raises(ValidationFailed) as exception_info:
-        TestVersionedNoRollbackAllowedController.rollback_to({"revision": 1})
-    assert {"key": ["Rollback forbidden"]} == exception_info.value.errors
-    assert {"revision": 1} == exception_info.value.received_data
-
-
-def test_get_last_when_empty(db):
-    assert TestVersionedController.get_last({}) == {}
-
-
-def test_get_last_when_single_doc_post(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({}) == {
-        "enum_fld": "Value1",
-        "key": "my_key",
-        "valid_since_revision": 1,
-        "valid_until_revision": -1,
-    }
-
-
-def test_get_last_with_unmatched_filter(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({"key": "my_key2"}) == {}
-
-
-def test_get_last_when_single_update(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    assert TestVersionedController.get_last({}) == {
-        "enum_fld": "Value2",
-        "key": "my_key",
-        "valid_since_revision": 2,
-        "valid_until_revision": -1,
-    }
-
-
-def test_get_last_when_removed(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    assert TestVersionedController.get_last({}) == {
-        "enum_fld": "Value2",
-        "key": "my_key",
-        "valid_since_revision": 2,
-        "valid_until_revision": 3,
-    }
-
-
-def test_get_last_with_one_removed_and_a_valid(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    TestVersionedController.post({"key": "my_key2", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({}) == {
-        "enum_fld": "Value1",
-        "key": "my_key2",
-        "valid_since_revision": 4,
-        "valid_until_revision": -1,
-    }
-
-
-def test_get_last_with_one_removed_and_a_valid_and_filter_on_removed(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    TestVersionedController.post({"key": "my_key2", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({"key": "my_key"}) == {
-        "enum_fld": "Value2",
-        "key": "my_key",
-        "valid_since_revision": 2,
-        "valid_until_revision": 3,
-    }
-
-
-def test_delete_with_enum_is_valid(db):
-    assert {"enum_fld": "Value1", "key": "my_key"} == TestEnumController.post(
-        {"key": "my_key", "enum_fld": EnumTest.Value1}
-    )
-    assert 1 == TestEnumController.delete({"enum_fld": EnumTest.Value1})
-    _check_audit(
-        TestEnumController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "enum_fld": "Value1",
-                "key": "my_key",
-                "revision": 1,
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "enum_fld": "Value1",
-                "key": "my_key",
-                "revision": 2,
-            },
         ],
     )
 
@@ -1436,58 +1241,34 @@ def test_delete_without_filter_is_removing_everything(db):
     )
 
 
-def test_query_get_parser(db):
-    assert {
-        "key": str,
-        "mandatory": int,
-        "optional": str,
-        "limit": inputs.positive,
-        "offset": inputs.natural,
-    } == parser_types(TestController.query_get_parser)
-    _check_audit(TestController, [])
+def test_query_get_parser(client):
+    response = client.get("/test_parsers?key=1&mandatory=2&optional=3&limit=1&offset=0")
+    assert response.json == {
+        "key": ["1"],
+        "limit": 1,
+        "mandatory": [2],
+        "offset": 0,
+        "optional": ["3"],
+    }
 
 
-def test_query_get_audit_parser(db):
-    assert {
-        "audit_action": str,
-        "audit_date_utc": inputs.datetime_from_iso8601,
-        "audit_user": str,
-        "key": str,
-        "mandatory": int,
-        "optional": str,
-        "limit": inputs.positive,
-        "offset": inputs.natural,
-        "revision": int,
-    } == parser_types(TestController.query_get_audit_parser)
-    _check_audit(TestController, [])
-
-
-def test_query_delete_parser(db):
-    assert {"key": str, "mandatory": int, "optional": str} == parser_types(
-        TestController.query_delete_parser
+def test_query_get_audit_parser(client):
+    response = client.get(
+        "/test_audit_parser?key=1&mandatory=2&optional=3&limit=1&offset=0&revision=1&audit_action=U&audit_user=test"
     )
-    _check_audit(TestController, [])
+    assert response.json == {
+        "audit_action": ["U"],
+        "audit_date_utc": None,
+        "audit_user": ["test"],
+        "key": ["1"],
+        "limit": 1,
+        "mandatory": [2],
+        "offset": 0,
+        "optional": ["3"],
+        "revision": [1],
+    }
 
 
-def test_get_response_model(db):
-    assert "TestModel" == TestController.get_response_model.name
-    assert {
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-    } == TestController.get_response_model.fields_flask_type
-    _check_audit(TestController, [])
-
-
-def test_get_audit_response_model(db):
-    assert "AuditTestModel" == TestController.get_audit_response_model.name
-    assert {
-        "audit_action": "String",
-        "audit_date_utc": "DateTime",
-        "audit_user": "String",
-        "key": "String",
-        "mandatory": "Integer",
-        "optional": "String",
-        "revision": "Integer",
-    } == TestController.get_audit_response_model.fields_flask_type
-    _check_audit(TestController, [])
+def test_query_delete_parser(client):
+    response = client.delete("/test_parsers?key=1&mandatory=2&optional=3")
+    assert response.json == {"key": ["1"], "mandatory": [2], "optional": ["3"]}

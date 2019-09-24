@@ -1,9 +1,42 @@
+import enum
 import logging
-from typing import List
+import warnings
+from typing import List, Union
 
 from layaberr import ValidationFailed
 
 logger = logging.getLogger(__name__)
+
+
+@enum.unique
+class ComparisonSigns(enum.Enum):
+    GreaterOrEqual = ">="
+    Greater = ">"
+    LowerOrEqual = "<="
+    Lower = "<"
+
+    def __init__(self, value: str):
+        self.length = len(value)
+
+    @classmethod
+    def deserialize(cls, value: str) -> Union[tuple, str]:
+        """
+        Convert a string representation of a sign and its value to tuple. Handle the fact that there may not be a sign.
+
+        >>> ComparisonSigns.deserialize("test")
+        'test'
+
+        >>> ComparisonSigns.deserialize(">=test")
+        (<ComparisonSigns.GreaterOrEqual: '>='>, 'test')
+
+        >>> ComparisonSigns.deserialize("<test")
+        (<ComparisonSigns.Lower: '<'>, 'test')
+        """
+        for sign in cls:
+            if value.startswith(sign.value):
+                return sign, value[sign.length :]
+
+        return value
 
 
 def _is_mongo(database_connection_url: str) -> bool:
@@ -74,6 +107,10 @@ def reset(base):
 
     :param base: database object as returned by the load function (Mandatory).
     """
+    warnings.warn(
+        "reset will be moved to a testing module, if you still need it to be supported for non-testing purposes, contact developers now.",
+        FutureWarning,
+    )
     if hasattr(base, "is_mongos"):
         import layabase.database_mongo as database_mongo
 
@@ -90,9 +127,13 @@ def dump(base, dump_path: str):
     The filenames will be <collection_name>.bson
 
     :param base: database object as returned by the load function (Mandatory).
-     TODO not supported yet for non Mongo DBs
+     Note that there is no support for non Mongo DBs
      :param dump_path: directory name where to store the dump bson results. (Mandatory).
     """
+    warnings.warn(
+        "dump will be removed in a future version, if you still need it to be supported, contact developers now.",
+        FutureWarning,
+    )
     if not base:
         raise NoDatabaseProvided()
     if not dump_path:
@@ -109,10 +150,14 @@ def restore(base, restore_path: str):
     Restore in the provided database the content of all the collections dumped in the provided path as bson.
 
     :param base: database object returned from the load function (Mandatory).
-     TODO not supported yet for non Mongo DBs
+     Note that there is no support for non Mongo DBs
     :param restore_path: directory name where the dumped bson files are stored. The filename will be used as the collection name
      (Mandatory).
     """
+    warnings.warn(
+        "restore will be removed in a future version, if you still need it to be supported, contact developers now.",
+        FutureWarning,
+    )
     if not base:
         raise NoDatabaseProvided()
     if not restore_path:
@@ -126,23 +171,23 @@ def restore(base, restore_path: str):
 
 def health_details(base) -> (str, dict):
     """
-    Return Health details for this database connection.
+    Return Health checks for this database connection.
 
     :param base: database object as returned by the load method (Mandatory).
-     TODO not supported yet for non Mongo DBs
-    :return: A tuple with a string providing the status (pass, warn, fail), and the details.
+    :return: A tuple with a string providing the status (pass, warn, fail), and the checks.
     """
+    # TODO Rename to health_checks when removing dump and restore functions. (as it will be a major release)
     if not base:
         raise NoDatabaseProvided()
 
     if hasattr(base, "is_mongos"):
         import layabase.database_mongo as database_mongo
 
-        return database_mongo._health_details(base)
+        return database_mongo._health_checks(base)
     else:
         import layabase.database_sqlalchemy as database_sqlalchemy
 
-        return database_sqlalchemy._health_details(base)
+        return database_sqlalchemy._health_checks(base)
 
 
 class ControllerModelNotSet(Exception):
