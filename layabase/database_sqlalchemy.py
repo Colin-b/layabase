@@ -607,8 +607,6 @@ def _model_field_values(model_instance) -> dict:
 
 def _models_field_values(model_instances: list) -> List[dict]:
     """Return models fields values (with the proper type) as a list of dictionaries."""
-    if not model_instances:
-        return []
     return model_instances[0].schema().dump(model_instances, many=True)
 
 
