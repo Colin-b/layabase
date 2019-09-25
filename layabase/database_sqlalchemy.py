@@ -750,7 +750,7 @@ def _get_python_type(marshmallow_field):
     return str
 
 
-def _health_checks(base) -> (str, dict):
+def _check(base) -> (str, dict):
     """
     Return Health checks for this SqlAlchemy database.
 

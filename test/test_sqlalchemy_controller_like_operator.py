@@ -2,6 +2,7 @@ import pytest
 import sqlalchemy
 
 from layabase import database, database_sqlalchemy
+import layabase.testing
 
 
 class TestLikeOperatorController(database.CRUDController):
@@ -24,7 +25,7 @@ def _create_models(base):
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 def test_get_like_operator_double_star(db):

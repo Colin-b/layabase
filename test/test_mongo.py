@@ -2,6 +2,7 @@ import pymongo
 import pytest
 
 from layabase import database, database_mongo, versioning_mongo
+import layabase.testing
 
 
 def test_str_column_cannot_auto_increment():
@@ -154,7 +155,7 @@ def test_int_column_with_not_int_example_is_invalid():
 def db():
     _db = database.load("mongomock", lambda x: x)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 def test_2entities_on_same_collection_without_pk(db):

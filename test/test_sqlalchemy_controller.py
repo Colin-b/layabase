@@ -7,6 +7,7 @@ import flask_restplus
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import database, database_sqlalchemy
+import layabase.testing
 
 
 class TestController(database.CRUDController):
@@ -29,7 +30,7 @@ def _create_models(base):
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 @pytest.fixture

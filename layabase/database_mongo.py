@@ -2484,51 +2484,7 @@ def _reset_collection(base: pymongo.database.Database, collection: str) -> None:
     logger.info(f"{nb_removed} counter records deleted")
 
 
-def _dump(base: pymongo.database.Database, dump_path: str) -> None:
-    """
-    Dump the content of all the collections of the provided database as bson files in the provided directory
-
-    :param base: database object as returned by the _load method (Mandatory).
-    :param dump_path: directory name of where to store all the collections dumps.
-    If the directory doesn't exist, it will be created (Mandatory).
-    """
-    logger.debug(f"dumping collections as bson...")
-    pathlib.Path(dump_path).mkdir(parents=True, exist_ok=True)
-    for collection in base.list_collection_names():
-        dump_file = os.path.join(dump_path, f"{collection}.bson")
-        logger.debug(f"dumping collection {collection} in {dump_file}")
-        documents = list(base[collection].find({}))
-        if documents:
-            with open(dump_file, "w") as output:
-                output.write(dumps(documents))
-
-
-def _restore(base: pymongo.database.Database, restore_path: str) -> None:
-    """
-    Restore in the provided database the content of all the collections dumped in the provided path as bson.
-
-    :param base: database object as returned by the _load method (Mandatory).
-    :param restore_path: directory name of where all the collections dumps are stored (Mandatory).
-    """
-    logger.debug(f"restoring collections dumped as bson...")
-    collections = [
-        os.path.splitext(collection)[0]
-        for collection in os.listdir(restore_path)
-        if os.path.isfile(os.path.join(restore_path, collection))
-        and os.path.splitext(collection)[1] == ".bson"
-    ]
-    for collection in collections:
-        restore_file = os.path.join(restore_path, f"{collection}.bson")
-        with open(restore_file, "r") as input:
-            documents = loads(input.read())
-            if len(documents) > 0:
-                logger.debug(f"drop all records from collection {collection} if any")
-                base[collection].delete_many({})
-                logger.debug(f"import {restore_file} into collection {collection}")
-                base[collection].insert_many(documents)
-
-
-def _health_checks(base: pymongo.database.Database) -> (str, dict):
+def _check(base: pymongo.database.Database) -> (str, dict):
     """
     Return Health checks for this Mongo database connection.
 
