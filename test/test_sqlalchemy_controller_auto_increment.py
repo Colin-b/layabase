@@ -219,7 +219,7 @@ def test_open_api_definition(client):
             "TestAutoIncrementModel": {
                 "required": ["enum_field"],
                 "properties": {
-                    "key": {"type": "integer", "readOnly": True, "example": "0"},
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
                     "enum_field": {
                         "type": "string",
                         "description": "Test Documentation",

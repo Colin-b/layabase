@@ -381,7 +381,7 @@ def test_open_api_definition(client):
                 "required": ["key", "mandatory"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": "0"},
+                    "mandatory": {"type": "integer", "example": 1},
                     "optional": {"type": "string", "example": "sample_value"},
                 },
                 "type": "object",
@@ -403,7 +403,7 @@ def test_open_api_definition(client):
             "AuditTestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "revision": {"type": "integer", "readOnly": True, "example": "0"},
+                    "revision": {"type": "integer", "readOnly": True, "example": 1},
                     "audit_user": {"type": "string", "example": "sample_value"},
                     "audit_date_utc": {
                         "type": "string",
@@ -416,7 +416,7 @@ def test_open_api_definition(client):
                         "enum": ["I", "U", "D"],
                     },
                     "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": "0"},
+                    "mandatory": {"type": "integer", "example": 1},
                     "optional": {"type": "string", "example": "sample_value"},
                 },
                 "type": "object",

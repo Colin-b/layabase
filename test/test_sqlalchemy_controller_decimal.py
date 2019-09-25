@@ -67,7 +67,7 @@ def test_open_api_definition(client):
         "definitions": {
             "TestDecimalModel": {
                 "properties": {
-                    "decimal_field": {"example": "0.0", "type": "number"},
+                    "decimal_field": {"example": 1.4, "type": "number"},
                     "key": {"example": "sample_value", "type": "string"},
                 },
                 "required": ["key"],

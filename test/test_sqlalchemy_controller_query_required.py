@@ -277,7 +277,7 @@ def test_open_api_definition(client):
                 "required": ["key", "mandatory"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": "0"},
+                    "mandatory": {"type": "integer", "example": 1},
                 },
                 "type": "object",
             }

@@ -251,7 +251,7 @@ def test_open_api_definition(client):
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
-                    "float_field": {"type": "number", "example": "0.0"},
+                    "float_field": {"type": "number", "example": 1.4},
                 },
                 "type": "object",
             }

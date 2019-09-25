@@ -251,7 +251,7 @@ def test_open_api_definition(client):
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
-                    "bool_field": {"type": "boolean", "example": "true"},
+                    "bool_field": {"type": "boolean", "example": True},
                 },
                 "type": "object",
             }

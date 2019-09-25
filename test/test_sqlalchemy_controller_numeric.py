@@ -68,7 +68,7 @@ def test_open_api_definition(client):
             "TestNumericModel": {
                 "properties": {
                     "key": {"example": "sample_value", "type": "string"},
-                    "numeric_field": {"example": "0.0", "type": "number"},
+                    "numeric_field": {"example": 1.4, "type": "number"},
                 },
                 "required": ["key"],
                 "type": "object",
