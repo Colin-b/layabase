@@ -66,7 +66,8 @@ base = None  # Base is provided when calling load method
 class MyModel(CRUDModel, base):
     
     key = Column(String, primary_key=True)
-    value = Column(String)
+    # info can be used to provide information to marshmallow, such as requiring the field to be set on queries
+    value = Column(String, info={'marshmallow': {"required_on_query": True}})
 ```
 
 #### Retrieving data ####
