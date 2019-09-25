@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2019-09-25
+### Added
+- [SQLAlchemy] It is now possible to mark a column as mandatory on query via info={'marshmallow': {"required_on_query": True}}
+
+### Fixed
+- query parsers now extract arguments from query arguments only (and do not look at body anymore)
+
 ## [1.2.0] - 2019-09-24
 ### Added
 - You can now query mongo on something else than equality: >, >=, <, <=. Refer to documentation for details.
@@ -43,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.2.0...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.0...HEAD
+[1.3.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.2.0...v1.3.0
 [1.2.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.1.1...v1.2.0
 [1.1.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.1.0...v1.1.1
 [1.1.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.0.0...v1.1.0

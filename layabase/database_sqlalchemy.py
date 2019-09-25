@@ -59,6 +59,8 @@ class CRUDModel:
         """
         Return all SQLAlchemy models.
         """
+        cls._check_required_query_fields(filters)
+
         query = cls._session.query(cls)
 
         order_by = filters.pop("order_by", [])
@@ -116,6 +118,7 @@ class CRUDModel:
         """
         Return the model formatted as a dictionary.
         """
+        cls._check_required_query_fields(filters)
         query = cls._session.query(cls)
         for column_name, value in filters.items():
             if value is not None:
@@ -300,6 +303,7 @@ class CRUDModel:
 
         :returns Number of removed rows.
         """
+        cls._check_required_query_fields(filters)
         try:
             query = cls._session.query(cls)
             for column_name, value in filters.items():
@@ -353,6 +357,7 @@ class CRUDModel:
             column.default.arg for column in sql_alchemy_field.columns if column.default
         ]
         if defaults:
+            # TODO Set marshmallow_field.default instead ?
             marshmallow_field.metadata["sqlalchemy_default"] = defaults[0]
 
         # Auto incremented field
@@ -367,18 +372,26 @@ class CRUDModel:
     @classmethod
     def query_get_parser(cls) -> reqparse.RequestParser:
         query_get_parser = cls._query_parser()
-        query_get_parser.add_argument("limit", type=inputs.positive)
-        query_get_parser.add_argument("order_by", type=str, action="append")
+        query_get_parser.add_argument("limit", type=inputs.positive, location="args")
+        query_get_parser.add_argument(
+            "order_by", type=str, action="append", location="args"
+        )
         if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_parser.add_argument("offset", type=inputs.natural)
+            query_get_parser.add_argument(
+                "offset", type=inputs.natural, location="args"
+            )
         return query_get_parser
 
     @classmethod
     def query_get_history_parser(cls) -> reqparse.RequestParser:
         query_get_hist_parser = cls._query_parser()
-        query_get_hist_parser.add_argument("limit", type=inputs.positive)
+        query_get_hist_parser.add_argument(
+            "limit", type=inputs.positive, location="args"
+        )
         if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_hist_parser.add_argument("offset", type=inputs.natural)
+            query_get_hist_parser.add_argument(
+                "offset", type=inputs.natural, location="args"
+            )
         return query_get_hist_parser
 
     @classmethod
@@ -395,18 +408,37 @@ class CRUDModel:
         for marshmallow_field in cls.schema().fields.values():
             query_parser.add_argument(
                 marshmallow_field.name,
-                required=False,
+                required=marshmallow_field.metadata.get("required_on_query", False),
                 type=_get_python_type(marshmallow_field),
                 action="append",
+                location="args",
             )
         return query_parser
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
+        # TODO Replace with marshmallow_sqlalchemy.fields.get_primary_keys(cls)
         return [
             marshmallow_field.name
             for marshmallow_field in cls.schema().fields.values()
             if marshmallow_field.required
+        ]
+
+    @classmethod
+    def _check_required_query_fields(cls, filters):
+        for required_field in cls._get_required_query_fields():
+            if required_field not in filters:
+                raise ValidationFailed(
+                    filters,
+                    errors={required_field: ["Missing data for required field."]},
+                )
+
+    @classmethod
+    def _get_required_query_fields(cls) -> List[str]:
+        return [
+            marshmallow_field.name
+            for marshmallow_field in cls.schema().fields.values()
+            if marshmallow_field.metadata.get("required_on_query", False)
         ]
 
     @classmethod
