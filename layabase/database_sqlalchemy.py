@@ -445,8 +445,8 @@ class CRUDModel:
     def description_dictionary(cls) -> Dict[str, str]:
         description = {"table": cls.__tablename__}
 
-        if hasattr(cls, "table_args__"):
-            description["schema"] = cls.table_args__.get("schema")
+        if hasattr(cls, "__table_args__"):
+            description["schema"] = cls.__table_args__.get("schema")
 
         mapper = inspect(cls)
         for column in mapper.attrs:
@@ -500,7 +500,7 @@ class CRUDModel:
             )
         }
 
-        if hasattr(cls, "table_args__"):
+        if hasattr(cls, "__table_args__"):
             exported_fields["schema"] = flask_restplus_fields.String(
                 required=True, example="schema", description="Table schema"
             )
@@ -664,8 +664,6 @@ def _get_rest_plus_type(marshmallow_field):
         return flask_restplus_fields.Fixed
     if isinstance(marshmallow_field, marshmallow_fields.Float):
         return flask_restplus_fields.Float
-    if isinstance(marshmallow_field, marshmallow_fields.Number):
-        return flask_restplus_fields.Decimal
     if isinstance(marshmallow_field, marshmallow_fields.Boolean):
         return flask_restplus_fields.Boolean
     if isinstance(marshmallow_field, marshmallow_fields.Date):
@@ -727,8 +725,6 @@ def _get_default_example(marshmallow_field) -> str:
         return "2017-09-24T15:36:09"
     if isinstance(marshmallow_field, marshmallow_fields.Time):
         return "15:36:09"
-    if isinstance(marshmallow_field, marshmallow_fields.List):
-        return "xxxx"
 
     return "sample_value"
 
@@ -751,8 +747,6 @@ def _get_python_type(marshmallow_field):
         return inputs.date_from_iso8601
     if isinstance(marshmallow_field, marshmallow_fields.DateTime):
         return inputs.datetime_from_iso8601
-    if isinstance(marshmallow_field, marshmallow_fields.List):
-        return list
 
     # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
     return str

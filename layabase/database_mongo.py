@@ -1536,8 +1536,13 @@ class CRUDModel:
                 cls.logger.debug(f"Query all documents...")
         documents = cls.__collection__.find(filters, skip=offset, limit=limit)
         if cls.logger.isEnabledFor(logging.DEBUG):
+            nb_documents = (
+                cls.__collection__.count_documents(filters, skip=offset, limit=limit)
+                if limit
+                else cls.__collection__.count_documents(filters, skip=offset)
+            )
             cls.logger.debug(
-                f'{len(list(documents)) if documents else "No corresponding"} documents retrieved.'
+                f'{nb_documents if nb_documents else "No corresponding"} documents retrieved.'
             )
         return [cls.serialize(document) for document in documents]
 
