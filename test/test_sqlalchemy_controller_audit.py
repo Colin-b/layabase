@@ -915,6 +915,40 @@ def test_put_is_updating(db):
     )
 
 
+def test_put_many_is_updating(db):
+    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert (
+        [{"key": "my_key1", "mandatory": 1, "optional": "my_value1"}],
+        [{"key": "my_key1", "mandatory": 1, "optional": "my_value"}],
+    ) == TestController.put_many([{"key": "my_key1", "optional": "my_value"}])
+    assert [
+        {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
+    ] == TestController.get({"mandatory": 1})
+    _check_audit(
+        TestController,
+        [
+            {
+                "audit_action": "I",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
+                "audit_user": "",
+                "key": "my_key1",
+                "mandatory": 1,
+                "optional": "my_value1",
+                "revision": 1,
+            },
+            {
+                "audit_action": "U",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
+                "audit_user": "",
+                "key": "my_key1",
+                "mandatory": 1,
+                "optional": "my_value",
+                "revision": 2,
+            },
+        ],
+    )
+
+
 def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.put({"key": "my_key1", "optional": "my_value"})

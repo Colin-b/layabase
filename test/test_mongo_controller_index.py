@@ -74,10 +74,10 @@ def test_get_one_and_multiple_results_is_invalid(db):
 def test_get_one_is_valid(db):
     TestIndexController.post({"unique_key": "test", "non_unique_key": "2017-01-01"})
     TestIndexController.post({"unique_key": "test2", "non_unique_key": "2017-01-01"})
-    assert {
+    assert TestIndexController.get_one({"unique_key": "test2"}) == {
         "unique_key": "test2",
         "non_unique_key": "2017-01-01",
-    } == TestIndexController.get_one({"unique_key": "test2"})
+    }
 
 
 def test_get_with_list_is_valid(db):
