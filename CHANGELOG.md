@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.1] - 2019-09-25
 ### Fixed
 - [SQLAlchemy] Description now return the schema as well if provided.
-- [Mongo] Release 1.3.0 introduced a regression when logging was in DEBUG. It is now fixed and tested.
+- [Mongo] Release 1.2.0 introduced a regression when logging was in DEBUG. It is now fixed and tested.
 
 ### Removed
 - [SQLAlchemy] Remove support for List field as it is unused and not covered in test cases.
