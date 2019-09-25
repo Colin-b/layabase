@@ -80,178 +80,180 @@ def app(db):
 def test_get_without_providing_a_dictionary(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.get("")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == ""
 
 
 def test_get_one_without_providing_a_dictionary(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.get_one("")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == ""
 
 
 def test_get_last_without_providing_a_dictionary(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.get_last("")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == ""
 
 
 def test_get_history_without_providing_a_dictionary(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.get_history("")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == ""
 
 
 def test_delete_without_providing_a_dictionary(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.delete("")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == ""
 
 
 def test_rollback_without_providing_a_dictionary(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.rollback_to("")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == ""
 
 
 def test_get_all_without_data_returns_empty_list(db):
-    assert [] == TestController.get({})
+    assert TestController.get({}) == []
 
 
 def test_post_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
 
 
 def test_post_list_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
 
 
 def test_post_with_empty_dict_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({})
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
 
 
 def test_post_without_providing_a_dictionary(client):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post("fail")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "fail" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == "fail"
 
 
 def test_post_many_with_empty_list_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([])
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
 
 
 def test_get_audit_when_not_audited(db):
-    assert [] == TestController.get_audit({})
+    assert TestController.get_audit({}) == []
 
 
 def test_put_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
 
 
 def test_put_with_empty_dict_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({})
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
 
 
 def test_delete_without_nothing_do_not_fail(db):
-    assert 0 == TestController.delete({})
+    assert TestController.delete({}) == 0
 
 
 def test_post_without_mandatory_field_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": "my_key"})
-    assert {
+    assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
-    } == exception_info.value.errors
-    assert {"key": "my_key"} == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == {"key": "my_key"}
 
 
 def test_post_many_without_mandatory_field_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": "my_key"}])
-    assert {
+    assert exception_info.value.errors == {
         0: {"mandatory": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"key": "my_key"}] == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == [{"key": "my_key"}]
 
 
 def test_post_without_key_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"mandatory": 1})
-    assert {"key": ["Missing data for required field."]} == exception_info.value.errors
-    assert {"mandatory": 1} == exception_info.value.received_data
+    assert exception_info.value.errors == {"key": ["Missing data for required field."]}
+    assert exception_info.value.received_data == {"mandatory": 1}
 
 
 def test_post_many_without_key_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"mandatory": 1}])
-    assert {
+    assert exception_info.value.errors == {
         0: {"key": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"mandatory": 1}] == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == [{"mandatory": 1}]
 
 
 def test_post_with_wrong_type_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": 256, "mandatory": 1})
-    assert {"key": ["Not a valid string."]} == exception_info.value.errors
-    assert {"key": 256, "mandatory": 1} == exception_info.value.received_data
+    assert exception_info.value.errors == {"key": ["Not a valid string."]}
+    assert exception_info.value.received_data == {"key": 256, "mandatory": 1}
 
 
 def test_post_many_with_wrong_type_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": 256, "mandatory": 1}])
-    assert {0: {"key": ["Not a valid string."]}} == exception_info.value.errors
-    assert [{"key": 256, "mandatory": 1}] == exception_info.value.received_data
+    assert exception_info.value.errors == {0: {"key": ["Not a valid string."]}}
+    assert exception_info.value.received_data == [{"key": 256, "mandatory": 1}]
 
 
 def test_put_with_wrong_type_is_invalid(db):
     TestController.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({"key": "value1", "mandatory": "invalid value"})
-    assert {"mandatory": ["Not a valid integer."]} == exception_info.value.errors
-    assert {
+    assert exception_info.value.errors == {"mandatory": ["Not a valid integer."]}
+    assert exception_info.value.received_data == {
         "key": "value1",
         "mandatory": "invalid value",
-    } == exception_info.value.received_data
+    }
 
 
 def test_post_without_optional_is_valid(db):
-    assert {"mandatory": 1, "key": "my_key", "optional": None} == TestController.post(
-        {"key": "my_key", "mandatory": 1}
-    )
+    assert TestController.post({"key": "my_key", "mandatory": 1}) == {
+        "mandatory": 1,
+        "key": "my_key",
+        "optional": None,
+    }
 
 
 def test_post_many_without_optional_is_valid(db):
-    assert [
+    assert TestController.post_many(
+        [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
+    ) == [
         {"mandatory": 1, "key": "my_key", "optional": None},
         {"mandatory": 2, "key": "my_key2", "optional": None},
-    ] == TestController.post_many(
-        [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
-    )
+    ]
 
 
 def test_get_no_like_operator(db):
@@ -264,35 +266,29 @@ def test_get_no_like_operator(db):
             {"key": "y_key", "mandatory": 1},
         ]
     )
-    assert [] == TestController.get({"key": "*y_k*"})
+    assert TestController.get({"key": "*y_k*"}) == []
 
 
 def test_post_with_optional_is_valid(db):
-    assert {
-        "mandatory": 1,
-        "key": "my_key",
-        "optional": "my_value",
-    } == TestController.post({"key": "my_key", "mandatory": 1, "optional": "my_value"})
+    assert TestController.post(
+        {"key": "my_key", "mandatory": 1, "optional": "my_value"}
+    ) == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
 
 
 def test_post_many_with_optional_is_valid(db):
-    assert [
-        {"mandatory": 1, "key": "my_key", "optional": "my_value"},
-        {"mandatory": 2, "key": "my_key2", "optional": "my_value2"},
-    ] == TestController.post_many(
+    assert TestController.post_many(
         [
             {"key": "my_key", "mandatory": 1, "optional": "my_value"},
             {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
         ]
-    )
+    ) == [
+        {"mandatory": 1, "key": "my_key", "optional": "my_value"},
+        {"mandatory": 2, "key": "my_key2", "optional": "my_value2"},
+    ]
 
 
 def test_post_with_unknown_field_is_valid(db):
-    assert {
-        "mandatory": 1,
-        "key": "my_key",
-        "optional": "my_value",
-    } == TestController.post(
+    assert TestController.post(
         {
             "key": "my_key",
             "mandatory": 1,
@@ -300,14 +296,11 @@ def test_post_with_unknown_field_is_valid(db):
             # This field do not exists in schema
             "unknown": "my_value",
         }
-    )
+    ) == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
 
 
 def test_post_many_with_unknown_field_is_valid(db):
-    assert [
-        {"mandatory": 1, "key": "my_key", "optional": "my_value"},
-        {"mandatory": 2, "key": "my_key2", "optional": "my_value2"},
-    ] == TestController.post_many(
+    assert TestController.post_many(
         [
             {
                 "key": "my_key",
@@ -324,21 +317,24 @@ def test_post_many_with_unknown_field_is_valid(db):
                 "unknown": "my_value2",
             },
         ]
-    )
+    ) == [
+        {"mandatory": 1, "key": "my_key", "optional": "my_value"},
+        {"mandatory": 2, "key": "my_key2", "optional": "my_value2"},
+    ]
 
 
 def test_get_without_filter_is_retrieving_the_only_item(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert [
+    assert TestController.get({}) == [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
-    ] == TestController.get({})
+    ]
 
 
 def test_get_from_another_thread_than_post(db):
     def save_get_result():
-        assert [
+        assert TestController.get({}) == [
             {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
-        ] == TestController.get({})
+        ]
 
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
 
@@ -350,10 +346,10 @@ def test_get_from_another_thread_than_post(db):
 def test_get_without_filter_is_retrieving_everything_with_multiple_posts(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert TestController.get({}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
-    ] == TestController.get({})
+    ]
 
 
 def test_get_without_filter_is_retrieving_everything(db):
@@ -363,78 +359,81 @@ def test_get_without_filter_is_retrieving_everything(db):
             {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
         ]
     )
-    assert [
+    assert TestController.get({}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
-    ] == TestController.get({})
+    ]
 
 
 def test_get_with_filter_is_retrieving_subset_with_multiple_posts(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert TestController.get({"optional": "my_value1"}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
-    ] == TestController.get({"optional": "my_value1"})
+    ]
 
 
 def test_get_with_list_filter_matching_one_is_retrieving_subset(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert TestController.get({"optional": ["my_value1"]}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
-    ] == TestController.get({"optional": ["my_value1"]})
+    ]
 
 
 def test_get_with_list_filter_matching_many_is_retrieving_subset(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert TestController.get({"optional": ["my_value1", "my_value2"]}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
-    ] == TestController.get({"optional": ["my_value1", "my_value2"]})
+    ]
 
 
 def test_get_with_list_filter_matching_partial_is_retrieving_subset(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
-        {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
-    ] == TestController.get({"optional": ["non existing", "my_value1", "not existing"]})
+    assert TestController.get(
+        {"optional": ["non existing", "my_value1", "not existing"]}
+    ) == [{"key": "my_key1", "mandatory": 1, "optional": "my_value1"}]
 
 
 def test_get_with_empty_list_filter_is_retrieving_everything(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert TestController.get({"optional": []}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
-    ] == TestController.get({"optional": []})
+    ]
 
 
 def test_delete_with_list_filter_matching_one_is_retrieving_subset(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 1 == TestController.delete({"optional": ["my_value1"]})
+    assert TestController.delete({"optional": ["my_value1"]}) == 1
 
 
 def test_delete_with_list_filter_matching_many_is_retrieving_subset(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 2 == TestController.delete({"optional": ["my_value1", "my_value2"]})
+    assert TestController.delete({"optional": ["my_value1", "my_value2"]}) == 2
 
 
 def test_delete_with_list_filter_matching_partial_is_retrieving_subset(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 1 == TestController.delete(
-        {"optional": ["non existing", "my_value1", "not existing"]}
+    assert (
+        TestController.delete(
+            {"optional": ["non existing", "my_value1", "not existing"]}
+        )
+        == 1
     )
 
 
 def test_delete_with_empty_list_filter_is_retrieving_everything(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 2 == TestController.delete({"optional": []})
+    assert TestController.delete({"optional": []}) == 2
 
 
 def test_get_with_filter_is_retrieving_subset(db):
@@ -451,35 +450,62 @@ def test_get_with_filter_is_retrieving_subset(db):
 
 def test_put_is_updating(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert (
+    assert TestController.put({"key": "my_key1", "optional": "my_value"}) == (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"},
-    ) == TestController.put({"key": "my_key1", "optional": "my_value"})
-    assert [
+    )
+    assert TestController.get({"mandatory": 1}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
-    ] == TestController.get({"mandatory": 1})
+    ]
+
+
+def test_history_retrieve_all(db):
+    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    TestController.put({"key": "my_key1", "optional": "my_value"})
+    assert TestController.get_history({}) == [
+        {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
+    ]
+
+
+def test_get_last_returns_latest(db):
+    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    TestController.put({"key": "my_key1", "optional": "my_value"})
+    assert TestController.get_last({}) == {
+        "key": "my_key1",
+        "mandatory": 1,
+        "optional": "my_value",
+    }
+
+
+def test_rollback_does_nothing(db):
+    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    TestController.put({"key": "my_key1", "optional": "my_value"})
+    assert TestController.rollback_to({"revision": 0}) == 0
+    assert TestController.get({}) == [
+        {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
+    ]
 
 
 def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.put({"key": "my_key1", "optional": "my_value"})
-    assert [] == TestController.get({"optional": "my_value1"})
+    assert TestController.get({"optional": "my_value1"}) == []
 
 
 def test_delete_with_filter_is_removing_the_proper_row(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 1 == TestController.delete({"key": "my_key1"})
-    assert [
+    assert TestController.delete({"key": "my_key1"}) == 1
+    assert TestController.get({}) == [
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"}
-    ] == TestController.get({})
+    ]
 
 
 def test_delete_without_filter_is_removing_everything(db):
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 2 == TestController.delete({})
-    assert [] == TestController.get({})
+    assert TestController.delete({}) == 2
+    assert TestController.get({}) == []
 
 
 def test_query_get_parser(client):

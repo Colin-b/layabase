@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2019-09-25
+### Fixed
+- [SQLAlchemy] Description now return the schema as well if provided.
+- [Mongo] Release 1.2.0 introduced a regression when logging was in DEBUG. It is now fixed and tested.
+
+### Removed
+- [SQLAlchemy] Remove support for List field as it is unused and not covered in test cases.
+- [SQLAlchemy] Remove support for Number fields that are not Float or Decimal as it is unused and not covered in test cases.
+
 ## [1.3.0] - 2019-09-25
 ### Added
 - [SQLAlchemy] It is now possible to mark a column as mandatory on query via info={'marshmallow': {"required_on_query": True}}
@@ -50,7 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.0...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.1...HEAD
+[1.3.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.0...v1.3.1
 [1.3.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.2.0...v1.3.0
 [1.2.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.1.1...v1.2.0
 [1.1.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.1.0...v1.1.1
