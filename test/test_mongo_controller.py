@@ -1,5 +1,7 @@
 import datetime
 from threading import Thread
+import logging
+import sys
 
 import flask
 import flask_restplus
@@ -7,6 +9,13 @@ import pytest
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo
+
+# Use debug logging to ensure that debug logging statements have no impact
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(process)d:%(thread)d - %(filename)s:%(lineno)d - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+    level=logging.DEBUG,
+)
 
 
 class TestController(database.CRUDController):
