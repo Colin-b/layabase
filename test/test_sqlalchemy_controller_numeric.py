@@ -4,6 +4,7 @@ import pytest
 import sqlalchemy
 
 from layabase import database, database_sqlalchemy
+import layabase.testing
 
 
 class TestNumericController(database.CRUDController):
@@ -25,7 +26,7 @@ def _create_models(base):
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 @pytest.fixture
@@ -68,7 +69,7 @@ def test_open_api_definition(client):
             "TestNumericModel": {
                 "properties": {
                     "key": {"example": "sample_value", "type": "string"},
-                    "numeric_field": {"example": "0.0", "type": "number"},
+                    "numeric_field": {"example": 1.4, "type": "number"},
                 },
                 "required": ["key"],
                 "type": "object",

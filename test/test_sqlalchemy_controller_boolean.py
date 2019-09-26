@@ -4,6 +4,7 @@ import pytest
 import sqlalchemy
 
 from layabase import database, database_sqlalchemy
+import layabase.testing
 
 
 class TestBooleanController(database.CRUDController):
@@ -25,7 +26,7 @@ def _create_models(base):
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 @pytest.fixture
@@ -251,7 +252,7 @@ def test_open_api_definition(client):
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
-                    "bool_field": {"type": "boolean", "example": "true"},
+                    "bool_field": {"type": "boolean", "example": True},
                 },
                 "type": "object",
             }

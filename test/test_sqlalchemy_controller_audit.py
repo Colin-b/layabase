@@ -7,6 +7,7 @@ import flask_restplus
 from layaberr import ValidationFailed
 
 from layabase import database, database_sqlalchemy
+import layabase.testing
 
 
 class TestController(database.CRUDController):
@@ -45,7 +46,7 @@ def _create_models(base):
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 @pytest.fixture
@@ -381,7 +382,7 @@ def test_open_api_definition(client):
                 "required": ["key", "mandatory"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": "0"},
+                    "mandatory": {"type": "integer", "example": 1},
                     "optional": {"type": "string", "example": "sample_value"},
                 },
                 "type": "object",
@@ -403,7 +404,7 @@ def test_open_api_definition(client):
             "AuditTestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "revision": {"type": "integer", "readOnly": True, "example": "0"},
+                    "revision": {"type": "integer", "readOnly": True, "example": 1},
                     "audit_user": {"type": "string", "example": "sample_value"},
                     "audit_date_utc": {
                         "type": "string",
@@ -416,7 +417,7 @@ def test_open_api_definition(client):
                         "enum": ["I", "U", "D"],
                     },
                     "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": "0"},
+                    "mandatory": {"type": "integer", "example": 1},
                     "optional": {"type": "string", "example": "sample_value"},
                 },
                 "type": "object",
@@ -887,6 +888,40 @@ def test_put_is_updating(db):
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"},
     ) == TestController.put({"key": "my_key1", "optional": "my_value"})
+    assert [
+        {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
+    ] == TestController.get({"mandatory": 1})
+    _check_audit(
+        TestController,
+        [
+            {
+                "audit_action": "I",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
+                "audit_user": "",
+                "key": "my_key1",
+                "mandatory": 1,
+                "optional": "my_value1",
+                "revision": 1,
+            },
+            {
+                "audit_action": "U",
+                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
+                "audit_user": "",
+                "key": "my_key1",
+                "mandatory": 1,
+                "optional": "my_value",
+                "revision": 2,
+            },
+        ],
+    )
+
+
+def test_put_many_is_updating(db):
+    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert (
+        [{"key": "my_key1", "mandatory": 1, "optional": "my_value1"}],
+        [{"key": "my_key1", "mandatory": 1, "optional": "my_value"}],
+    ) == TestController.put_many([{"key": "my_key1", "optional": "my_value"}])
     assert [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
     ] == TestController.get({"mandatory": 1})

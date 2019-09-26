@@ -1,6 +1,5 @@
 import enum
 import logging
-import warnings
 from typing import List, Union
 
 from layaberr import ValidationFailed
@@ -39,10 +38,6 @@ class ComparisonSigns(enum.Enum):
         return value
 
 
-def _is_mongo(database_connection_url: str) -> bool:
-    return database_connection_url.startswith("mongo")
-
-
 class NoDatabaseProvided(Exception):
     def __init__(self):
         Exception.__init__(self, "A database connection URL must be provided.")
@@ -53,11 +48,6 @@ class NoRelatedModels(Exception):
         Exception.__init__(
             self, "A method allowing to create related models must be provided."
         )
-
-
-class NoPathProvided(Exception):
-    def __init__(self):
-        Exception.__init__(self, "A directory path must be provided.")
 
 
 def load(database_connection_url: str, create_models_func: callable, **kwargs):
@@ -87,7 +77,7 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     if not create_models_func:
         raise NoRelatedModels()
 
-    if _is_mongo(database_connection_url):
+    if database_connection_url.startswith("mongo"):
         import layabase.database_mongo as database_mongo
 
         return database_mongo._load(
@@ -101,93 +91,25 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
     )
 
 
-def reset(base):
+def check(base) -> (str, dict):
     """
-    If the database was already created, then drop all tables and recreate them all.
-
-    :param base: database object as returned by the load function (Mandatory).
-    """
-    warnings.warn(
-        "reset will be moved to a testing module, if you still need it to be supported for non-testing purposes, contact developers now.",
-        FutureWarning,
-    )
-    if hasattr(base, "is_mongos"):
-        import layabase.database_mongo as database_mongo
-
-        database_mongo._reset(base)
-    else:
-        import layabase.database_sqlalchemy as database_sqlalchemy
-
-        database_sqlalchemy._reset(base)
-
-
-def dump(base, dump_path: str):
-    """
-    Dump the content of all the collections part of the provided database in the provided path.
-    The filenames will be <collection_name>.bson
-
-    :param base: database object as returned by the load function (Mandatory).
-     Note that there is no support for non Mongo DBs
-     :param dump_path: directory name where to store the dump bson results. (Mandatory).
-    """
-    warnings.warn(
-        "dump will be removed in a future version, if you still need it to be supported, contact developers now.",
-        FutureWarning,
-    )
-    if not base:
-        raise NoDatabaseProvided()
-    if not dump_path:
-        raise NoPathProvided()
-
-    if hasattr(base, "is_mongos"):
-        import layabase.database_mongo as database_mongo
-
-        database_mongo._dump(base, dump_path)
-
-
-def restore(base, restore_path: str):
-    """
-    Restore in the provided database the content of all the collections dumped in the provided path as bson.
-
-    :param base: database object returned from the load function (Mandatory).
-     Note that there is no support for non Mongo DBs
-    :param restore_path: directory name where the dumped bson files are stored. The filename will be used as the collection name
-     (Mandatory).
-    """
-    warnings.warn(
-        "restore will be removed in a future version, if you still need it to be supported, contact developers now.",
-        FutureWarning,
-    )
-    if not base:
-        raise NoDatabaseProvided()
-    if not restore_path:
-        raise NoPathProvided()
-
-    if hasattr(base, "is_mongos"):
-        import layabase.database_mongo as database_mongo
-
-        database_mongo._restore(base, restore_path)
-
-
-def health_details(base) -> (str, dict):
-    """
-    Return Health checks for this database connection.
+    Return Health "Checks object" for this database connection.
 
     :param base: database object as returned by the load method (Mandatory).
-    :return: A tuple with a string providing the status (pass, warn, fail), and the checks.
+    :return: A tuple with a string providing the status (pass, warn, fail), and the "Checks object".
+    Based on https://inadarei.github.io/rfc-healthcheck/
     """
-    # TODO Rename to health_checks when removing dump and restore functions. (as it will be a major release)
     if not base:
         raise NoDatabaseProvided()
 
     if hasattr(base, "is_mongos"):
         import layabase.database_mongo as database_mongo
 
-        return database_mongo._health_checks(base)
+        return database_mongo._check(base)
     else:
         import layabase.database_sqlalchemy as database_sqlalchemy
 
-        return database_sqlalchemy._health_checks(base)
+        return database_sqlalchemy._check(base)
 
 
 class ControllerModelNotSet(Exception):
