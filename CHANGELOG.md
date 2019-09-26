@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2019-09-26
+### Removed
+- database.dump
+- database.restore
+
+### Changed
+- layabase.database.reset is now layabase.testing.reset
+- layabase.health_details is now layabase.check
+
+### Fixed
+- [SQLAlchemy] sample values now have the correct data type in the OpenAPI definition.
+
 ## [1.3.1] - 2019-09-25
 ### Fixed
 - [SQLAlchemy] Description now return the schema as well if provided.
@@ -59,7 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.1...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.0...HEAD
+[2.0.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.1...v2.0.0
 [1.3.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.0...v1.3.1
 [1.3.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.2.0...v1.3.0
 [1.2.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.1.1...v1.2.0

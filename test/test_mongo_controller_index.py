@@ -5,6 +5,7 @@ import pytest
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo
+import layabase.testing
 
 
 class TestIndexController(database.CRUDController):
@@ -29,7 +30,7 @@ def _create_models(base):
 def db():
     _db = database.load("mongomock", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 def test_post_twice_with_unique_index_is_invalid(db):
@@ -74,10 +75,10 @@ def test_get_one_and_multiple_results_is_invalid(db):
 def test_get_one_is_valid(db):
     TestIndexController.post({"unique_key": "test", "non_unique_key": "2017-01-01"})
     TestIndexController.post({"unique_key": "test2", "non_unique_key": "2017-01-01"})
-    assert {
+    assert TestIndexController.get_one({"unique_key": "test2"}) == {
         "unique_key": "test2",
         "non_unique_key": "2017-01-01",
-    } == TestIndexController.get_one({"unique_key": "test2"})
+    }
 
 
 def test_get_with_list_is_valid(db):

@@ -13,11 +13,29 @@ database modules (SQLAlchemy and PyMongo).
 
 Features:
 
- * Audit
- * Rollback
- * History
- * Validation
- * Conversion
+- Audit
+  - Automatic audit support (if `layabauth` python module is used, user will be logged as well)
+- Rollback
+  - Automatic rollback support (when history is activated)
+- History
+  - Automatic history management
+- Validation
+  - Enforce proper values are received (type, restricted choices, required fields)
+- Conversion
+  - Converting JSON received data to appropriate database data type
+  - Converting Database data type to JSON
+- Health check
+- Smart queries
+  - HTTP query parameters are extracted and converted from HTTP query arguments
+    - Special parameter: group_by
+    - Special parameter: limit
+    - Special parameter: offset
+  - Query on multiple equality via `field=value1&field=value2`
+  - Query on excluded intervals via `field=>value1&field=<value2`
+  - Query on included intervals via `field=>=value1&field=<=value2`
+  - Query on restricted values via `field=!=value1&field=!=value2` (__Feature not yet available__)
+  - Query via a mix of all those features if needed as long as it make sense to you
+  - Query regex thanks to `*` character via `field=v*lue` (__Feature not yet available for mongo__) 
 
 ## Concept ##
 

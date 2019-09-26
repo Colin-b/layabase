@@ -1,6 +1,7 @@
 import pytest
 
 from layabase import database, database_mongo
+import layabase.testing
 
 
 class TestStringListController(database.CRUDController):
@@ -23,7 +24,7 @@ def _create_models(base):
 def db():
     _db = database.load("mongomock", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 def test_post_list_of_str_is_sorted(db):

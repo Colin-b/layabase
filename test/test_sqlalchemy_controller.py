@@ -4,9 +4,10 @@ import pytest
 import sqlalchemy
 import flask
 import flask_restplus
-from layaberr import ValidationFailed
+from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import database, database_sqlalchemy
+import layabase.testing
 
 
 class TestController(database.CRUDController):
@@ -29,7 +30,7 @@ def _create_models(base):
 def db():
     _db = database.load("sqlite:///:memory:", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 @pytest.fixture
@@ -256,6 +257,57 @@ def test_post_many_without_optional_is_valid(db):
     ]
 
 
+def test_put_many_without_optional_is_valid(db):
+    TestController.post_many(
+        [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
+    )
+    assert TestController.put_many(
+        [{"key": "my_key", "mandatory": 2}, {"key": "my_key2", "mandatory": 3}]
+    ) == (
+        [
+            {"mandatory": 1, "key": "my_key", "optional": None},
+            {"mandatory": 2, "key": "my_key2", "optional": None},
+        ],
+        [
+            {"mandatory": 2, "key": "my_key", "optional": None},
+            {"mandatory": 3, "key": "my_key2", "optional": None},
+        ],
+    )
+
+
+def test_put_many_with_invalid_value(db):
+    TestController.post_many(
+        [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
+    )
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.put_many(
+            [
+                {"key": "my_key", "mandatory": "not integer"},
+                {"key": "my_key2", "mandatory": 3},
+            ]
+        )
+    assert exception_info.value.errors == {"mandatory": ["Not a valid integer."]}
+    assert exception_info.value.received_data == {
+        "key": "my_key",
+        "mandatory": "not integer",
+    }
+
+
+def test_put_many_without_previous_is_invalid(db):
+    with pytest.raises(ModelCouldNotBeFound) as exception_info:
+        TestController.put_many(
+            [{"key": "my_key", "mandatory": 2}, {"key": "my_key2", "mandatory": 3}]
+        )
+    assert exception_info.value.requested_data == {"key": "my_key", "mandatory": 2}
+
+
+def test_put_many_with_empty_list_is_invalid(db):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.put_many([])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
+
+
 def test_get_no_like_operator(db):
     TestController.post_many(
         [
@@ -267,6 +319,34 @@ def test_get_no_like_operator(db):
         ]
     )
     assert TestController.get({"key": "*y_k*"}) == []
+
+
+def test_get_one_with_a_list_of_one_value_is_valid(db):
+    TestController.post({"key": "test", "mandatory": 1})
+    TestController.post({"key": "test2", "mandatory": 2})
+    assert TestController.get_one({"key": ["test2"]}) == {
+        "key": "test2",
+        "mandatory": 2,
+        "optional": None,
+    }
+
+
+def test_get_one_with_an_empty_list_is_valid(db):
+    TestController.post({"key": "test", "mandatory": 1})
+    assert TestController.get_one({"key": []}) == {
+        "key": "test",
+        "mandatory": 1,
+        "optional": None,
+    }
+
+
+def test_get_one_with_a_list_of_values_is_invalid(db):
+    TestController.post({"key": "test", "mandatory": 1})
+    TestController.post({"key": "test2", "mandatory": 2})
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.get_one({"key": ["test2", "test"]})
+    assert exception_info.value.errors == {"key": ["Only one value must be queried."]}
+    assert exception_info.value.received_data == {"key": ["test2", "test"]}
 
 
 def test_post_with_optional_is_valid(db):
@@ -692,7 +772,7 @@ def test_open_api_definition(client):
                 "required": ["key", "mandatory"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": "0"},
+                    "mandatory": {"type": "integer", "example": 1},
                     "optional": {"type": "string", "example": "sample_value"},
                 },
                 "type": "object",

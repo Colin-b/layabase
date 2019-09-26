@@ -607,8 +607,6 @@ def _model_field_values(model_instance) -> dict:
 
 def _models_field_values(model_instances: list) -> List[dict]:
     """Return models fields values (with the proper type) as a list of dictionaries."""
-    if not model_instances:
-        return []
     return model_instances[0].schema().dump(model_instances, many=True)
 
 
@@ -709,16 +707,16 @@ def _is_read_only_value(marshmallow_field) -> bool:
     )
 
 
-def _get_default_example(marshmallow_field) -> str:
+def _get_default_example(marshmallow_field):
     """
     Return an Example value corresponding to this SQL Alchemy Marshmallow field.
     """
     if isinstance(marshmallow_field, marshmallow_fields.Integer):
-        return "0"
+        return 1
     if isinstance(marshmallow_field, marshmallow_fields.Number):
-        return "0.0"
+        return 1.4
     if isinstance(marshmallow_field, marshmallow_fields.Boolean):
-        return "true"
+        return True
     if isinstance(marshmallow_field, marshmallow_fields.Date):
         return "2017-09-24"
     if isinstance(marshmallow_field, marshmallow_fields.DateTime):
@@ -752,7 +750,7 @@ def _get_python_type(marshmallow_field):
     return str
 
 
-def _health_checks(base) -> (str, dict):
+def _check(base) -> (str, dict):
     """
     Return Health checks for this SqlAlchemy database.
 

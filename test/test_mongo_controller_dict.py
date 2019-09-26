@@ -7,6 +7,7 @@ from flask_restplus import inputs
 from layaberr import ValidationFailed
 
 from layabase import database, database_mongo
+import layabase.testing
 
 
 class EnumTest(enum.Enum):
@@ -40,7 +41,7 @@ def _create_models(base):
 def db():
     _db = database.load("mongomock", _create_models)
     yield _db
-    database.reset(_db)
+    layabase.testing.reset(_db)
 
 
 @pytest.fixture
