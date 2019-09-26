@@ -54,5 +54,5 @@ def test_rollback_validation_custom(db):
     TestVersionedNoRollbackAllowedController.delete({"key": "my_key"})
     with pytest.raises(ValidationFailed) as exception_info:
         TestVersionedNoRollbackAllowedController.rollback_to({"revision": 1})
-    assert {"key": ["Rollback forbidden"]} == exception_info.value.errors
-    assert {"revision": 1} == exception_info.value.received_data
+    assert exception_info.value.errors == {"key": ["Rollback forbidden"]}
+    assert exception_info.value.received_data == {"revision": 1}

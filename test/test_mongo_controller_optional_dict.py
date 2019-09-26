@@ -39,20 +39,6 @@ def db():
     layabase.testing.reset(_db)
 
 
-class DateTimeModuleMock:
-    class DateTimeMock:
-        @staticmethod
-        def utcnow():
-            class UTCDateTimeMock:
-                @staticmethod
-                def isoformat():
-                    return "2018-10-11T15:05:05.663979"
-
-            return UTCDateTimeMock
-
-    datetime = DateTimeMock
-
-
 def test_post_missing_optional_dict_is_valid(db):
     assert {
         "dict_col": {"first_key": None, "second_key": None},
