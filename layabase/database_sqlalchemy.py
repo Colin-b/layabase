@@ -225,6 +225,8 @@ class CRUDModel:
         new_rows = []
         new_models = []
         for row in rows:
+            if not isinstance(row, dict):
+                raise ValidationFailed(row, message="Must be a dictionary.")
             try:
                 previous_model = cls.schema().get_instance(row)
             except exc.sa_exc.DBAPIError:
@@ -269,6 +271,8 @@ class CRUDModel:
         """
         if not row:
             raise ValidationFailed({}, message="No data provided.")
+        if not isinstance(row, dict):
+            raise ValidationFailed(row, message="Must be a dictionary.")
         try:
             previous_model = cls.schema().get_instance(row)
         except exc.sa_exc.DBAPIError:
