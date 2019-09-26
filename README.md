@@ -31,8 +31,8 @@ Features:
     - Special parameter: limit
     - Special parameter: offset
   - Query on multiple equality via `field=value1&field=value2`
-  - Query on excluded intervals via `field=>value1&field=<value2`
-  - Query on included intervals via `field=>=value1&field=<=value2`
+  - Query on excluded intervals via `field=>value1&field=<value2` (__Feature not yet available for sqla__)
+  - Query on included intervals via `field=>=value1&field=<=value2` (__Feature not yet available for sqla__)
   - Query on restricted values via `field=!=value1&field=!=value2` (__Feature not yet available__)
   - Query via a mix of all those features if needed as long as it make sense to you
   - Query regex thanks to `*` character via `field=v*lue` (__Feature not yet available for mongo__) 

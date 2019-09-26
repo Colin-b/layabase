@@ -1,5 +1,3 @@
-import re
-
 import pytest
 import sqlalchemy
 import flask
@@ -8,6 +6,8 @@ from layaberr import ValidationFailed
 
 from layabase import database, database_sqlalchemy
 import layabase.testing
+import layabase.audit_sqlalchemy
+from test import DateTimeModuleMock
 
 
 class TestController(database.CRUDController):
@@ -110,13 +110,13 @@ def app(db):
 def test_get_audit_without_providing_a_dictionary(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.get_audit("")
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert "" == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == ""
 
 
 def test_get_all_without_data_returns_empty_list(db):
-    assert [] == TestController.get({})
-    _check_audit(TestController, [])
+    assert TestController.get({}) == []
+    assert TestController.get_audit({}) == []
 
 
 def test_open_api_definition(client):
@@ -428,80 +428,80 @@ def test_open_api_definition(client):
             "MaskError": {"description": "When any error occurs on mask"},
         },
     }
-    _check_audit(TestController, [])
+    assert TestController.get_audit({}) == []
 
 
 def test_post_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
+    assert TestController.get_audit({}) == []
 
 
 def test_post_many_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
+    assert TestController.get_audit({}) == []
 
 
 def test_post_with_empty_dict_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({})
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
+    assert TestController.get_audit({}) == []
 
 
 def test_post_many_with_empty_list_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([])
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
+    assert TestController.get_audit({}) == []
 
 
 def test_put_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
+    assert TestController.get_audit({}) == []
 
 
 def test_put_with_empty_dict_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({})
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
+    assert TestController.get_audit({}) == []
 
 
 def test_delete_without_nothing_do_not_fail(db):
-    assert 0 == TestController.delete({})
-    _check_audit(TestController, [])
+    assert TestController.delete({}) == 0
+    assert TestController.get_audit({}) == []
 
 
 def test_post_without_mandatory_field_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": "my_key"})
-    assert {
+    assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
-    } == exception_info.value.errors
-    assert {"key": "my_key"} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    }
+    assert exception_info.value.received_data == {"key": "my_key"}
+    assert TestController.get_audit({}) == []
 
 
 def test_post_many_without_mandatory_field_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": "my_key"}])
-    assert {
+    assert exception_info.value.errors == {
         0: {"mandatory": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"key": "my_key"}] == exception_info.value.received_data
-    _check_audit(TestController, [])
+    }
+    assert exception_info.value.received_data == [{"key": "my_key"}]
+    assert TestController.get_audit({}) == []
 
 
 def test_post_without_key_is_invalid(db):
@@ -509,7 +509,7 @@ def test_post_without_key_is_invalid(db):
         TestController.post({"mandatory": 1})
     assert {"key": ["Missing data for required field."]} == exception_info.value.errors
     assert {"mandatory": 1} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert TestController.get_audit({}) == []
 
 
 def test_post_many_without_key_is_invalid(db):
@@ -519,7 +519,7 @@ def test_post_many_without_key_is_invalid(db):
         0: {"key": ["Missing data for required field."]}
     } == exception_info.value.errors
     assert [{"mandatory": 1}] == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert TestController.get_audit({}) == []
 
 
 def test_post_with_wrong_type_is_invalid(db):
@@ -527,7 +527,7 @@ def test_post_with_wrong_type_is_invalid(db):
         TestController.post({"key": 256, "mandatory": 1})
     assert {"key": ["Not a valid string."]} == exception_info.value.errors
     assert {"key": 256, "mandatory": 1} == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert TestController.get_audit({}) == []
 
 
 def test_post_many_with_wrong_type_is_invalid(db):
@@ -535,10 +535,12 @@ def test_post_many_with_wrong_type_is_invalid(db):
         TestController.post_many([{"key": 256, "mandatory": 1}])
     assert {0: {"key": ["Not a valid string."]}} == exception_info.value.errors
     assert [{"key": 256, "mandatory": 1}] == exception_info.value.received_data
-    _check_audit(TestController, [])
+    assert TestController.get_audit({}) == []
 
 
-def test_put_with_wrong_type_is_invalid(db):
+def test_put_with_wrong_type_is_invalid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({"key": "value1", "mandatory": "invalid_value"})
@@ -547,162 +549,133 @@ def test_put_with_wrong_type_is_invalid(db):
         "key": "value1",
         "mandatory": "invalid_value",
     } == exception_info.value.received_data
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "value1",
-                "mandatory": 1,
-                "optional": None,
-                "revision": 1,
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "value1",
+            "mandatory": 1,
+            "optional": None,
+            "revision": 1,
+        }
+    ]
 
 
-def test_post_without_optional_is_valid(db):
+def test_post_without_optional_is_valid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == TestController.post(
         {"key": "my_key", "mandatory": 1}
     )
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": None,
-                "revision": 1,
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": None,
+            "revision": 1,
+        }
+    ]
 
 
-def test_post_on_a_second_model_without_optional_is_valid(db):
+def test_post_on_a_second_model_without_optional_is_valid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key", "mandatory": 1})
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == Test2Controller.post(
         {"key": "my_key", "mandatory": 1}
     )
-    _check_audit(
-        Test2Controller,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": None,
-                "revision": 1,
-            }
-        ],
-    )
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": None,
-                "revision": 1,
-            }
-        ],
-    )
+    assert Test2Controller.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": None,
+            "revision": 1,
+        }
+    ]
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": None,
+            "revision": 1,
+        }
+    ]
 
 
-def test_post_many_without_optional_is_valid(db):
+def test_post_many_without_optional_is_valid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     assert [
         {"optional": None, "mandatory": 1, "key": "my_key"}
     ] == TestController.post_many([{"key": "my_key", "mandatory": 1}])
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": None,
-                "revision": 1,
-            }
-        ],
-    )
-
-
-def _check_audit(controller, expected_audit, filter_audit=None):
-    if not filter_audit:
-        filter_audit = {}
-    audit = controller.get_audit(filter_audit)
-    audit = [
-        {key: audit_line[key] for key in sorted(audit_line.keys())}
-        for audit_line in audit
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": None,
+            "revision": 1,
+        }
     ]
 
-    if not expected_audit:
-        assert audit == expected_audit
-    else:
-        assert re.match(
-            f"{expected_audit}".replace("[", "\\[")
-            .replace("]", "\\]")
-            .replace("\\\\", "\\"),
-            f"{audit}",
-        )
 
+def test_post_with_optional_is_valid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
 
-def test_post_with_optional_is_valid(db):
     assert {
         "mandatory": 1,
         "key": "my_key",
         "optional": "my_value",
     } == TestController.post({"key": "my_key", "mandatory": 1, "optional": "my_value"})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": "my_value",
-                "revision": 1,
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": "my_value",
+            "revision": 1,
+        }
+    ]
 
 
-def test_post_many_with_optional_is_valid(db):
+def test_post_many_with_optional_is_valid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     assert [
         {"mandatory": 1, "key": "my_key", "optional": "my_value"}
     ] == TestController.post_many(
         [{"key": "my_key", "mandatory": 1, "optional": "my_value"}]
     )
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": "my_value",
-                "revision": 1,
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": "my_value",
+            "revision": 1,
+        }
+    ]
 
 
-def test_post_with_unknown_field_is_valid(db):
+def test_post_with_unknown_field_is_valid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     assert {
         "optional": "my_value",
         "mandatory": 1,
@@ -716,23 +689,22 @@ def test_post_with_unknown_field_is_valid(db):
             "unknown": "my_value",
         }
     )
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": "my_value",
-                "revision": 1,
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": "my_value",
+            "revision": 1,
+        }
+    ]
 
 
-def test_post_many_with_unknown_field_is_valid(db):
+def test_post_many_with_unknown_field_is_valid(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     assert [
         {"optional": "my_value", "mandatory": 1, "key": "my_key"}
     ] == TestController.post_many(
@@ -746,76 +718,75 @@ def test_post_many_with_unknown_field_is_valid(db):
             }
         ]
     )
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": "my_value",
-                "revision": 1,
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": "my_value",
+            "revision": 1,
+        }
+    ]
 
 
-def test_get_without_filter_is_retrieving_the_only_item(db):
+def test_get_without_filter_is_retrieving_the_only_item(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
     ] == TestController.get({})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        }
+    ]
 
 
-def test_get_without_filter_is_retrieving_everything_with_multiple_posts(db):
+def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
+    db, monkeypatch
+):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
     ] == TestController.get({})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key2",
-                "mandatory": 2,
-                "optional": "my_value2",
-                "revision": 2,
-            },
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key2",
+            "mandatory": 2,
+            "optional": "my_value2",
+            "revision": 2,
+        },
+    ]
 
 
-def test_get_without_filter_is_retrieving_everything(db):
+def test_get_without_filter_is_retrieving_everything(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post_many(
         [
             {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -826,63 +797,61 @@ def test_get_without_filter_is_retrieving_everything(db):
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
     ] == TestController.get({})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key2",
-                "mandatory": 2,
-                "optional": "my_value2",
-                "revision": 2,
-            },
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key2",
+            "mandatory": 2,
+            "optional": "my_value2",
+            "revision": 2,
+        },
+    ]
 
 
-def test_get_with_filter_is_retrieving_subset(db):
+def test_get_with_filter_is_retrieving_subset(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
     ] == TestController.get({"optional": "my_value1"})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key2",
-                "mandatory": 2,
-                "optional": "my_value2",
-                "revision": 2,
-            },
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key2",
+            "mandatory": 2,
+            "optional": "my_value2",
+            "revision": 2,
+        },
+    ]
 
 
-def test_put_is_updating(db):
+def test_put_is_updating(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -891,32 +860,31 @@ def test_put_is_updating(db):
     assert [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
     ] == TestController.get({"mandatory": 1})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value",
-                "revision": 2,
-            },
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "U",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value",
+            "revision": 2,
+        },
+    ]
 
 
-def test_put_many_is_updating(db):
+def test_put_many_is_updating(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert (
         [{"key": "my_key1", "mandatory": 1, "optional": "my_value1"}],
@@ -925,207 +893,197 @@ def test_put_many_is_updating(db):
     assert [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
     ] == TestController.get({"mandatory": 1})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value",
-                "revision": 2,
-            },
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "U",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value",
+            "revision": 2,
+        },
+    ]
 
 
-def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db):
+def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.put({"key": "my_key1", "optional": "my_value"})
     assert [] == TestController.get({"optional": "my_value1"})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value",
-                "revision": 2,
-            },
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "U",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value",
+            "revision": 2,
+        },
+    ]
 
 
-def test_delete_with_filter_is_removing_the_proper_row(db):
+def test_delete_with_filter_is_removing_the_proper_row(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 1 == TestController.delete({"key": "my_key1"})
-    assert [
+    assert TestController.delete({"key": "my_key1"}) == 1
+    assert TestController.get({}) == [
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"}
-    ] == TestController.get({})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key2",
-                "mandatory": 2,
-                "optional": "my_value2",
-                "revision": 2,
-            },
-            {
-                "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 3,
-            },
-        ],
-    )
+    ]
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key2",
+            "mandatory": 2,
+            "optional": "my_value2",
+            "revision": 2,
+        },
+        {
+            "audit_action": "D",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 3,
+        },
+    ]
 
 
-def test_audit_filter_on_model_is_returning_only_selected_data(db):
+def test_audit_filter_on_model_is_returning_only_selected_data(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.put({"key": "my_key1", "mandatory": 2})
     TestController.delete({"key": "my_key1"})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 2,
-                "optional": "my_value1",
-                "revision": 2,
-            },
-            {
-                "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 2,
-                "optional": "my_value1",
-                "revision": 3,
-            },
-        ],
-        filter_audit={"key": "my_key1"},
-    )
+    assert TestController.get_audit({"key": "my_key1"}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "U",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 2,
+            "optional": "my_value1",
+            "revision": 2,
+        },
+        {
+            "audit_action": "D",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 2,
+            "optional": "my_value1",
+            "revision": 3,
+        },
+    ]
 
 
-def test_audit_filter_on_audit_model_is_returning_only_selected_data(db):
+def test_audit_filter_on_audit_model_is_returning_only_selected_data(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.put({"key": "my_key1", "mandatory": 2})
     TestController.delete({"key": "my_key1"})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "U",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 2,
-                "optional": "my_value1",
-                "revision": 2,
-            }
-        ],
-        filter_audit={"audit_action": "U"},
-    )
+    assert TestController.get_audit({"audit_action": "U"}) == [
+        {
+            "audit_action": "U",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 2,
+            "optional": "my_value1",
+            "revision": 2,
+        }
+    ]
 
 
-def test_delete_without_filter_is_removing_everything(db):
+def test_delete_without_filter_is_removing_everything(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+
     TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert 2 == TestController.delete({})
     assert [] == TestController.get({})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "I",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key2",
-                "mandatory": 2,
-                "optional": "my_value2",
-                "revision": 2,
-            },
-            {
-                "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key1",
-                "mandatory": 1,
-                "optional": "my_value1",
-                "revision": 3,
-            },
-            {
-                "audit_action": "D",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.\d\d\d\d\d\d)?",
-                "audit_user": "",
-                "key": "my_key2",
-                "mandatory": 2,
-                "optional": "my_value2",
-                "revision": 4,
-            },
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "I",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key2",
+            "mandatory": 2,
+            "optional": "my_value2",
+            "revision": 2,
+        },
+        {
+            "audit_action": "D",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key1",
+            "mandatory": 1,
+            "optional": "my_value1",
+            "revision": 3,
+        },
+        {
+            "audit_action": "D",
+            "audit_date_utc": "2018-10-11T15:05:05.663979",
+            "audit_user": "",
+            "key": "my_key2",
+            "mandatory": 2,
+            "optional": "my_value2",
+            "revision": 4,
+        },
+    ]
 
 
 def test_query_get_parser(client):

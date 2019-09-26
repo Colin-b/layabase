@@ -73,36 +73,16 @@ def app(db):
     return application
 
 
-class DateTimeModuleMock:
-    class DateTimeMock:
-        @staticmethod
-        def utcnow():
-            class UTCDateTimeMock:
-                @staticmethod
-                def isoformat():
-                    return "2018-10-11T15:05:05.663979"
-
-            return UTCDateTimeMock
-
-    datetime = DateTimeMock
-
-
 def test_post_with_specified_incremented_field_is_ignored_and_valid(client):
-    assert {
-        "optional_with_default": "Test value",
-        "key": 1,
-        "enum_field": "Value1",
-    } == TestAutoIncrementController.post({"key": "my_key", "enum_field": "Value1"})
+    assert TestAutoIncrementController.post(
+        {"key": "my_key", "enum_field": "Value1"}
+    ) == {"optional_with_default": "Test value", "key": 1, "enum_field": "Value1"}
 
 
 def test_post_with_enum_is_valid(client):
-    assert {
-        "optional_with_default": "Test value",
-        "key": 1,
-        "enum_field": "Value1",
-    } == TestAutoIncrementController.post(
+    assert TestAutoIncrementController.post(
         {"key": "my_key", "enum_field": EnumTest.Value1}
-    )
+    ) == {"optional_with_default": "Test value", "key": 1, "enum_field": "Value1"}
 
 
 def test_post_with_invalid_enum_choice_is_invalid(client):
@@ -110,22 +90,22 @@ def test_post_with_invalid_enum_choice_is_invalid(client):
         TestAutoIncrementController.post(
             {"key": "my_key", "enum_field": "InvalidValue"}
         )
-    assert {
+    assert exception_info.value.errors == {
         "enum_field": ["Value \"InvalidValue\" is not within ['Value1', 'Value2']."]
-    } == exception_info.value.errors
-    assert {"enum_field": "InvalidValue"} == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == {"enum_field": "InvalidValue"}
 
 
 def test_post_many_with_specified_incremented_field_is_ignored_and_valid(client):
-    assert [
-        {"optional_with_default": "Test value", "enum_field": "Value1", "key": 1},
-        {"optional_with_default": "Test value", "enum_field": "Value2", "key": 2},
-    ] == TestAutoIncrementController.post_many(
+    assert TestAutoIncrementController.post_many(
         [
             {"key": "my_key", "enum_field": "Value1"},
             {"key": "my_key", "enum_field": "Value2"},
         ]
-    )
+    ) == [
+        {"optional_with_default": "Test value", "enum_field": "Value1", "key": 1},
+        {"optional_with_default": "Test value", "enum_field": "Value2", "key": 2},
+    ]
 
 
 def test_open_api_definition(client):

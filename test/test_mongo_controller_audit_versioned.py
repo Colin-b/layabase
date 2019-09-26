@@ -1,5 +1,4 @@
 import enum
-import re
 
 import flask
 import flask_restplus
@@ -8,6 +7,8 @@ from layaberr import ModelCouldNotBeFound
 
 from layabase import database, database_mongo, versioning_mongo
 import layabase.testing
+import layabase.audit_mongo
+from test import DateTimeModuleMock
 
 
 class EnumTest(enum.Enum):
@@ -384,103 +385,97 @@ def test_open_api_definition(client):
     }
 
 
-def test_revision_not_shared_if_not_versioned(db):
+def test_revision_not_shared_if_not_versioned(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
+
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == TestController.post(
         {"key": "my_key", "mandatory": 1}
     )
     TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    _check_audit(
-        TestController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": "my_key",
-                "mandatory": 1,
-                "optional": None,
-                "revision": 1,
-            }
-        ],
-    )
-    _check_audit(
-        TestVersionedController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 1,
-                "table_name": "versioned_table_name",
-            }
-        ],
-    )
+    assert TestController.get_audit({}) == [
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "key": "my_key",
+            "mandatory": 1,
+            "optional": None,
+            "revision": 1,
+        }
+    ]
+    assert TestVersionedController.get_audit({}) == [
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "revision": 1,
+            "table_name": "versioned_table_name",
+        }
+    ]
 
 
-def test_revision_on_versionned_audit_after_put_failure(db):
+def test_revision_on_versionned_audit_after_put_failure(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
+
     TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     with pytest.raises(ModelCouldNotBeFound):
         TestVersionedController.put({"key": "my_key2", "enum_fld": EnumTest.Value2})
     TestVersionedController.delete({"key": "my_key"})
-    _check_audit(
-        TestVersionedController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 1,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 2,
-                "table_name": "versioned_table_name",
-            },
-        ],
-    )
+    assert TestVersionedController.get_audit({}) == [
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "revision": 1,
+            "table_name": "versioned_table_name",
+        },
+        {
+            "audit_action": "Delete",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "revision": 2,
+            "table_name": "versioned_table_name",
+        },
+    ]
 
 
-def test_versioned_audit_after_post_put_delete_rollback(db):
+def test_versioned_audit_after_post_put_delete_rollback(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
+
     TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
     TestVersionedController.delete({"key": "my_key"})
     TestVersionedController.rollback_to({"revision": 1})
-    _check_audit(
-        TestVersionedController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 1,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Update",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 2,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 3,
-                "table_name": "versioned_table_name",
-            },
-            {
-                "audit_action": "Rollback",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "revision": 4,
-                "table_name": "versioned_table_name",
-            },
-        ],
-    )
+    assert TestVersionedController.get_audit({}) == [
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "revision": 1,
+            "table_name": "versioned_table_name",
+        },
+        {
+            "audit_action": "Update",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "revision": 2,
+            "table_name": "versioned_table_name",
+        },
+        {
+            "audit_action": "Delete",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "revision": 3,
+            "table_name": "versioned_table_name",
+        },
+        {
+            "audit_action": "Rollback",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "revision": 4,
+            "table_name": "versioned_table_name",
+        },
+    ]
 
 
 def test_get_last_when_empty(db):
@@ -549,18 +544,3 @@ def test_get_last_with_one_removed_and_a_valid_and_filter_on_removed(db):
         "valid_since_revision": 2,
         "valid_until_revision": 3,
     }
-
-
-def _check_audit(controller, expected_audit):
-    audit = controller.get_audit({})
-    audit = [
-        {key: audit_line[key] for key in sorted(audit_line.keys())}
-        for audit_line in audit
-    ]
-
-    assert re.match(
-        f"{expected_audit}".replace("[", "\\[")
-        .replace("]", "\\]")
-        .replace("\\\\", "\\"),
-        f"{audit}",
-    )
