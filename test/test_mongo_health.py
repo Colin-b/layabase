@@ -2,6 +2,7 @@ import pytest
 
 from layabase import database, database_mongo
 import layabase.testing
+from test import DateTimeModuleMock
 
 
 @pytest.fixture
@@ -9,20 +10,6 @@ def db():
     _db = database.load("mongomock", lambda base: [])
     yield _db
     layabase.testing.reset(_db)
-
-
-class DateTimeModuleMock:
-    class DateTimeMock:
-        @staticmethod
-        def utcnow():
-            class UTCDateTimeMock:
-                @staticmethod
-                def isoformat():
-                    return "2018-10-11T15:05:05.663979"
-
-            return UTCDateTimeMock
-
-    datetime = DateTimeMock
 
 
 def test_health_details_failure(db, monkeypatch):

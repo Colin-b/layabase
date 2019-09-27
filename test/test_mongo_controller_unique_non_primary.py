@@ -71,20 +71,6 @@ def db():
     layabase.testing.reset(_db)
 
 
-class DateTimeModuleMock:
-    class DateTimeMock:
-        @staticmethod
-        def utcnow():
-            class UTCDateTimeMock:
-                @staticmethod
-                def isoformat():
-                    return "2018-10-11T15:05:05.663979"
-
-            return UTCDateTimeMock
-
-    datetime = DateTimeMock
-
-
 def test_get_url_without_primary_key_in_model_and_many_models(db):
     models = [{"key": 1, "unique": 2}, {"key": 2, "unique": 3}]
     assert TestUniqueNonPrimaryController.get_url("/test", *models) == "/test"

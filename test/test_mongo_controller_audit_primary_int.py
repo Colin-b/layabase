@@ -1,9 +1,9 @@
-import re
-
 import pytest
 
 from layabase import database, database_mongo
 import layabase.testing
+import layabase.audit_mongo
+from test import DateTimeModuleMock
 
 
 class TestPrimaryIntController(database.CRUDController):
@@ -33,7 +33,9 @@ def db():
     layabase.testing.reset(_db)
 
 
-def test_int_primary_key_is_reset_after_delete(db):
+def test_int_primary_key_is_reset_after_delete(db, monkeypatch):
+    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
+
     assert TestPrimaryIntController.post({"other": "test1"}) == {
         "key": 1,
         "other": "test1",
@@ -47,55 +49,37 @@ def test_int_primary_key_is_reset_after_delete(db):
         "key": 2,
         "other": "test1",
     }
-    _check_audit(
-        TestPrimaryIntController,
-        [
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "other": "test1",
-                "revision": 1,
-            },
-            {
-                "audit_action": "Delete",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "other": "test1",
-                "revision": 2,
-            },
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 1,
-                "other": "test1",
-                "revision": 3,
-            },
-            {
-                "audit_action": "Insert",
-                "audit_date_utc": "\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(.)?(\d{0,6})",
-                "audit_user": "",
-                "key": 2,
-                "other": "test1",
-                "revision": 4,
-            },
-        ],
-    )
-
-
-def _check_audit(controller, expected_audit):
-    audit = controller.get_audit({})
-    audit = [
-        {key: audit_line[key] for key in sorted(audit_line.keys())}
-        for audit_line in audit
+    assert TestPrimaryIntController.get_audit({}) == [
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "key": 1,
+            "other": "test1",
+            "revision": 1,
+        },
+        {
+            "audit_action": "Delete",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "key": 1,
+            "other": "test1",
+            "revision": 2,
+        },
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "key": 1,
+            "other": "test1",
+            "revision": 3,
+        },
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "key": 2,
+            "other": "test1",
+            "revision": 4,
+        },
     ]
-
-    assert re.match(
-        f"{expected_audit}".replace("[", "\\[")
-        .replace("]", "\\]")
-        .replace("\\\\", "\\"),
-        f"{audit}",
-    )

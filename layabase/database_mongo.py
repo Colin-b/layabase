@@ -1766,7 +1766,7 @@ class CRUDModel:
             return {"": ["No data provided."]}
 
         if not isinstance(document, dict):
-            raise ValidationFailed(document, message="Must be a dictionary.")
+            return {"": ["Must be a dictionary."]}
 
         new_document = copy.deepcopy(document)
 
@@ -1988,7 +1988,7 @@ class CRUDModel:
             return {"": ["No data provided."]}
 
         if not isinstance(document, dict):
-            raise ValidationFailed(document, message="Must be a dictionary.")
+            return {"": ["Must be a dictionary."]}
 
         new_document = copy.deepcopy(document)
 

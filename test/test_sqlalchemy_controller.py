@@ -152,6 +152,27 @@ def test_post_without_providing_a_dictionary(client):
     assert exception_info.value.received_data == "fail"
 
 
+def test_put_without_providing_a_dictionary(client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.put("fail")
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == "fail"
+
+
+def test_put_many_without_providing_a_list(client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.put_many("fail")
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == "f"
+
+
+def test_put_many_without_providing_a_list_of_dictionaries(client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        TestController.put_many(["fail"])
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == "fail"
+
+
 def test_post_many_with_empty_list_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([])

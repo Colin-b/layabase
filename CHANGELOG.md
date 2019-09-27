@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2019-09-26
+### Fixed
+- [SQLAlchemy] Avoid processing invalid data types when inserting or updating data.
+
 ## [2.0.0] - 2019-09-26
 ### Removed
 - database.dump
@@ -71,7 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.0...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.1...HEAD
+[2.0.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.0...v2.0.1
 [2.0.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.1...v2.0.0
 [1.3.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.0...v1.3.1
 [1.3.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.2.0...v1.3.0
