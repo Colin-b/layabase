@@ -7,52 +7,41 @@ import layabase.testing
 
 @pytest.fixture
 def controller_insert():
-    class TestNoneInsertController(layabase.CRUDController):
-        class TestNoneInsertModel:
-            __tablename__ = "none_table_name"
+    class TestNoneInsertModel:
+        __tablename__ = "none_table_name"
 
-            key = layabase.database_mongo.Column(int, is_primary_key=True)
-            my_dict = layabase.database_mongo.DictColumn(
-                fields={"null_value": layabase.database_mongo.Column(store_none=True)},
-                is_required=True,
-            )
+        key = layabase.database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase.database_mongo.DictColumn(
+            fields={"null_value": layabase.database_mongo.Column(store_none=True)},
+            is_required=True,
+        )
 
-        model = TestNoneInsertModel
-        skip_name_check = True
-
-    return TestNoneInsertController
+    return layabase.CRUDController(TestNoneInsertModel, skip_name_check=True)
 
 
 @pytest.fixture
 def controller_not_inserted():
-    class TestNoneNotInsertedController(layabase.CRUDController):
-        class TestNoneNotInsertedModel:
-            __tablename__ = "none_table_name"
+    class TestNoneNotInsertedModel:
+        __tablename__ = "none_table_name"
 
-            key = layabase.database_mongo.Column(int, is_primary_key=True)
-            my_dict = layabase.database_mongo.DictColumn(
-                fields={"null_value": layabase.database_mongo.Column(store_none=False)},
-                is_required=True,
-            )
+        key = layabase.database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase.database_mongo.DictColumn(
+            fields={"null_value": layabase.database_mongo.Column(store_none=False)},
+            is_required=True,
+        )
 
-        model = TestNoneNotInsertedModel
-
-    return TestNoneNotInsertedController
+    return layabase.CRUDController(TestNoneNotInsertedModel)
 
 
 @pytest.fixture
 def controller_retrieve():
-    class TestNoneRetrieveController(layabase.CRUDController):
-        class TestNoneRetrieveModel:
-            __tablename__ = "none_table_name"
+    class TestNoneRetrieveModel:
+        __tablename__ = "none_table_name"
 
-            key = layabase.database_mongo.Column(int, is_primary_key=True)
-            my_dict = layabase.database_mongo.Column(dict, is_required=True)
+        key = layabase.database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase.database_mongo.Column(dict, is_required=True)
 
-        model = TestNoneRetrieveModel
-        skip_name_check = True
-
-    return TestNoneRetrieveController
+    return layabase.CRUDController(TestNoneRetrieveModel, skip_name_check=True)
 
 
 @pytest.fixture

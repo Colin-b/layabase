@@ -9,17 +9,15 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestNumericModel:
-            __tablename__ = "numeric_table_name"
+    class TestNumericModel:
+        __tablename__ = "numeric_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            numeric_field = sqlalchemy.Column(sqlalchemy.Numeric)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        numeric_field = sqlalchemy.Column(sqlalchemy.Numeric)
 
-        model = TestNumericModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestNumericModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

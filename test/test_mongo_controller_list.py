@@ -16,29 +16,27 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestListModel:
-            __tablename__ = "list_table_name"
+    class TestListModel:
+        __tablename__ = "list_table_name"
 
-            key = layabase.database_mongo.Column(is_primary_key=True)
-            list_field = layabase.database_mongo.ListColumn(
-                layabase.database_mongo.DictColumn(
-                    fields={
-                        "first_key": layabase.database_mongo.Column(
-                            EnumTest, is_nullable=False
-                        ),
-                        "second_key": layabase.database_mongo.Column(
-                            int, is_nullable=False
-                        ),
-                    }
-                )
+        key = layabase.database_mongo.Column(is_primary_key=True)
+        list_field = layabase.database_mongo.ListColumn(
+            layabase.database_mongo.DictColumn(
+                fields={
+                    "first_key": layabase.database_mongo.Column(
+                        EnumTest, is_nullable=False
+                    ),
+                    "second_key": layabase.database_mongo.Column(
+                        int, is_nullable=False
+                    ),
+                }
             )
-            bool_field = layabase.database_mongo.Column(bool)
+        )
+        bool_field = layabase.database_mongo.Column(bool)
 
-        model = TestListModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestListModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

@@ -10,27 +10,25 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestChoicesModel:
-            __tablename__ = "choices_table_name"
+    class TestChoicesModel:
+        __tablename__ = "choices_table_name"
 
-            key = layabase.database_mongo.Column(
-                int, is_primary_key=True, should_auto_increment=True
-            )
-            int_choices_field = layabase.database_mongo.Column(
-                int, description="Test Documentation", choices=[1, 2, 3]
-            )
-            str_choices_field = layabase.database_mongo.Column(
-                str, description="Test Documentation", choices=["one", "two", "three"]
-            )
-            float_choices_field = layabase.database_mongo.Column(
-                float, description="Test Documentation", choices=[1.25, 1.5, 1.75]
-            )
+        key = layabase.database_mongo.Column(
+            int, is_primary_key=True, should_auto_increment=True
+        )
+        int_choices_field = layabase.database_mongo.Column(
+            int, description="Test Documentation", choices=[1, 2, 3]
+        )
+        str_choices_field = layabase.database_mongo.Column(
+            str, description="Test Documentation", choices=["one", "two", "three"]
+        )
+        float_choices_field = layabase.database_mongo.Column(
+            float, description="Test Documentation", choices=[1.25, 1.5, 1.75]
+        )
 
-        model = TestChoicesModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestChoicesModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

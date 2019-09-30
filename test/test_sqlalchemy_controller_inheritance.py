@@ -7,23 +7,20 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class Inherited:
-            optional = sqlalchemy.Column(sqlalchemy.String)
+    class Inherited:
+        optional = sqlalchemy.Column(sqlalchemy.String)
 
-        class TestInheritanceModel(Inherited):
-            __tablename__ = "inheritance_table_name"
+    class TestInheritanceModel(Inherited):
+        __tablename__ = "inheritance_table_name"
 
-            key = sqlalchemy.Column(
-                sqlalchemy.Integer, primary_key=True, autoincrement=True
-            )
-            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        key = sqlalchemy.Column(
+            sqlalchemy.Integer, primary_key=True, autoincrement=True
+        )
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
-        model = TestInheritanceModel
-        audit = True
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestInheritanceModel, audit=True)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

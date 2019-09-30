@@ -15,29 +15,26 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestDictRequiredNonNullableVersionedModel:
-            __tablename__ = "req_not_null_versioned_table_name"
+    class TestDictRequiredNonNullableVersionedModel:
+        __tablename__ = "req_not_null_versioned_table_name"
 
-            key = layabase.database_mongo.Column(is_primary_key=True)
-            dict_field = layabase.database_mongo.DictColumn(
-                fields={
-                    "first_key": layabase.database_mongo.Column(
-                        EnumTest, is_nullable=False
-                    ),
-                    "second_key": layabase.database_mongo.Column(
-                        int, is_nullable=False
-                    ),
-                },
-                is_required=True,
-                is_nullable=False,
-            )
+        key = layabase.database_mongo.Column(is_primary_key=True)
+        dict_field = layabase.database_mongo.DictColumn(
+            fields={
+                "first_key": layabase.database_mongo.Column(
+                    EnumTest, is_nullable=False
+                ),
+                "second_key": layabase.database_mongo.Column(int, is_nullable=False),
+            },
+            is_required=True,
+            is_nullable=False,
+        )
 
-        model = TestDictRequiredNonNullableVersionedModel
-        history = True
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(
+        TestDictRequiredNonNullableVersionedModel, history=True
+    )
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

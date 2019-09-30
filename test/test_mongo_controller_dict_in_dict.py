@@ -14,35 +14,31 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestDictInDictModel:
-            __tablename__ = "dict_in_dict_table_name"
+    class TestDictInDictModel:
+        __tablename__ = "dict_in_dict_table_name"
 
-            key = layabase.database_mongo.Column(is_primary_key=True)
-            dict_field = layabase.database_mongo.DictColumn(
-                fields={
-                    "first_key": layabase.database_mongo.DictColumn(
-                        fields={
-                            "inner_key1": layabase.database_mongo.Column(
-                                EnumTest, is_nullable=False
-                            ),
-                            "inner_key2": layabase.database_mongo.Column(
-                                int, is_nullable=False
-                            ),
-                        },
-                        is_required=True,
-                    ),
-                    "second_key": layabase.database_mongo.Column(
-                        int, is_nullable=False
-                    ),
-                },
-                is_required=True,
-            )
+        key = layabase.database_mongo.Column(is_primary_key=True)
+        dict_field = layabase.database_mongo.DictColumn(
+            fields={
+                "first_key": layabase.database_mongo.DictColumn(
+                    fields={
+                        "inner_key1": layabase.database_mongo.Column(
+                            EnumTest, is_nullable=False
+                        ),
+                        "inner_key2": layabase.database_mongo.Column(
+                            int, is_nullable=False
+                        ),
+                    },
+                    is_required=True,
+                ),
+                "second_key": layabase.database_mongo.Column(int, is_nullable=False),
+            },
+            is_required=True,
+        )
 
-        model = TestDictInDictModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestDictInDictModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

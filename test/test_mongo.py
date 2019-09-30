@@ -154,59 +154,52 @@ def test_int_column_with_not_int_example_is_invalid():
 
 
 def test_2entities_on_same_collection_without_pk():
-    class TestEntitySameCollection1Controller(layabase.CRUDController):
-        class TestEntitySameCollection1:
-            __tablename__ = "sample_table_name_2entities"
+    class TestEntitySameCollection1:
+        __tablename__ = "sample_table_name_2entities"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-            optional = layabase.database_mongo.Column(str)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+        optional = layabase.database_mongo.Column(str)
 
-        model = TestEntitySameCollection1
-        history = True
+    controller = layabase.CRUDController(TestEntitySameCollection1, history=True)
 
-    mongo_base = layabase.load("mongomock", [TestEntitySameCollection1Controller])
-    TestEntitySameCollection1Controller.post({"key": "1", "mandatory": 2})
-    TestEntitySameCollection1Controller.post({"key": "2", "mandatory": 2})
+    mongo_base = layabase.load("mongomock", [controller])
+    controller.post({"key": "1", "mandatory": 2})
+    controller.post({"key": "2", "mandatory": 2})
 
-    class TestEntitySameCollection2Controller(layabase.CRUDController):
-        class TestEntitySameCollection2:
-            __tablename__ = "sample_table_name_2entities"
+    class TestEntitySameCollection2:
+        __tablename__ = "sample_table_name_2entities"
 
-        model = TestEntitySameCollection2
-        history = True
+    controller = layabase.CRUDController(TestEntitySameCollection2, history=True)
 
     # This call is performed using the internal function because we want to simulate an already filled database
     with pytest.raises(pymongo.errors.DuplicateKeyError):
-        layabase.database_mongo._create_model(
-            TestEntitySameCollection2Controller, mongo_base
-        )
+        layabase.database_mongo._create_model(controller, mongo_base)
 
 
 def test_2entities_on_same_collection_with_pk():
-    class TestEntitySameCollection1Controller(layabase.CRUDController):
-        class TestEntitySameCollection1:
-            __tablename__ = "sample_table_name_2entities"
+    class TestEntitySameCollection1:
+        __tablename__ = "sample_table_name_2entities"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-            optional = layabase.database_mongo.Column(str)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+        optional = layabase.database_mongo.Column(str)
 
-        model = TestEntitySameCollection1
-        history = True
+    controller = layabase.CRUDController(TestEntitySameCollection1, history=True)
 
-    layabase.load("mongomock", [TestEntitySameCollection1Controller])
-    TestEntitySameCollection1Controller.post({"key": "1", "mandatory": 2})
-    TestEntitySameCollection1Controller.post({"key": "2", "mandatory": 2})
+    mongo_base = layabase.load("mongomock", [controller])
+    controller.post({"key": "1", "mandatory": 2})
+    controller.post({"key": "2", "mandatory": 2})
 
-    class TestEntitySameCollection2Controller(layabase.CRUDController):
-        class TestEntitySameCollection2:
-            __tablename__ = "sample_table_name_2entities"
+    class TestEntitySameCollection2:
+        __tablename__ = "sample_table_name_2entities"
 
-        model = TestEntitySameCollection2
-        history = True
-        skip_update_indexes = True
+    controller = layabase.CRUDController(
+        TestEntitySameCollection2, history=True, skip_update_indexes=True
+    )
 
-    layabase.load("mongomock", [TestEntitySameCollection2Controller])
-    TestEntitySameCollection1Controller.post({"key": "3", "mandatory": 2})
-    assert len(TestEntitySameCollection1Controller.get({})) == 3
+    # This call is performed using the internal function because we want to simulate an already filled database
+    layabase.database_mongo._create_model(controller, mongo_base)
+
+    controller.post({"key": "3", "mandatory": 2})
+    assert len(controller.get({})) == 3

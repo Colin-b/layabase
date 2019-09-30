@@ -14,19 +14,16 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-            optional = layabase.database_mongo.Column(str)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+        optional = layabase.database_mongo.Column(str)
 
-        model = TestModel
-        audit = True
-
-    _db = layabase.load("mongomock?ssl=True", [TestController], replicaSet="globaldb")
-    yield TestController
+    controller = layabase.CRUDController(TestModel, audit=True)
+    _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
+    yield controller
     layabase.testing.reset(_db)
 
 
@@ -90,34 +87,32 @@ def test_get_all_without_data_returns_empty_list(controller):
 
 
 def test_audit_table_name_is_forbidden():
-    class TestAuditController(layabase.CRUDController):
-        class TestAuditModel:
-            __tablename__ = "audit"
+    class TestAuditModel:
+        __tablename__ = "audit"
 
-            key = layabase.database_mongo.Column(str)
-
-        model = TestAuditModel
+        key = layabase.database_mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
         layabase.load(
-            "mongomock?ssl=True", [TestAuditController], replicaSet="globaldb"
+            "mongomock?ssl=True",
+            [layabase.CRUDController(TestAuditModel)],
+            replicaSet="globaldb",
         )
 
     assert "audit is a reserved collection name." == str(exception_info.value)
 
 
 def test_audited_table_name_is_forbidden():
-    class TestAuditController(layabase.CRUDController):
-        class TestAuditModel:
-            __tablename__ = "audit_int_table_name"
+    class TestAuditModel:
+        __tablename__ = "audit_int_table_name"
 
-            key = layabase.database_mongo.Column(str)
-
-        model = TestAuditModel
+        key = layabase.database_mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
         layabase.load(
-            "mongomock?ssl=True", [TestAuditController], replicaSet="globaldb"
+            "mongomock?ssl=True",
+            [layabase.CRUDController(TestAuditModel)],
+            replicaSet="globaldb",
         )
 
     assert (

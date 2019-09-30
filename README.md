@@ -51,7 +51,7 @@ This model will describe:
 
 By providing this model to a controller class, you will automatically have flask-restplus models and arguments parsers.
 
-Every feature provided by a model if exposed via the controller class so that you never have to manipulate the model yourself.
+Every feature provided by a model if exposed via a controller so that you never have to manipulate the model yourself.
 
 ## Installation ##
 
@@ -65,43 +65,43 @@ python -m pip install .[testing]
 
 ## CRUD Controller ##
 
-Extending layabase.CRUDController will provides C.R.U.D. methods (and more, as listed in features) on a specified model.
+layabase.CRUDController provides C.R.U.D. methods (and more, as listed in features) on a specified model.
 
 ### Controller definition ###
 
 ```python
 import layabase
 
-class MyController(layabase.CRUDController):
-    model = MyModel
+
+controller = layabase.CRUDController(MyModel)
 
 # Retrieving data
-all_models_as_dict_list = MyController.get({})
+all_models_as_dict_list = controller.get({})
 
-filtered_models_as_dict_list = MyController.get({"value": 'value1'})
+filtered_models_as_dict_list = controller.get({"value": 'value1'})
 
 # Inserting data
-inserted_models_as_dict_list = MyController.post_many([
+inserted_models_as_dict_list = controller.post_many([
     {'key': 'key1', 'value': 'value1'},
     {'key': 'key2', 'value': 'value2'},
 ])
 
-inserted_model_as_dict = MyController.post({'key': 'key1', 'value': 'value1'})
+inserted_model_as_dict = controller.post({'key': 'key1', 'value': 'value1'})
 
 # Updating data
-updated_model_as_dict = MyController.put({'key': 'key1', 'value': 'new value'})
+updated_model_as_dict = controller.put({'key': 'key1', 'value': 'new value'})
 
 # Removing data
-nb_removed_models = MyController.delete({"key": 'key1'})
+nb_removed_models = controller.delete({"key": 'key1'})
 
 # Retrieving table mapping
 # description = {'table': 'MyModel', 'key': 'key', 'value': 'value'}
-description = MyController.get_model_description()
+description = controller.get_model_description()
 
 # Auditing
-all_audit_models_as_dict_list = MyController.get_audit({})
+all_audit_models_as_dict_list = controller.get_audit({})
 
-filtered_audit_models_as_dict_list = MyController.get_audit({"value": 'value1'})
+filtered_audit_models_as_dict_list = controller.get_audit({"value": 'value1'})
 ```
 
 ## Relational databases (non-Mongo) ##

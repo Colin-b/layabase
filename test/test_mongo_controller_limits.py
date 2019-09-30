@@ -10,30 +10,26 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestLimitsModel:
-            __tablename__ = "limits_table_name"
+    class TestLimitsModel:
+        __tablename__ = "limits_table_name"
 
-            key = layabase.database_mongo.Column(
-                is_primary_key=True, min_length=3, max_length=4
-            )
-            list_field = layabase.database_mongo.Column(
-                list, min_length=2, max_length=3, example=["my", "test"]
-            )
-            dict_field = layabase.database_mongo.Column(
-                dict, min_length=2, max_length=3, example={"my": 1, "test": 2}
-            )
-            int_field = layabase.database_mongo.Column(
-                int, min_value=100, max_value=999
-            )
-            float_field = layabase.database_mongo.Column(
-                float, min_value=1.25, max_value=1.75
-            )
+        key = layabase.database_mongo.Column(
+            is_primary_key=True, min_length=3, max_length=4
+        )
+        list_field = layabase.database_mongo.Column(
+            list, min_length=2, max_length=3, example=["my", "test"]
+        )
+        dict_field = layabase.database_mongo.Column(
+            dict, min_length=2, max_length=3, example={"my": 1, "test": 2}
+        )
+        int_field = layabase.database_mongo.Column(int, min_value=100, max_value=999)
+        float_field = layabase.database_mongo.Column(
+            float, min_value=1.25, max_value=1.75
+        )
 
-        model = TestLimitsModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestLimitsModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

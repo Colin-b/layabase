@@ -9,17 +9,15 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestBooleanModel:
-            __tablename__ = "bool_table_name"
+    class TestBooleanModel:
+        __tablename__ = "bool_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            bool_field = sqlalchemy.Column(sqlalchemy.Boolean)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        bool_field = sqlalchemy.Column(sqlalchemy.Boolean)
 
-        model = TestBooleanModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestBooleanModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

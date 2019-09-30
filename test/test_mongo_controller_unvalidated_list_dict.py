@@ -10,19 +10,17 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestUnvalidatedListAndDictModel:
-            __tablename__ = "list_and_dict_table_name"
+    class TestUnvalidatedListAndDictModel:
+        __tablename__ = "list_and_dict_table_name"
 
-            float_key = layabase.database_mongo.Column(float, is_primary_key=True)
-            float_with_default = layabase.database_mongo.Column(float, default_value=34)
-            dict_field = layabase.database_mongo.Column(dict, is_required=True)
-            list_field = layabase.database_mongo.Column(list, is_required=True)
+        float_key = layabase.database_mongo.Column(float, is_primary_key=True)
+        float_with_default = layabase.database_mongo.Column(float, default_value=34)
+        dict_field = layabase.database_mongo.Column(dict, is_required=True)
+        list_field = layabase.database_mongo.Column(list, is_required=True)
 
-        model = TestUnvalidatedListAndDictModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestUnvalidatedListAndDictModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

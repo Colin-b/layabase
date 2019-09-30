@@ -8,15 +8,12 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-        model = TestModel
-
-    return TestController
+    return layabase.CRUDController(TestModel)
 
 
 @pytest.fixture

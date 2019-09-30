@@ -12,34 +12,26 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def controller1():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-            optional = sqlalchemy.Column(sqlalchemy.String)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        optional = sqlalchemy.Column(sqlalchemy.String)
 
-        model = TestModel
-        audit = True
-
-    return TestController
+    return layabase.CRUDController(TestModel, audit=True)
 
 
 @pytest.fixture
 def controller2():
-    class Test2Controller(layabase.CRUDController):
-        class Test2Model:
-            __tablename__ = "sample2_table_name"
+    class Test2Model:
+        __tablename__ = "sample2_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-            optional = sqlalchemy.Column(sqlalchemy.String)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        optional = sqlalchemy.Column(sqlalchemy.String)
 
-        model = Test2Model
-        audit = True
-
-    return Test2Controller
+    return layabase.CRUDController(Test2Model, audit=True)
 
 
 @pytest.fixture

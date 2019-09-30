@@ -523,8 +523,6 @@ class CRUDModel:
 
 
 def _create_model(controller, base) -> Type[CRUDModel]:
-    if not controller.model:
-        raise ControllerModelNotSet(controller)
     # TODO Create the appropriate CRUDModel in case history is requested (not supported for now)
     class ControllerModel(controller.model, CRUDModel, base):
         pass
@@ -550,7 +548,7 @@ def _load(
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    :param controllers: List of all CRUDController(s) (Mandatory).
+    :param controllers: List of all CRUDController-like instances (Mandatory).
     :param pool_recycle: Number of seconds to wait before recycling a connection pool. Default value is 60.
     :return SQLAlchemy base.
     """

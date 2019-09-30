@@ -15,60 +15,47 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller_versioned():
-    class TestVersionedController(layabase.CRUDController):
-        class TestVersionedModel:
-            __tablename__ = "versioned_table_name"
+    class TestVersionedModel:
+        __tablename__ = "versioned_table_name"
 
-            key = layabase.database_mongo.Column(is_primary_key=True)
-            dict_field = layabase.database_mongo.DictColumn(
-                fields={
-                    "first_key": layabase.database_mongo.Column(
-                        EnumTest, is_nullable=False
-                    ),
-                    "second_key": layabase.database_mongo.Column(
-                        int, is_nullable=False
-                    ),
-                },
-                is_required=True,
-            )
+        key = layabase.database_mongo.Column(is_primary_key=True)
+        dict_field = layabase.database_mongo.DictColumn(
+            fields={
+                "first_key": layabase.database_mongo.Column(
+                    EnumTest, is_nullable=False
+                ),
+                "second_key": layabase.database_mongo.Column(int, is_nullable=False),
+            },
+            is_required=True,
+        )
 
-        model = TestVersionedModel
-        history = True
-
-    return TestVersionedController
+    return layabase.CRUDController(TestVersionedModel, history=True)
 
 
 @pytest.fixture
 def controller_versioned_unique():
-    class TestVersionedUniqueNonPrimaryController(layabase.CRUDController):
-        class TestVersionedUniqueNonPrimaryModel:
-            __tablename__ = "versioned_uni_table_name"
+    class TestVersionedUniqueNonPrimaryModel:
+        __tablename__ = "versioned_uni_table_name"
 
-            key = layabase.database_mongo.Column(int, should_auto_increment=True)
-            unique = layabase.database_mongo.Column(
-                int, index_type=layabase.database_mongo.IndexType.Unique
-            )
+        key = layabase.database_mongo.Column(int, should_auto_increment=True)
+        unique = layabase.database_mongo.Column(
+            int, index_type=layabase.database_mongo.IndexType.Unique
+        )
 
-        model = TestVersionedUniqueNonPrimaryModel
-        history = True
-
-    return TestVersionedUniqueNonPrimaryController
+    return layabase.CRUDController(TestVersionedUniqueNonPrimaryModel, history=True)
 
 
 @pytest.fixture
 def controller_unique():
-    class TestUniqueNonPrimaryController(layabase.CRUDController):
-        class TestUniqueNonPrimaryModel:
-            __tablename__ = "uni_table_name"
+    class TestUniqueNonPrimaryModel:
+        __tablename__ = "uni_table_name"
 
-            key = layabase.database_mongo.Column(int, should_auto_increment=True)
-            unique = layabase.database_mongo.Column(
-                int, index_type=layabase.database_mongo.IndexType.Unique
-            )
+        key = layabase.database_mongo.Column(int, should_auto_increment=True)
+        unique = layabase.database_mongo.Column(
+            int, index_type=layabase.database_mongo.IndexType.Unique
+        )
 
-        model = TestUniqueNonPrimaryModel
-
-    return TestUniqueNonPrimaryController
+    return layabase.CRUDController(TestUniqueNonPrimaryModel)
 
 
 @pytest.fixture

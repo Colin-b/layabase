@@ -14,24 +14,20 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestOptionalDictModel:
-            __tablename__ = "optional_dict_table_name"
+    class TestOptionalDictModel:
+        __tablename__ = "optional_dict_table_name"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            dict_col = layabase.database_mongo.DictColumn(
-                get_fields=lambda model_as_dict: {
-                    "first_key": layabase.database_mongo.Column(
-                        EnumTest, is_nullable=True
-                    ),
-                    "second_key": layabase.database_mongo.Column(int, is_nullable=True),
-                }
-            )
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        dict_col = layabase.database_mongo.DictColumn(
+            get_fields=lambda model_as_dict: {
+                "first_key": layabase.database_mongo.Column(EnumTest, is_nullable=True),
+                "second_key": layabase.database_mongo.Column(int, is_nullable=True),
+            }
+        )
 
-        model = TestOptionalDictModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestOptionalDictModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

@@ -9,16 +9,14 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestIdModel:
-            __tablename__ = "id_table_name"
+    class TestIdModel:
+        __tablename__ = "id_table_name"
 
-            _id = layabase.database_mongo.Column(is_primary_key=True)
+        _id = layabase.database_mongo.Column(is_primary_key=True)
 
-        model = TestIdModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestIdModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

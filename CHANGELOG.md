@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - SQLAlchemy models do not need to extend anything. Provide [Mixins](https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html#declarative-mixins) instead of models.
-- database.load now request a list of controllers as parameters.
+- CRUDController does not expose class methods anymore but must be instantiated instead. Meaning there is no need for placeholder classes anymore.
+- database.load now request a list of controller instances as parameters.
 
 ### Fixed
 - Avoid creating f-string when nothing needs to be interpreted.

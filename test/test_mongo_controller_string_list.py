@@ -7,19 +7,17 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestStringListModel:
-            __tablename__ = "string_list_table_name"
+    class TestStringListModel:
+        __tablename__ = "string_list_table_name"
 
-            key = layabase.database_mongo.Column(is_primary_key=True)
-            list_field = layabase.database_mongo.ListColumn(
-                layabase.database_mongo.Column(), sorted=True
-            )
+        key = layabase.database_mongo.Column(is_primary_key=True)
+        list_field = layabase.database_mongo.ListColumn(
+            layabase.database_mongo.Column(), sorted=True
+        )
 
-        model = TestStringListModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestStringListModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

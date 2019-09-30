@@ -2408,8 +2408,6 @@ class CRUDModel:
 
 
 def _create_model(controller, base) -> Type[CRUDModel]:
-    if not controller.model:
-        raise ControllerModelNotSet(controller)
     if controller.history:
         import layabase.audit_mongo
 
@@ -2445,8 +2443,7 @@ def _load(
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
-    (Mandatory).
+    :param controllers: List of CRUDController-like instances (Mandatory).
     :param kwargs: MongoClient constructor parameters.
     :return Mongo Database instance.
     """

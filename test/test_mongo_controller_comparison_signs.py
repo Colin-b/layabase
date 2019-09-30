@@ -12,25 +12,21 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestSupportForComparisonSignsModel:
-            __tablename__ = "support_comparison_sign"
+    class TestSupportForComparisonSignsModel:
+        __tablename__ = "support_comparison_sign"
 
-            int_value = layabase.database_mongo.Column(int, allow_comparison_signs=True)
-            float_value = layabase.database_mongo.Column(
-                float, allow_comparison_signs=True
-            )
-            date_value = layabase.database_mongo.Column(
-                datetime.date, allow_comparison_signs=True
-            )
-            datetime_value = layabase.database_mongo.Column(
-                datetime.datetime, allow_comparison_signs=True
-            )
+        int_value = layabase.database_mongo.Column(int, allow_comparison_signs=True)
+        float_value = layabase.database_mongo.Column(float, allow_comparison_signs=True)
+        date_value = layabase.database_mongo.Column(
+            datetime.date, allow_comparison_signs=True
+        )
+        datetime_value = layabase.database_mongo.Column(
+            datetime.datetime, allow_comparison_signs=True
+        )
 
-        model = TestSupportForComparisonSignsModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestSupportForComparisonSignsModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

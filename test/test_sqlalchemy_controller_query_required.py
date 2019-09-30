@@ -10,21 +10,19 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestRequiredModel:
-            __tablename__ = "required_table_name"
+    class TestRequiredModel:
+        __tablename__ = "required_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(
-                sqlalchemy.Integer,
-                nullable=False,
-                info={"marshmallow": {"required_on_query": True}},
-            )
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        mandatory = sqlalchemy.Column(
+            sqlalchemy.Integer,
+            nullable=False,
+            info={"marshmallow": {"required_on_query": True}},
+        )
 
-        model = TestRequiredModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestRequiredModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

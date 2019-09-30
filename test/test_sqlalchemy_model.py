@@ -11,35 +11,30 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def model():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-            optional = sqlalchemy.Column(sqlalchemy.String)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        optional = sqlalchemy.Column(sqlalchemy.String)
 
-        model = TestModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    model_class = TestController._model
+    controller = layabase.CRUDController(TestModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    model_class = controller._model
     yield model_class
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
 def db():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-            optional = sqlalchemy.Column(sqlalchemy.String)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        optional = sqlalchemy.Column(sqlalchemy.String)
 
-        model = TestModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
+    _db = layabase.load("sqlite:///:memory:", [layabase.CRUDController(TestModel)])
     yield _db
     layabase.testing.reset(_db)
 

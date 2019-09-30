@@ -9,21 +9,19 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestPrimaryIntVersionedModel:
-            __tablename__ = "prim_int_version_table_name"
+    class TestPrimaryIntVersionedModel:
+        __tablename__ = "prim_int_version_table_name"
 
-            key = layabase.database_mongo.Column(
-                int, is_primary_key=True, should_auto_increment=True
-            )
-            other = layabase.database_mongo.Column()
+        key = layabase.database_mongo.Column(
+            int, is_primary_key=True, should_auto_increment=True
+        )
+        other = layabase.database_mongo.Column()
 
-        model = TestPrimaryIntVersionedModel
-        audit = True
-        history = True
-
-    _db = layabase.load("mongomock?ssl=True", [TestController], replicaSet="globaldb")
-    yield TestController
+    controller = layabase.CRUDController(
+        TestPrimaryIntVersionedModel, audit=True, history=True
+    )
+    _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
+    yield controller
     layabase.testing.reset(_db)
 
 

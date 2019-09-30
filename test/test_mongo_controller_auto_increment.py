@@ -17,24 +17,22 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestAutoIncrementModel:
-            __tablename__ = "auto_increment_table_name"
+    class TestAutoIncrementModel:
+        __tablename__ = "auto_increment_table_name"
 
-            key = layabase.database_mongo.Column(
-                int, is_primary_key=True, should_auto_increment=True
-            )
-            enum_field = layabase.database_mongo.Column(
-                EnumTest, is_nullable=False, description="Test Documentation"
-            )
-            optional_with_default = layabase.database_mongo.Column(
-                str, default_value="Test value"
-            )
+        key = layabase.database_mongo.Column(
+            int, is_primary_key=True, should_auto_increment=True
+        )
+        enum_field = layabase.database_mongo.Column(
+            EnumTest, is_nullable=False, description="Test Documentation"
+        )
+        optional_with_default = layabase.database_mongo.Column(
+            str, default_value="Test value"
+        )
 
-        model = TestAutoIncrementModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestAutoIncrementModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

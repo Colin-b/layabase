@@ -8,15 +8,12 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def database():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "test_table"
+    class TestModel:
+        __tablename__ = "test_table"
 
-            id = layabase.database_mongo.Column()
+        id = layabase.database_mongo.Column()
 
-        model = TestModel
-
-    _db = layabase.load("mongomock", [TestController])
+    _db = layabase.load("mongomock", [layabase.CRUDController(TestModel)])
     yield _db
     layabase.testing.reset(_db)
 

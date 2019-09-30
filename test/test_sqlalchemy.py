@@ -5,19 +5,16 @@ import layabase.database_sqlalchemy
 
 
 def test_models_are_added_to_metadata():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-            @classmethod
-            def _post_init(cls, base):
-                pass
+        @classmethod
+        def _post_init(cls, base):
+            pass
 
-        model = TestModel
-
-    db = layabase.load("sqlite:///:memory:", [TestController])
+    db = layabase.load("sqlite:///:memory:", [layabase.CRUDController(TestModel)])
     assert "sqlite:///:memory:" == str(db.metadata.bind.engine.url)
     assert ["sample_table_name"] == list(db.metadata.tables.keys())
 

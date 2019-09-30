@@ -4,157 +4,152 @@ import layabase
 import layabase.database_mongo
 
 
-def test_load_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
-
-    with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        layabase.load("mongomock", [TestController])
-    assert (
-        str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
-    )
-
-
 def test_namespace_method_without_setting_model():
     class TestNamespace:
         pass
 
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.namespace(TestNamespace)
+        layabase.CRUDController(TestModel).namespace(TestNamespace)
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )
 
 
 def test_counters_table_name_is_forbidden():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "counters"
+    class TestModel:
+        __tablename__ = "counters"
 
-            key = layabase.database_mongo.Column(str)
-
-        model = TestModel
+        key = layabase.database_mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
-        layabase.load("mongomock", [TestController])
+        layabase.load("mongomock", [layabase.CRUDController(TestModel)])
 
     assert "counters is a reserved collection name." == str(exception_info.value)
 
 
 def test_audit_table_name_is_forbidden():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "audit"
+    class TestModel:
+        __tablename__ = "audit"
 
-            key = layabase.database_mongo.Column(str)
-
-        model = TestModel
+        key = layabase.database_mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
-        layabase.load("mongomock", [TestController])
+        layabase.load("mongomock", [layabase.CRUDController(TestModel)])
 
     assert "audit is a reserved collection name." == str(exception_info.value)
 
 
 def test_audit_prefixed_table_name_is_forbidden():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "audit_toto"
+    class TestModel:
+        __tablename__ = "audit_toto"
 
-            key = layabase.database_mongo.Column(str)
-
-        model = TestModel
+        key = layabase.database_mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
-        layabase.load("mongomock", [TestController])
+        layabase.load("mongomock", [layabase.CRUDController(TestModel)])
 
     assert "audit_toto is a reserved collection name." == str(exception_info.value)
 
 
 def test_get_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.get({})
+        layabase.CRUDController(TestModel).get({})
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )
 
 
 def test_post_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.post({})
+        layabase.CRUDController(TestModel).post({})
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )
 
 
 def test_post_many_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.post_many([])
+        layabase.CRUDController(TestModel).post_many([])
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )
 
 
 def test_put_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.put({})
+        layabase.CRUDController(TestModel).put({})
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )
 
 
 def test_delete_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.delete({})
+        layabase.CRUDController(TestModel).delete({})
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )
 
 
 def test_audit_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.get_audit({})
+        layabase.CRUDController(TestModel).get_audit({})
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )
 
 
 def test_model_description_method_without_setting_model():
-    class TestController(layabase.CRUDController):
-        pass
+    class TestModel:
+        __tablename__ = "test"
+
+        id = layabase.database_mongo.Column()
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        TestController.get_model_description()
+        layabase.CRUDController(TestModel).get_model_description()
     assert (
         str(exception_info.value)
-        == "TestController.model must be set before calling layabase.load function."
+        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
     )

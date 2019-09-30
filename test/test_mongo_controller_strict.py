@@ -8,19 +8,16 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestStrictModel:
-            __tablename__ = "strict_table_name"
+    class TestStrictModel:
+        __tablename__ = "strict_table_name"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-            optional = layabase.database_mongo.Column(str)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+        optional = layabase.database_mongo.Column(str)
 
-        model = TestStrictModel
-        skip_unknown_fields = False
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestStrictModel, skip_unknown_fields=False)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

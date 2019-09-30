@@ -9,17 +9,15 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestFloatModel:
-            __tablename__ = "float_table_name"
+    class TestFloatModel:
+        __tablename__ = "float_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            float_field = sqlalchemy.Column(sqlalchemy.Float)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        float_field = sqlalchemy.Column(sqlalchemy.Float)
 
-        model = TestFloatModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestFloatModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

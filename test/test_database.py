@@ -3,6 +3,12 @@ import pytest
 import layabase
 
 
+def test_controller_without_setting_model():
+    with pytest.raises(Exception) as exception_info:
+        layabase.CRUDController(None)
+    assert str(exception_info.value) == "Model must be provided."
+
+
 def test_none_connection_string_is_invalid():
     with pytest.raises(layabase.NoDatabaseProvided) as exception_info:
         layabase.load(None, None)

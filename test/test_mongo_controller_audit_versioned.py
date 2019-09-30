@@ -19,34 +19,25 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-            optional = layabase.database_mongo.Column(str)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+        optional = layabase.database_mongo.Column(str)
 
-        model = TestModel
-        audit = True
-
-    return TestController
+    return layabase.CRUDController(TestModel, audit=True)
 
 
 @pytest.fixture
 def controller_versioned():
-    class TestVersionedController(layabase.CRUDController):
-        class TestVersionedModel:
-            __tablename__ = "versioned_table_name"
+    class TestVersionedModel:
+        __tablename__ = "versioned_table_name"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            enum_fld = layabase.database_mongo.Column(EnumTest)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        enum_fld = layabase.database_mongo.Column(EnumTest)
 
-        model = TestVersionedModel
-        history = True
-        audit = True
-
-    return TestVersionedController
+    return layabase.CRUDController(TestVersionedModel, audit=True, history=True)
 
 
 @pytest.fixture

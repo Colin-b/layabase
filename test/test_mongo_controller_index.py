@@ -11,19 +11,17 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestIndexModel:
-            __tablename__ = "index_table_name"
+    class TestIndexModel:
+        __tablename__ = "index_table_name"
 
-            unique_key = layabase.database_mongo.Column(str, is_primary_key=True)
-            non_unique_key = layabase.database_mongo.Column(
-                datetime.date, index_type=layabase.database_mongo.IndexType.Other
-            )
+        unique_key = layabase.database_mongo.Column(str, is_primary_key=True)
+        non_unique_key = layabase.database_mongo.Column(
+            datetime.date, index_type=layabase.database_mongo.IndexType.Other
+        )
 
-        model = TestIndexModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestIndexModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

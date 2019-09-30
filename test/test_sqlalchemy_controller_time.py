@@ -9,17 +9,15 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestTimeModel:
-            __tablename__ = "time_table_name"
+    class TestTimeModel:
+        __tablename__ = "time_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            time_field = sqlalchemy.Column(sqlalchemy.Time)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        time_field = sqlalchemy.Column(sqlalchemy.Time)
 
-        model = TestTimeModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestTimeModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

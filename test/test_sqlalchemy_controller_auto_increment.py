@@ -9,26 +9,24 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestAutoIncrementModel:
-            __tablename__ = "auto_increment_table_name"
+    class TestAutoIncrementModel:
+        __tablename__ = "auto_increment_table_name"
 
-            key = sqlalchemy.Column(
-                sqlalchemy.Integer, primary_key=True, autoincrement=True
-            )
-            enum_field = sqlalchemy.Column(
-                sqlalchemy.Enum("Value1", "Value2"),
-                nullable=False,
-                doc="Test Documentation",
-            )
-            optional_with_default = sqlalchemy.Column(
-                sqlalchemy.String, default="Test value"
-            )
+        key = sqlalchemy.Column(
+            sqlalchemy.Integer, primary_key=True, autoincrement=True
+        )
+        enum_field = sqlalchemy.Column(
+            sqlalchemy.Enum("Value1", "Value2"),
+            nullable=False,
+            doc="Test Documentation",
+        )
+        optional_with_default = sqlalchemy.Column(
+            sqlalchemy.String, default="Test value"
+        )
 
-        model = TestAutoIncrementModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestAutoIncrementModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

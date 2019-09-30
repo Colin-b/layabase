@@ -22,18 +22,16 @@ logging.basicConfig(
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestModel:
-            __tablename__ = "sample_table_name"
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-            optional = layabase.database_mongo.Column(str)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+        optional = layabase.database_mongo.Column(str)
 
-        model = TestModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 
@@ -341,10 +339,7 @@ def test_post_with_unknown_field_is_valid(controller):
 
 
 def test_post_many_with_unknown_field_is_valid(controller):
-    assert [
-        {"mandatory": 1, "key": "my_key", "optional": "my_value"},
-        {"mandatory": 2, "key": "my_key2", "optional": "my_value2"},
-    ] == controller.post_many(
+    assert controller.post_many(
         [
             {
                 "key": "my_key",
@@ -361,21 +356,24 @@ def test_post_many_with_unknown_field_is_valid(controller):
                 "unknown": "my_value2",
             },
         ]
-    )
+    ) == [
+        {"mandatory": 1, "key": "my_key", "optional": "my_value"},
+        {"mandatory": 2, "key": "my_key2", "optional": "my_value2"},
+    ]
 
 
 def test_get_without_filter_is_retrieving_the_only_item(controller):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert [
+    assert controller.get({}) == [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
-    ] == controller.get({})
+    ]
 
 
 def test_get_from_another_thread_than_post(controller):
     def save_get_result():
-        assert [
+        assert controller.get({}) == [
             {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
-        ] == controller.get({})
+        ]
 
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
 
@@ -387,10 +385,10 @@ def test_get_from_another_thread_than_post(controller):
 def test_get_without_filter_is_retrieving_everything_with_multiple_posts(controller):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert controller.get({}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
-    ] == controller.get({})
+    ]
 
 
 def test_get_without_filter_is_retrieving_everything(controller):

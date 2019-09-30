@@ -9,17 +9,15 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestDecimalModel:
-            __tablename__ = "decimal_table_name"
+    class TestDecimalModel:
+        __tablename__ = "decimal_table_name"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-            decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)
 
-        model = TestDecimalModel
-
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestDecimalModel)
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 

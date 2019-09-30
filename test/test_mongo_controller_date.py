@@ -12,18 +12,16 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestController(layabase.CRUDController):
-        class TestDateModel:
-            __tablename__ = "date_table_name"
+    class TestDateModel:
+        __tablename__ = "date_table_name"
 
-            key = layabase.database_mongo.Column(str, is_primary_key=True)
-            date_str = layabase.database_mongo.Column(datetime.date)
-            datetime_str = layabase.database_mongo.Column(datetime.datetime)
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        date_str = layabase.database_mongo.Column(datetime.date)
+        datetime_str = layabase.database_mongo.Column(datetime.datetime)
 
-        model = TestDateModel
-
-    _db = layabase.load("mongomock", [TestController])
-    yield TestController
+    controller = layabase.CRUDController(TestDateModel)
+    _db = layabase.load("mongomock", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 
