@@ -8,13 +8,9 @@ import layabase.testing
 
 
 class TestChoicesController(database.CRUDController):
-    pass
+    class TestChoicesModel:
+        __tablename__ = "choices_table_name"
 
-
-def _create_models(base):
-    class TestChoicesModel(
-        database_mongo.CRUDModel, base=base, table_name="choices_table_name"
-    ):
         key = database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
@@ -28,14 +24,12 @@ def _create_models(base):
             float, description="Test Documentation", choices=[1.25, 1.5, 1.75]
         )
 
-    TestChoicesController.model(TestChoicesModel)
-
-    return [TestChoicesModel]
+    model = TestChoicesModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestChoicesController])
     yield _db
     layabase.testing.reset(_db)
 

@@ -6,28 +6,26 @@ import layabase.testing
 
 
 class TestAutoIncAuditVersionedController(database.CRUDController):
-    pass
+    class TestAutoIncAuditVersionedModel:
+        __tablename__ = "prim_int_auto_inc_version_table_name"
 
-
-def _create_models(base):
-    class TestAutoIncAuditVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="prim_int_auto_inc_version_table_name",
-        audit=True,
-    ):
         key = database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
         other = database_mongo.Column(int)
 
-    TestAutoIncAuditVersionedController.model(TestAutoIncAuditVersionedModel)
-    return [TestAutoIncAuditVersionedModel]
+    model = TestAutoIncAuditVersionedModel
+    history = True
+    audit = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
+    _db = database.load(
+        "mongomock?ssl=True",
+        [TestAutoIncAuditVersionedController],
+        replicaSet="globaldb",
+    )
     yield _db
     layabase.testing.reset(_db)
 

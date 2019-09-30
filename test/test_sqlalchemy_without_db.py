@@ -6,21 +6,17 @@ from test import DateTimeModuleMock
 
 
 class TestController(CRUDController):
-    pass
+    class TestModel:
+        __tablename__ = "sample_table_name"
+
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+
+    model = TestModel
 
 
 @pytest.fixture
 def disconnected_database():
-    def _create_models(base):
-        class TestModel(database_sqlalchemy.CRUDModel, base):
-            __tablename__ = "sample_table_name"
-
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-
-        TestController.model(TestModel)
-        return [TestModel]
-
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = database.load("sqlite:///:memory:", [TestController])
     _db.metadata.bind.dispose()
     yield _db
 

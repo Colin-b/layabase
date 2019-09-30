@@ -15,15 +15,9 @@ class EnumTest(enum.Enum):
 
 
 class TestVersionedController(database.CRUDController):
-    pass
+    class TestVersionedModel:
+        __tablename__ = "versioned_table_name"
 
-
-def _create_models(base):
-    class TestVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="versioned_table_name",
-    ):
         key = database_mongo.Column(is_primary_key=True)
         dict_field = database_mongo.DictColumn(
             fields={
@@ -33,14 +27,13 @@ def _create_models(base):
             is_required=True,
         )
 
-    TestVersionedController.model(TestVersionedModel)
-
-    return [TestVersionedModel]
+    model = TestVersionedModel
+    history = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestVersionedController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -682,34 +675,6 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "dict_field.first_key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "dict_field.second_key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -719,22 +684,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
+                                "$ref": "#/definitions/TestVersionedModel_PutRequestModel"
                             },
                         }
                     ],
@@ -745,7 +695,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
+                                "$ref": "#/definitions/TestVersionedModel_GetResponseModel"
                             },
                         }
                     },
@@ -795,6 +745,49 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestVersionedModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "dict_field.first_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field.second_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
             },
             "/test_rollback_parser": {
                 "get": {
@@ -840,7 +833,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestVersionedModel_Versioned": {
+            "TestVersionedModel_PutRequestModel": {
                 "required": ["dict_field"],
                 "properties": {
                     "dict_field": {
@@ -866,6 +859,40 @@ def test_open_api_definition(client):
                         "enum": ["Value1", "Value2"],
                     },
                     "second_key": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+            "TestVersionedModel_PostRequestModel": {
+                "required": ["dict_field"],
+                "properties": {
+                    "dict_field": {
+                        "readOnly": False,
+                        "default": {"first_key": None, "second_key": None},
+                        "example": {"first_key": "Value1", "second_key": 1},
+                        "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                },
+                "type": "object",
+            },
+            "TestVersionedModel_GetResponseModel": {
+                "required": ["dict_field"],
+                "properties": {
+                    "dict_field": {
+                        "readOnly": False,
+                        "default": {"first_key": None, "second_key": None},
+                        "example": {"first_key": "Value1", "second_key": 1},
+                        "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
                 },
                 "type": "object",
             },

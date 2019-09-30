@@ -12,13 +12,9 @@ class EnumTest(enum.Enum):
 
 
 class TestOptionalDictController(database.CRUDController):
-    pass
+    class TestOptionalDictModel:
+        __tablename__ = "optional_dict_table_name"
 
-
-def _create_models(base):
-    class TestOptionalDictModel(
-        database_mongo.CRUDModel, base=base, table_name="optional_dict_table_name"
-    ):
         key = database_mongo.Column(str, is_primary_key=True)
         dict_col = database_mongo.DictColumn(
             get_fields=lambda model_as_dict: {
@@ -27,14 +23,12 @@ def _create_models(base):
             }
         )
 
-    TestOptionalDictController.model(TestOptionalDictModel)
-
-    return [TestOptionalDictModel]
+    model = TestOptionalDictModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestOptionalDictController])
     yield _db
     layabase.testing.reset(_db)
 

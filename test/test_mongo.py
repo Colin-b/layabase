@@ -1,7 +1,8 @@
 import pymongo
 import pytest
 
-from layabase import database, database_mongo, versioning_mongo
+from layabase import database_mongo
+import layabase
 import layabase.testing
 
 
@@ -57,24 +58,21 @@ def test_spaces_are_forbidden_at_start_and_end_of_column_name():
 
 
 def test_none_connection_string_is_invalid():
-    with pytest.raises(Exception) as exception_info:
-        database.load(None, None)
+    with pytest.raises(layabase.NoDatabaseProvided) as exception_info:
+        layabase.load(None, None)
     assert str(exception_info.value) == "A database connection URL must be provided."
 
 
 def test_empty_connection_string_is_invalid():
-    with pytest.raises(Exception) as exception_info:
-        database.load("", None)
+    with pytest.raises(layabase.NoDatabaseProvided) as exception_info:
+        layabase.load("", None)
     assert str(exception_info.value) == "A database connection URL must be provided."
 
 
 def test_no_create_models_function_is_invalid():
-    with pytest.raises(Exception) as exception_info:
-        database.load("mongomock", None)
-    assert (
-        str(exception_info.value)
-        == "A method allowing to create related models must be provided."
-    )
+    with pytest.raises(layabase.NoRelatedControllers) as exception_info:
+        layabase.load("mongomock", None)
+    assert str(exception_info.value) == "A list of CRUDController must be provided."
 
 
 def test_dots_are_forbidden_in_column_name():
@@ -151,56 +149,58 @@ def test_int_column_with_not_int_example_is_invalid():
     assert str(exception_info.value) == "Example must be of field type."
 
 
-@pytest.fixture
-def db():
-    _db = database.load("mongomock", lambda x: x)
-    yield _db
-    layabase.testing.reset(_db)
+def test_2entities_on_same_collection_without_pk():
+    class TestEntitySameCollection1Controller(layabase.CRUDController):
+        class TestEntitySameCollection1:
+            __tablename__ = "sample_table_name_2entities"
 
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
 
-def test_2entities_on_same_collection_without_pk(db):
-    class TestEntitySameCollection1(
-        versioning_mongo.VersionedCRUDModel,
-        base=db,
-        table_name="sample_table_name_2entities",
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        mandatory = database_mongo.Column(int, is_nullable=False)
-        optional = database_mongo.Column(str)
+        model = TestEntitySameCollection1
+        history = True
 
-    TestEntitySameCollection1.add({"key": "1", "mandatory": 2})
-    TestEntitySameCollection1.add({"key": "2", "mandatory": 2})
+    mongo_base = layabase.load("mongomock", [TestEntitySameCollection1Controller])
+    TestEntitySameCollection1Controller.post({"key": "1", "mandatory": 2})
+    TestEntitySameCollection1Controller.post({"key": "2", "mandatory": 2})
 
+    class TestEntitySameCollection2Controller(layabase.CRUDController):
+        class TestEntitySameCollection2:
+            __tablename__ = "sample_table_name_2entities"
+
+        model = TestEntitySameCollection2
+        history = True
+
+    # This call is performed using the internal function because we want to simulate an already filled database
     with pytest.raises(pymongo.errors.DuplicateKeyError):
-
-        class TestEntitySameCollection2(
-            versioning_mongo.VersionedCRUDModel,
-            base=db,
-            table_name="sample_table_name_2entities",
-        ):
-            pass
+        database_mongo._create_model(TestEntitySameCollection2Controller, mongo_base)
 
 
-def test_2entities_on_same_collection_with_pk(db):
-    class TestEntitySameCollection1(
-        versioning_mongo.VersionedCRUDModel,
-        base=db,
-        table_name="sample_table_name_2entities",
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        mandatory = database_mongo.Column(int, is_nullable=False)
-        optional = database_mongo.Column(str)
+def test_2entities_on_same_collection_with_pk():
+    class TestEntitySameCollection1Controller(layabase.CRUDController):
+        class TestEntitySameCollection1:
+            __tablename__ = "sample_table_name_2entities"
 
-    TestEntitySameCollection1.add({"key": "1", "mandatory": 2})
-    TestEntitySameCollection1.add({"key": "2", "mandatory": 2})
+            key = database_mongo.Column(str, is_primary_key=True)
+            mandatory = database_mongo.Column(int, is_nullable=False)
+            optional = database_mongo.Column(str)
 
-    class TestEntitySameCollection2(
-        versioning_mongo.VersionedCRUDModel,
-        base=db,
-        table_name="sample_table_name_2entities",
-        skip_update_indexes=True,
-    ):
-        pass
+        model = TestEntitySameCollection1
+        history = True
 
-    TestEntitySameCollection1.add({"key": "3", "mandatory": 2})
-    assert len(TestEntitySameCollection1.get_all()) == 3
+    layabase.load("mongomock", [TestEntitySameCollection1Controller])
+    TestEntitySameCollection1Controller.post({"key": "1", "mandatory": 2})
+    TestEntitySameCollection1Controller.post({"key": "2", "mandatory": 2})
+
+    class TestEntitySameCollection2Controller(layabase.CRUDController):
+        class TestEntitySameCollection2:
+            __tablename__ = "sample_table_name_2entities"
+
+        model = TestEntitySameCollection2
+        history = True
+        skip_update_indexes = True
+
+    layabase.load("mongomock", [TestEntitySameCollection2Controller])
+    TestEntitySameCollection1Controller.post({"key": "3", "mandatory": 2})
+    assert len(TestEntitySameCollection1Controller.get({})) == 3

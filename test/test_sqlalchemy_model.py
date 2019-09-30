@@ -10,39 +10,35 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def model():
-    model_class = None
-
-    def _create_models(base):
-        class TestModel(database_sqlalchemy.CRUDModel, base):
+    class TestController(layabase.CRUDController):
+        class TestModel:
             __tablename__ = "sample_table_name"
 
             key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
             mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
             optional = sqlalchemy.Column(sqlalchemy.String)
 
-        nonlocal model_class
-        model_class = TestModel
-        return [TestModel]
+        model = TestModel
 
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = database.load("sqlite:///:memory:", [TestController])
+    model_class = TestController._model
     yield model_class
     layabase.testing.reset(_db)
 
 
-def _create_models(base):
-    class TestModel(database_sqlalchemy.CRUDModel, base):
-        __tablename__ = "sample_table_name"
-
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-        optional = sqlalchemy.Column(sqlalchemy.String)
-
-    return [TestModel]
-
-
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    class TestController(layabase.CRUDController):
+        class TestModel:
+            __tablename__ = "sample_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+            optional = sqlalchemy.Column(sqlalchemy.String)
+
+        model = TestModel
+
+    _db = database.load("sqlite:///:memory:", [TestController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -71,18 +67,18 @@ def test_health_details_no_db(db):
 
 
 def test_get_all_without_data_returns_empty_list(model):
-    assert [] == model.get_all()
+    assert model.get_all() == []
 
 
 def test_get_without_data_returns_empty_dict(model):
-    assert {} == model.get()
+    assert model.get() == {}
 
 
 def test_add_with_nothing_is_invalid(model):
     with pytest.raises(ValidationFailed) as exception_info:
         model.add(None)
     assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.received_data == {}
 
 
 def test_add_with_something_else_than_dictionary_is_invalid(model):
@@ -135,27 +131,27 @@ def test_add_with_empty_dict_is_invalid(model):
     with pytest.raises(ValidationFailed) as exception_info:
         model.add({})
     assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.received_data == {}
 
 
 def test_update_with_nothing_is_invalid(model):
     with pytest.raises(ValidationFailed) as exception_info:
         model.update(None)
     assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.received_data == {}
 
 
 def test_update_with_empty_dict_is_invalid(model):
     with pytest.raises(ValidationFailed) as exception_info:
         model.update({})
     assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    assert {} == model.get()
+    assert exception_info.value.received_data == {}
+    assert model.get() == {}
 
 
 def test_remove_without_nothing_do_not_fail(model):
     assert 0 == model.remove()
-    assert {} == model.get()
+    assert model.get() == {}
 
 
 def test_add_without_mandatory_field_is_invalid(model):
@@ -165,7 +161,7 @@ def test_add_without_mandatory_field_is_invalid(model):
         "mandatory": ["Missing data for required field."]
     } == exception_info.value.errors
     assert {"key": "my_key"} == exception_info.value.received_data
-    assert {} == model.get()
+    assert model.get() == {}
 
 
 def test_add_without_key_is_invalid(model):
@@ -173,7 +169,7 @@ def test_add_without_key_is_invalid(model):
         model.add({"mandatory": 1})
     assert {"key": ["Missing data for required field."]} == exception_info.value.errors
     assert {"mandatory": 1} == exception_info.value.received_data
-    assert {} == model.get()
+    assert model.get() == {}
 
 
 def test_add_with_wrong_type_is_invalid(model):
@@ -181,7 +177,7 @@ def test_add_with_wrong_type_is_invalid(model):
         model.add({"key": 256, "mandatory": 1})
     assert {"key": ["Not a valid string."]} == exception_info.value.errors
     assert {"key": 256, "mandatory": 1} == exception_info.value.received_data
-    assert {} == model.get()
+    assert model.get() == {}
 
 
 def test_update_with_wrong_type_is_invalid(model):
@@ -204,8 +200,8 @@ def test_add_all_with_nothing_is_invalid(model):
 def test_add_all_with_empty_dict_is_invalid(model):
     with pytest.raises(ValidationFailed) as exception_info:
         model.add_all({})
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == {}
 
 
 def test_add_all_without_mandatory_field_is_invalid(model):
@@ -216,14 +212,14 @@ def test_add_all_without_mandatory_field_is_invalid(model):
                 {"key": "my_key", "mandatory": 1, "optional": "my_value"},
             ]
         )
-    assert {
+    assert exception_info.value.errors == {
         0: {"mandatory": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [
+    }
+    assert exception_info.value.received_data == [
         {"key": "my_key"},
         {"key": "my_key", "mandatory": 1, "optional": "my_value"},
-    ] == exception_info.value.received_data
-    assert {} == model.get()
+    ]
+    assert model.get() == {}
 
 
 def test_add_all_without_key_is_invalid(model):
@@ -241,7 +237,7 @@ def test_add_all_without_key_is_invalid(model):
         {"mandatory": 1},
         {"key": "my_key", "mandatory": 1, "optional": "my_value"},
     ] == exception_info.value.received_data
-    assert {} == model.get()
+    assert model.get() == {}
 
 
 def test_add_all_with_wrong_type_is_invalid(model):
@@ -257,7 +253,7 @@ def test_add_all_with_wrong_type_is_invalid(model):
         {"key": 256, "mandatory": 1},
         {"key": "my_key", "mandatory": 1, "optional": "my_value"},
     ] == exception_info.value.received_data
-    assert {} == model.get()
+    assert model.get() == {}
 
 
 def test_add_without_optional_is_valid(model):
@@ -271,7 +267,7 @@ def test_add_with_optional_is_valid(model):
     assert {"mandatory": 1, "key": "my_key", "optional": "my_value"} == model.add(
         {"key": "my_key", "mandatory": 1, "optional": "my_value"}
     )
-    assert {"key": "my_key", "mandatory": 1, "optional": "my_value"} == model.get()
+    assert model.get() == {"key": "my_key", "mandatory": 1, "optional": "my_value"}
 
 
 def test_update_unexisting_is_invalid(model):
@@ -294,7 +290,7 @@ def test_add_with_unknown_field_is_valid(model):
             "unknown": "my_value",
         }
     )
-    assert {"key": "my_key", "mandatory": 1, "optional": "my_value"} == model.get()
+    assert model.get() == {"key": "my_key", "mandatory": 1, "optional": "my_value"}
 
 
 def test_get_without_filter_is_retrieving_the_only_item(model):
@@ -310,16 +306,16 @@ def test_get_without_filter_is_failing_if_more_than_one_item_exists(model):
     assert {
         "": ["More than one result: Consider another filtering."]
     } == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.received_data == {}
 
 
 def test_get_all_without_filter_is_retrieving_everything_after_multiple_posts(model):
     model.add({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     model.add({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert model.get_all() == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
-    ] == model.get_all()
+    ]
 
 
 def test_get_all_without_filter_is_retrieving_everything(model):
@@ -329,18 +325,18 @@ def test_get_all_without_filter_is_retrieving_everything(model):
             {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
         ]
     )
-    assert [
+    assert model.get_all() == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
-    ] == model.get_all()
+    ]
 
 
 def test_get_all_with_filter_is_retrieving_subset_after_multiple_posts(model):
     model.add({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     model.add({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert [
+    assert model.get_all(optional="my_value1") == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
-    ] == model.get_all(optional="my_value1")
+    ]
 
 
 def test_get_all_with_filter_is_retrieving_subset(model):
@@ -350,9 +346,9 @@ def test_get_all_with_filter_is_retrieving_subset(model):
             {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
         ]
     )
-    assert [
+    assert model.get_all(optional="my_value1") == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
-    ] == model.get_all(optional="my_value1")
+    ]
 
 
 def test_get_all_order_by(model):
@@ -363,21 +359,23 @@ def test_get_all_order_by(model):
             {"key": "my_key3", "mandatory": -1, "optional": "my_value3"},
         ]
     )
-    assert [
+    assert model.get_all(
+        order_by=[sqlalchemy.asc(model.mandatory), sqlalchemy.desc(model.key)]
+    ) == [
         {"key": "my_key3", "mandatory": -1, "optional": "my_value3"},
         {"key": "my_key2", "mandatory": 1, "optional": "my_value2"},
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
-    ] == model.get_all(
-        order_by=[sqlalchemy.asc(model.mandatory), sqlalchemy.desc(model.key)]
-    )
+    ]
 
 
 def test_get_with_filter_is_retrieving_the_proper_row_after_multiple_posts(model):
     model.add({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     model.add({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert {"key": "my_key1", "mandatory": 1, "optional": "my_value1"} == model.get(
-        optional="my_value1"
-    )
+    assert model.get(optional="my_value1") == {
+        "key": "my_key1",
+        "mandatory": 1,
+        "optional": "my_value1",
+    }
 
 
 def test_get_with_filter_is_retrieving_the_proper_row(model):
@@ -387,39 +385,43 @@ def test_get_with_filter_is_retrieving_the_proper_row(model):
             {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
         ]
     )
-    assert {"key": "my_key1", "mandatory": 1, "optional": "my_value1"} == model.get(
-        optional="my_value1"
-    )
+    assert model.get(optional="my_value1") == {
+        "key": "my_key1",
+        "mandatory": 1,
+        "optional": "my_value1",
+    }
 
 
 def test_update_is_updating(model):
     model.add({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert (
+    assert model.update({"key": "my_key1", "optional": "my_value"}) == (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"},
-    ) == model.update({"key": "my_key1", "optional": "my_value"})
-    assert {"key": "my_key1", "mandatory": 1, "optional": "my_value"} == model.get(
-        mandatory=1
     )
+    assert model.get(mandatory=1) == {
+        "key": "my_key1",
+        "mandatory": 1,
+        "optional": "my_value",
+    }
 
 
 def test_update_is_updating_and_previous_value_cannot_be_used_to_filter(model):
     model.add({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     model.update({"key": "my_key1", "optional": "my_value"})
-    assert {} == model.get(optional="my_value1")
+    assert model.get(optional="my_value1") == {}
 
 
 def test_remove_with_filter_is_removing_the_proper_row(model):
     model.add({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     model.add({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 1 == model.remove(key="my_key1")
-    assert [
+    assert model.remove(key="my_key1") == 1
+    assert model.get_all() == [
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"}
-    ] == model.get_all()
+    ]
 
 
 def test_remove_without_filter_is_removing_everything(model):
     model.add({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     model.add({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 2 == model.remove()
-    assert [] == model.get_all()
+    assert model.remove() == 2
+    assert model.get_all() == []

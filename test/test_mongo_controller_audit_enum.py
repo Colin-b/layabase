@@ -14,23 +14,21 @@ class EnumTest(enum.Enum):
 
 
 class TestEnumController(database.CRUDController):
-    pass
+    class TestEnumModel:
+        __tablename__ = "enum_table_name"
 
-
-def _create_models(base):
-    class TestEnumModel(
-        database_mongo.CRUDModel, base=base, table_name="enum_table_name", audit=True
-    ):
         key = database_mongo.Column(str, is_primary_key=True)
         enum_fld = database_mongo.Column(EnumTest)
 
-    TestEnumController.model(TestEnumModel)
-    return [TestEnumModel]
+    model = TestEnumModel
+    audit = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
+    _db = database.load(
+        "mongomock?ssl=True", [TestEnumController], replicaSet="globaldb"
+    )
     yield _db
     layabase.testing.reset(_db)
 

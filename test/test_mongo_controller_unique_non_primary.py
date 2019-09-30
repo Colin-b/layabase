@@ -13,23 +13,9 @@ class EnumTest(enum.Enum):
 
 
 class TestVersionedController(database.CRUDController):
-    pass
+    class TestVersionedModel:
+        __tablename__ = "versioned_table_name"
 
-
-class TestVersionedUniqueNonPrimaryController(database.CRUDController):
-    pass
-
-
-class TestUniqueNonPrimaryController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="versioned_table_name",
-    ):
         key = database_mongo.Column(is_primary_key=True)
         dict_field = database_mongo.DictColumn(
             fields={
@@ -39,34 +25,41 @@ def _create_models(base):
             is_required=True,
         )
 
-    class TestVersionedUniqueNonPrimaryModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="versioned_uni_table_name",
-    ):
+    model = TestVersionedModel
+    history = True
+
+
+class TestVersionedUniqueNonPrimaryController(database.CRUDController):
+    class TestVersionedUniqueNonPrimaryModel:
+        __tablename__ = "versioned_uni_table_name"
+
         key = database_mongo.Column(int, should_auto_increment=True)
         unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
 
-    class TestUniqueNonPrimaryModel(
-        database_mongo.CRUDModel, base=base, table_name="uni_table_name"
-    ):
+    model = TestVersionedUniqueNonPrimaryModel
+    history = True
+
+
+class TestUniqueNonPrimaryController(database.CRUDController):
+    class TestUniqueNonPrimaryModel:
+        __tablename__ = "uni_table_name"
+
         key = database_mongo.Column(int, should_auto_increment=True)
         unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
 
-    TestVersionedController.model(TestVersionedModel)
-    TestVersionedUniqueNonPrimaryController.model(TestVersionedUniqueNonPrimaryModel)
-    TestUniqueNonPrimaryController.model(TestUniqueNonPrimaryModel)
-
-    return [
-        TestVersionedModel,
-        TestVersionedUniqueNonPrimaryModel,
-        TestUniqueNonPrimaryModel,
-    ]
+    model = TestUniqueNonPrimaryModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load(
+        "mongomock",
+        [
+            TestVersionedController,
+            TestUniqueNonPrimaryController,
+            TestVersionedUniqueNonPrimaryController,
+        ],
+    )
     yield _db
     layabase.testing.reset(_db)
 

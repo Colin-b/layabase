@@ -1,29 +1,23 @@
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestLikeOperatorController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestLikeOperatorModel(database_sqlalchemy.CRUDModel, base):
+class TestLikeOperatorController(layabase.CRUDController):
+    class TestLikeOperatorModel:
         __tablename__ = "like_operator_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-    TestLikeOperatorModel.interpret_star_character_as_like()
-
-    TestLikeOperatorController.model(TestLikeOperatorModel)
-    return [TestLikeOperatorModel]
+    model = TestLikeOperatorModel
+    interpret_star_character = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestLikeOperatorController])
     yield _db
     layabase.testing.reset(_db)
 

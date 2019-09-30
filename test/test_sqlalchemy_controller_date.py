@@ -6,29 +6,24 @@ import flask_restplus
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestDateController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestDateModel(database_sqlalchemy.CRUDModel, base):
+class TestDateController(layabase.CRUDController):
+    class TestDateModel:
         __tablename__ = "date_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         date_str = sqlalchemy.Column(sqlalchemy.Date)
         datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
 
-    TestDateController.model(TestDateModel)
-    return [TestDateModel]
+    model = TestDateModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestDateController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -89,37 +84,13 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestDateModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -174,6 +145,36 @@ def test_open_api_definition(client):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestDateModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestDateModel_PutRequestModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -296,7 +297,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestDateModel": {
+            "TestDateModel_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -312,7 +313,41 @@ def test_open_api_definition(client):
                     },
                 },
                 "type": "object",
-            }
+            },
+            "TestDateModel_PutRequestModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2017-09-24T15:36:09",
+                    },
+                },
+                "type": "object",
+            },
+            "TestDateModel_GetResponseModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2017-09-24T15:36:09",
+                    },
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

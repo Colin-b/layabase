@@ -5,58 +5,53 @@ import layabase.testing
 
 
 class TestNoneInsertController(database.CRUDController):
-    pass
+    class TestNoneInsertModel:
+        __tablename__ = "none_table_name"
 
-
-class TestNoneRetrieveController(database.CRUDController):
-    pass
-
-
-class TestNoneNotInsertedController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestNoneNotInsertedModel(
-        database_mongo.CRUDModel, base=base, table_name="none_table_name"
-    ):
-        key = database_mongo.Column(int, is_primary_key=True)
-        my_dict = database_mongo.DictColumn(
-            fields={"null_value": database_mongo.Column(store_none=False)},
-            is_required=True,
-        )
-
-    class TestNoneInsertModel(
-        database_mongo.CRUDModel,
-        base=base,
-        table_name="none_table_name",
-        skip_name_check=True,
-    ):
         key = database_mongo.Column(int, is_primary_key=True)
         my_dict = database_mongo.DictColumn(
             fields={"null_value": database_mongo.Column(store_none=True)},
             is_required=True,
         )
 
-    class TestNoneRetrieveModel(
-        database_mongo.CRUDModel,
-        base=base,
-        table_name="none_table_name",
-        skip_name_check=True,
-    ):
+    model = TestNoneInsertModel
+    skip_name_check = True
+
+
+class TestNoneRetrieveController(database.CRUDController):
+    class TestNoneRetrieveModel:
+        __tablename__ = "none_table_name"
+
         key = database_mongo.Column(int, is_primary_key=True)
         my_dict = database_mongo.Column(dict, is_required=True)
 
-    TestNoneNotInsertedController.model(TestNoneNotInsertedModel)
-    TestNoneInsertController.model(TestNoneInsertModel)
-    TestNoneRetrieveController.model(TestNoneRetrieveModel)
+    model = TestNoneRetrieveModel
+    skip_name_check = True
 
-    return [TestNoneInsertModel]
+
+class TestNoneNotInsertedController(database.CRUDController):
+    class TestNoneNotInsertedModel:
+        __tablename__ = "none_table_name"
+
+        key = database_mongo.Column(int, is_primary_key=True)
+        my_dict = database_mongo.DictColumn(
+            fields={"null_value": database_mongo.Column(store_none=False)},
+            is_required=True,
+        )
+
+    model = TestNoneNotInsertedModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load(
+        "mongomock",
+        [
+            TestNoneInsertController,
+            TestNoneNotInsertedController,
+            TestNoneRetrieveController,
+        ],
+    )
     yield _db
     layabase.testing.reset(_db)
 

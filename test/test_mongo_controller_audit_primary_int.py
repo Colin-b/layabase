@@ -7,28 +7,23 @@ from test import DateTimeModuleMock
 
 
 class TestPrimaryIntController(database.CRUDController):
-    pass
+    class TestPrimaryIntModel:
+        __tablename__ = "prim_int_table_name"
 
-
-def _create_models(base):
-    class TestPrimaryIntModel(
-        database_mongo.CRUDModel,
-        base=base,
-        table_name="prim_int_table_name",
-        audit=True,
-    ):
         key = database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
         other = database_mongo.Column()
 
-    TestPrimaryIntController.model(TestPrimaryIntModel)
-    return [TestPrimaryIntModel]
+    model = TestPrimaryIntModel
+    audit = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
+    _db = database.load(
+        "mongomock?ssl=True", [TestPrimaryIntController], replicaSet="globaldb"
+    )
     yield _db
     layabase.testing.reset(_db)
 

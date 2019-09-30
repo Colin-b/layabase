@@ -10,13 +10,9 @@ import layabase.testing
 
 
 class TestSupportForComparisonSignsController(database.CRUDController):
-    pass
+    class TestSupportForComparisonSignsModel:
+        __tablename__ = "support_comparison_sign"
 
-
-def _create_models(base):
-    class TestSupportForComparisonSignsModel(
-        database_mongo.CRUDModel, base=base, table_name="support_comparison_sign"
-    ):
         int_value = database_mongo.Column(int, allow_comparison_signs=True)
         float_value = database_mongo.Column(float, allow_comparison_signs=True)
         date_value = database_mongo.Column(datetime.date, allow_comparison_signs=True)
@@ -24,14 +20,12 @@ def _create_models(base):
             datetime.datetime, allow_comparison_signs=True
         )
 
-    TestSupportForComparisonSignsController.model(TestSupportForComparisonSignsModel)
-
-    return [TestSupportForComparisonSignsModel]
+    model = TestSupportForComparisonSignsModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestSupportForComparisonSignsController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -1160,41 +1154,6 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "date_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "datetime_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "int_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -1204,22 +1163,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel_PutRequestModel"
                             },
                         }
                     ],
@@ -1230,7 +1174,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel_GetResponseModel"
                             },
                         }
                     },
@@ -1287,11 +1231,9 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-            },
-            "/test_parsers": {
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
+                    "operationId": "delete_test_resource",
                     "parameters": [
                         {
                             "name": "date_value",
@@ -1324,6 +1266,23 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestSupportForComparisonSignsModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+            },
+            "/test_parsers": {
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -1372,6 +1331,41 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "date_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
             },
         },
         "info": {"title": "API", "version": "1.0"},
@@ -1379,7 +1373,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestSupportForComparisonSignsModel": {
+            "TestSupportForComparisonSignsModel_PutRequestModel": {
                 "properties": {
                     "date_value": {
                         "type": "string",
@@ -1401,7 +1395,53 @@ def test_open_api_definition(client):
                     "int_value": {"type": "integer", "readOnly": False, "example": 1},
                 },
                 "type": "object",
-            }
+            },
+            "TestSupportForComparisonSignsModel_PostRequestModel": {
+                "properties": {
+                    "date_value": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": False,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_value": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+            "TestSupportForComparisonSignsModel_GetResponseModel": {
+                "properties": {
+                    "date_value": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": False,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_value": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

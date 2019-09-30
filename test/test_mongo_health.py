@@ -5,9 +5,18 @@ import layabase.testing
 from test import DateTimeModuleMock
 
 
+class TestController(layabase.CRUDController):
+    class TestModel:
+        __tablename__ = "test_table"
+
+        id = database_mongo.Column()
+
+    model = TestModel
+
+
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", lambda base: [])
+    _db = database.load("mongomock", [TestController])
     yield _db
     layabase.testing.reset(_db)
 

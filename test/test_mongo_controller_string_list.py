@@ -5,24 +5,18 @@ import layabase.testing
 
 
 class TestStringListController(database.CRUDController):
-    pass
+    class TestStringListModel:
+        __tablename__ = "string_list_table_name"
 
-
-def _create_models(base):
-    class TestStringListModel(
-        database_mongo.CRUDModel, base=base, table_name="string_list_table_name"
-    ):
         key = database_mongo.Column(is_primary_key=True)
         list_field = database_mongo.ListColumn(database_mongo.Column(), sorted=True)
 
-    TestStringListController.model(TestStringListModel)
-
-    return [TestStringListModel]
+    model = TestStringListModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestStringListController])
     yield _db
     layabase.testing.reset(_db)
 

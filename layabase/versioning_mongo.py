@@ -2,7 +2,7 @@ import logging
 from typing import List, Dict
 
 import pymongo
-from flask_restplus import inputs
+import flask_restplus
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase.database_mongo import CRUDModel, Column, IndexType
@@ -44,11 +44,11 @@ class VersionedCRUDModel(CRUDModel):
                 cls.audit_model.update_indexes(document)
 
     @classmethod
-    def json_post_model(cls, namespace):
+    def post_fields(cls, namespace: flask_restplus.Namespace):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
-        return namespace.model(f"{cls.__name__}_Versioned", all_fields)
+        return all_fields
 
     @classmethod
     def _insert_one(cls, document: dict) -> dict:
@@ -71,11 +71,11 @@ class VersionedCRUDModel(CRUDModel):
             cls.audit_model.audit_add(revision)
 
     @classmethod
-    def json_put_model(cls, namespace):
+    def put_fields(cls, namespace: flask_restplus.Namespace):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
-        return namespace.model(f"{cls.__name__}_Versioned", all_fields)
+        return all_fields
 
     @classmethod
     def _update_one(cls, document: dict) -> (dict, dict):
@@ -171,7 +171,7 @@ class VersionedCRUDModel(CRUDModel):
         query_rollback_parser.remove_argument(cls.valid_since_revision.name)
         query_rollback_parser.remove_argument(cls.valid_until_revision.name)
         query_rollback_parser.add_argument(
-            "revision", type=inputs.positive, required=True
+            "revision", type=flask_restplus.inputs.positive, required=True
         )
         return query_rollback_parser
 
@@ -198,11 +198,11 @@ class VersionedCRUDModel(CRUDModel):
         return query_get_parser
 
     @classmethod
-    def get_response_model(cls, namespace):
+    def get_fields(cls, namespace: flask_restplus.Namespace):
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
-        return namespace.model(f"{cls.__name__}_Versioned", all_fields)
+        return all_fields
 
     @classmethod
     def get(cls, **filters) -> dict:

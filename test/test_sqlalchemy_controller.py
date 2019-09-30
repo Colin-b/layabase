@@ -6,29 +6,24 @@ import flask
 import flask_restplus
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestModel(database_sqlalchemy.CRUDModel, base):
+class TestController(layabase.CRUDController):
+    class TestModel:
         __tablename__ = "sample_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    TestController.model(TestModel)
-    return [TestModel]
+    model = TestModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -639,7 +634,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -703,7 +700,9 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -716,7 +715,9 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -755,7 +756,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModelDescription"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_GetDescriptionResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_description_resource",
@@ -789,7 +792,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel": {
+            "TestModel_PostRequestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -798,7 +801,25 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModelDescription": {
+            "TestModel_PutRequestModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": 1},
+                    "optional": {"type": "string", "example": "sample_value"},
+                },
+                "type": "object",
+            },
+            "TestModel_GetResponseModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": 1},
+                    "optional": {"type": "string", "example": "sample_value"},
+                },
+                "type": "object",
+            },
+            "TestModel_GetDescriptionResponseModel": {
                 "required": ["key", "mandatory", "table"],
                 "properties": {
                     "table": {

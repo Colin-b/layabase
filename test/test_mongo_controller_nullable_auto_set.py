@@ -6,13 +6,9 @@ import layabase.testing
 
 
 class TestNullableAutoSetController(database.CRUDController):
-    pass
+    class TestNullableAutoSetModel:
+        __tablename__ = "nullable_auto_set_table_name"
 
-
-def _create_models(base):
-    class TestNullableAutoSetModel(
-        database_mongo.CRUDModel, base=base, table_name="nullable_auto_set_table_name"
-    ):
         prim_def_inc = database_mongo.Column(
             int, is_primary_key=True, default_value=1, should_auto_increment=True
         )
@@ -21,14 +17,12 @@ def _create_models(base):
             int, is_primary_key=True, should_auto_increment=True
         )
 
-    TestNullableAutoSetController.model(TestNullableAutoSetModel)
-
-    return [TestNullableAutoSetModel]
+    model = TestNullableAutoSetModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestNullableAutoSetController])
     yield _db
     layabase.testing.reset(_db)
 

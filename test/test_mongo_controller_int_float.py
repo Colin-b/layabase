@@ -6,24 +6,18 @@ import layabase.testing
 
 
 class TestIntAndFloatController(database.CRUDController):
-    pass
+    class TestIntAndFloatModel:
+        __tablename__ = "int_and_float"
 
-
-def _create_models(base):
-    class TestIntAndFloatModel(
-        database_mongo.CRUDModel, base=base, table_name="int_and_float"
-    ):
         int_value = database_mongo.Column(int)
         float_value = database_mongo.Column(float)
 
-    TestIntAndFloatController.model(TestIntAndFloatModel)
-
-    return [TestIntAndFloatModel]
+    model = TestIntAndFloatModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestIntAndFloatController])
     yield _db
     layabase.testing.reset(_db)
 

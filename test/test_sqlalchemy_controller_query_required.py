@@ -4,16 +4,12 @@ import flask
 import flask_restplus
 from layaberr import ValidationFailed
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestRequiredController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestRequiredModel(database_sqlalchemy.CRUDModel, base):
+class TestRequiredController(layabase.CRUDController):
+    class TestRequiredModel:
         __tablename__ = "required_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
@@ -23,13 +19,12 @@ def _create_models(base):
             info={"marshmallow": {"required_on_query": True}},
         )
 
-    TestRequiredController.model(TestRequiredModel)
-    return [TestRequiredModel]
+    model = TestRequiredModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestRequiredController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -153,24 +148,13 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestRequiredModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestRequiredModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestRequiredModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -220,6 +204,21 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestRequiredModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -228,7 +227,9 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestRequiredModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestRequiredModel_PutRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -274,14 +275,30 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestRequiredModel": {
+            "TestRequiredModel_PostRequestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
                     "mandatory": {"type": "integer", "example": 1},
                 },
                 "type": "object",
-            }
+            },
+            "TestRequiredModel_PutRequestModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": 1},
+                },
+                "type": "object",
+            },
+            "TestRequiredModel_GetResponseModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": 1},
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

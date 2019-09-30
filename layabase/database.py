@@ -1,8 +1,12 @@
 import enum
 import logging
 from typing import List, Union
+import collections.abc
 
 from layaberr import ValidationFailed
+import flask_restplus
+
+from layabase.exceptions import ControllerModelNotSet
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +47,12 @@ class NoDatabaseProvided(Exception):
         Exception.__init__(self, "A database connection URL must be provided.")
 
 
-class NoRelatedModels(Exception):
+class NoRelatedControllers(Exception):
     def __init__(self):
-        Exception.__init__(
-            self, "A method allowing to create related models must be provided."
-        )
+        Exception.__init__(self, "A list of CRUDController must be provided.")
 
 
-def load(database_connection_url: str, create_models_func: callable, **kwargs):
+def load(database_connection_url: str, controllers: collections.abc.Iterable, **kwargs):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
@@ -63,32 +65,29 @@ def load(database_connection_url: str, create_models_func: callable, **kwargs):
      - Postgre SQL: postgresql://user_name:user_password@host:port/server_name
      - Oracle: oracle://user_name:user_password@host:port/server_name
      - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
-    :param create_models_func: Function that will be called to create models and return them (subclasses of CRUDModel)
-     (Mandatory). It should take a single parameter (the base).
+    :param controllers: List of CRUDController classes (Mandatory).
     :param kwargs: Additional custom parameters:
-     for SQLAlchemy: create_engine methods parameters.
-     for Mongo: MongoClient constructor parameters.
+     In case database connection URL is related to a non mongo database: SQLAlchemy.create_engine methods parameters.
+     Otherwise (mongo): pymongo.MongoClient constructor parameters.
     :return Database object.
-     for SQLAlchemy: base instance.
-     for Mongo: Mongo Database instance.
+     In case database connection URL is related to a non mongo database: SQLAlchemy base instance.
+     Otherwise (mongo): pymongo.Database instance.
+    :raises NoDatabaseProvided in case no database connection URL is provided.
+    :raises NoRelatedControllers in case no controllers are provided.
     """
     if not database_connection_url:
         raise NoDatabaseProvided()
-    if not create_models_func:
-        raise NoRelatedModels()
+    if not controllers:
+        raise NoRelatedControllers()
 
     if database_connection_url.startswith("mongo"):
         import layabase.database_mongo as database_mongo
 
-        return database_mongo._load(
-            database_connection_url, create_models_func, **kwargs
-        )
+        return database_mongo._load(database_connection_url, controllers, **kwargs)
 
     import layabase.database_sqlalchemy as database_sqlalchemy
 
-    return database_sqlalchemy._load(
-        database_connection_url, create_models_func, **kwargs
-    )
+    return database_sqlalchemy._load(database_connection_url, controllers, **kwargs)
 
 
 def check(base) -> (str, dict):
@@ -110,14 +109,6 @@ def check(base) -> (str, dict):
         import layabase.database_sqlalchemy as database_sqlalchemy
 
         return database_sqlalchemy._check(base)
-
-
-class ControllerModelNotSet(Exception):
-    def __init__(self, controller_class):
-        Exception.__init__(
-            self,
-            f"Model was not attached to {controller_class.__name__}. Call {controller_class.model}.",
-        )
 
 
 def _ignore_read_only_fields(model_properties: dict, model_as_dict: dict):
@@ -142,7 +133,15 @@ class CRUDController:
     Class providing methods to interact with a CRUDModel.
     """
 
-    _model = None
+    model = None  # Provided by user, naive python class describing requested fields
+    history = False
+    audit = False
+    interpret_star_character = False
+    skip_name_check = False
+    skip_unknown_fields = True
+    skip_update_indexes = False
+
+    _model = None  # Generated from model, appropriate class depending on what was requested on controller
 
     # CRUD request parsers
     query_get_parser = None
@@ -165,7 +164,7 @@ class CRUDController:
     _model_description_dictionary = None
 
     @classmethod
-    def model(cls, model_class):
+    def set_model(cls, model_class):
         """
         Initialize related model (should extends (Version)CRUDModel).
 
@@ -186,29 +185,39 @@ class CRUDController:
         cls._model_description_dictionary = cls._model.description_dictionary()
 
     @classmethod
-    def namespace(cls, namespace):
+    def namespace(cls, namespace: flask_restplus.Namespace):
         """
         Create Flask RestPlus models that can be used to marshall results (and document service).
-        This method should always be called AFTER cls.model()
+        This method should always be called AFTER controller has already been provided as parameter of layabase.load function
 
         :param namespace: Flask RestPlus API.
         """
         if not cls._model:
             raise ControllerModelNotSet(cls)
-        cls.json_post_model = cls._model.json_post_model(namespace)
-        cls.json_put_model = cls._model.json_put_model(namespace)
-        cls.get_response_model = cls._model.get_response_model(namespace)
-        cls.get_history_response_model = cls._model.get_history_response_model(
-            namespace
+        cls.json_post_model = namespace.model(
+            f"{cls.model.__name__}_PostRequestModel", cls._model.post_fields(namespace)
+        )
+        cls.json_put_model = namespace.model(
+            f"{cls.model.__name__}_PutRequestModel", cls._model.put_fields(namespace)
+        )
+        cls.get_response_model = namespace.model(
+            f"{cls.model.__name__}_GetResponseModel", cls._model.get_fields(namespace)
+        )
+        cls.get_history_response_model = namespace.model(
+            f"{cls.model.__name__}_GetHistoryResponseModel",
+            cls._model.history_fields(namespace),
         )
         cls.get_audit_response_model = (
-            cls._model.audit_model.get_response_model(namespace)
+            namespace.model(
+                f"{cls.model.__name__}_GetAuditResponseModel",
+                cls._model.audit_model.get_fields(namespace),
+            )
             if cls._model.audit_model
             else None
         )
         cls.get_model_description_response_model = namespace.model(
-            "".join([cls._model.__name__, "Description"]),
-            cls._model.flask_restplus_description_fields(),
+            f"{cls.model.__name__}_GetDescriptionResponseModel",
+            cls._model.description_fields(),
         )
 
     @classmethod

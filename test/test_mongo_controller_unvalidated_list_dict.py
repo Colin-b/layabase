@@ -8,26 +8,20 @@ import layabase.testing
 
 
 class TestUnvalidatedListAndDictController(database.CRUDController):
-    pass
+    class TestUnvalidatedListAndDictModel:
+        __tablename__ = "list_and_dict_table_name"
 
-
-def _create_models(base):
-    class TestUnvalidatedListAndDictModel(
-        database_mongo.CRUDModel, base=base, table_name="list_and_dict_table_name"
-    ):
         float_key = database_mongo.Column(float, is_primary_key=True)
         float_with_default = database_mongo.Column(float, default_value=34)
         dict_field = database_mongo.Column(dict, is_required=True)
         list_field = database_mongo.Column(list, is_required=True)
 
-    TestUnvalidatedListAndDictController.model(TestUnvalidatedListAndDictModel)
-
-    return [TestUnvalidatedListAndDictModel]
+    model = TestUnvalidatedListAndDictModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestUnvalidatedListAndDictController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -70,79 +64,12 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "dict_field",
-                            "in": "query",
-                            "type": "array",
-                            "required": True,
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_with_default",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "list_field",
-                            "in": "query",
-                            "type": "array",
-                            "required": True,
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel"
+                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel_GetResponseModel"
                             },
                         }
                     },
@@ -201,6 +128,73 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestUnvalidatedListAndDictModel_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
+                            "required": True,
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_with_default",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "required": True,
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -208,7 +202,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestUnvalidatedListAndDictModel": {
+            "TestUnvalidatedListAndDictModel_PostRequestModel": {
                 "required": ["dict_field", "list_field"],
                 "properties": {
                     "dict_field": {
@@ -234,7 +228,61 @@ def test_open_api_definition(client):
                     },
                 },
                 "type": "object",
-            }
+            },
+            "TestUnvalidatedListAndDictModel_PutRequestModel": {
+                "required": ["dict_field", "list_field"],
+                "properties": {
+                    "dict_field": {
+                        "type": "object",
+                        "readOnly": False,
+                        "example": {
+                            "1st dict_field key": "1st dict_field sample",
+                            "2nd dict_field key": "2nd dict_field sample",
+                        },
+                    },
+                    "float_key": {"type": "number", "readOnly": False, "example": 1.4},
+                    "float_with_default": {
+                        "type": "number",
+                        "readOnly": False,
+                        "default": 34,
+                        "example": 34,
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
+                    },
+                },
+                "type": "object",
+            },
+            "TestUnvalidatedListAndDictModel_GetResponseModel": {
+                "required": ["dict_field", "list_field"],
+                "properties": {
+                    "dict_field": {
+                        "type": "object",
+                        "readOnly": False,
+                        "example": {
+                            "1st dict_field key": "1st dict_field sample",
+                            "2nd dict_field key": "2nd dict_field sample",
+                        },
+                    },
+                    "float_key": {"type": "number", "readOnly": False, "example": 1.4},
+                    "float_with_default": {
+                        "type": "number",
+                        "readOnly": False,
+                        "default": 34,
+                        "example": 34,
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
+                    },
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

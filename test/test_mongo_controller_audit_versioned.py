@@ -17,38 +17,36 @@ class EnumTest(enum.Enum):
 
 
 class TestController(database.CRUDController):
-    pass
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-
-class TestVersionedController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestModel(
-        database_mongo.CRUDModel, base=base, table_name="sample_table_name", audit=True
-    ):
         key = database_mongo.Column(str, is_primary_key=True)
         mandatory = database_mongo.Column(int, is_nullable=False)
         optional = database_mongo.Column(str)
 
-    class TestVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="versioned_table_name",
-        audit=True,
-    ):
+    model = TestModel
+    audit = True
+
+
+class TestVersionedController(database.CRUDController):
+    class TestVersionedModel:
+        __tablename__ = "versioned_table_name"
+
         key = database_mongo.Column(str, is_primary_key=True)
         enum_fld = database_mongo.Column(EnumTest)
 
-    TestController.model(TestModel)
-    TestVersionedController.model(TestVersionedModel)
-    return [TestModel, TestVersionedModel]
+    model = TestVersionedModel
+    history = True
+    audit = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
+    _db = database.load(
+        "mongomock?ssl=True",
+        [TestController, TestVersionedController],
+        replicaSet="globaldb",
+    )
     yield _db
     layabase.testing.reset(_db)
 
@@ -118,6 +116,21 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestVersionedModel_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
@@ -144,7 +157,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
+                                "$ref": "#/definitions/TestVersionedModel_GetResponseModel"
                             },
                         }
                     },
@@ -187,21 +200,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "post": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "post_test_resource",
@@ -211,7 +209,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_Versioned"
+                                "$ref": "#/definitions/TestVersionedModel_PostRequestModel"
                             },
                         }
                     ],
@@ -223,7 +221,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/AuditModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestVersionedModel_GetAuditResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_audit_resource",
@@ -338,7 +338,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestVersionedModel_Versioned": {
+            "TestVersionedModel_PutRequestModel": {
                 "properties": {
                     "enum_fld": {
                         "type": "string",
@@ -354,7 +354,39 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "AuditModel": {
+            "TestVersionedModel_PostRequestModel": {
+                "properties": {
+                    "enum_fld": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                },
+                "type": "object",
+            },
+            "TestVersionedModel_GetResponseModel": {
+                "properties": {
+                    "enum_fld": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                },
+                "type": "object",
+            },
+            "TestVersionedModel_GetAuditResponseModel": {
                 "properties": {
                     "audit_action": {
                         "type": "string",

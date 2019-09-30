@@ -16,13 +16,9 @@ class EnumTest(enum.Enum):
 
 
 class TestDictController(database.CRUDController):
-    pass
+    class TestDictModel:
+        __tablename__ = "dict_table_name"
 
-
-def _create_models(base):
-    class TestDictModel(
-        database_mongo.CRUDModel, base=base, table_name="dict_table_name"
-    ):
         key = database_mongo.Column(str, is_primary_key=True)
         dict_col = database_mongo.DictColumn(
             fields={
@@ -32,14 +28,12 @@ def _create_models(base):
             is_nullable=False,
         )
 
-    TestDictController.model(TestDictModel)
-
-    return [TestDictModel]
+    model = TestDictModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestDictController])
     yield _db
     layabase.testing.reset(_db)
 

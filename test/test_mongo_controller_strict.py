@@ -6,28 +6,20 @@ import layabase.testing
 
 
 class TestStrictController(database.CRUDController):
-    pass
+    class TestStrictModel:
+        __tablename__ = "strict_table_name"
 
-
-def _create_models(base):
-    class TestStrictModel(
-        database_mongo.CRUDModel,
-        base=base,
-        table_name="strict_table_name",
-        skip_unknown_fields=False,
-    ):
         key = database_mongo.Column(str, is_primary_key=True)
         mandatory = database_mongo.Column(int, is_nullable=False)
         optional = database_mongo.Column(str)
 
-    TestStrictController.model(TestStrictModel)
-
-    return [TestStrictModel]
+    model = TestStrictModel
+    skip_unknown_fields = False
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestStrictController])
     yield _db
     layabase.testing.reset(_db)
 

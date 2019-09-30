@@ -3,16 +3,12 @@ import sqlalchemy
 import flask
 import flask_restplus
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestAutoIncrementController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestAutoIncrementModel(database_sqlalchemy.CRUDModel, base):
+class TestAutoIncrementController(layabase.CRUDController):
+    class TestAutoIncrementModel:
         __tablename__ = "auto_increment_table_name"
 
         key = sqlalchemy.Column(
@@ -27,13 +23,12 @@ def _create_models(base):
             sqlalchemy.String, default="Test value"
         )
 
-    TestAutoIncrementController.model(TestAutoIncrementModel)
-    return [TestAutoIncrementModel]
+    model = TestAutoIncrementModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestAutoIncrementController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -100,7 +95,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestAutoIncrementModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -156,19 +153,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "post": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "post_test_resource",
@@ -177,7 +161,24 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestAutoIncrementModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestAutoIncrementModel_PutRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -217,7 +218,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestAutoIncrementModel": {
+            "TestAutoIncrementModel_PostRequestModel": {
                 "required": ["enum_field"],
                 "properties": {
                     "key": {"type": "integer", "readOnly": True, "example": 1},
@@ -234,7 +235,43 @@ def test_open_api_definition(client):
                     },
                 },
                 "type": "object",
-            }
+            },
+            "TestAutoIncrementModel_PutRequestModel": {
+                "required": ["enum_field"],
+                "properties": {
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
+                    "enum_field": {
+                        "type": "string",
+                        "description": "Test Documentation",
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "optional_with_default": {
+                        "type": "string",
+                        "default": "Test value",
+                        "example": "Test value",
+                    },
+                },
+                "type": "object",
+            },
+            "TestAutoIncrementModel_GetResponseModel": {
+                "required": ["enum_field"],
+                "properties": {
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
+                    "enum_field": {
+                        "type": "string",
+                        "description": "Test Documentation",
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "optional_with_default": {
+                        "type": "string",
+                        "default": "Test value",
+                        "example": "Test value",
+                    },
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

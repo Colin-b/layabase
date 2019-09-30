@@ -5,31 +5,28 @@ import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
+import layabase
 import layabase.testing
+import layabase.database_mongo
 import layabase.audit_mongo
 from test import DateTimeModuleMock
 
 
-class TestController(database.CRUDController):
-    pass
+class TestController(layabase.CRUDController):
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
+        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+        optional = layabase.database_mongo.Column(str)
 
-def _create_models(base):
-    class TestModel(
-        database_mongo.CRUDModel, base=base, table_name="sample_table_name", audit=True
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        mandatory = database_mongo.Column(int, is_nullable=False)
-        optional = database_mongo.Column(str)
-
-    TestController.model(TestModel)
-    return [TestModel]
+    model = TestModel
+    audit = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
+    _db = layabase.load("mongomock?ssl=True", [TestController], replicaSet="globaldb")
     yield _db
     layabase.testing.reset(_db)
 
@@ -89,29 +86,44 @@ def app(db):
 
 
 def test_get_all_without_data_returns_empty_list(db):
-    assert [] == TestController.get({})
+    assert TestController.get({}) == []
     assert TestController.get_audit({}) == []
 
 
-def test_audit_table_name_is_forbidden(db):
-    with pytest.raises(Exception) as exception_info:
+def test_audit_table_name_is_forbidden():
+    class TestAuditController(layabase.CRUDController):
+        class TestAuditModel:
+            __tablename__ = "audit"
 
-        class TestAuditModel(database_mongo.CRUDModel, base=db, table_name="audit"):
-            key = database_mongo.Column(str)
+            key = layabase.database_mongo.Column(str)
+
+        model = TestAuditModel
+
+    with pytest.raises(Exception) as exception_info:
+        layabase.load(
+            "mongomock?ssl=True", [TestAuditController], replicaSet="globaldb"
+        )
 
     assert "audit is a reserved collection name." == str(exception_info.value)
 
 
-def test_audited_table_name_is_forbidden(db):
+def test_audited_table_name_is_forbidden():
+    class TestAuditController(layabase.CRUDController):
+        class TestAuditModel:
+            __tablename__ = "audit_int_table_name"
+
+            key = layabase.database_mongo.Column(str)
+
+        model = TestAuditModel
+
     with pytest.raises(Exception) as exception_info:
+        layabase.load(
+            "mongomock?ssl=True", [TestAuditController], replicaSet="globaldb"
+        )
 
-        class TestAuditModel(
-            database_mongo.CRUDModel, base=db, table_name="audit_int_table_name"
-        ):
-            key = database_mongo.Column(str)
-
-    assert "audit_int_table_name is a reserved collection name." == str(
-        exception_info.value
+    assert (
+        str(exception_info.value)
+        == "audit_int_table_name is a reserved collection name."
     )
 
 
@@ -130,7 +142,24 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -139,7 +168,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -188,19 +219,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
@@ -235,7 +253,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/AuditTestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_GetAuditResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_audit_resource",
@@ -463,7 +483,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel": {
+            "TestModel_PutRequestModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -479,7 +499,39 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "AuditTestModel": {
+            "TestModel_PostRequestModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "TestModel_GetResponseModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "TestModel_GetAuditResponseModel": {
                 "properties": {
                     "audit_action": {
                         "type": "string",
@@ -524,7 +576,7 @@ def test_open_api_definition(client):
 def test_post_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
+    assert exception_info.value.errors == {"": ["No data provided."]}
     assert not exception_info.value.received_data
     assert TestController.get_audit({}) == []
 
@@ -532,8 +584,8 @@ def test_post_with_nothing_is_invalid(db):
 def test_post_many_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert [] == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == []
     assert TestController.get_audit({}) == []
 
 
@@ -544,22 +596,22 @@ def test_post_with_empty_dict_is_invalid(db):
         "key": ["Missing data for required field."],
         "mandatory": ["Missing data for required field."],
     } == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.received_data == {}
     assert TestController.get_audit({}) == []
 
 
 def test_post_many_with_empty_list_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([])
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert [] == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == []
     assert TestController.get_audit({}) == []
 
 
 def test_put_with_nothing_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
+    assert exception_info.value.errors == {"": ["No data provided."]}
     assert not exception_info.value.received_data
     assert TestController.get_audit({}) == []
 
@@ -567,72 +619,72 @@ def test_put_with_nothing_is_invalid(db):
 def test_put_with_empty_dict_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({})
-    assert {"key": ["Missing data for required field."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"key": ["Missing data for required field."]}
+    assert exception_info.value.received_data == {}
     assert TestController.get_audit({}) == []
 
 
 def test_delete_without_nothing_do_not_fail(db):
-    assert 0 == TestController.delete({})
+    assert TestController.delete({}) == 0
     assert TestController.get_audit({}) == []
 
 
 def test_post_without_mandatory_field_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": "my_key"})
-    assert {
+    assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
-    } == exception_info.value.errors
-    assert {"key": "my_key"} == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == {"key": "my_key"}
     assert TestController.get_audit({}) == []
 
 
 def test_post_many_without_mandatory_field_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": "my_key"}])
-    assert {
+    assert exception_info.value.errors == {
         0: {"mandatory": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"key": "my_key"}] == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == [{"key": "my_key"}]
     assert TestController.get_audit({}) == []
 
 
 def test_post_without_key_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"mandatory": 1})
-    assert {"key": ["Missing data for required field."]} == exception_info.value.errors
-    assert {"mandatory": 1} == exception_info.value.received_data
+    assert exception_info.value.errors == {"key": ["Missing data for required field."]}
+    assert exception_info.value.received_data == {"mandatory": 1}
     assert TestController.get_audit({}) == []
 
 
 def test_post_many_without_key_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"mandatory": 1}])
-    assert {
+    assert exception_info.value.errors == {
         0: {"key": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"mandatory": 1}] == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == [{"mandatory": 1}]
     assert TestController.get_audit({}) == []
 
 
 def test_post_with_wrong_type_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post({"key": datetime.date(2007, 12, 5), "mandatory": 1})
-    assert {"key": ["Not a valid str."]} == exception_info.value.errors
-    assert {
+    assert exception_info.value.errors == {"key": ["Not a valid str."]}
+    assert exception_info.value.received_data == {
         "key": datetime.date(2007, 12, 5),
         "mandatory": 1,
-    } == exception_info.value.received_data
+    }
     assert TestController.get_audit({}) == []
 
 
 def test_post_many_with_wrong_type_is_invalid(db):
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.post_many([{"key": datetime.date(2007, 12, 5), "mandatory": 1}])
-    assert {0: {"key": ["Not a valid str."]}} == exception_info.value.errors
-    assert [
+    assert exception_info.value.errors == {0: {"key": ["Not a valid str."]}}
+    assert exception_info.value.received_data == [
         {"key": datetime.date(2007, 12, 5), "mandatory": 1}
-    ] == exception_info.value.received_data
+    ]
     assert TestController.get_audit({}) == []
 
 
@@ -642,11 +694,11 @@ def test_put_with_wrong_type_is_invalid(db, monkeypatch):
     TestController.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
         TestController.put({"key": "value1", "mandatory": "invalid_value"})
-    assert {"mandatory": ["Not a valid int."]} == exception_info.value.errors
-    assert {
+    assert exception_info.value.errors == {"mandatory": ["Not a valid int."]}
+    assert exception_info.value.received_data == {
         "key": "value1",
         "mandatory": "invalid_value",
-    } == exception_info.value.received_data
+    }
     assert TestController.get_audit({}) == [
         {
             "audit_action": "Insert",
@@ -663,9 +715,11 @@ def test_put_with_wrong_type_is_invalid(db, monkeypatch):
 def test_post_without_optional_is_valid(db, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert {"optional": None, "mandatory": 1, "key": "my_key"} == TestController.post(
-        {"key": "my_key", "mandatory": 1}
-    )
+    assert TestController.post({"key": "my_key", "mandatory": 1}) == {
+        "optional": None,
+        "mandatory": 1,
+        "key": "my_key",
+    }
     assert TestController.get_audit({}) == [
         {
             "audit_action": "Insert",
@@ -682,9 +736,9 @@ def test_post_without_optional_is_valid(db, monkeypatch):
 def test_post_many_without_optional_is_valid(db, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert [
+    assert TestController.post_many([{"key": "my_key", "mandatory": 1}]) == [
         {"optional": None, "mandatory": 1, "key": "my_key"}
-    ] == TestController.post_many([{"key": "my_key", "mandatory": 1}])
+    ]
     assert TestController.get_audit({}) == [
         {
             "audit_action": "Insert",

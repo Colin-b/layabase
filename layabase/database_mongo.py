@@ -5,7 +5,7 @@ import inspect
 import json
 import logging
 import os.path
-import pathlib
+import collections.abc
 from typing import List, Dict, Union, Type
 
 import iso8601
@@ -13,11 +13,13 @@ import pymongo
 import pymongo.errors
 import pymongo.database
 from bson.errors import BSONError
-from bson.json_util import dumps, loads
 from bson.objectid import ObjectId
+import flask_restplus
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from layaberr import ValidationFailed, ModelCouldNotBeFound
+
 from layabase.database import ComparisonSigns
+from layabase.exceptions import ControllerModelNotSet
 
 logger = logging.getLogger(__name__)
 
@@ -1316,25 +1318,19 @@ class CRUDModel:
     logger = None
     _server_version: str = ""
 
-    def __init_subclass__(
-        cls,
-        base: pymongo.database.Database = None,
-        table_name: str = None,
-        audit: bool = False,
-        **kwargs,
-    ):
+    def __init_subclass__(cls, base: pymongo.database.Database = None, **kwargs):
         cls._skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
         cls._skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
         skip_name_check = kwargs.pop("skip_name_check", False)
         skip_update_indexes = kwargs.pop("skip_update_indexes", False)
         super().__init_subclass__(**kwargs)
-        cls.__tablename__ = table_name
-        cls.logger = logging.getLogger(f"{__name__}.{table_name}")
+        cls.logger = logging.getLogger(f"{__name__}.{cls.__tablename__}")
         cls.__fields__ = [
             field._update_name(field_name)
             for field_name, field in inspect.getmembers(cls)
             if isinstance(field, Column)
         ]
+        # TODO Add a way to mark a model as not connected
         if base is not None:  # Allow to not provide base to create fake models
             if not skip_name_check and cls._is_forbidden():
                 raise Exception(f"{cls.__tablename__} is a reserved collection name.")
@@ -1343,13 +1339,6 @@ class CRUDModel:
             cls._server_version = _server_versions.get(base.name, "")
             if not skip_update_indexes:
                 cls.update_indexes()
-        if audit:
-            from layabase.audit_mongo import _create_from
-
-            cls.audit_model = _create_from(cls, base)
-        else:
-            # Ensure no circular reference when creating the audit
-            cls.audit_model = None
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
@@ -1357,8 +1346,8 @@ class CRUDModel:
 
     @classmethod
     def _is_forbidden(cls):
-        # Counters collection is managed by pycommon_database
-        # Audit collections are managed by pycommon_database
+        # Counters collection is managed by layabase
+        # Audit collections are managed by layabase
         return (
             not cls.__tablename__
             or "counters" == cls.__tablename__
@@ -2089,7 +2078,7 @@ class CRUDModel:
             if filters:
                 cls.logger.debug(f"Removing documents corresponding to {filters}...")
             else:
-                cls.logger.debug(f"Removing all documents...")
+                cls.logger.debug("Removing all documents...")
         nb_removed = cls._delete_many(filters)
         if cls.logger.isEnabledFor(logging.DEBUG):
             cls.logger.debug(f"{nb_removed} documents removed.")
@@ -2252,43 +2241,40 @@ class CRUDModel:
         return description
 
     @classmethod
-    def json_post_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def post_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def json_put_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def put_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def get_response_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def get_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def get_history_response_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def history_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def _model_with_all_fields(cls, namespace):
-        return namespace.model(cls.__name__, cls._flask_restplus_fields(namespace))
-
-    @classmethod
-    def _flask_restplus_fields(cls, namespace) -> dict:
+    def _flask_restplus_fields(cls, namespace: flask_restplus.Namespace) -> dict:
         return {
             field.name: cls._to_flask_restplus_field(namespace, field)
             for field in cls.__fields__
         }
 
     @classmethod
-    def _to_flask_restplus_field(cls, namespace, field: Column):
+    def _to_flask_restplus_field(
+        cls, namespace: flask_restplus.Namespace, field: Column
+    ):
         if isinstance(field, DictColumn):
             dict_fields = field._default_description_model()._flask_restplus_fields(
                 namespace
             )
             if dict_fields:
-                dict_model = namespace.model("_".join(dict_fields), dict_fields)
                 # Nested field cannot contains nothing
                 return flask_restplus_fields.Nested(
-                    dict_model,
+                    namespace.model("_".join(dict_fields), dict_fields),
                     required=field.is_required,
                     example=field.example(),
                     description=field.description,
@@ -2401,7 +2387,7 @@ class CRUDModel:
             )
 
     @classmethod
-    def flask_restplus_description_fields(cls) -> dict:
+    def description_fields(cls) -> dict:
         exported_fields = {
             "collection": flask_restplus_fields.String(
                 required=True, example="collection", description="Collection name"
@@ -2421,8 +2407,39 @@ class CRUDModel:
         return exported_fields
 
 
+def _create_model(controller, base) -> Type[CRUDModel]:
+    if not controller.model:
+        raise ControllerModelNotSet(controller)
+    if controller.history:
+        import layabase.audit_mongo
+
+        crud_model = layabase.audit_mongo.VersionedCRUDModel
+    else:
+        crud_model = CRUDModel
+
+    class ControllerModel(
+        controller.model,
+        crud_model,
+        base=base,
+        skip_name_check=controller.skip_name_check,
+        skip_unknown_fields=controller.skip_unknown_fields,
+        skip_update_indexes=controller.skip_update_indexes,
+    ):
+        pass
+
+    if controller.audit:
+        from layabase.audit_mongo import _create_from
+
+        ControllerModel.audit_model = _create_from(
+            mixin=controller.model, model=ControllerModel, base=base
+        )
+
+    controller.set_model(ControllerModel)
+    return ControllerModel
+
+
 def _load(
-    database_connection_url: str, create_models_func: callable, **kwargs
+    database_connection_url: str, controllers: collections.abc.Iterable, **kwargs
 ) -> pymongo.database.Database:
     """
     Create all necessary tables and perform the link between models and underlying database connection.
@@ -2453,7 +2470,8 @@ def _load(
         logger.debug(f"Server information: {server_info}")
         _server_versions.setdefault(base.name, server_info.get("version", ""))
     logger.debug(f"Creating models...")
-    create_models_func(base)
+    for controller in controllers:
+        _create_model(controller, base)
     return base
 
 

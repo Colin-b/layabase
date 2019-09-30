@@ -9,26 +9,20 @@ import layabase.testing
 
 
 class TestIndexController(database.CRUDController):
-    pass
+    class TestIndexModel:
+        __tablename__ = "index_table_name"
 
-
-def _create_models(base):
-    class TestIndexModel(
-        database_mongo.CRUDModel, base=base, table_name="index_table_name"
-    ):
         unique_key = database_mongo.Column(str, is_primary_key=True)
         non_unique_key = database_mongo.Column(
             datetime.date, index_type=database_mongo.IndexType.Other
         )
 
-    TestIndexController.model(TestIndexModel)
-
-    return [TestIndexModel]
+    model = TestIndexModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestIndexController])
     yield _db
     layabase.testing.reset(_db)
 

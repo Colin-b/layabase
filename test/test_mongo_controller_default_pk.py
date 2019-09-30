@@ -5,24 +5,18 @@ import layabase.testing
 
 
 class TestDefaultPrimaryKeyController(database.CRUDController):
-    pass
+    class TestDefaultPrimaryKeyModel:
+        __tablename__ = "default_primary_table_name"
 
-
-def _create_models(base):
-    class TestDefaultPrimaryKeyModel(
-        database_mongo.CRUDModel, base=base, table_name="default_primary_table_name"
-    ):
         key = database_mongo.Column(is_primary_key=True, default_value="test")
         optional = database_mongo.Column()
 
-    TestDefaultPrimaryKeyController.model(TestDefaultPrimaryKeyModel)
-
-    return [TestDefaultPrimaryKeyModel]
+    model = TestDefaultPrimaryKeyModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestDefaultPrimaryKeyController])
     yield _db
     layabase.testing.reset(_db)
 

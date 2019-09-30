@@ -8,13 +8,9 @@ import layabase.testing
 
 
 class TestLimitsController(database.CRUDController):
-    pass
+    class TestLimitsModel:
+        __tablename__ = "limits_table_name"
 
-
-def _create_models(base):
-    class TestLimitsModel(
-        database_mongo.CRUDModel, base=base, table_name="limits_table_name"
-    ):
         key = database_mongo.Column(is_primary_key=True, min_length=3, max_length=4)
         list_field = database_mongo.Column(
             list, min_length=2, max_length=3, example=["my", "test"]
@@ -25,14 +21,12 @@ def _create_models(base):
         int_field = database_mongo.Column(int, min_value=100, max_value=999)
         float_field = database_mongo.Column(float, min_value=1.25, max_value=1.75)
 
-    TestLimitsController.model(TestLimitsModel)
-
-    return [TestLimitsModel]
+    model = TestLimitsModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestLimitsController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -153,79 +147,13 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "dict_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "int_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "list_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestLimitsModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestLimitsModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -288,6 +216,78 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestLimitsModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestLimitsModel_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -295,7 +295,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestLimitsModel": {
+            "TestLimitsModel_PostRequestModel": {
                 "properties": {
                     "dict_field": {
                         "type": "object",
@@ -333,7 +333,85 @@ def test_open_api_definition(client):
                     },
                 },
                 "type": "object",
-            }
+            },
+            "TestLimitsModel_PutRequestModel": {
+                "properties": {
+                    "dict_field": {
+                        "type": "object",
+                        "readOnly": False,
+                        "example": {"my": 1, "test": 2},
+                    },
+                    "float_field": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                        "minimum": 1.25,
+                        "maximum": 1.75,
+                    },
+                    "int_field": {
+                        "type": "integer",
+                        "readOnly": False,
+                        "example": 100,
+                        "minimum": 100,
+                        "maximum": 999,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "XXX",
+                        "minLength": 3,
+                        "maxLength": 4,
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": ["my", "test"],
+                        "minItems": 2,
+                        "maxItems": 3,
+                        "items": {"type": "string"},
+                    },
+                },
+                "type": "object",
+            },
+            "TestLimitsModel_GetResponseModel": {
+                "properties": {
+                    "dict_field": {
+                        "type": "object",
+                        "readOnly": False,
+                        "example": {"my": 1, "test": 2},
+                    },
+                    "float_field": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                        "minimum": 1.25,
+                        "maximum": 1.75,
+                    },
+                    "int_field": {
+                        "type": "integer",
+                        "readOnly": False,
+                        "example": 100,
+                        "minimum": 100,
+                        "maximum": 999,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "XXX",
+                        "minLength": 3,
+                        "maxLength": 4,
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": ["my", "test"],
+                        "minItems": 2,
+                        "maxItems": 3,
+                        "items": {"type": "string"},
+                    },
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

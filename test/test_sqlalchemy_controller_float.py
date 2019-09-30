@@ -3,28 +3,23 @@ import flask_restplus
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestFloatController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestFloatModel(database_sqlalchemy.CRUDModel, base):
+class TestFloatController(layabase.CRUDController):
+    class TestFloatModel:
         __tablename__ = "float_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         float_field = sqlalchemy.Column(sqlalchemy.Float)
 
-    TestFloatController.model(TestFloatModel)
-    return [TestFloatModel]
+    model = TestFloatModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestFloatController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -77,37 +72,13 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestFloatModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestFloatModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestFloatModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestFloatModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -153,6 +124,36 @@ def test_open_api_definition(client):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestFloatModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestFloatModel_PutRequestModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -248,14 +249,30 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestFloatModel": {
+            "TestFloatModel_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
                     "float_field": {"type": "number", "example": 1.4},
                 },
                 "type": "object",
-            }
+            },
+            "TestFloatModel_PutRequestModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "float_field": {"type": "number", "example": 1.4},
+                },
+                "type": "object",
+            },
+            "TestFloatModel_GetResponseModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "float_field": {"type": "number", "example": 1.4},
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

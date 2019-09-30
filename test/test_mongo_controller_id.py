@@ -7,21 +7,17 @@ import layabase.testing
 
 
 class TestIdController(database.CRUDController):
-    pass
+    class TestIdModel:
+        __tablename__ = "id_table_name"
 
-
-def _create_models(base):
-    class TestIdModel(database_mongo.CRUDModel, base=base, table_name="id_table_name"):
         _id = database_mongo.Column(is_primary_key=True)
 
-    TestIdController.model(TestIdModel)
-
-    return [TestIdModel]
+    model = TestIdModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestIdController])
     yield _db
     layabase.testing.reset(_db)
 

@@ -1,7 +1,8 @@
 import datetime
 import logging
 import urllib.parse
-from typing import List, Dict
+from typing import List, Dict, Type
+import collections.abc
 
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from marshmallow import validate, ValidationError, EXCLUDE
@@ -12,6 +13,9 @@ from sqlalchemy import create_engine, inspect, Column, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import StaticPool
+import flask_restplus
+
+from layabase.exceptions import ControllerModelNotSet
 
 logger = logging.getLogger(__name__)
 
@@ -459,24 +463,20 @@ class CRUDModel:
         return description
 
     @classmethod
-    def json_post_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def post_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields()
 
     @classmethod
-    def json_put_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def put_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields()
 
     @classmethod
-    def get_response_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def get_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields()
 
     @classmethod
-    def get_history_response_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
-
-    @classmethod
-    def _model_with_all_fields(cls, namespace):
-        return namespace.model(cls.__name__, cls._flask_restplus_fields())
+    def history_fields(cls, namespace: flask_restplus.Namespace):
+        return cls._flask_restplus_fields()
 
     @classmethod
     def _flask_restplus_fields(cls) -> dict:
@@ -497,7 +497,7 @@ class CRUDModel:
         return [field.name for field in cls.schema().fields.values()]
 
     @classmethod
-    def flask_restplus_description_fields(cls) -> dict:
+    def description_fields(cls) -> dict:
         exported_fields = {
             "table": flask_restplus_fields.String(
                 required=True, example="table", description="Table name"
@@ -521,37 +521,42 @@ class CRUDModel:
         )
         return exported_fields
 
-    @classmethod
-    def audit(cls) -> None:
-        """
-        Call this method to add audit to a model.
-        """
+
+def _create_model(controller, base) -> Type[CRUDModel]:
+    if not controller.model:
+        raise ControllerModelNotSet(controller)
+    # TODO Create the appropriate CRUDModel in case history is requested (not supported for now)
+    class ControllerModel(controller.model, CRUDModel, base):
+        pass
+
+    if controller.audit:
         from layabase.audit_sqlalchemy import _create_from
 
-        cls.audit_model = _create_from(cls)
+        ControllerModel.audit_model = _create_from(
+            controller.model, ControllerModel, CRUDModel, base
+        )
 
-    @classmethod
-    def interpret_star_character_as_like(cls) -> None:
-        """
-        Call this method to interpret star character for LIKE operator.
-        """
+    if controller.interpret_star_character:
+        ControllerModel.interpret_star_character = True
 
-        cls.interpret_star_character = True
+    controller.set_model(ControllerModel)
+    return ControllerModel
 
 
-def _load(database_connection_url: str, create_models_func: callable, **kwargs):
+def _load(
+    database_connection_url: str, controllers: collections.abc.Iterable, **kwargs
+):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
-     (Mandatory).
+    :param controllers: List of all CRUDController(s) (Mandatory).
     :param pool_recycle: Number of seconds to wait before recycling a connection pool. Default value is 60.
     :return SQLAlchemy base.
     """
     database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f"Connecting to {database_connection_url}...")
-    logger.debug(f"Creating engine...")
+    logger.debug("Creating engine...")
     if _in_memory(database_connection_url):
         engine = create_engine(
             database_connection_url,
@@ -562,10 +567,10 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
         kwargs.setdefault("pool_recycle", 60)
         engine = create_engine(database_connection_url, **kwargs)
     _prepare_engine(engine)
-    logger.debug(f"Creating base...")
+    logger.debug("Creating base...")
     base = declarative_base(bind=engine)
-    logger.debug(f"Creating models...")
-    model_classes = create_models_func(base)
+    logger.debug("Creating models...")
+    model_classes = [_create_model(controller, base) for controller in controllers]
     if _can_retrieve_metadata(database_connection_url):
         all_view_names = _get_view_names(engine, base.metadata.schema)
         all_tables_and_views = base.metadata.tables
@@ -575,7 +580,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
             for table_name, table_or_view in all_tables_and_views.items()
             if table_name not in all_view_names
         }
-        logger.debug(f"Creating tables...")
+        logger.debug("Creating tables...")
         if _in_memory(database_connection_url) and hasattr(base.metadata, "_schemas"):
             if len(base.metadata._schemas) > 1:
                 raise MultiSchemaNotSupported()
@@ -585,7 +590,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
                 )
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
-    logger.debug(f"Creating session...")
+    logger.debug("Creating session...")
     session = sessionmaker(bind=engine)()
     logger.info(f"Connected to {database_connection_url}.")
     for model_class in model_classes:

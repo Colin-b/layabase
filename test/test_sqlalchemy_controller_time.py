@@ -3,28 +3,23 @@ import flask_restplus
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestTimeController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestTimeModel(database_sqlalchemy.CRUDModel, base):
+class TestTimeController(layabase.CRUDController):
+    class TestTimeModel:
         __tablename__ = "time_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         time_field = sqlalchemy.Column(sqlalchemy.Time)
 
-    TestTimeController.model(TestTimeModel)
-    return [TestTimeModel]
+    model = TestTimeModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestTimeController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -63,132 +58,162 @@ def app(db):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
-        "consumes": ["application/json"],
-        "definitions": {
-            "TestTimeModel": {
-                "properties": {
-                    "key": {"example": "sample_value", "type": "string"},
-                    "time_field": {
-                        "example": "15:36:09",
-                        "format": "date-time",
-                        "type": "string",
-                    },
-                },
-                "required": ["key"],
-                "type": "object",
-            }
-        },
-        "info": {"title": "API", "version": "1.0"},
         "paths": {
             "/test": {
-                "delete": {
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "time_field",
-                            "type": "array",
-                        },
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
                 "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "time_field",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "order_by",
-                            "type": "array",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestTimeModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTimeModel_GetResponseModel"
+                            },
                         }
                     },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "time_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "order_by",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
                     "tags": ["Test"],
                 },
                 "post": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "post_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
                             "name": "payload",
                             "required": True,
-                            "schema": {"$ref": "#/definitions/TestTimeModel"},
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTimeModel_PostRequestModel"
+                            },
                         }
                     ],
-                    "responses": {"200": {"description": "Success"}},
                     "tags": ["Test"],
                 },
                 "put": {
+                    "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
                     "parameters": [
                         {
-                            "in": "body",
                             "name": "payload",
                             "required": True,
-                            "schema": {"$ref": "#/definitions/TestTimeModel"},
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTimeModel_PutRequestModel"
+                            },
                         }
                     ],
+                    "tags": ["Test"],
+                },
+                "delete": {
                     "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "time_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
                     "tags": ["Test"],
                 },
             }
         },
+        "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
-        "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
-            "ParseError": {"description": "When a mask can't be parsed"},
-        },
-        "swagger": "2.0",
+        "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
+        "definitions": {
+            "TestTimeModel_PostRequestModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "time_field": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "15:36:09",
+                    },
+                },
+                "type": "object",
+            },
+            "TestTimeModel_PutRequestModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "time_field": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "15:36:09",
+                    },
+                },
+                "type": "object",
+            },
+            "TestTimeModel_GetResponseModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "time_field": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "15:36:09",
+                    },
+                },
+                "type": "object",
+            },
+        },
+        "responses": {
+            "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
+        },
     }

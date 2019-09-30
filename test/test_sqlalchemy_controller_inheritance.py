@@ -1,19 +1,15 @@
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestInheritanceController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
+class TestInheritanceController(layabase.CRUDController):
     class Inherited:
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    class TestInheritanceModel(database_sqlalchemy.CRUDModel, Inherited, base):
+    class TestInheritanceModel(Inherited):
         __tablename__ = "inheritance_table_name"
 
         key = sqlalchemy.Column(
@@ -21,15 +17,13 @@ def _create_models(base):
         )
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
-    TestInheritanceModel.audit()
-
-    TestInheritanceController.model(TestInheritanceModel)
-    return [TestInheritanceModel]
+    model = TestInheritanceModel
+    audit = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestInheritanceController])
     yield _db
     layabase.testing.reset(_db)
 

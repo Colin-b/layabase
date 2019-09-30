@@ -3,28 +3,23 @@ import flask_restplus
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
+import layabase
 import layabase.testing
 
 
-class TestBooleanController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestBooleanModel(database_sqlalchemy.CRUDModel, base):
+class TestBooleanController(layabase.CRUDController):
+    class TestBooleanModel:
         __tablename__ = "bool_table_name"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         bool_field = sqlalchemy.Column(sqlalchemy.Boolean)
 
-    TestBooleanController.model(TestBooleanModel)
-    return [TestBooleanModel]
+    model = TestBooleanModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
+    _db = layabase.load("sqlite:///:memory:", [TestBooleanController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -77,37 +72,13 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestBooleanModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestBooleanModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestBooleanModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestBooleanModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -153,6 +124,36 @@ def test_open_api_definition(client):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestBooleanModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestBooleanModel_PutRequestModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -248,14 +249,30 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestBooleanModel": {
+            "TestBooleanModel_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
                     "bool_field": {"type": "boolean", "example": True},
                 },
                 "type": "object",
-            }
+            },
+            "TestBooleanModel_PutRequestModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "bool_field": {"type": "boolean", "example": True},
+                },
+                "type": "object",
+            },
+            "TestBooleanModel_GetResponseModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "bool_field": {"type": "boolean", "example": True},
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

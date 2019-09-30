@@ -20,25 +20,19 @@ logging.basicConfig(
 
 
 class TestController(database.CRUDController):
-    pass
+    class TestModel:
+        __tablename__ = "sample_table_name"
 
-
-def _create_models(base):
-    class TestModel(
-        database_mongo.CRUDModel, base=base, table_name="sample_table_name"
-    ):
         key = database_mongo.Column(str, is_primary_key=True)
         mandatory = database_mongo.Column(int, is_nullable=False)
         optional = database_mongo.Column(str)
 
-    TestController.model(TestModel)
-
-    return [TestModel]
+    model = TestModel
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestController])
     yield _db
     layabase.testing.reset(_db)
 
@@ -500,7 +494,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -585,7 +581,9 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -598,7 +596,9 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -609,7 +609,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModelDescription"},
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_GetDescriptionResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_description_resource",
@@ -626,6 +628,34 @@ def test_open_api_definition(client):
                 }
             },
             "/test_parsers": {
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -667,34 +697,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             },
         },
         "info": {"title": "API", "version": "1.0"},
@@ -702,7 +704,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel": {
+            "TestModel_PutRequestModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -718,7 +720,39 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModelDescription": {
+            "TestModel_PostRequestModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "TestModel_GetResponseModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "TestModel_GetDescriptionResponseModel": {
                 "required": ["collection"],
                 "properties": {
                     "collection": {

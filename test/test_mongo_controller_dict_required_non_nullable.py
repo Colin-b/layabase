@@ -13,15 +13,9 @@ class EnumTest(enum.Enum):
 
 
 class TestDictRequiredNonNullableVersionedController(database.CRUDController):
-    pass
+    class TestDictRequiredNonNullableVersionedModel:
+        __tablename__ = "req_not_null_versioned_table_name"
 
-
-def _create_models(base):
-    class TestDictRequiredNonNullableVersionedModel(
-        versioning_mongo.VersionedCRUDModel,
-        base=base,
-        table_name="req_not_null_versioned_table_name",
-    ):
         key = database_mongo.Column(is_primary_key=True)
         dict_field = database_mongo.DictColumn(
             fields={
@@ -32,16 +26,13 @@ def _create_models(base):
             is_nullable=False,
         )
 
-    TestDictRequiredNonNullableVersionedController.model(
-        TestDictRequiredNonNullableVersionedModel
-    )
-
-    return [TestDictRequiredNonNullableVersionedModel]
+    model = TestDictRequiredNonNullableVersionedModel
+    history = True
 
 
 @pytest.fixture
 def db():
-    _db = database.load("mongomock", _create_models)
+    _db = database.load("mongomock", [TestDictRequiredNonNullableVersionedController])
     yield _db
     layabase.testing.reset(_db)
 
