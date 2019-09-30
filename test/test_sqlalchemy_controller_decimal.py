@@ -7,48 +7,47 @@ import layabase
 import layabase.testing
 
 
-class TestDecimalController(layabase.CRUDController):
-    class TestDecimalModel:
-        __tablename__ = "decimal_table_name"
-
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)
-
-    model = TestDecimalModel
-
-
 @pytest.fixture
-def db():
-    _db = layabase.load("sqlite:///:memory:", [TestDecimalController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestDecimalModel:
+            __tablename__ = "decimal_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)
+
+        model = TestDecimalModel
+
+    _db = layabase.load("sqlite:///:memory:", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestDecimalController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestDecimalController.query_get_parser)
-        @namespace.marshal_with(TestDecimalController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestDecimalController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestDecimalController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestDecimalController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 

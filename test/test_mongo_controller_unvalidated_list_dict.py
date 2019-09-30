@@ -3,54 +3,54 @@ import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
-class TestUnvalidatedListAndDictController(database.CRUDController):
-    class TestUnvalidatedListAndDictModel:
-        __tablename__ = "list_and_dict_table_name"
-
-        float_key = database_mongo.Column(float, is_primary_key=True)
-        float_with_default = database_mongo.Column(float, default_value=34)
-        dict_field = database_mongo.Column(dict, is_required=True)
-        list_field = database_mongo.Column(list, is_required=True)
-
-    model = TestUnvalidatedListAndDictModel
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestUnvalidatedListAndDictController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestUnvalidatedListAndDictModel:
+            __tablename__ = "list_and_dict_table_name"
+
+            float_key = layabase.database_mongo.Column(float, is_primary_key=True)
+            float_with_default = layabase.database_mongo.Column(float, default_value=34)
+            dict_field = layabase.database_mongo.Column(dict, is_required=True)
+            list_field = layabase.database_mongo.Column(list, is_required=True)
+
+        model = TestUnvalidatedListAndDictModel
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestUnvalidatedListAndDictController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestUnvalidatedListAndDictController.query_get_parser)
-        @namespace.marshal_with(TestUnvalidatedListAndDictController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestUnvalidatedListAndDictController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestUnvalidatedListAndDictController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestUnvalidatedListAndDictController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
@@ -291,46 +291,48 @@ def test_open_api_definition(client):
     }
 
 
-def test_post_float_as_int(db):
-    assert {
+def test_post_float_as_int(controller):
+    assert controller.post(
+        {
+            "dict_field": {"any_key": 5},
+            "float_key": 1,
+            "list_field": [22, "33", 44.55, True],
+        }
+    ) == {
         "dict_field": {"any_key": 5},
         "float_key": 1,
         "float_with_default": 34,
         "list_field": [22, "33", 44.55, True],
-    } == TestUnvalidatedListAndDictController.post(
+    }
+
+
+def test_get_float_as_int(controller):
+    controller.post(
         {
             "dict_field": {"any_key": 5},
             "float_key": 1,
             "list_field": [22, "33", 44.55, True],
         }
     )
-
-
-def test_get_float_as_int(db):
-    TestUnvalidatedListAndDictController.post(
-        {
-            "dict_field": {"any_key": 5},
-            "float_key": 1,
-            "list_field": [22, "33", 44.55, True],
-        }
-    )
-    assert {
+    assert controller.get_one({"float_key": 1}) == {
         "dict_field": {"any_key": 5},
         "float_key": 1,
         "float_with_default": 34,
         "list_field": [22, "33", 44.55, True],
-    } == TestUnvalidatedListAndDictController.get_one({"float_key": 1})
+    }
 
 
-def test_put_float_as_int(db):
-    TestUnvalidatedListAndDictController.post(
+def test_put_float_as_int(controller):
+    controller.post(
         {
             "dict_field": {"any_key": 5},
             "float_key": 1,
             "list_field": [22, "33", 44.55, True],
         }
     )
-    assert (
+    assert controller.put(
+        {"dict_field.any_key": 6, "float_key": 1, "float_with_default": 35}
+    ) == (
         {
             "dict_field": {"any_key": 5},
             "float_key": 1,
@@ -343,13 +345,11 @@ def test_put_float_as_int(db):
             "float_with_default": 35,
             "list_field": [22, "33", 44.55, True],
         },
-    ) == TestUnvalidatedListAndDictController.put(
-        {"dict_field.any_key": 6, "float_key": 1, "float_with_default": 35}
     )
 
 
-def test_get_with_required_field_as_none_is_invalid(db):
-    TestUnvalidatedListAndDictController.post(
+def test_get_with_required_field_as_none_is_invalid(controller):
+    controller.post(
         {
             "dict_field": {"any_key": 5},
             "float_key": 1,
@@ -357,8 +357,8 @@ def test_get_with_required_field_as_none_is_invalid(db):
         }
     )
     with pytest.raises(ValidationFailed) as exception_info:
-        TestUnvalidatedListAndDictController.get({"dict_field": None})
+        controller.get({"dict_field": None})
     assert exception_info.value.errors == {
         "dict_field": ["Missing data for required field."]
     }
-    assert {"dict_field": None} == exception_info.value.received_data
+    assert exception_info.value.received_data == {"dict_field": None}

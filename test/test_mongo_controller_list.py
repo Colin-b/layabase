@@ -4,7 +4,8 @@ import flask
 import flask_restplus
 import pytest
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
@@ -13,68 +14,71 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestListController(database.CRUDController):
-    class TestListModel:
-        __tablename__ = "list_table_name"
-
-        key = database_mongo.Column(is_primary_key=True)
-        list_field = database_mongo.ListColumn(
-            database_mongo.DictColumn(
-                fields={
-                    "first_key": database_mongo.Column(EnumTest, is_nullable=False),
-                    "second_key": database_mongo.Column(int, is_nullable=False),
-                }
-            )
-        )
-        bool_field = database_mongo.Column(bool)
-
-    model = TestListModel
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestListController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestListModel:
+            __tablename__ = "list_table_name"
+
+            key = layabase.database_mongo.Column(is_primary_key=True)
+            list_field = layabase.database_mongo.ListColumn(
+                layabase.database_mongo.DictColumn(
+                    fields={
+                        "first_key": layabase.database_mongo.Column(
+                            EnumTest, is_nullable=False
+                        ),
+                        "second_key": layabase.database_mongo.Column(
+                            int, is_nullable=False
+                        ),
+                    }
+                )
+            )
+            bool_field = layabase.database_mongo.Column(bool)
+
+        model = TestListModel
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestListController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestListController.query_get_parser)
-        @namespace.marshal_with(TestListController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestListController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestListController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestListController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestListController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
-            return TestListController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
-        @namespace.expect(TestListController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
-            return TestListController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 
@@ -375,7 +379,7 @@ def test_open_api_definition(client):
     }
 
 
-def test_post_list_of_dict_is_valid(db):
+def test_post_list_of_dict_is_valid(controller):
     assert {
         "bool_field": False,
         "key": "my_key",
@@ -383,7 +387,7 @@ def test_post_list_of_dict_is_valid(db):
             {"first_key": "Value1", "second_key": 1},
             {"first_key": "Value2", "second_key": 2},
         ],
-    } == TestListController.post(
+    } == controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -395,26 +399,24 @@ def test_post_list_of_dict_is_valid(db):
     )
 
 
-def test_post_optional_missing_list_of_dict_is_valid(db):
+def test_post_optional_missing_list_of_dict_is_valid(controller):
     assert {
         "bool_field": False,
         "key": "my_key",
         "list_field": None,
-    } == TestListController.post({"key": "my_key", "bool_field": False})
+    } == controller.post({"key": "my_key", "bool_field": False})
 
 
-def test_post_optional_list_of_dict_as_none_is_valid(db):
+def test_post_optional_list_of_dict_as_none_is_valid(controller):
     assert {
         "bool_field": False,
         "key": "my_key",
         "list_field": None,
-    } == TestListController.post(
-        {"key": "my_key", "bool_field": False, "list_field": None}
-    )
+    } == controller.post({"key": "my_key", "bool_field": False, "list_field": None})
 
 
-def test_get_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_get_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -433,7 +435,7 @@ def test_get_list_of_dict_is_valid(db):
                 {"first_key": "Value2", "second_key": 2},
             ],
         }
-    ] == TestListController.get(
+    ] == controller.get(
         {
             "list_field": [
                 {"first_key": EnumTest.Value1, "second_key": 1},
@@ -443,8 +445,8 @@ def test_get_list_of_dict_is_valid(db):
     )
 
 
-def test_get_optional_list_of_dict_as_None_is_skipped(db):
-    TestListController.post(
+def test_get_optional_list_of_dict_as_none_is_skipped(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -463,11 +465,11 @@ def test_get_optional_list_of_dict_as_None_is_skipped(db):
                 {"first_key": "Value2", "second_key": 2},
             ],
         }
-    ] == TestListController.get({"list_field": None})
+    ] == controller.get({"list_field": None})
 
 
-def test_delete_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_delete_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -477,7 +479,7 @@ def test_delete_list_of_dict_is_valid(db):
             "bool_field": False,
         }
     )
-    assert 1 == TestListController.delete(
+    assert 1 == controller.delete(
         {
             "list_field": [
                 {"first_key": EnumTest.Value1, "second_key": 1},
@@ -487,8 +489,8 @@ def test_delete_list_of_dict_is_valid(db):
     )
 
 
-def test_delete_optional_list_of_dict_as_None_is_valid(db):
-    TestListController.post(
+def test_delete_optional_list_of_dict_as_none_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -498,11 +500,11 @@ def test_delete_optional_list_of_dict_as_None_is_valid(db):
             "bool_field": False,
         }
     )
-    assert 1 == TestListController.delete({"list_field": None})
+    assert 1 == controller.delete({"list_field": None})
 
 
-def test_put_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_put_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -529,7 +531,7 @@ def test_put_list_of_dict_is_valid(db):
                 {"first_key": "Value1", "second_key": 2},
             ],
         },
-    ) == TestListController.put(
+    ) == controller.put(
         {
             "key": "my_key",
             "list_field": [
@@ -541,8 +543,8 @@ def test_put_list_of_dict_is_valid(db):
     )
 
 
-def test_put_without_optional_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_put_without_optional_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -569,7 +571,7 @@ def test_put_without_optional_list_of_dict_is_valid(db):
                 {"first_key": "Value2", "second_key": 2},
             ],
         },
-    ) == TestListController.put({"key": "my_key", "bool_field": True})
+    ) == controller.put({"key": "my_key", "bool_field": True})
 
 
 def test_query_get_parser_with_list_of_dict(client):

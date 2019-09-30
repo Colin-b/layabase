@@ -4,11 +4,10 @@ import layabase
 import layabase.database_mongo
 
 
-class TestController(layabase.CRUDController):
-    pass
-
-
 def test_load_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         layabase.load("mongomock", [TestController])
     assert (
@@ -19,6 +18,9 @@ def test_load_method_without_setting_model():
 
 def test_namespace_method_without_setting_model():
     class TestNamespace:
+        pass
+
+    class TestController(layabase.CRUDController):
         pass
 
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
@@ -75,6 +77,9 @@ def test_audit_prefixed_table_name_is_forbidden():
 
 
 def test_get_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         TestController.get({})
     assert (
@@ -84,6 +89,9 @@ def test_get_method_without_setting_model():
 
 
 def test_post_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         TestController.post({})
     assert (
@@ -93,6 +101,9 @@ def test_post_method_without_setting_model():
 
 
 def test_post_many_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         TestController.post_many([])
     assert (
@@ -102,6 +113,9 @@ def test_post_many_method_without_setting_model():
 
 
 def test_put_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         TestController.put({})
     assert (
@@ -111,6 +125,9 @@ def test_put_method_without_setting_model():
 
 
 def test_delete_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         TestController.delete({})
     assert (
@@ -120,6 +137,9 @@ def test_delete_method_without_setting_model():
 
 
 def test_audit_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         TestController.get_audit({})
     assert (
@@ -129,6 +149,9 @@ def test_audit_method_without_setting_model():
 
 
 def test_model_description_method_without_setting_model():
+    class TestController(layabase.CRUDController):
+        pass
+
     with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
         TestController.get_model_description()
     assert (

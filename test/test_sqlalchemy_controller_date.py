@@ -10,68 +10,67 @@ import layabase
 import layabase.testing
 
 
-class TestDateController(layabase.CRUDController):
-    class TestDateModel:
-        __tablename__ = "date_table_name"
-
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        date_str = sqlalchemy.Column(sqlalchemy.Date)
-        datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
-
-    model = TestDateModel
-
-
 @pytest.fixture
-def db():
-    _db = layabase.load("sqlite:///:memory:", [TestDateController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestDateModel:
+            __tablename__ = "date_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            date_str = sqlalchemy.Column(sqlalchemy.Date)
+            datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
+
+        model = TestDateModel
+
+    _db = layabase.load("sqlite:///:memory:", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestDateController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestDateController.query_get_parser)
-        @namespace.marshal_with(TestDateController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestDateController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestDateController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestDateController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestDateController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
             return {
                 field: [str(value) for value in values]
                 if isinstance(values, collections.abc.Iterable)
                 else values
-                for field, values in TestDateController.query_get_parser.parse_args().items()
+                for field, values in controller.query_get_parser.parse_args().items()
             }
 
-        @namespace.expect(TestDateController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return {
                 field: [str(value) for value in values]
-                for field, values in TestDateController.query_delete_parser.parse_args().items()
+                for field, values in controller.query_delete_parser.parse_args().items()
             }
 
     return application
@@ -356,8 +355,8 @@ def test_open_api_definition(client):
     }
 
 
-def test_put_is_updating_date(db):
-    TestDateController.post(
+def test_put_is_updating_date(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -375,7 +374,7 @@ def test_put_is_updating_date(db):
             "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         },
-    ) == TestDateController.put(
+    ) == controller.put(
         {
             "key": "my_key1",
             "date_str": "2018-06-01",
@@ -388,11 +387,11 @@ def test_put_is_updating_date(db):
             "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         }
-    ] == TestDateController.get({"date_str": "2018-06-01"})
+    ] == controller.get({"date_str": "2018-06-01"})
 
 
-def test_get_date_is_handled_for_valid_date(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_valid_date(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -405,11 +404,11 @@ def test_get_date_is_handled_for_valid_date(db):
             "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == TestDateController.get({"date_str": datetime.date(2017, 5, 15)})
+    ] == controller.get({"date_str": datetime.date(2017, 5, 15)})
 
 
-def test_get_date_is_handled_for_unused_date(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_unused_date(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -417,11 +416,11 @@ def test_get_date_is_handled_for_unused_date(db):
         }
     )
     d = datetime.datetime.strptime("2016-09-23", "%Y-%m-%d").date()
-    assert [] == TestDateController.get({"date_str": d})
+    assert [] == controller.get({"date_str": d})
 
 
-def test_get_date_is_handled_for_valid_datetime(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_valid_datetime(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -434,13 +433,11 @@ def test_get_date_is_handled_for_valid_datetime(db):
             "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == TestDateController.get(
-        {"datetime_str": datetime.datetime(2016, 9, 23, 23, 59, 59)}
-    )
+    ] == controller.get({"datetime_str": datetime.datetime(2016, 9, 23, 23, 59, 59)})
 
 
-def test_get_date_is_handled_for_unused_datetime(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_unused_datetime(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -448,7 +445,7 @@ def test_get_date_is_handled_for_unused_datetime(db):
         }
     )
     dt = datetime.datetime.strptime("2016-09-24T23:59:59", "%Y-%m-%dT%H:%M:%S")
-    assert [] == TestDateController.get({"datetime_str": dt})
+    assert [] == controller.get({"datetime_str": dt})
 
 
 def test_query_get_parser(client):

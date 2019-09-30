@@ -7,60 +7,59 @@ import layabase
 import layabase.testing
 
 
-class TestFloatController(layabase.CRUDController):
-    class TestFloatModel:
-        __tablename__ = "float_table_name"
-
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        float_field = sqlalchemy.Column(sqlalchemy.Float)
-
-    model = TestFloatModel
-
-
 @pytest.fixture
-def db():
-    _db = layabase.load("sqlite:///:memory:", [TestFloatController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestFloatModel:
+            __tablename__ = "float_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            float_field = sqlalchemy.Column(sqlalchemy.Float)
+
+        model = TestFloatModel
+
+    _db = layabase.load("sqlite:///:memory:", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestFloatController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestFloatController.query_get_parser)
-        @namespace.marshal_with(TestFloatController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestFloatController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestFloatController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestFloatController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestFloatController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
-            return TestFloatController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
-        @namespace.expect(TestFloatController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
-            return TestFloatController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 

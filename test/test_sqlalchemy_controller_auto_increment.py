@@ -7,81 +7,82 @@ import layabase
 import layabase.testing
 
 
-class TestAutoIncrementController(layabase.CRUDController):
-    class TestAutoIncrementModel:
-        __tablename__ = "auto_increment_table_name"
-
-        key = sqlalchemy.Column(
-            sqlalchemy.Integer, primary_key=True, autoincrement=True
-        )
-        enum_field = sqlalchemy.Column(
-            sqlalchemy.Enum("Value1", "Value2"),
-            nullable=False,
-            doc="Test Documentation",
-        )
-        optional_with_default = sqlalchemy.Column(
-            sqlalchemy.String, default="Test value"
-        )
-
-    model = TestAutoIncrementModel
-
-
 @pytest.fixture
-def db():
-    _db = layabase.load("sqlite:///:memory:", [TestAutoIncrementController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestAutoIncrementModel:
+            __tablename__ = "auto_increment_table_name"
+
+            key = sqlalchemy.Column(
+                sqlalchemy.Integer, primary_key=True, autoincrement=True
+            )
+            enum_field = sqlalchemy.Column(
+                sqlalchemy.Enum("Value1", "Value2"),
+                nullable=False,
+                doc="Test Documentation",
+            )
+            optional_with_default = sqlalchemy.Column(
+                sqlalchemy.String, default="Test value"
+            )
+
+        model = TestAutoIncrementModel
+
+    _db = layabase.load("sqlite:///:memory:", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestAutoIncrementController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestAutoIncrementController.query_get_parser)
-        @namespace.marshal_with(TestAutoIncrementController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestAutoIncrementController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestAutoIncrementController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestAutoIncrementController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     return application
 
 
-def test_post_with_specified_incremented_field_is_ignored_and_valid(client):
-    assert {
+def test_post_with_specified_incremented_field_is_ignored_and_valid(controller, client):
+    assert controller.post({"key": "my_key", "enum_field": "Value1"}) == {
         "optional_with_default": "Test value",
         "key": 1,
         "enum_field": "Value1",
-    } == TestAutoIncrementController.post({"key": "my_key", "enum_field": "Value1"})
+    }
 
 
-def test_post_many_with_specified_incremented_field_is_ignored_and_valid(client):
-    assert [
-        {"optional_with_default": "Test value", "enum_field": "Value1", "key": 1},
-        {"optional_with_default": "Test value", "enum_field": "Value2", "key": 2},
-    ] == TestAutoIncrementController.post_many(
+def test_post_many_with_specified_incremented_field_is_ignored_and_valid(
+    controller, client
+):
+    assert controller.post_many(
         [
             {"key": "my_key", "enum_field": "Value1"},
             {"key": "my_key", "enum_field": "Value2"},
         ]
-    )
+    ) == [
+        {"optional_with_default": "Test value", "enum_field": "Value1", "key": 1},
+        {"optional_with_default": "Test value", "enum_field": "Value2", "key": 2},
+    ]
 
 
 def test_open_api_definition(client):

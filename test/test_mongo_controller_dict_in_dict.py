@@ -2,7 +2,8 @@ import enum
 
 import pytest
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
@@ -11,45 +12,48 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestDictInDictController(database.CRUDController):
-    class TestDictInDictModel:
-        __tablename__ = "dict_in_dict_table_name"
-
-        key = database_mongo.Column(is_primary_key=True)
-        dict_field = database_mongo.DictColumn(
-            fields={
-                "first_key": database_mongo.DictColumn(
-                    fields={
-                        "inner_key1": database_mongo.Column(
-                            EnumTest, is_nullable=False
-                        ),
-                        "inner_key2": database_mongo.Column(int, is_nullable=False),
-                    },
-                    is_required=True,
-                ),
-                "second_key": database_mongo.Column(int, is_nullable=False),
-            },
-            is_required=True,
-        )
-
-    model = TestDictInDictModel
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestDictInDictController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestDictInDictModel:
+            __tablename__ = "dict_in_dict_table_name"
+
+            key = layabase.database_mongo.Column(is_primary_key=True)
+            dict_field = layabase.database_mongo.DictColumn(
+                fields={
+                    "first_key": layabase.database_mongo.DictColumn(
+                        fields={
+                            "inner_key1": layabase.database_mongo.Column(
+                                EnumTest, is_nullable=False
+                            ),
+                            "inner_key2": layabase.database_mongo.Column(
+                                int, is_nullable=False
+                            ),
+                        },
+                        is_required=True,
+                    ),
+                    "second_key": layabase.database_mongo.Column(
+                        int, is_nullable=False
+                    ),
+                },
+                is_required=True,
+            )
+
+        model = TestDictInDictModel
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
-def test_get_with_dot_notation_multi_level_is_valid(db):
+def test_get_with_dot_notation_multi_level_is_valid(controller):
     assert {
         "dict_field": {
             "first_key": {"inner_key1": "Value1", "inner_key2": 3},
             "second_key": 3,
         },
         "key": "my_key",
-    } == TestDictInDictController.post(
+    } == controller.post(
         {
             "key": "my_key",
             "dict_field": {
@@ -64,7 +68,7 @@ def test_get_with_dot_notation_multi_level_is_valid(db):
             "second_key": 3,
         },
         "key": "my_key2",
-    } == TestDictInDictController.post(
+    } == controller.post(
         {
             "key": "my_key2",
             "dict_field": {
@@ -81,6 +85,4 @@ def test_get_with_dot_notation_multi_level_is_valid(db):
             },
             "key": "my_key",
         }
-    ] == TestDictInDictController.get(
-        {"dict_field.first_key.inner_key1": EnumTest.Value1}
-    )
+    ] == controller.get({"dict_field.first_key.inner_key1": EnumTest.Value1})

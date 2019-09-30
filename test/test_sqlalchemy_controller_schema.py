@@ -7,56 +7,55 @@ import layabase
 import layabase.testing
 
 
-class TestController(layabase.CRUDController):
-    class TestModel:
-        __tablename__ = "sample_table_name"
-        __table_args__ = {u"schema": "schema_name"}
-
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-        optional = sqlalchemy.Column(sqlalchemy.String)
-
-    model = TestModel
-
-
 @pytest.fixture
-def db():
-    _db = layabase.load("sqlite:///:memory:", [TestController])
-    yield _db
+def controller():
+    class controller(layabase.CRUDController):
+        class TestModel:
+            __tablename__ = "sample_table_name"
+            __table_args__ = {u"schema": "schema_name"}
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+            optional = sqlalchemy.Column(sqlalchemy.String)
+
+        model = TestModel
+
+    _db = layabase.load("sqlite:///:memory:", [controller])
+    yield controller
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_parser)
-        @namespace.marshal_with(TestController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test/description")
     class TestDescriptionResource(flask_restplus.Resource):
-        @namespace.marshal_with(TestController.get_model_description_response_model)
+        @namespace.marshal_with(controller.get_model_description_response_model)
         def get(self):
             return {}
 
@@ -274,8 +273,8 @@ def test_open_api_definition(client):
     }
 
 
-def test_get_model_description_returns_description(db):
-    assert TestController.get_model_description() == {
+def test_get_model_description_returns_description(controller):
+    assert controller.get_model_description() == {
         "key": "key",
         "mandatory": "mandatory",
         "optional": "optional",

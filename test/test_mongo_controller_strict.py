@@ -1,32 +1,32 @@
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
-class TestStrictController(database.CRUDController):
-    class TestStrictModel:
-        __tablename__ = "strict_table_name"
-
-        key = database_mongo.Column(str, is_primary_key=True)
-        mandatory = database_mongo.Column(int, is_nullable=False)
-        optional = database_mongo.Column(str)
-
-    model = TestStrictModel
-    skip_unknown_fields = False
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestStrictController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestStrictModel:
+            __tablename__ = "strict_table_name"
+
+            key = layabase.database_mongo.Column(str, is_primary_key=True)
+            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+            optional = layabase.database_mongo.Column(str)
+
+        model = TestStrictModel
+        skip_unknown_fields = False
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
-def test_post_with_unknown_field_is_invalid(db):
+def test_post_with_unknown_field_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestStrictController.post(
+        controller.post(
             {
                 "key": "my_key",
                 "mandatory": 1,
@@ -35,10 +35,10 @@ def test_post_with_unknown_field_is_invalid(db):
                 "unknown": "my_value",
             }
         )
-    assert {"unknown": ["Unknown field"]} == exception_info.value.errors
-    assert {
+    assert exception_info.value.errors == {"unknown": ["Unknown field"]}
+    assert exception_info.value.received_data == {
         "key": "my_key",
         "mandatory": 1,
         "optional": "my_value",
         "unknown": "my_value",
-    } == exception_info.value.received_data
+    }

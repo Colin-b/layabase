@@ -1,36 +1,38 @@
 import pytest
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
-class TestStringListController(database.CRUDController):
-    class TestStringListModel:
-        __tablename__ = "string_list_table_name"
-
-        key = database_mongo.Column(is_primary_key=True)
-        list_field = database_mongo.ListColumn(database_mongo.Column(), sorted=True)
-
-    model = TestStringListModel
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestStringListController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestStringListModel:
+            __tablename__ = "string_list_table_name"
+
+            key = layabase.database_mongo.Column(is_primary_key=True)
+            list_field = layabase.database_mongo.ListColumn(
+                layabase.database_mongo.Column(), sorted=True
+            )
+
+        model = TestStringListModel
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
-def test_post_list_of_str_is_sorted(db):
-    assert {
+def test_post_list_of_str_is_sorted(controller):
+    assert controller.post({"key": "my_key", "list_field": ["c", "a", "b"]}) == {
         "key": "my_key",
         "list_field": ["a", "b", "c"],
-    } == TestStringListController.post({"key": "my_key", "list_field": ["c", "a", "b"]})
+    }
 
 
-def test_put_list_of_str_is_sorted(db):
-    TestStringListController.post({"key": "my_key", "list_field": ["a", "c", "b"]})
-    assert (
+def test_put_list_of_str_is_sorted(controller):
+    controller.post({"key": "my_key", "list_field": ["a", "c", "b"]})
+    assert controller.put({"key": "my_key", "list_field": ["f", "e", "d"]}) == (
         {"key": "my_key", "list_field": ["a", "b", "c"]},
         {"key": "my_key", "list_field": ["d", "e", "f"]},
-    ) == TestStringListController.put({"key": "my_key", "list_field": ["f", "e", "d"]})
+    )

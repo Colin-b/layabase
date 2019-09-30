@@ -5,7 +5,8 @@ import flask_restplus
 import pytest
 from layaberr import ModelCouldNotBeFound
 
-from layabase import database, database_mongo, versioning_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 import layabase.audit_mongo
 from test import DateTimeModuleMock
@@ -16,81 +17,87 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestController(database.CRUDController):
-    class TestModel:
-        __tablename__ = "sample_table_name"
+@pytest.fixture
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestModel:
+            __tablename__ = "sample_table_name"
 
-        key = database_mongo.Column(str, is_primary_key=True)
-        mandatory = database_mongo.Column(int, is_nullable=False)
-        optional = database_mongo.Column(str)
+            key = layabase.database_mongo.Column(str, is_primary_key=True)
+            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+            optional = layabase.database_mongo.Column(str)
 
-    model = TestModel
-    audit = True
+        model = TestModel
+        audit = True
 
-
-class TestVersionedController(database.CRUDController):
-    class TestVersionedModel:
-        __tablename__ = "versioned_table_name"
-
-        key = database_mongo.Column(str, is_primary_key=True)
-        enum_fld = database_mongo.Column(EnumTest)
-
-    model = TestVersionedModel
-    history = True
-    audit = True
+    return TestController
 
 
 @pytest.fixture
-def db():
-    _db = database.load(
-        "mongomock?ssl=True",
-        [TestController, TestVersionedController],
-        replicaSet="globaldb",
+def controller_versioned():
+    class TestVersionedController(layabase.CRUDController):
+        class TestVersionedModel:
+            __tablename__ = "versioned_table_name"
+
+            key = layabase.database_mongo.Column(str, is_primary_key=True)
+            enum_fld = layabase.database_mongo.Column(EnumTest)
+
+        model = TestVersionedModel
+        history = True
+        audit = True
+
+    return TestVersionedController
+
+
+@pytest.fixture
+def controllers(controller, controller_versioned):
+    _db = layabase.load(
+        "mongomock?ssl=True", [controller, controller_versioned], replicaSet="globaldb"
     )
     yield _db
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controllers, controller_versioned):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestVersionedController.namespace(namespace)
+    controller_versioned.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestVersionedController.query_get_parser)
-        @namespace.marshal_with(TestVersionedController.get_response_model)
+        @namespace.expect(controller_versioned.query_get_parser)
+        @namespace.marshal_with(controller_versioned.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestVersionedController.json_post_model)
+        @namespace.expect(controller_versioned.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestVersionedController.json_put_model)
+        @namespace.expect(controller_versioned.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestVersionedController.query_delete_parser)
+        @namespace.expect(controller_versioned.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test/audit")
     class TestAuditResource(flask_restplus.Resource):
-        @namespace.expect(TestVersionedController.query_get_audit_parser)
-        @namespace.marshal_with(TestVersionedController.get_audit_response_model)
+        @namespace.expect(controller_versioned.query_get_audit_parser)
+        @namespace.marshal_with(controller_versioned.get_audit_response_model)
         def get(self):
             return []
 
     @namespace.route("/test_audit_parser")
     class TestAuditParserResource(flask_restplus.Resource):
-        @namespace.expect(TestVersionedController.query_get_audit_parser)
+        @namespace.expect(controller_versioned.query_get_audit_parser)
         def get(self):
-            return TestVersionedController.query_get_audit_parser.parse_args()
+            return controller_versioned.query_get_audit_parser.parse_args()
 
     return application
 
@@ -417,14 +424,16 @@ def test_open_api_definition(client):
     }
 
 
-def test_revision_not_shared_if_not_versioned(db, monkeypatch):
+def test_revision_not_shared_if_not_versioned(
+    controllers, controller, controller_versioned, monkeypatch
+):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert {"optional": None, "mandatory": 1, "key": "my_key"} == TestController.post(
+    assert {"optional": None, "mandatory": 1, "key": "my_key"} == controller.post(
         {"key": "my_key", "mandatory": 1}
     )
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    assert TestController.get_audit({}) == [
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -435,7 +444,7 @@ def test_revision_not_shared_if_not_versioned(db, monkeypatch):
             "revision": 1,
         }
     ]
-    assert TestVersionedController.get_audit({}) == [
+    assert controller_versioned.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -446,14 +455,16 @@ def test_revision_not_shared_if_not_versioned(db, monkeypatch):
     ]
 
 
-def test_revision_on_versionned_audit_after_put_failure(db, monkeypatch):
+def test_revision_on_versionned_audit_after_put_failure(
+    controllers, controller_versioned, monkeypatch
+):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     with pytest.raises(ModelCouldNotBeFound):
-        TestVersionedController.put({"key": "my_key2", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    assert TestVersionedController.get_audit({}) == [
+        controller_versioned.put({"key": "my_key2", "enum_fld": EnumTest.Value2})
+    controller_versioned.delete({"key": "my_key"})
+    assert controller_versioned.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -471,14 +482,16 @@ def test_revision_on_versionned_audit_after_put_failure(db, monkeypatch):
     ]
 
 
-def test_versioned_audit_after_post_put_delete_rollback(db, monkeypatch):
+def test_versioned_audit_after_post_put_delete_rollback(
+    controllers, controller_versioned, monkeypatch
+):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    TestVersionedController.rollback_to({"revision": 1})
-    assert TestVersionedController.get_audit({}) == [
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
+    controller_versioned.delete({"key": "my_key"})
+    controller_versioned.rollback_to({"revision": 1})
+    assert controller_versioned.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -510,13 +523,13 @@ def test_versioned_audit_after_post_put_delete_rollback(db, monkeypatch):
     ]
 
 
-def test_get_last_when_empty(db):
-    assert TestVersionedController.get_last({}) == {}
+def test_get_last_when_empty(controllers, controller_versioned):
+    assert controller_versioned.get_last({}) == {}
 
 
-def test_get_last_when_single_doc_post(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({}) == {
+def test_get_last_when_single_doc_post(controllers, controller_versioned):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    assert controller_versioned.get_last({}) == {
         "enum_fld": "Value1",
         "key": "my_key",
         "valid_since_revision": 1,
@@ -524,15 +537,15 @@ def test_get_last_when_single_doc_post(db):
     }
 
 
-def test_get_last_with_unmatched_filter(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({"key": "my_key2"}) == {}
+def test_get_last_with_unmatched_filter(controllers, controller_versioned):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    assert controller_versioned.get_last({"key": "my_key2"}) == {}
 
 
-def test_get_last_when_single_update(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    assert TestVersionedController.get_last({}) == {
+def test_get_last_when_single_update(controllers, controller_versioned):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
+    assert controller_versioned.get_last({}) == {
         "enum_fld": "Value2",
         "key": "my_key",
         "valid_since_revision": 2,
@@ -540,11 +553,11 @@ def test_get_last_when_single_update(db):
     }
 
 
-def test_get_last_when_removed(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    assert TestVersionedController.get_last({}) == {
+def test_get_last_when_removed(controllers, controller_versioned):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
+    controller_versioned.delete({"key": "my_key"})
+    assert controller_versioned.get_last({}) == {
         "enum_fld": "Value2",
         "key": "my_key",
         "valid_since_revision": 2,
@@ -552,12 +565,12 @@ def test_get_last_when_removed(db):
     }
 
 
-def test_get_last_with_one_removed_and_a_valid(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    TestVersionedController.post({"key": "my_key2", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({}) == {
+def test_get_last_with_one_removed_and_a_valid(controllers, controller_versioned):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
+    controller_versioned.delete({"key": "my_key"})
+    controller_versioned.post({"key": "my_key2", "enum_fld": EnumTest.Value1})
+    assert controller_versioned.get_last({}) == {
         "enum_fld": "Value1",
         "key": "my_key2",
         "valid_since_revision": 4,
@@ -565,12 +578,14 @@ def test_get_last_with_one_removed_and_a_valid(db):
     }
 
 
-def test_get_last_with_one_removed_and_a_valid_and_filter_on_removed(db):
-    TestVersionedController.post({"key": "my_key", "enum_fld": EnumTest.Value1})
-    TestVersionedController.put({"key": "my_key", "enum_fld": EnumTest.Value2})
-    TestVersionedController.delete({"key": "my_key"})
-    TestVersionedController.post({"key": "my_key2", "enum_fld": EnumTest.Value1})
-    assert TestVersionedController.get_last({"key": "my_key"}) == {
+def test_get_last_with_one_removed_and_a_valid_and_filter_on_removed(
+    controllers, controller_versioned
+):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
+    controller_versioned.delete({"key": "my_key"})
+    controller_versioned.post({"key": "my_key2", "enum_fld": EnumTest.Value1})
+    assert controller_versioned.get_last({"key": "my_key"}) == {
         "enum_fld": "Value2",
         "key": "my_key",
         "valid_since_revision": 2,

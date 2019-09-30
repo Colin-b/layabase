@@ -12,82 +12,81 @@ import layabase.audit_mongo
 from test import DateTimeModuleMock
 
 
-class TestController(layabase.CRUDController):
-    class TestModel:
-        __tablename__ = "sample_table_name"
-
-        key = layabase.database_mongo.Column(str, is_primary_key=True)
-        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-        optional = layabase.database_mongo.Column(str)
-
-    model = TestModel
-    audit = True
-
-
 @pytest.fixture
-def db():
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestModel:
+            __tablename__ = "sample_table_name"
+
+            key = layabase.database_mongo.Column(str, is_primary_key=True)
+            mandatory = layabase.database_mongo.Column(int, is_nullable=False)
+            optional = layabase.database_mongo.Column(str)
+
+        model = TestModel
+        audit = True
+
     _db = layabase.load("mongomock?ssl=True", [TestController], replicaSet="globaldb")
-    yield _db
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_parser)
-        @namespace.marshal_with(TestController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test/audit")
     class TestAuditResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_audit_parser)
-        @namespace.marshal_with(TestController.get_audit_response_model)
+        @namespace.expect(controller.query_get_audit_parser)
+        @namespace.marshal_with(controller.get_audit_response_model)
         def get(self):
             return []
 
     @namespace.route("/test_audit_parser")
     class TestAuditParserResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_audit_parser)
+        @namespace.expect(controller.query_get_audit_parser)
         def get(self):
-            return TestController.query_get_audit_parser.parse_args()
+            return controller.query_get_audit_parser.parse_args()
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
-            return TestController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
-        @namespace.expect(TestController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
-            return TestController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 
 
-def test_get_all_without_data_returns_empty_list(db):
-    assert TestController.get({}) == []
-    assert TestController.get_audit({}) == []
+def test_get_all_without_data_returns_empty_list(controller):
+    assert controller.get({}) == []
+    assert controller.get_audit({}) == []
 
 
 def test_audit_table_name_is_forbidden():
@@ -573,133 +572,133 @@ def test_open_api_definition(client):
     }
 
 
-def test_post_with_nothing_is_invalid(db):
+def test_post_with_nothing_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post(None)
+        controller.post(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert not exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_with_nothing_is_invalid(db):
+def test_post_many_with_nothing_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many(None)
+        controller.post_many(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == []
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_with_empty_dict_is_invalid(db):
+def test_post_with_empty_dict_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({})
+        controller.post({})
     assert {
         "key": ["Missing data for required field."],
         "mandatory": ["Missing data for required field."],
     } == exception_info.value.errors
     assert exception_info.value.received_data == {}
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_with_empty_list_is_invalid(db):
+def test_post_many_with_empty_list_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([])
+        controller.post_many([])
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == []
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_put_with_nothing_is_invalid(db):
+def test_put_with_nothing_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.put(None)
+        controller.put(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert not exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_put_with_empty_dict_is_invalid(db):
+def test_put_with_empty_dict_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.put({})
+        controller.put({})
     assert exception_info.value.errors == {"key": ["Missing data for required field."]}
     assert exception_info.value.received_data == {}
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_delete_without_nothing_do_not_fail(db):
-    assert TestController.delete({}) == 0
-    assert TestController.get_audit({}) == []
+def test_delete_without_nothing_do_not_fail(controller):
+    assert controller.delete({}) == 0
+    assert controller.get_audit({}) == []
 
 
-def test_post_without_mandatory_field_is_invalid(db):
+def test_post_without_mandatory_field_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({"key": "my_key"})
+        controller.post({"key": "my_key"})
     assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
     }
     assert exception_info.value.received_data == {"key": "my_key"}
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_without_mandatory_field_is_invalid(db):
+def test_post_many_without_mandatory_field_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([{"key": "my_key"}])
+        controller.post_many([{"key": "my_key"}])
     assert exception_info.value.errors == {
         0: {"mandatory": ["Missing data for required field."]}
     }
     assert exception_info.value.received_data == [{"key": "my_key"}]
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_without_key_is_invalid(db):
+def test_post_without_key_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({"mandatory": 1})
+        controller.post({"mandatory": 1})
     assert exception_info.value.errors == {"key": ["Missing data for required field."]}
     assert exception_info.value.received_data == {"mandatory": 1}
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_without_key_is_invalid(db):
+def test_post_many_without_key_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([{"mandatory": 1}])
+        controller.post_many([{"mandatory": 1}])
     assert exception_info.value.errors == {
         0: {"key": ["Missing data for required field."]}
     }
     assert exception_info.value.received_data == [{"mandatory": 1}]
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_with_wrong_type_is_invalid(db):
+def test_post_with_wrong_type_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({"key": datetime.date(2007, 12, 5), "mandatory": 1})
+        controller.post({"key": datetime.date(2007, 12, 5), "mandatory": 1})
     assert exception_info.value.errors == {"key": ["Not a valid str."]}
     assert exception_info.value.received_data == {
         "key": datetime.date(2007, 12, 5),
         "mandatory": 1,
     }
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_with_wrong_type_is_invalid(db):
+def test_post_many_with_wrong_type_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([{"key": datetime.date(2007, 12, 5), "mandatory": 1}])
+        controller.post_many([{"key": datetime.date(2007, 12, 5), "mandatory": 1}])
     assert exception_info.value.errors == {0: {"key": ["Not a valid str."]}}
     assert exception_info.value.received_data == [
         {"key": datetime.date(2007, 12, 5), "mandatory": 1}
     ]
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_put_with_wrong_type_is_invalid(db, monkeypatch):
+def test_put_with_wrong_type_is_invalid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "value1", "mandatory": 1})
+    controller.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.put({"key": "value1", "mandatory": "invalid_value"})
+        controller.put({"key": "value1", "mandatory": "invalid_value"})
     assert exception_info.value.errors == {"mandatory": ["Not a valid int."]}
     assert exception_info.value.received_data == {
         "key": "value1",
         "mandatory": "invalid_value",
     }
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -712,15 +711,15 @@ def test_put_with_wrong_type_is_invalid(db, monkeypatch):
     ]
 
 
-def test_post_without_optional_is_valid(db, monkeypatch):
+def test_post_without_optional_is_valid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert TestController.post({"key": "my_key", "mandatory": 1}) == {
+    assert controller.post({"key": "my_key", "mandatory": 1}) == {
         "optional": None,
         "mandatory": 1,
         "key": "my_key",
     }
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -733,13 +732,13 @@ def test_post_without_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_many_without_optional_is_valid(db, monkeypatch):
+def test_post_many_without_optional_is_valid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert TestController.post_many([{"key": "my_key", "mandatory": 1}]) == [
+    assert controller.post_many([{"key": "my_key", "mandatory": 1}]) == [
         {"optional": None, "mandatory": 1, "key": "my_key"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -752,16 +751,16 @@ def test_post_many_without_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_put_many_is_valid(db, monkeypatch):
+def test_put_many_is_valid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post_many(
+    controller.post_many(
         [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
     )
-    TestController.put_many(
+    controller.put_many(
         [{"key": "my_key", "optional": "test"}, {"key": "my_key2", "mandatory": 3}]
     )
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -801,13 +800,13 @@ def test_put_many_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_with_optional_is_valid(db, monkeypatch):
+def test_post_with_optional_is_valid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert TestController.post(
+    assert controller.post(
         {"key": "my_key", "mandatory": 1, "optional": "my_value"}
     ) == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -820,13 +819,13 @@ def test_post_with_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_many_with_optional_is_valid(db, monkeypatch):
+def test_post_many_with_optional_is_valid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert TestController.post_many(
+    assert controller.post_many(
         [{"key": "my_key", "mandatory": 1, "optional": "my_value"}]
     ) == [{"mandatory": 1, "key": "my_key", "optional": "my_value"}]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -839,10 +838,10 @@ def test_post_many_with_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_with_unknown_field_is_valid(db, monkeypatch):
+def test_post_with_unknown_field_is_valid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert TestController.post(
+    assert controller.post(
         {
             "key": "my_key",
             "mandatory": 1,
@@ -851,7 +850,7 @@ def test_post_with_unknown_field_is_valid(db, monkeypatch):
             "unknown": "my_value",
         }
     ) == {"optional": "my_value", "mandatory": 1, "key": "my_key"}
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -864,10 +863,10 @@ def test_post_with_unknown_field_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_many_with_unknown_field_is_valid(db, monkeypatch):
+def test_post_many_with_unknown_field_is_valid(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert TestController.post_many(
+    assert controller.post_many(
         [
             {
                 "key": "my_key",
@@ -878,7 +877,7 @@ def test_post_many_with_unknown_field_is_valid(db, monkeypatch):
             }
         ]
     ) == [{"optional": "my_value", "mandatory": 1, "key": "my_key"}]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -891,14 +890,14 @@ def test_post_many_with_unknown_field_is_valid(db, monkeypatch):
     ]
 
 
-def test_get_without_filter_is_retrieving_the_only_item(db, monkeypatch):
+def test_get_without_filter_is_retrieving_the_only_item(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert TestController.get({}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert controller.get({}) == [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -912,17 +911,17 @@ def test_get_without_filter_is_retrieving_the_only_item(db, monkeypatch):
 
 
 def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
-    db, monkeypatch
+    controller, monkeypatch
 ):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert TestController.get({}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.get({}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -944,20 +943,20 @@ def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
     ]
 
 
-def test_get_without_filter_is_retrieving_everything(db, monkeypatch):
+def test_get_without_filter_is_retrieving_everything(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post_many(
+    controller.post_many(
         [
             {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
             {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
         ]
     )
-    assert TestController.get({}) == [
+    assert controller.get({}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -979,15 +978,15 @@ def test_get_without_filter_is_retrieving_everything(db, monkeypatch):
     ]
 
 
-def test_get_with_filter_is_retrieving_subset(db, monkeypatch):
+def test_get_with_filter_is_retrieving_subset(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert TestController.get({"optional": "my_value1"}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.get({"optional": "my_value1"}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1009,18 +1008,18 @@ def test_get_with_filter_is_retrieving_subset(db, monkeypatch):
     ]
 
 
-def test_put_is_updating(db, monkeypatch):
+def test_put_is_updating(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert TestController.put({"key": "my_key1", "optional": "my_value"}) == (
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert controller.put({"key": "my_key1", "optional": "my_value"}) == (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"},
     )
-    assert TestController.get({"mandatory": 1}) == [
+    assert controller.get({"mandatory": 1}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1042,13 +1041,15 @@ def test_put_is_updating(db, monkeypatch):
     ]
 
 
-def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db, monkeypatch):
+def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(
+    controller, monkeypatch
+):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "optional": "my_value"})
-    assert TestController.get({"optional": "my_value1"}) == []
-    assert TestController.get_audit({}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "optional": "my_value"})
+    assert controller.get({"optional": "my_value1"}) == []
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1070,16 +1071,16 @@ def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db, monkeyp
     ]
 
 
-def test_delete_with_filter_is_removing_the_proper_row(db, monkeypatch):
+def test_delete_with_filter_is_removing_the_proper_row(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert TestController.delete({"key": "my_key1"}) == 1
-    assert TestController.get({}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.delete({"key": "my_key1"}) == 1
+    assert controller.get({}) == [
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1110,13 +1111,13 @@ def test_delete_with_filter_is_removing_the_proper_row(db, monkeypatch):
     ]
 
 
-def test_audit_filter_on_model_is_returning_only_selected_data(db, monkeypatch):
+def test_audit_filter_on_model_is_returning_only_selected_data(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "mandatory": 2})
-    TestController.delete({"key": "my_key1"})
-    assert TestController.get_audit({"key": "my_key1"}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "mandatory": 2})
+    controller.delete({"key": "my_key1"})
+    assert controller.get_audit({"key": "my_key1"}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1147,13 +1148,15 @@ def test_audit_filter_on_model_is_returning_only_selected_data(db, monkeypatch):
     ]
 
 
-def test_audit_filter_on_audit_model_is_returning_only_selected_data(db, monkeypatch):
+def test_audit_filter_on_audit_model_is_returning_only_selected_data(
+    controller, monkeypatch
+):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "mandatory": 2})
-    TestController.delete({"key": "my_key1"})
-    assert TestController.get_audit({"audit_action": "Update"}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "mandatory": 2})
+    controller.delete({"key": "my_key1"})
+    assert controller.get_audit({"audit_action": "Update"}) == [
         {
             "audit_action": "Update",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1166,13 +1169,13 @@ def test_audit_filter_on_audit_model_is_returning_only_selected_data(db, monkeyp
     ]
 
 
-def test_value_can_be_updated_to_previous_value(db, monkeypatch):
+def test_value_can_be_updated_to_previous_value(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "mandatory": 2})
-    TestController.put({"key": "my_key1", "mandatory": 1})  # Put back initial value
-    assert TestController.get_audit({}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "mandatory": 2})
+    controller.put({"key": "my_key1", "mandatory": 1})  # Put back initial value
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1203,14 +1206,14 @@ def test_value_can_be_updated_to_previous_value(db, monkeypatch):
     ]
 
 
-def test_delete_without_filter_is_removing_everything(db, monkeypatch):
+def test_delete_without_filter_is_removing_everything(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 2 == TestController.delete({})
-    assert [] == TestController.get({})
-    assert TestController.get_audit({}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert 2 == controller.delete({})
+    assert [] == controller.get({})
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",

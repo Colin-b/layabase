@@ -5,7 +5,8 @@ import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo, versioning_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
@@ -14,68 +15,71 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestVersionedController(database.CRUDController):
-    class TestVersionedModel:
-        __tablename__ = "versioned_table_name"
-
-        key = database_mongo.Column(is_primary_key=True)
-        dict_field = database_mongo.DictColumn(
-            fields={
-                "first_key": database_mongo.Column(EnumTest, is_nullable=False),
-                "second_key": database_mongo.Column(int, is_nullable=False),
-            },
-            is_required=True,
-        )
-
-    model = TestVersionedModel
-    history = True
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestVersionedController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestVersionedModel:
+            __tablename__ = "versioned_table_name"
+
+            key = layabase.database_mongo.Column(is_primary_key=True)
+            dict_field = layabase.database_mongo.DictColumn(
+                fields={
+                    "first_key": layabase.database_mongo.Column(
+                        EnumTest, is_nullable=False
+                    ),
+                    "second_key": layabase.database_mongo.Column(
+                        int, is_nullable=False
+                    ),
+                },
+                is_required=True,
+            )
+
+        model = TestVersionedModel
+        history = True
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestVersionedController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestVersionedController.query_get_parser)
-        @namespace.marshal_with(TestVersionedController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestVersionedController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestVersionedController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestVersionedController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_rollback_parser")
     class TestRollbackParserResource(flask_restplus.Resource):
-        @namespace.expect(TestVersionedController.query_rollback_parser)
+        @namespace.expect(controller.query_rollback_parser)
         def get(self):
-            return TestVersionedController.query_rollback_parser.parse_args()
+            return controller.query_rollback_parser.parse_args()
 
     return application
 
 
-def test_get_url_with_primary_key_in_model_and_many_models(db):
+def test_get_url_with_primary_key_in_model_and_many_models(controller):
     models = [
         {
             "key": "first",
@@ -90,68 +94,65 @@ def test_get_url_with_primary_key_in_model_and_many_models(db):
             "valid_until_revision": -1,
         },
     ]
-    assert (
-        TestVersionedController.get_url("/test", *models)
-        == "/test?key=first&key=second"
-    )
+    assert controller.get_url("/test", *models) == "/test?key=first&key=second"
 
 
-def test_get_url_with_primary_key_in_model_and_a_single_model(db):
+def test_get_url_with_primary_key_in_model_and_a_single_model(controller):
     model = {
         "key": "first",
         "dict_field": {"first_key": "Value1", "second_key": 1},
         "valid_since_revision": 1,
         "valid_until_revision": -1,
     }
-    assert TestVersionedController.get_url("/test", model) == "/test?key=first"
+    assert controller.get_url("/test", model) == "/test?key=first"
 
 
-def test_get_url_with_primary_key_in_model_and_no_model(db):
-    assert TestVersionedController.get_url("/test") == "/test"
+def test_get_url_with_primary_key_in_model_and_no_model(controller):
+    assert controller.get_url("/test") == "/test"
 
 
-def test_post_versioning_is_valid(db):
+def test_post_versioning_is_valid(controller):
     assert {
         "key": "first",
         "dict_field": {"first_key": "Value1", "second_key": 1},
         "valid_since_revision": 1,
         "valid_until_revision": -1,
-    } == TestVersionedController.post(
+    } == controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    assert [
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value1", "second_key": 1},
             "valid_since_revision": 1,
             "valid_until_revision": -1,
         }
-    ] == TestVersionedController.get_history({})
-    assert [
+    ]
+    assert controller.get({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value1", "second_key": 1},
             "valid_since_revision": 1,
             "valid_until_revision": -1,
         }
-    ] == TestVersionedController.get({})
+    ]
 
 
-def test_post_without_providing_required_nullable_dict_column_is_valid(db):
-    assert {
+def test_post_without_providing_required_nullable_dict_column_is_valid(controller):
+    assert controller.post({"key": "first"}) == {
         "dict_field": {"first_key": None, "second_key": None},
         "key": "first",
         "valid_since_revision": 1,
         "valid_until_revision": -1,
-    } == TestVersionedController.post({"key": "first"})
+    }
 
 
-def test_put_without_providing_required_nullable_dict_column_is_valid(db):
-    TestVersionedController.post(
+def test_put_without_providing_required_nullable_dict_column_is_valid(controller):
+    controller.post(
         {"key": "first", "dict_field": {"first_key": "Value1", "second_key": 0}}
     )
     assert (
@@ -167,11 +168,11 @@ def test_put_without_providing_required_nullable_dict_column_is_valid(db):
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         },
-    ) == TestVersionedController.put({"key": "first"})
+    ) == controller.put({"key": "first"})
 
 
-def test_put_versioning_is_valid(db):
-    TestVersionedController.post(
+def test_put_versioning_is_valid(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
@@ -191,9 +192,7 @@ def test_put_versioning_is_valid(db):
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         },
-    ) == TestVersionedController.put(
-        {"key": "first", "dict_field.first_key": EnumTest.Value2}
-    )
+    ) == controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
     assert [
         {
             "key": "first",
@@ -207,7 +206,7 @@ def test_put_versioning_is_valid(db):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == TestVersionedController.get_history({})
+    ] == controller.get_history({})
     assert [
         {
             "key": "first",
@@ -215,21 +214,19 @@ def test_put_versioning_is_valid(db):
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         }
-    ] == TestVersionedController.get({})
+    ] == controller.get({})
 
 
-def test_delete_versioning_is_valid(db):
-    TestVersionedController.post(
+def test_delete_versioning_is_valid(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.put(
-        {"key": "first", "dict_field.first_key": EnumTest.Value2}
-    )
-    assert 1 == TestVersionedController.delete({"key": "first"})
+    controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
+    assert 1 == controller.delete({"key": "first"})
     assert [
         {
             "key": "first",
@@ -243,24 +240,22 @@ def test_delete_versioning_is_valid(db):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == TestVersionedController.get_history({})
-    assert [] == TestVersionedController.get({})
+    ] == controller.get_history({})
+    assert [] == controller.get({})
 
 
-def test_rollback_deleted_versioning_is_valid(db):
-    TestVersionedController.post(
+def test_rollback_deleted_versioning_is_valid(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.put(
-        {"key": "first", "dict_field.first_key": EnumTest.Value2}
-    )
+    controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
     before_delete = 2
-    TestVersionedController.delete({"key": "first"})
-    assert 1 == TestVersionedController.rollback_to({"revision": before_delete})
+    controller.delete({"key": "first"})
+    assert 1 == controller.rollback_to({"revision": before_delete})
     assert [
         {
             "key": "first",
@@ -280,7 +275,7 @@ def test_rollback_deleted_versioning_is_valid(db):
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         },
-    ] == TestVersionedController.get_history({})
+    ] == controller.get_history({})
     assert [
         {
             "key": "first",
@@ -288,11 +283,11 @@ def test_rollback_deleted_versioning_is_valid(db):
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         }
-    ] == TestVersionedController.get({})
+    ] == controller.get({})
 
 
-def test_rollback_before_update_deleted_versioning_is_valid(db):
-    TestVersionedController.post(
+def test_rollback_before_update_deleted_versioning_is_valid(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
@@ -300,11 +295,9 @@ def test_rollback_before_update_deleted_versioning_is_valid(db):
         }
     )
     before_update = 1
-    TestVersionedController.put(
-        {"key": "first", "dict_field.first_key": EnumTest.Value2}
-    )
-    TestVersionedController.delete({"key": "first"})
-    assert 1 == TestVersionedController.rollback_to({"revision": before_update})
+    controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
+    controller.delete({"key": "first"})
+    assert 1 == controller.rollback_to({"revision": before_update})
     assert [
         {
             "key": "first",
@@ -324,7 +317,7 @@ def test_rollback_before_update_deleted_versioning_is_valid(db):
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         },
-    ] == TestVersionedController.get_history({})
+    ] == controller.get_history({})
     assert [
         {
             "key": "first",
@@ -332,22 +325,20 @@ def test_rollback_before_update_deleted_versioning_is_valid(db):
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         }
-    ] == TestVersionedController.get({})
+    ] == controller.get({})
 
 
-def test_rollback_already_valid_versioning_is_valid(db):
-    TestVersionedController.post(
+def test_rollback_already_valid_versioning_is_valid(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.put(
-        {"key": "first", "dict_field.first_key": EnumTest.Value2}
-    )
+    controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
 
-    assert 0 == TestVersionedController.rollback_to({"revision": 2})
+    assert 0 == controller.rollback_to({"revision": 2})
     assert [
         {
             "key": "first",
@@ -361,7 +352,7 @@ def test_rollback_already_valid_versioning_is_valid(db):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == TestVersionedController.get_history({})
+    ] == controller.get_history({})
     assert [
         {
             "key": "first",
@@ -369,11 +360,11 @@ def test_rollback_already_valid_versioning_is_valid(db):
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         }
-    ] == TestVersionedController.get({})
+    ] == controller.get({})
 
 
-def test_rollback_unknown_criteria_is_valid(db):
-    TestVersionedController.post(
+def test_rollback_unknown_criteria_is_valid(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
@@ -381,13 +372,9 @@ def test_rollback_unknown_criteria_is_valid(db):
         }
     )
     before_update = 1
-    TestVersionedController.put(
-        {"key": "first", "dict_field.first_key": EnumTest.Value2}
-    )
+    controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
 
-    assert 0 == TestVersionedController.rollback_to(
-        {"revision": before_update, "key": "unknown"}
-    )
+    assert 0 == controller.rollback_to({"revision": before_update, "key": "unknown"})
     assert [
         {
             "key": "first",
@@ -401,7 +388,7 @@ def test_rollback_unknown_criteria_is_valid(db):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == TestVersionedController.get_history({})
+    ] == controller.get_history({})
     assert [
         {
             "key": "first",
@@ -409,11 +396,11 @@ def test_rollback_unknown_criteria_is_valid(db):
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         }
-    ] == TestVersionedController.get({})
+    ] == controller.get({})
 
 
-def test_versioned_many(db):
-    TestVersionedController.post_many(
+def test_versioned_many(controller):
+    controller.post_many(
         [
             {
                 "key": "first",
@@ -427,7 +414,7 @@ def test_versioned_many(db):
             },
         ]
     )
-    TestVersionedController.put_many(
+    controller.put_many(
         [
             {"key": "first", "dict_field.first_key": EnumTest.Value2},
             {"key": "second", "dict_field.second_key": 3},
@@ -459,31 +446,31 @@ def test_versioned_many(db):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == TestVersionedController.get_history({})
+    ] == controller.get_history({})
 
 
-def test_rollback_without_revision_is_invalid(db):
+def test_rollback_without_revision_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestVersionedController.rollback_to({"key": "unknown"})
+        controller.rollback_to({"key": "unknown"})
     assert {
         "revision": ["Missing data for required field."]
     } == exception_info.value.errors
     assert {"key": "unknown"} == exception_info.value.received_data
 
 
-def test_rollback_with_non_int_revision_is_invalid(db):
+def test_rollback_with_non_int_revision_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestVersionedController.rollback_to({"revision": "invalid revision"})
+        controller.rollback_to({"revision": "invalid revision"})
     assert {"revision": ["Not a valid int."]} == exception_info.value.errors
     assert {"revision": "invalid revision"} == exception_info.value.received_data
 
 
-def test_rollback_with_negative_revision_is_valid(db):
-    assert 0 == TestVersionedController.rollback_to({"revision": -1})
+def test_rollback_with_negative_revision_is_valid(controller):
+    assert 0 == controller.rollback_to({"revision": -1})
 
 
-def test_rollback_before_existing_is_valid(db):
-    TestVersionedController.post(
+def test_rollback_before_existing_is_valid(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
@@ -491,94 +478,94 @@ def test_rollback_before_existing_is_valid(db):
         }
     )
     before_insert = 1
-    TestVersionedController.post(
+    controller.post(
         {
             "key": "second",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    assert 1 == TestVersionedController.rollback_to({"revision": before_insert})
-    assert [] == TestVersionedController.get({"key": "second"})
+    assert 1 == controller.rollback_to({"revision": before_insert})
+    assert [] == controller.get({"key": "second"})
 
 
-def test_get_revision_is_valid_when_empty(db):
-    assert 0 == TestVersionedController._model.current_revision()
+def test_get_revision_is_valid_when_empty(controller):
+    assert 0 == controller._model.current_revision()
 
 
-def test_get_revision_is_valid_when_1(db):
-    TestVersionedController.post(
+def test_get_revision_is_valid_when_1(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    assert 1 == TestVersionedController._model.current_revision()
+    assert 1 == controller._model.current_revision()
 
 
-def test_get_revision_is_valid_when_2(db):
-    TestVersionedController.post(
+def test_get_revision_is_valid_when_2(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.post(
+    controller.post(
         {
             "key": "second",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    assert 2 == TestVersionedController._model.current_revision()
+    assert 2 == controller._model.current_revision()
 
 
-def test_rollback_to_0(db):
-    TestVersionedController.post(
+def test_rollback_to_0(controller):
+    controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.post(
+    controller.post(
         {
             "key": "second",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    assert 2 == TestVersionedController.rollback_to({"revision": 0})
-    assert [] == TestVersionedController.get({})
+    assert 2 == controller.rollback_to({"revision": 0})
+    assert [] == controller.get({})
 
 
-def test_rollback_multiple_rows_is_valid(db):
-    TestVersionedController.post(
+def test_rollback_multiple_rows_is_valid(controller):
+    controller.post(
         {
             "key": "1",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.post(
+    controller.post(
         {
             "key": "2",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.put({"key": "1", "dict_field.first_key": EnumTest.Value2})
-    TestVersionedController.delete({"key": "2"})
-    TestVersionedController.post(
+    controller.put({"key": "1", "dict_field.first_key": EnumTest.Value2})
+    controller.delete({"key": "2"})
+    controller.post(
         {
             "key": "3",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.post(
+    controller.post(
         {
             "key": "4",
             "dict_field.first_key": EnumTest.Value1,
@@ -586,16 +573,16 @@ def test_rollback_multiple_rows_is_valid(db):
         }
     )
     before_insert = 6
-    TestVersionedController.post(
+    controller.post(
         {
             "key": "5",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedController.put({"key": "1", "dict_field.second_key": 2})
+    controller.put({"key": "1", "dict_field.second_key": 2})
     # Remove key 5 and Update key 1 (Key 3 and Key 4 unchanged)
-    assert 2 == TestVersionedController.rollback_to({"revision": before_insert})
+    assert 2 == controller.rollback_to({"revision": before_insert})
     assert [
         {
             "dict_field": {"first_key": "Value1", "second_key": 1},
@@ -615,7 +602,7 @@ def test_rollback_multiple_rows_is_valid(db):
             "valid_since_revision": 9,
             "valid_until_revision": -1,
         },
-    ] == TestVersionedController.get({})
+    ] == controller.get({})
     assert [
         {
             "dict_field": {"first_key": "Value2", "second_key": 2},
@@ -665,7 +652,7 @@ def test_rollback_multiple_rows_is_valid(db):
             "valid_since_revision": 9,
             "valid_until_revision": -1,
         },
-    ] == TestVersionedController.get_history({})
+    ] == controller.get_history({})
 
 
 def test_open_api_definition(client):

@@ -2,38 +2,38 @@ import pytest
 
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
-class TestIdController(database.CRUDController):
-    class TestIdModel:
-        __tablename__ = "id_table_name"
-
-        _id = database_mongo.Column(is_primary_key=True)
-
-    model = TestIdModel
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestIdController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestIdModel:
+            __tablename__ = "id_table_name"
+
+            _id = layabase.database_mongo.Column(is_primary_key=True)
+
+        model = TestIdModel
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
-def test_post_id_is_valid(db):
-    assert {"_id": "123456789abcdef012345678"} == TestIdController.post(
-        {"_id": "123456789ABCDEF012345678"}
-    )
+def test_post_id_is_valid(controller):
+    assert controller.post({"_id": "123456789ABCDEF012345678"}) == {
+        "_id": "123456789abcdef012345678"
+    }
 
 
-def test_invalid_id_is_invalid(db):
+def test_invalid_id_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestIdController.post({"_id": "invalid value"})
-    assert {
+        controller.post({"_id": "invalid value"})
+    assert exception_info.value.errors == {
         "_id": [
             "'invalid value' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string"
         ]
-    } == exception_info.value.errors
-    assert {"_id": "invalid value"} == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == {"_id": "invalid value"}

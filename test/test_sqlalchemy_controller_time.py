@@ -7,48 +7,47 @@ import layabase
 import layabase.testing
 
 
-class TestTimeController(layabase.CRUDController):
-    class TestTimeModel:
-        __tablename__ = "time_table_name"
-
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        time_field = sqlalchemy.Column(sqlalchemy.Time)
-
-    model = TestTimeModel
-
-
 @pytest.fixture
-def db():
-    _db = layabase.load("sqlite:///:memory:", [TestTimeController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestTimeModel:
+            __tablename__ = "time_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            time_field = sqlalchemy.Column(sqlalchemy.Time)
+
+        model = TestTimeModel
+
+    _db = layabase.load("sqlite:///:memory:", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestTimeController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestTimeController.query_get_parser)
-        @namespace.marshal_with(TestTimeController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestTimeController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestTimeController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestTimeController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 

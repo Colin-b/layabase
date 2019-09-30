@@ -3,73 +3,79 @@ import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
-class TestLimitsController(database.CRUDController):
-    class TestLimitsModel:
-        __tablename__ = "limits_table_name"
-
-        key = database_mongo.Column(is_primary_key=True, min_length=3, max_length=4)
-        list_field = database_mongo.Column(
-            list, min_length=2, max_length=3, example=["my", "test"]
-        )
-        dict_field = database_mongo.Column(
-            dict, min_length=2, max_length=3, example={"my": 1, "test": 2}
-        )
-        int_field = database_mongo.Column(int, min_value=100, max_value=999)
-        float_field = database_mongo.Column(float, min_value=1.25, max_value=1.75)
-
-    model = TestLimitsModel
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", [TestLimitsController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestLimitsModel:
+            __tablename__ = "limits_table_name"
+
+            key = layabase.database_mongo.Column(
+                is_primary_key=True, min_length=3, max_length=4
+            )
+            list_field = layabase.database_mongo.Column(
+                list, min_length=2, max_length=3, example=["my", "test"]
+            )
+            dict_field = layabase.database_mongo.Column(
+                dict, min_length=2, max_length=3, example={"my": 1, "test": 2}
+            )
+            int_field = layabase.database_mongo.Column(
+                int, min_value=100, max_value=999
+            )
+            float_field = layabase.database_mongo.Column(
+                float, min_value=1.25, max_value=1.75
+            )
+
+        model = TestLimitsModel
+
+    _db = layabase.load("mongomock", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestLimitsController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestLimitsController.query_get_parser)
-        @namespace.marshal_with(TestLimitsController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestLimitsController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestLimitsController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestLimitsController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     return application
 
 
-def test_within_limits_is_valid(db):
+def test_within_limits_is_valid(controller):
     assert {
         "dict_field": {"my": 1, "test": 2},
         "int_field": 100,
         "float_field": 1.3,
         "key": "111",
         "list_field": ["1", "2", "3"],
-    } == TestLimitsController.post(
+    } == controller.post(
         {
             "dict_field": {"my": 1, "test": 2},
             "key": "111",
@@ -80,9 +86,9 @@ def test_within_limits_is_valid(db):
     )
 
 
-def test_outside_upper_limits_is_invalid(db):
+def test_outside_upper_limits_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestLimitsController.post(
+        controller.post(
             {
                 "key": "11111",
                 "list_field": ["1", "2", "3", "4", "5"],
@@ -111,9 +117,9 @@ def test_outside_upper_limits_is_invalid(db):
     } == exception_info.value.received_data
 
 
-def test_outside_lower_limits_is_invalid(db):
+def test_outside_lower_limits_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestLimitsController.post(
+        controller.post(
             {
                 "key": "11",
                 "list_field": ["1"],

@@ -8,62 +8,61 @@ import layabase
 import layabase.testing
 
 
-class TestRequiredController(layabase.CRUDController):
-    class TestRequiredModel:
-        __tablename__ = "required_table_name"
-
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        mandatory = sqlalchemy.Column(
-            sqlalchemy.Integer,
-            nullable=False,
-            info={"marshmallow": {"required_on_query": True}},
-        )
-
-    model = TestRequiredModel
-
-
 @pytest.fixture
-def db():
-    _db = layabase.load("sqlite:///:memory:", [TestRequiredController])
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestRequiredModel:
+            __tablename__ = "required_table_name"
+
+            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+            mandatory = sqlalchemy.Column(
+                sqlalchemy.Integer,
+                nullable=False,
+                info={"marshmallow": {"required_on_query": True}},
+            )
+
+        model = TestRequiredModel
+
+    _db = layabase.load("sqlite:///:memory:", [TestController])
+    yield TestController
     layabase.testing.reset(_db)
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestRequiredController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestRequiredController.query_get_parser)
-        @namespace.marshal_with(TestRequiredController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestRequiredController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestRequiredController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestRequiredController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
         def get(self):
-            return TestRequiredController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
         def delete(self):
-            return TestRequiredController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 
@@ -77,43 +76,43 @@ def test_query_get_parser_without_required_field(client):
     }
 
 
-def test_get_without_required_field(client):
+def test_get_without_required_field(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestRequiredController.get({})
+        controller.get({})
     assert exception_info.value.received_data == {}
     assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
     }
 
 
-def test_get_with_required_field(client):
-    assert TestRequiredController.get({"mandatory": 1}) == []
+def test_get_with_required_field(controller):
+    assert controller.get({"mandatory": 1}) == []
 
 
-def test_get_one_without_required_field(client):
+def test_get_one_without_required_field(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestRequiredController.get_one({})
+        controller.get_one({})
     assert exception_info.value.received_data == {}
     assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
     }
 
 
-def test_get_one_with_required_field(client):
-    assert TestRequiredController.get_one({"mandatory": 1}) == {}
+def test_get_one_with_required_field(controller):
+    assert controller.get_one({"mandatory": 1}) == {}
 
 
-def test_delete_without_required_field(client):
+def test_delete_without_required_field(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestRequiredController.delete({})
+        controller.delete({})
     assert exception_info.value.received_data == {}
     assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
     }
 
 
-def test_delete_with_required_field(client):
-    assert TestRequiredController.delete({"mandatory": 1}) == 0
+def test_delete_with_required_field(controller):
+    assert controller.delete({"mandatory": 1}) == 0
 
 
 def test_query_get_parser_with_required_field(client):

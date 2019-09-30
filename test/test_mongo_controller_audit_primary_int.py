@@ -1,50 +1,39 @@
 import pytest
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 import layabase.audit_mongo
 from test import DateTimeModuleMock
 
 
-class TestPrimaryIntController(database.CRUDController):
-    class TestPrimaryIntModel:
-        __tablename__ = "prim_int_table_name"
-
-        key = database_mongo.Column(
-            int, is_primary_key=True, should_auto_increment=True
-        )
-        other = database_mongo.Column()
-
-    model = TestPrimaryIntModel
-    audit = True
-
-
 @pytest.fixture
-def db():
-    _db = database.load(
-        "mongomock?ssl=True", [TestPrimaryIntController], replicaSet="globaldb"
-    )
-    yield _db
+def controller():
+    class TestController(layabase.CRUDController):
+        class TestPrimaryIntModel:
+            __tablename__ = "prim_int_table_name"
+
+            key = layabase.database_mongo.Column(
+                int, is_primary_key=True, should_auto_increment=True
+            )
+            other = layabase.database_mongo.Column()
+
+        model = TestPrimaryIntModel
+        audit = True
+
+    _db = layabase.load("mongomock?ssl=True", [TestController], replicaSet="globaldb")
+    yield TestController
     layabase.testing.reset(_db)
 
 
-def test_int_primary_key_is_reset_after_delete(db, monkeypatch):
+def test_int_primary_key_is_reset_after_delete(controller, monkeypatch):
     monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
 
-    assert TestPrimaryIntController.post({"other": "test1"}) == {
-        "key": 1,
-        "other": "test1",
-    }
-    assert TestPrimaryIntController.delete({}) == 1
-    assert TestPrimaryIntController.post({"other": "test1"}) == {
-        "key": 1,
-        "other": "test1",
-    }
-    assert TestPrimaryIntController.post({"other": "test1"}) == {
-        "key": 2,
-        "other": "test1",
-    }
-    assert TestPrimaryIntController.get_audit({}) == [
+    assert controller.post({"other": "test1"}) == {"key": 1, "other": "test1"}
+    assert controller.delete({}) == 1
+    assert controller.post({"other": "test1"}) == {"key": 1, "other": "test1"}
+    assert controller.post({"other": "test1"}) == {"key": 2, "other": "test1"}
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",

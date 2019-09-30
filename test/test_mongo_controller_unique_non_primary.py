@@ -3,7 +3,8 @@ import enum
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo, versioning_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
@@ -12,85 +13,109 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestVersionedController(database.CRUDController):
-    class TestVersionedModel:
-        __tablename__ = "versioned_table_name"
+@pytest.fixture
+def controller_versioned():
+    class TestVersionedController(layabase.CRUDController):
+        class TestVersionedModel:
+            __tablename__ = "versioned_table_name"
 
-        key = database_mongo.Column(is_primary_key=True)
-        dict_field = database_mongo.DictColumn(
-            fields={
-                "first_key": database_mongo.Column(EnumTest, is_nullable=False),
-                "second_key": database_mongo.Column(int, is_nullable=False),
-            },
-            is_required=True,
-        )
+            key = layabase.database_mongo.Column(is_primary_key=True)
+            dict_field = layabase.database_mongo.DictColumn(
+                fields={
+                    "first_key": layabase.database_mongo.Column(
+                        EnumTest, is_nullable=False
+                    ),
+                    "second_key": layabase.database_mongo.Column(
+                        int, is_nullable=False
+                    ),
+                },
+                is_required=True,
+            )
 
-    model = TestVersionedModel
-    history = True
+        model = TestVersionedModel
+        history = True
 
-
-class TestVersionedUniqueNonPrimaryController(database.CRUDController):
-    class TestVersionedUniqueNonPrimaryModel:
-        __tablename__ = "versioned_uni_table_name"
-
-        key = database_mongo.Column(int, should_auto_increment=True)
-        unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
-
-    model = TestVersionedUniqueNonPrimaryModel
-    history = True
-
-
-class TestUniqueNonPrimaryController(database.CRUDController):
-    class TestUniqueNonPrimaryModel:
-        __tablename__ = "uni_table_name"
-
-        key = database_mongo.Column(int, should_auto_increment=True)
-        unique = database_mongo.Column(int, index_type=database_mongo.IndexType.Unique)
-
-    model = TestUniqueNonPrimaryModel
+    return TestVersionedController
 
 
 @pytest.fixture
-def db():
-    _db = database.load(
+def controller_versioned_unique():
+    class TestVersionedUniqueNonPrimaryController(layabase.CRUDController):
+        class TestVersionedUniqueNonPrimaryModel:
+            __tablename__ = "versioned_uni_table_name"
+
+            key = layabase.database_mongo.Column(int, should_auto_increment=True)
+            unique = layabase.database_mongo.Column(
+                int, index_type=layabase.database_mongo.IndexType.Unique
+            )
+
+        model = TestVersionedUniqueNonPrimaryModel
+        history = True
+
+    return TestVersionedUniqueNonPrimaryController
+
+
+@pytest.fixture
+def controller_unique():
+    class TestUniqueNonPrimaryController(layabase.CRUDController):
+        class TestUniqueNonPrimaryModel:
+            __tablename__ = "uni_table_name"
+
+            key = layabase.database_mongo.Column(int, should_auto_increment=True)
+            unique = layabase.database_mongo.Column(
+                int, index_type=layabase.database_mongo.IndexType.Unique
+            )
+
+        model = TestUniqueNonPrimaryModel
+
+    return TestUniqueNonPrimaryController
+
+
+@pytest.fixture
+def controllers(controller_versioned, controller_unique, controller_versioned_unique):
+    _db = layabase.load(
         "mongomock",
-        [
-            TestVersionedController,
-            TestUniqueNonPrimaryController,
-            TestVersionedUniqueNonPrimaryController,
-        ],
+        [controller_versioned, controller_unique, controller_versioned_unique],
     )
-    yield _db
+    yield controller_versioned, controller_unique, controller_versioned_unique
     layabase.testing.reset(_db)
 
 
-def test_get_url_without_primary_key_in_model_and_many_models(db):
+def test_get_url_without_primary_key_in_model_and_many_models(
+    controllers, controller_unique
+):
     models = [{"key": 1, "unique": 2}, {"key": 2, "unique": 3}]
-    assert TestUniqueNonPrimaryController.get_url("/test", *models) == "/test"
+    assert controller_unique.get_url("/test", *models) == "/test"
 
 
-def test_get_url_without_primary_key_in_model_and_one_model(db):
+def test_get_url_without_primary_key_in_model_and_one_model(
+    controllers, controller_unique
+):
     model = {"key": 1, "unique": 2}
-    assert TestUniqueNonPrimaryController.get_url("/test", model) == "/test"
+    assert controller_unique.get_url("/test", model) == "/test"
 
 
-def test_get_url_without_primary_key_in_model_and_no_model(db):
-    assert "/test" == TestUniqueNonPrimaryController.get_url("/test")
+def test_get_url_without_primary_key_in_model_and_no_model(
+    controllers, controller_unique
+):
+    assert controller_unique.get_url("/test") == "/test"
 
 
-def test_revison_is_shared(db):
-    TestVersionedController.post(
+def test_revison_is_shared(
+    controllers, controller_versioned, controller_versioned_unique
+):
+    controller_versioned.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
     )
-    TestVersionedUniqueNonPrimaryController.post({"unique": 1})
-    TestVersionedController.put({"key": "first", "dict_field.second_key": 2})
-    TestVersionedController.delete({"key": "first"})
-    TestVersionedController.rollback_to({"revision": 2})
-    assert [
+    controller_versioned_unique.post({"unique": 1})
+    controller_versioned.put({"key": "first", "dict_field.second_key": 2})
+    controller_versioned.delete({"key": "first"})
+    controller_versioned.rollback_to({"revision": 2})
+    assert controller_versioned.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value1", "second_key": 2},
@@ -109,57 +134,59 @@ def test_revison_is_shared(db):
             "valid_since_revision": 5,
             "valid_until_revision": -1,
         },
-    ] == TestVersionedController.get_history({})
-    assert [
+    ]
+    assert controller_versioned_unique.get_history({}) == [
         {"key": 1, "unique": 1, "valid_since_revision": 2, "valid_until_revision": -1}
-    ] == TestVersionedUniqueNonPrimaryController.get_history({})
+    ]
 
 
-def test_versioning_handles_unique_non_primary(db):
-    TestVersionedUniqueNonPrimaryController.post({"unique": 1})
+def test_versioning_handles_unique_non_primary(
+    controllers, controller_versioned_unique
+):
+    controller_versioned_unique.post({"unique": 1})
     with pytest.raises(ValidationFailed) as exception_info:
-        TestVersionedUniqueNonPrimaryController.post({"unique": 1})
-    assert {"": ["This document already exists."]} == exception_info.value.errors
-    assert {
+        controller_versioned_unique.post({"unique": 1})
+    assert exception_info.value.errors == {"": ["This document already exists."]}
+    assert exception_info.value.received_data == {
         "key": 2,
         "unique": 1,
         "valid_since_revision": 2,
         "valid_until_revision": -1,
-    } == exception_info.value.received_data
+    }
 
 
-def test_insert_to_non_unique_after_update(db):
-    TestVersionedUniqueNonPrimaryController.post({"unique": 1})
-    TestVersionedUniqueNonPrimaryController.put({"key": 1, "unique": 2})
+def test_insert_to_non_unique_after_update(controllers, controller_versioned_unique):
+    controller_versioned_unique.post({"unique": 1})
+    controller_versioned_unique.put({"key": 1, "unique": 2})
     with pytest.raises(ValidationFailed) as exception_info:
-        TestVersionedUniqueNonPrimaryController.post({"unique": 2})
-    assert {"": ["This document already exists."]} == exception_info.value.errors
-    assert {
+        controller_versioned_unique.post({"unique": 2})
+    assert exception_info.value.errors == {"": ["This document already exists."]}
+    assert exception_info.value.received_data == {
         "key": 2,
         "unique": 2,
         "valid_since_revision": 3,
         "valid_until_revision": -1,
-    } == exception_info.value.received_data
+    }
 
 
-def test_update_to_non_unique_versioned(db):
-    TestVersionedUniqueNonPrimaryController.post({"unique": 1})
-    TestVersionedUniqueNonPrimaryController.post({"unique": 2})
+def test_update_to_non_unique_versioned(controllers, controller_versioned_unique):
+    controller_versioned_unique.post({"unique": 1})
+    controller_versioned_unique.post({"unique": 2})
     with pytest.raises(ValidationFailed) as exception_info:
-        TestVersionedUniqueNonPrimaryController.put({"key": 1, "unique": 2})
-    assert {"": ["This document already exists."]} == exception_info.value.errors
-    assert {
+        controller_versioned_unique.put({"key": 1, "unique": 2})
+    assert exception_info.value.errors == {"": ["This document already exists."]}
+    assert exception_info.value.received_data == {
         "key": 1,
         "unique": 2,
         "valid_since_revision": 3,
         "valid_until_revision": -1,
-    } == exception_info.value.received_data
+    }
 
 
-def test_update_to_non_unique(db):
-    TestUniqueNonPrimaryController.post({"unique": 1})
-    TestUniqueNonPrimaryController.post({"unique": 2})
+def test_update_to_non_unique(controllers, controller_unique):
+    controller_unique.post({"unique": 1})
+    controller_unique.post({"unique": 2})
     with pytest.raises(ValidationFailed) as exception_info:
-        TestUniqueNonPrimaryController.put({"unique": 2, "key": 1})
-    assert {"": ["This document already exists."]} == exception_info.value.errors
-    assert {"key": 1, "unique": 2} == exception_info.value.received_data
+        controller_unique.put({"unique": 2, "key": 1})
+    assert exception_info.value.errors == {"": ["This document already exists."]}
+    assert exception_info.value.received_data == {"key": 1, "unique": 2}
