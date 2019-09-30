@@ -63,84 +63,85 @@ To install all test required dependencies, use the following command:
 python -m pip install .[testing]
 ```
 
+## CRUD Controller ##
+
+Extending layabase.CRUDController will provides C.R.U.D. methods (and more, as listed in features) on a specified model.
+
+### Controller definition ###
+
+```python
+import layabase
+
+class MyController(layabase.CRUDController):
+    model = MyModel
+
+# Retrieving data
+all_models_as_dict_list = MyController.get({})
+
+filtered_models_as_dict_list = MyController.get({"value": 'value1'})
+
+# Inserting data
+inserted_models_as_dict_list = MyController.post_many([
+    {'key': 'key1', 'value': 'value1'},
+    {'key': 'key2', 'value': 'value2'},
+])
+
+inserted_model_as_dict = MyController.post({'key': 'key1', 'value': 'value1'})
+
+# Updating data
+updated_model_as_dict = MyController.put({'key': 'key1', 'value': 'new value'})
+
+# Removing data
+nb_removed_models = MyController.delete({"key": 'key1'})
+
+# Retrieving table mapping
+# description = {'table': 'MyModel', 'key': 'key', 'value': 'value'}
+description = MyController.get_model_description()
+
+# Auditing
+all_audit_models_as_dict_list = MyController.get_audit({})
+
+filtered_audit_models_as_dict_list = MyController.get_audit({"value": 'value1'})
+```
+
 ## Relational databases (non-Mongo) ##
 
 SQLAlchemy is the underlying framework used to manipulate relational databases.
 
-To create a representation of a table you will need to extend layabase.database_sqlalchemy.CRUDModel
+To create a representation of a table you will need to create a [Mixin](https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html#declarative-mixins).
 
 ### SQLAlchemy model ###
-
-Extending layabase.database_sqlalchemy.CRUDModel will provides C.R.U.D. methods on your SQLAlchemy model.
 
 #### Model definition ####
 
 ```python
 from sqlalchemy import Column, String
-from layabase.database_sqlalchemy import CRUDModel
 
-base = None  # Base is provided when calling load method
+class MyModel:
+    __tablename__ = "my_table"
 
-class MyModel(CRUDModel, base):
-    
     key = Column(String, primary_key=True)
     # info can be used to provide information to marshmallow, such as requiring the field to be set on queries
     value = Column(String, info={'marshmallow': {"required_on_query": True}})
-```
-
-#### Retrieving data ####
-
-```python
-all_models_as_dict_list = MyModel.get_all()
-
-filtered_models_as_dict_list = MyModel.get_all(value='value1')
-
-filtered_model_as_dict = MyModel.get(key='key1')
-```
-
-#### Inserting data ####
-
-```python
-inserted_models_as_dict_list = MyModel.add_all([
-    {'key': 'key1', 'value': 'value1'},
-    {'key': 'key2', 'value': 'value2'},
-])
-
-inserted_model_as_dict = MyModel.add({'key': 'key1', 'value': 'value1'})
-```
-
-#### Updating data ####
-
-```python
-updated_model_as_dict = MyModel.update({'key': 'key1', 'value': 'new value'})
-```
-
-#### Removing data ####
-
-```python
-nb_removed_models = MyModel.remove(key='key1')
 ```
 
 ## MongoDB (non-relational) ##
 
 PyMongo is the underlying framework used to manipulate MongoDB.
 
-To create a representation of a collection you will need to extend layabase.database_mongo.CRUDModel
+To create a representation of a collection you will need to create a Mixin class.
 
 To link your model to the underlying collection, you will need to provide a connection string.
 
 ### Mongo model ###
 
-Extending layabase.database_mongo.CRUDModel will provides C.R.U.D. methods on your Mongo model.
-
 #### Model definition ####
 
 ```python
-from layabase.database_mongo import CRUDModel, Column
+from layabase.database_mongo import Column
 
-pymongo_database = None  # pymongo database instance
-
-class MyModel(CRUDModel, base=pymongo_database, table_name="related collection name"):
+class MyModel:
+    __tablename__ = "related collection name"
 
     key = Column(str, is_primary_key=True)
     dict_value = Column(dict)
@@ -151,11 +152,10 @@ class MyModel(CRUDModel, base=pymongo_database, table_name="related collection n
 Fields containing string can be described using layabase.database_mongo.Column
 
 ```python
-from layabase.database_mongo import CRUDModel, Column
+from layabase.database_mongo import Column
 
-pymongo_database = None  # pymongo database instance
-
-class MyModel(CRUDModel, base=pymongo_database, table_name="related collection name"):
+class MyModel:
+    __tablename__ = "related collection name"
 
     key = Column()
 ```
@@ -232,39 +232,6 @@ Fields containing a dictionary can be described using layabase.database_mongo.Di
 
 Fields containing a list can be described using layabase.database_mongo.ListColumn
 
-#### Retrieving data ####
-
-```python
-all_models_as_dict_list = MyModel.get_all()
-
-filtered_models_as_dict_list = MyModel.get_all(dict_value={'dict_key': 'value1'})
-
-filtered_model_as_dict = MyModel.get(key='key1')
-```
-
-#### Inserting data ####
-
-```python
-inserted_models_as_dict_list = MyModel.add_all([
-    {'key': 'key1', 'dict_value': {'dict_key': 'value1'}},
-    {'key': 'key2', 'dict_value': {'dict_key': 'value2'}},
-])
-
-inserted_model_as_dict = MyModel.add({'key': 'key1', 'dict_value': {'dict_key': value1'}})
-```
-
-#### Updating data ####
-
-```python
-updated_model_as_dict = MyModel.update({'key': 'key1', 'dict_value': {'dict_key': 'new value'}})
-```
-
-#### Removing data ####
-
-```python
-nb_removed_models = MyModel.remove(key='key1')
-```
-
 ### Link to a Mongo database ###
 
 Mongo specific dependencies must be installed, use the following command:
@@ -283,77 +250,10 @@ and use the following connection string: "mongomock" instead of a real mongodb c
 ```python
 import layabase
 
-def create_models(database):
-    my_model_class = None  # It should be a model class
-    return [my_model_class]  # It should be a list containing all the models that should be linked
 
-layabase.load("mongodb://host:port/server_name", create_models)
-```
-
-## CRUD Controller ##
-
-Extending layabase.CRUDController will provides C.R.U.D. methods on your controller.
-
-It returns you JSON ready to be sent to your client.
-
-It also allows you to manage audit.
-
-### Controller definition ###
-
-```python
-from layabase import CRUDController
-
-class MyController(CRUDController):
-    pass
-
-MyController.model(MyModel)
-```
-
-### Retrieving data ###
-
-```python
-all_models_as_dict_list = MyController.get()
-
-filtered_models_as_dict_list = MyController.get(value='value1')
-```
-
-### Inserting data ###
-
-```python
-inserted_models_as_dict_list = MyController.post_many([
-    {'key': 'key1', 'value': 'value1'},
-    {'key': 'key2', 'value': 'value2'},
-])
-
-inserted_model_as_dict = MyController.post({'key': 'key1', 'value': 'value1'})
-```
-
-### Updating data ###
-
-```python
-updated_model_as_dict = MyController.put({'key': 'key1', 'value': 'new value'})
-```
-
-### Removing data ###
-
-```python
-nb_removed_models = MyController.delete(key='key1')
-```
-
-### Retrieving table mapping ###
-
-```python
-# Return a dictionary like
-# {'table': 'MyModel', 'key': 'key', 'value': 'value'}
-description = MyController.get_model_description()
-```
-
-### Auditing ###
-
-```python
-all_audit_models_as_dict_list = MyController.get_audit()
-
-filtered_audit_models_as_dict_list = MyController.get_audit(value='value1')
+# Should be a list of CRUDController inherited classes
+my_controllers = []
+layabase.load("mongodb://host:port/server_name", my_controllers)
 ```
 
 ## How to install
