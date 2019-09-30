@@ -9,7 +9,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestNullableAutoSetModel:
-        __tablename__ = "nullable_auto_set_table_name"
+        __tablename__ = "test"
 
         prim_def_inc = layabase.database_mongo.Column(
             int, is_primary_key=True, default_value=1, should_auto_increment=True

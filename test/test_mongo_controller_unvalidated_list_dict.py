@@ -11,7 +11,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestUnvalidatedListAndDictModel:
-        __tablename__ = "list_and_dict_table_name"
+        __tablename__ = "test"
 
         float_key = layabase.database_mongo.Column(float, is_primary_key=True)
         float_with_default = layabase.database_mongo.Column(float, default_value=34)

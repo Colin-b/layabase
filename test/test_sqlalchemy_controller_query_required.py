@@ -11,7 +11,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestRequiredModel:
-        __tablename__ = "required_table_name"
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         mandatory = sqlalchemy.Column(

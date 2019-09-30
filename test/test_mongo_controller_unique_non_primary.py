@@ -16,7 +16,7 @@ class EnumTest(enum.Enum):
 @pytest.fixture
 def controller_versioned():
     class TestVersionedModel:
-        __tablename__ = "versioned_table_name"
+        __tablename__ = "test_versioned"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
         dict_field = layabase.database_mongo.DictColumn(
@@ -35,7 +35,7 @@ def controller_versioned():
 @pytest.fixture
 def controller_versioned_unique():
     class TestVersionedUniqueNonPrimaryModel:
-        __tablename__ = "versioned_uni_table_name"
+        __tablename__ = "test_versioned_unique"
 
         key = layabase.database_mongo.Column(int, should_auto_increment=True)
         unique = layabase.database_mongo.Column(
@@ -48,7 +48,7 @@ def controller_versioned_unique():
 @pytest.fixture
 def controller_unique():
     class TestUniqueNonPrimaryModel:
-        __tablename__ = "uni_table_name"
+        __tablename__ = "test_unique"
 
         key = layabase.database_mongo.Column(int, should_auto_increment=True)
         unique = layabase.database_mongo.Column(

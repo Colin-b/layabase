@@ -8,7 +8,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestDefaultPrimaryKeyModel:
-        __tablename__ = "default_primary_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(is_primary_key=True, default_value="test")
         optional = layabase.database_mongo.Column()

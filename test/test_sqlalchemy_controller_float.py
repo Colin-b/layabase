@@ -10,7 +10,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestFloatModel:
-        __tablename__ = "float_table_name"
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         float_field = sqlalchemy.Column(sqlalchemy.Float)

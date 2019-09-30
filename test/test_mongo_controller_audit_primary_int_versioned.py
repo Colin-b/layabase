@@ -10,7 +10,7 @@ from test import DateTimeModuleMock
 @pytest.fixture
 def controller():
     class TestPrimaryIntVersionedModel:
-        __tablename__ = "prim_int_version_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
@@ -47,21 +47,21 @@ def test_versioned_int_primary_key_is_reset_after_delete(controller, monkeypatch
             "audit_date_utc": "2018-10-11T15:05:05.663000",
             "audit_user": "",
             "revision": 1,
-            "table_name": "prim_int_version_table_name",
+            "table_name": "test",
         },
         {
             "audit_action": "Delete",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
             "audit_user": "",
             "revision": 2,
-            "table_name": "prim_int_version_table_name",
+            "table_name": "test",
         },
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
             "audit_user": "",
             "revision": 3,
-            "table_name": "prim_int_version_table_name",
+            "table_name": "test",
         },
     ]
     assert controller.get_history({}) == [

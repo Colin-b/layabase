@@ -8,7 +8,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestLikeOperatorModel:
-        __tablename__ = "like_operator_table_name"
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 

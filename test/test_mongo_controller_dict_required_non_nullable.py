@@ -16,7 +16,7 @@ class EnumTest(enum.Enum):
 @pytest.fixture
 def controller():
     class TestDictRequiredNonNullableVersionedModel:
-        __tablename__ = "req_not_null_versioned_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
         dict_field = layabase.database_mongo.DictColumn(

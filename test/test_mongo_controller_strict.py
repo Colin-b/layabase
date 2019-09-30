@@ -9,7 +9,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestStrictModel:
-        __tablename__ = "strict_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         mandatory = layabase.database_mongo.Column(int, is_nullable=False)

@@ -10,7 +10,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestTimeModel:
-        __tablename__ = "time_table_name"
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         time_field = sqlalchemy.Column(sqlalchemy.Time)

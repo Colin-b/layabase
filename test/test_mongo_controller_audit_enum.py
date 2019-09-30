@@ -17,7 +17,7 @@ class EnumTest(enum.Enum):
 @pytest.fixture
 def controller():
     class TestEnumModel:
-        __tablename__ = "enum_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         enum_fld = layabase.database_mongo.Column(EnumTest)

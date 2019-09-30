@@ -8,7 +8,7 @@ import layabase.testing
 @pytest.fixture
 def controller_insert():
     class TestNoneInsertModel:
-        __tablename__ = "none_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(int, is_primary_key=True)
         my_dict = layabase.database_mongo.DictColumn(
@@ -22,7 +22,7 @@ def controller_insert():
 @pytest.fixture
 def controller_not_inserted():
     class TestNoneNotInsertedModel:
-        __tablename__ = "none_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(int, is_primary_key=True)
         my_dict = layabase.database_mongo.DictColumn(
@@ -36,7 +36,7 @@ def controller_not_inserted():
 @pytest.fixture
 def controller_retrieve():
     class TestNoneRetrieveModel:
-        __tablename__ = "none_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(int, is_primary_key=True)
         my_dict = layabase.database_mongo.Column(dict, is_required=True)

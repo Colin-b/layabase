@@ -13,7 +13,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestDateModel:
-        __tablename__ = "date_table_name"
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         date_str = sqlalchemy.Column(sqlalchemy.Date)

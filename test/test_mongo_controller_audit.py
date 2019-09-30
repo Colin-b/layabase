@@ -15,7 +15,7 @@ from test import DateTimeModuleMock
 @pytest.fixture
 def controller():
     class TestModel:
-        __tablename__ = "sample_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         mandatory = layabase.database_mongo.Column(int, is_nullable=False)
@@ -104,7 +104,7 @@ def test_audit_table_name_is_forbidden():
 
 def test_audited_table_name_is_forbidden():
     class TestAuditModel:
-        __tablename__ = "audit_int_table_name"
+        __tablename__ = "audit_test"
 
         key = layabase.database_mongo.Column(str)
 
@@ -115,10 +115,7 @@ def test_audited_table_name_is_forbidden():
             replicaSet="globaldb",
         )
 
-    assert (
-        str(exception_info.value)
-        == "audit_int_table_name is a reserved collection name."
-    )
+    assert str(exception_info.value) == "audit_test is a reserved collection name."
 
 
 def test_open_api_definition(client):

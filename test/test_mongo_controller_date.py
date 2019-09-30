@@ -13,7 +13,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestDateModel:
-        __tablename__ = "date_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         date_str = layabase.database_mongo.Column(datetime.date)

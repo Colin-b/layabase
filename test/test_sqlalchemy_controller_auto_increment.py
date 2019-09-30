@@ -10,7 +10,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestAutoIncrementModel:
-        __tablename__ = "auto_increment_table_name"
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(
             sqlalchemy.Integer, primary_key=True, autoincrement=True

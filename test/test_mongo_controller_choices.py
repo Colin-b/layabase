@@ -11,7 +11,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestChoicesModel:
-        __tablename__ = "choices_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True

@@ -10,7 +10,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestIdModel:
-        __tablename__ = "id_table_name"
+        __tablename__ = "test"
 
         _id = layabase.database_mongo.Column(is_primary_key=True)
 

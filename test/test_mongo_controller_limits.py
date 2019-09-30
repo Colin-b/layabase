@@ -11,7 +11,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestLimitsModel:
-        __tablename__ = "limits_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(
             is_primary_key=True, min_length=3, max_length=4

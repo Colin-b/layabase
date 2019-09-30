@@ -10,7 +10,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestDecimalModel:
-        __tablename__ = "decimal_table_name"
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)

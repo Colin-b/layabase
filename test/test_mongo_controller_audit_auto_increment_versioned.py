@@ -9,7 +9,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestAutoIncAuditVersionedModel:
-        __tablename__ = "prim_int_auto_inc_version_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True

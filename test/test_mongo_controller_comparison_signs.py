@@ -13,7 +13,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestSupportForComparisonSignsModel:
-        __tablename__ = "support_comparison_sign"
+        __tablename__ = "test"
 
         int_value = layabase.database_mongo.Column(int, allow_comparison_signs=True)
         float_value = layabase.database_mongo.Column(float, allow_comparison_signs=True)

@@ -9,7 +9,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestIntAndFloatModel:
-        __tablename__ = "int_and_float"
+        __tablename__ = "test"
 
         int_value = layabase.database_mongo.Column(int)
         float_value = layabase.database_mongo.Column(float)

@@ -9,7 +9,7 @@ from test import DateTimeModuleMock
 @pytest.fixture
 def database():
     class TestModel:
-        __tablename__ = "test_table"
+        __tablename__ = "test"
 
         id = layabase.database_mongo.Column()
 

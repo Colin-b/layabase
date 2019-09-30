@@ -15,7 +15,7 @@ class EnumTest(enum.Enum):
 @pytest.fixture
 def controller():
     class TestOptionalDictModel:
-        __tablename__ = "optional_dict_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         dict_col = layabase.database_mongo.DictColumn(

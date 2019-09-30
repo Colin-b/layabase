@@ -12,7 +12,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestIndexModel:
-        __tablename__ = "index_table_name"
+        __tablename__ = "test"
 
         unique_key = layabase.database_mongo.Column(str, is_primary_key=True)
         non_unique_key = layabase.database_mongo.Column(

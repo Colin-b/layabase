@@ -8,7 +8,7 @@ import layabase.testing
 @pytest.fixture
 def controller():
     class TestStringListModel:
-        __tablename__ = "string_list_table_name"
+        __tablename__ = "test"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
         list_field = layabase.database_mongo.ListColumn(
