@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Avoid creating f-string when nothing needs to be interpreted.
 
+### Removed
+- layabase.database is not exposed anymore. Use layabase instead.
+- layabase.audit is not exposed anymore. It should never have been used anyway.
+
 ## [2.0.1] - 2019-09-26
 ### Fixed
 - [SQLAlchemy] Avoid processing invalid data types when inserting or updating data.

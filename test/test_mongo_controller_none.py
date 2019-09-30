@@ -1,18 +1,19 @@
 import pytest
 
-from layabase import database, database_mongo
+import layabase
+import layabase.database_mongo
 import layabase.testing
 
 
 @pytest.fixture
 def controller_insert():
-    class TestNoneInsertController(database.CRUDController):
+    class TestNoneInsertController(layabase.CRUDController):
         class TestNoneInsertModel:
             __tablename__ = "none_table_name"
 
-            key = database_mongo.Column(int, is_primary_key=True)
-            my_dict = database_mongo.DictColumn(
-                fields={"null_value": database_mongo.Column(store_none=True)},
+            key = layabase.database_mongo.Column(int, is_primary_key=True)
+            my_dict = layabase.database_mongo.DictColumn(
+                fields={"null_value": layabase.database_mongo.Column(store_none=True)},
                 is_required=True,
             )
 
@@ -24,13 +25,13 @@ def controller_insert():
 
 @pytest.fixture
 def controller_not_inserted():
-    class TestNoneNotInsertedController(database.CRUDController):
+    class TestNoneNotInsertedController(layabase.CRUDController):
         class TestNoneNotInsertedModel:
             __tablename__ = "none_table_name"
 
-            key = database_mongo.Column(int, is_primary_key=True)
-            my_dict = database_mongo.DictColumn(
-                fields={"null_value": database_mongo.Column(store_none=False)},
+            key = layabase.database_mongo.Column(int, is_primary_key=True)
+            my_dict = layabase.database_mongo.DictColumn(
+                fields={"null_value": layabase.database_mongo.Column(store_none=False)},
                 is_required=True,
             )
 
@@ -41,12 +42,12 @@ def controller_not_inserted():
 
 @pytest.fixture
 def controller_retrieve():
-    class TestNoneRetrieveController(database.CRUDController):
+    class TestNoneRetrieveController(layabase.CRUDController):
         class TestNoneRetrieveModel:
             __tablename__ = "none_table_name"
 
-            key = database_mongo.Column(int, is_primary_key=True)
-            my_dict = database_mongo.Column(dict, is_required=True)
+            key = layabase.database_mongo.Column(int, is_primary_key=True)
+            my_dict = layabase.database_mongo.Column(dict, is_required=True)
 
         model = TestNoneRetrieveModel
         skip_name_check = True

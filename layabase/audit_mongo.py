@@ -7,7 +7,7 @@ from typing import Type
 import flask_restplus
 
 from layabase.database_mongo import Column, CRUDModel
-from layabase.audit import current_user_name
+from layabase._audit import current_user_name
 from layabase.versioning_mongo import VersionedCRUDModel
 
 logger = logging.getLogger(__name__)

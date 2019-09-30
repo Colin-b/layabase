@@ -1,4 +1,4 @@
-from layabase.database import (
+from layabase._database import (
     CRUDController,
     load,
     check,

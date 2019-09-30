@@ -6,7 +6,7 @@ from layaberr import ValidationFailed
 from marshmallow import ValidationError
 from sqlalchemy import Column, DateTime, Enum, String, Integer
 
-from layabase.audit import current_user_name
+from layabase._audit import current_user_name
 
 
 @enum.unique

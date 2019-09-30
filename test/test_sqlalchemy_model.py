@@ -3,7 +3,8 @@ import sqlalchemy
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 
-from layabase import database, database_sqlalchemy
+import layabase
+import layabase.database_sqlalchemy
 import layabase.testing
 from test import DateTimeModuleMock
 
@@ -20,7 +21,7 @@ def model():
 
         model = TestModel
 
-    _db = database.load("sqlite:///:memory:", [TestController])
+    _db = layabase.load("sqlite:///:memory:", [TestController])
     model_class = TestController._model
     yield model_class
     layabase.testing.reset(_db)
@@ -38,14 +39,14 @@ def db():
 
         model = TestModel
 
-    _db = database.load("sqlite:///:memory:", [TestController])
+    _db = layabase.load("sqlite:///:memory:", [TestController])
     yield _db
     layabase.testing.reset(_db)
 
 
 def test_health_details(db, monkeypatch):
-    monkeypatch.setattr(database_sqlalchemy, "datetime", DateTimeModuleMock)
-    health_status = database.check(db)
+    monkeypatch.setattr(layabase.database_sqlalchemy, "datetime", DateTimeModuleMock)
+    health_status = layabase.check(db)
     expected_result = (
         "pass",
         {
@@ -62,7 +63,7 @@ def test_health_details(db, monkeypatch):
 
 def test_health_details_no_db(db):
     with pytest.raises(Exception) as exception_info:
-        database.check(None)
+        layabase.check(None)
     assert "A database connection URL must be provided." == str(exception_info.value)
 
 

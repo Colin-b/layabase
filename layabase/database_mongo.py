@@ -18,7 +18,7 @@ import flask_restplus
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
-from layabase.database import ComparisonSigns
+from layabase import ComparisonSigns
 from layabase.exceptions import ControllerModelNotSet
 
 logger = logging.getLogger(__name__)
