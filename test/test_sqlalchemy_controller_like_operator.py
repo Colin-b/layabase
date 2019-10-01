@@ -9,9 +9,13 @@ def controller():
     class TestModel:
         __tablename__ = "test"
 
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        key = sqlalchemy.Column(
+            sqlalchemy.String,
+            primary_key=True,
+            info={"marshmallow": {"interpret_star_character": True}},
+        )
 
-    controller = layabase.CRUDController(TestModel, interpret_star_character=True)
+    controller = layabase.CRUDController(TestModel)
     layabase.load("sqlite:///:memory:", [controller])
     return controller
 

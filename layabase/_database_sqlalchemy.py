@@ -1,8 +1,7 @@
 import datetime
 import logging
 import urllib.parse
-from typing import List, Dict, Type
-import collections.abc
+from typing import List, Dict, Type, Iterable
 
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from marshmallow import validate, ValidationError, EXCLUDE
@@ -16,6 +15,7 @@ from sqlalchemy.pool import StaticPool
 import flask_restplus
 
 from layabase.exceptions import MultiSchemaNotSupported
+from layabase import CRUDController
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,6 @@ class CRUDModel:
 
     _session = None
     audit_model = None
-    interpret_star_character = False
 
     @classmethod
     def _post_init(cls, session):
@@ -82,20 +81,21 @@ class CRUDModel:
 
         for column_name, value in filters.items():
             if value is not None:
+                column: Column = getattr(cls, column_name)
                 if isinstance(value, list):
                     if value:
-                        query = query.filter(getattr(cls, column_name).in_(value))
+                        query = query.filter(column.in_(value))
                 else:
                     if (
-                        cls.interpret_star_character
-                        and isinstance(value, str)
+                        isinstance(value, str)
                         and "*" in value
-                    ):
-                        query = query.filter(
-                            getattr(cls, column_name).like(value.replace("*", "%"))
+                        and column.info.get("marshmallow", {}).get(
+                            "interpret_star_character", False
                         )
+                    ):
+                        query = query.filter(column.like(value.replace("*", "%")))
                     else:
-                        query = query.filter(getattr(cls, column_name) == value)
+                        query = query.filter(column == value)
 
         if query_limit:
             query = query.limit(query_limit)
@@ -523,7 +523,7 @@ class CRUDModel:
         return exported_fields
 
 
-def _create_model(controller, base) -> Type[CRUDModel]:
+def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
     # TODO Create the appropriate CRUDModel in case history is requested (not supported for now)
     class ControllerModel(controller.model, CRUDModel, base):
         pass
@@ -535,15 +535,12 @@ def _create_model(controller, base) -> Type[CRUDModel]:
             controller.model, ControllerModel, CRUDModel, base
         )
 
-    if controller.interpret_star_character:
-        ControllerModel.interpret_star_character = True
-
     controller._set_model(ControllerModel)
     return ControllerModel
 
 
 def _load(
-    database_connection_url: str, controllers: collections.abc.Iterable, **kwargs
+    database_connection_url: str, controllers: Iterable[CRUDController], **kwargs
 ):
     """
     Create all necessary tables and perform the link between models and underlying database connection.

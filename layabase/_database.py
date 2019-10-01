@@ -1,7 +1,6 @@
 import enum
 import logging
-from typing import List, Union
-import collections.abc
+from typing import List, Union, Iterable
 
 from layaberr import ValidationFailed
 import flask_restplus
@@ -52,44 +51,6 @@ class NoRelatedControllers(Exception):
         Exception.__init__(self, "A list of CRUDController must be provided.")
 
 
-def load(database_connection_url: str, controllers: collections.abc.Iterable, **kwargs):
-    """
-    Create all necessary tables and perform the link between models and underlying database connection.
-
-    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    Here are some sample connection urls:
-     - Mongo (in memory): mongomock
-     - Mongo: mongodb://host:port/server_name
-
-     - SQL Lite (in memory): sqlite:///:memory:
-     - Postgre SQL: postgresql://user_name:user_password@host:port/server_name
-     - Oracle: oracle://user_name:user_password@host:port/server_name
-     - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
-    :param controllers: List of CRUDController-like instances (Mandatory).
-    :param kwargs: Additional custom parameters:
-     In case database connection URL is related to a non mongo database: SQLAlchemy.create_engine methods parameters.
-     Otherwise (mongo): pymongo.MongoClient constructor parameters.
-    :return Database object.
-     In case database connection URL is related to a non mongo database: SQLAlchemy base instance.
-     Otherwise (mongo): pymongo.Database instance.
-    :raises NoDatabaseProvided in case no database connection URL is provided.
-    :raises NoRelatedControllers in case no controllers are provided.
-    """
-    if not database_connection_url:
-        raise NoDatabaseProvided()
-    if not controllers:
-        raise NoRelatedControllers()
-
-    if database_connection_url.startswith("mongo"):
-        import layabase.database_mongo as database_mongo
-
-        return database_mongo._load(database_connection_url, controllers, **kwargs)
-
-    import layabase._database_sqlalchemy as database_sqlalchemy
-
-    return database_sqlalchemy._load(database_connection_url, controllers, **kwargs)
-
-
 def check(base) -> (str, dict):
     """
     Return Health "Checks object" for this database connection.
@@ -133,37 +94,26 @@ class CRUDController:
     Class providing methods to interact with a CRUDModel.
     """
 
-    def __init__(
-        self,
-        model,
-        history=False,
-        audit=False,
-        interpret_star_character=False,
-        skip_name_check=False,
-        skip_unknown_fields=True,
-        skip_update_indexes=False,
-    ):
+    def __init__(self, model, **kwargs):
         """
         Create a new controller to manipulate a table or mongo collection.
 
         :param model: Naive python class describing requested fields
-        :param history: True to be able to rollback to any state in the past. No history by default.
+        :param history: True to be able to rollback to any state in the past. No history by default. (Mongo only)
         :param audit: True to keep record of every action on the underlying model. No audit by default.
-        :param interpret_star_character: True to consider "*" character in queried field values as %LIKE%. Disabled by default.
-        :param skip_name_check: True to be able to force the usage of forbidden table or collection names. Name check is enforced by default.
-        :param skip_unknown_fields: False to use strict field name check. Ignore unknown fields by default.
-        :param skip_update_indexes: True to never update indexes. Warning, this might lead to invalid indexes on the underlying table or collection.
+        :param skip_name_check: True to be able to force the usage of forbidden table or collection names. Name check is enforced by default. (Mongo only)
+        :param skip_unknown_fields: False to use strict field name check. Ignore unknown fields by default. (Mongo only)
+        :param skip_update_indexes: True to never update indexes. Warning, this might lead to invalid indexes on the underlying table or collection. (Mongo only)
         """
         if not model:
             raise Exception("Model must be provided.")
 
         self.model = model
-        self.history = history
-        self.audit = audit
-        self.interpret_star_character = interpret_star_character
-        self.skip_name_check = skip_name_check
-        self.skip_unknown_fields = skip_unknown_fields
-        self.skip_update_indexes = skip_update_indexes
+        self.history = kwargs.pop("history", False)
+        self.audit = kwargs.pop("audit", False)
+        self.skip_name_check = kwargs.pop("skip_name_check", False)
+        self.skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
+        self.skip_update_indexes = kwargs.pop("skip_update_indexes", False)
 
         self._model = None  # Generated from model, appropriate class depending on what was requested on controller
 
@@ -408,3 +358,41 @@ class CRUDController:
         if not self._model:
             raise ControllerModelNotSet(self)
         return self._model.get_field_names()
+
+
+def load(database_connection_url: str, controllers: Iterable[CRUDController], **kwargs):
+    """
+    Create all necessary tables and perform the link between models and underlying database connection.
+
+    :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
+    Here are some sample connection urls:
+     - Mongo (in memory): mongomock
+     - Mongo: mongodb://host:port/server_name
+
+     - SQL Lite (in memory): sqlite:///:memory:
+     - Postgre SQL: postgresql://user_name:user_password@host:port/server_name
+     - Oracle: oracle://user_name:user_password@host:port/server_name
+     - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
+    :param controllers: List of CRUDController-like instances (Mandatory).
+    :param kwargs: Additional custom parameters:
+     In case database connection URL is related to a non mongo database: SQLAlchemy.create_engine methods parameters.
+     Otherwise (mongo): pymongo.MongoClient constructor parameters.
+    :return Database object.
+     In case database connection URL is related to a non mongo database: SQLAlchemy base instance.
+     Otherwise (mongo): pymongo.Database instance.
+    :raises NoDatabaseProvided in case no database connection URL is provided.
+    :raises NoRelatedControllers in case no controllers are provided.
+    """
+    if not database_connection_url:
+        raise NoDatabaseProvided()
+    if not controllers:
+        raise NoRelatedControllers()
+
+    if database_connection_url.startswith("mongo"):
+        import layabase.database_mongo as database_mongo
+
+        return database_mongo._load(database_connection_url, controllers, **kwargs)
+
+    import layabase._database_sqlalchemy as database_sqlalchemy
+
+    return database_sqlalchemy._load(database_connection_url, controllers, **kwargs)

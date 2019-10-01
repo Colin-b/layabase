@@ -20,6 +20,8 @@ def _to_audit_column(column):
     """
     Remove primary keys from mixin as revision is the unique primary key
     Remove auto increment from mixin as value is already auto incremented by model
+    
+    :param column: SQLAlchemy column or any other attribute of the original Mixin.
     """
     if hasattr(column, "primary_key") and column.primary_key:
         column = copy.deepcopy(column)

@@ -121,8 +121,8 @@ class MyModel:
     __tablename__ = "my_table"
 
     key = Column(String, primary_key=True)
-    # info can be used to provide information to marshmallow, such as requiring the field to be set on queries
-    value = Column(String, info={'marshmallow': {"required_on_query": True}})
+    # info can be used to provide information to marshmallow, such as requiring the field to be set on queries or interpreting star character as like
+    value = Column(String, info={'marshmallow': {"required_on_query": True, "interpret_star_character": True}})
 ```
 
 ## MongoDB (non-relational) ##
@@ -221,6 +221,11 @@ The following parameters can also be provided when creating a column of string t
         <td><strong>max_length</strong></td>
         <td>Maximum value length.</td>
         <td>None (no maximum length)</td>
+    </tr>
+    <tr>
+        <td><strong>allow_comparison_signs</strong></td>
+        <td>If field value should be interpreted to extract >, >=, <, <= prefix.</td>
+        <td>False (value is kept as provided for equlity comparison)</td>
     </tr>
 </table>
 

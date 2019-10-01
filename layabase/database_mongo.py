@@ -5,8 +5,7 @@ import inspect
 import json
 import logging
 import os.path
-import collections.abc
-from typing import List, Dict, Union, Type
+from typing import List, Dict, Union, Type, Iterable
 
 import iso8601
 import pymongo
@@ -18,7 +17,7 @@ import flask_restplus
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
-from layabase import ComparisonSigns
+from layabase import ComparisonSigns, CRUDController
 
 logger = logging.getLogger(__name__)
 
@@ -2406,7 +2405,7 @@ class _CRUDModel:
         return exported_fields
 
 
-def _create_model(controller, base) -> Type[_CRUDModel]:
+def _create_model(controller: CRUDController, base) -> Type[_CRUDModel]:
     if controller.history:
         import layabase._versioning_mongo
 
@@ -2436,7 +2435,7 @@ def _create_model(controller, base) -> Type[_CRUDModel]:
 
 
 def _load(
-    database_connection_url: str, controllers: collections.abc.Iterable, **kwargs
+    database_connection_url: str, controllers: Iterable[CRUDController], **kwargs
 ) -> pymongo.database.Database:
     """
     Create all necessary tables and perform the link between models and underlying database connection.
