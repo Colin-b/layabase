@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - layabase.database is not exposed anymore. Use layabase instead.
 - layabase.audit is not exposed anymore. It should never have been used anyway.
+- layabase.audit_mongo is not exposed anymore. It should never have been used anyway.
+- layabase.audit_sqlalchemy is not exposed anymore. It should never have been used anyway.
 
 ### Added
 - layabase.testing.mock_mongo_audit_datetime pytest fixture

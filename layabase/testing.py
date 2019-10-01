@@ -40,9 +40,9 @@ def mock_mongo_health_datetime(monkeypatch):
 
 @pytest.fixture
 def mock_mongo_audit_datetime(monkeypatch):
-    import layabase.audit_mongo
+    import layabase._audit_mongo
 
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
+    monkeypatch.setattr(layabase._audit_mongo, "datetime", DateTimeModuleMock)
 
 
 @pytest.fixture
@@ -54,6 +54,6 @@ def mock_sqlalchemy_health_datetime(monkeypatch):
 
 @pytest.fixture
 def mock_sqlalchemy_audit_datetime(monkeypatch):
-    import layabase.audit_sqlalchemy
+    import layabase._audit_sqlalchemy
 
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
+    monkeypatch.setattr(layabase._audit_sqlalchemy, "datetime", DateTimeModuleMock)

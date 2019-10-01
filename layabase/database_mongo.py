@@ -2409,9 +2409,9 @@ class CRUDModel:
 
 def _create_model(controller, base) -> Type[CRUDModel]:
     if controller.history:
-        import layabase.audit_mongo
+        import layabase._versioning_mongo
 
-        crud_model = layabase.audit_mongo.VersionedCRUDModel
+        crud_model = layabase._versioning_mongo.VersionedCRUDModel
     else:
         crud_model = CRUDModel
 
@@ -2426,7 +2426,7 @@ def _create_model(controller, base) -> Type[CRUDModel]:
         pass
 
     if controller.audit:
-        from layabase.audit_mongo import _create_from
+        from layabase._audit_mongo import _create_from
 
         ControllerModel.audit_model = _create_from(
             mixin=controller.model, model=ControllerModel, base=base

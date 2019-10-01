@@ -528,7 +528,7 @@ def _create_model(controller, base) -> Type[CRUDModel]:
         pass
 
     if controller.audit:
-        from layabase.audit_sqlalchemy import _create_from
+        from layabase._audit_sqlalchemy import _create_from
 
         ControllerModel.audit_model = _create_from(
             controller.model, ControllerModel, CRUDModel, base
