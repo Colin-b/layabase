@@ -7,8 +7,7 @@ from layaberr import ModelCouldNotBeFound
 
 import layabase
 import layabase.database_mongo
-import layabase.audit_mongo
-from test import DateTimeModuleMock
+from layabase.testing import mock_mongo_audit_datetime
 
 
 class EnumTest(enum.Enum):
@@ -411,10 +410,8 @@ def test_open_api_definition(client):
 
 
 def test_revision_not_shared_if_not_versioned(
-    controllers, controller, controller_versioned, monkeypatch
+    controllers, controller, controller_versioned, mock_mongo_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == controller.post(
         {"key": "my_key", "mandatory": 1}
     )
@@ -442,10 +439,8 @@ def test_revision_not_shared_if_not_versioned(
 
 
 def test_revision_on_versioned_audit_after_put_failure(
-    controllers, controller_versioned, monkeypatch
+    controllers, controller_versioned, mock_mongo_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
     controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     with pytest.raises(ModelCouldNotBeFound):
         controller_versioned.put({"key": "my_key2", "enum_fld": EnumTest.Value2})
@@ -469,10 +464,8 @@ def test_revision_on_versioned_audit_after_put_failure(
 
 
 def test_versioned_audit_after_post_put_delete_rollback(
-    controllers, controller_versioned, monkeypatch
+    controllers, controller_versioned, mock_mongo_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
     controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
     controller_versioned.delete({"key": "my_key"})

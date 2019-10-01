@@ -4,8 +4,7 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.audit_mongo
-from test import DateTimeModuleMock
+from layabase.testing import mock_mongo_audit_datetime
 
 
 class EnumTest(enum.Enum):
@@ -26,9 +25,7 @@ def controller():
     return controller
 
 
-def test_post_with_enum_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_post_with_enum_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",
@@ -45,9 +42,7 @@ def test_post_with_enum_is_valid(controller, monkeypatch):
     ]
 
 
-def test_put_with_enum_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_put_with_enum_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",
@@ -76,9 +71,7 @@ def test_put_with_enum_is_valid(controller, monkeypatch):
     ]
 
 
-def test_delete_with_enum_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_delete_with_enum_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",

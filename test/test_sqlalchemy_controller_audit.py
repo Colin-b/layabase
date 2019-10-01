@@ -5,8 +5,7 @@ import flask_restplus
 from layaberr import ValidationFailed
 
 import layabase
-import layabase.audit_sqlalchemy
-from test import DateTimeModuleMock
+from layabase.testing import mock_sqlalchemy_audit_datetime
 
 
 @pytest.fixture
@@ -555,9 +554,9 @@ def test_post_many_with_wrong_type_is_invalid(controllers, controller1):
     assert controller1.get_audit({}) == []
 
 
-def test_put_with_wrong_type_is_invalid(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_put_with_wrong_type_is_invalid(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     controller1.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
         controller1.put({"key": "value1", "mandatory": "invalid_value"})
@@ -579,9 +578,9 @@ def test_put_with_wrong_type_is_invalid(controllers, controller1, monkeypatch):
     ]
 
 
-def test_post_without_optional_is_valid(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_post_without_optional_is_valid(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == controller1.post(
         {"key": "my_key", "mandatory": 1}
     )
@@ -599,10 +598,8 @@ def test_post_without_optional_is_valid(controllers, controller1, monkeypatch):
 
 
 def test_post_on_a_second_model_without_optional_is_valid(
-    controllers, controller1, controller2, monkeypatch
+    controllers, controller1, controller2, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key", "mandatory": 1})
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == controller2.post(
         {"key": "my_key", "mandatory": 1}
@@ -631,9 +628,9 @@ def test_post_on_a_second_model_without_optional_is_valid(
     ]
 
 
-def test_post_many_without_optional_is_valid(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_post_many_without_optional_is_valid(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     assert [
         {"optional": None, "mandatory": 1, "key": "my_key"}
     ] == controller1.post_many([{"key": "my_key", "mandatory": 1}])
@@ -650,9 +647,9 @@ def test_post_many_without_optional_is_valid(controllers, controller1, monkeypat
     ]
 
 
-def test_post_with_optional_is_valid(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_post_with_optional_is_valid(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     assert {
         "mandatory": 1,
         "key": "my_key",
@@ -671,9 +668,9 @@ def test_post_with_optional_is_valid(controllers, controller1, monkeypatch):
     ]
 
 
-def test_post_many_with_optional_is_valid(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_post_many_with_optional_is_valid(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     assert [
         {"mandatory": 1, "key": "my_key", "optional": "my_value"}
     ] == controller1.post_many(
@@ -692,9 +689,9 @@ def test_post_many_with_optional_is_valid(controllers, controller1, monkeypatch)
     ]
 
 
-def test_post_with_unknown_field_is_valid(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_post_with_unknown_field_is_valid(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     assert {
         "optional": "my_value",
         "mandatory": 1,
@@ -721,9 +718,9 @@ def test_post_with_unknown_field_is_valid(controllers, controller1, monkeypatch)
     ]
 
 
-def test_post_many_with_unknown_field_is_valid(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_post_many_with_unknown_field_is_valid(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     assert [
         {"optional": "my_value", "mandatory": 1, "key": "my_key"}
     ] == controller1.post_many(
@@ -751,10 +748,8 @@ def test_post_many_with_unknown_field_is_valid(controllers, controller1, monkeyp
 
 
 def test_get_without_filter_is_retrieving_the_only_item(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
@@ -773,10 +768,8 @@ def test_get_without_filter_is_retrieving_the_only_item(
 
 
 def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller1.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert [
@@ -806,10 +799,8 @@ def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
 
 
 def test_get_without_filter_is_retrieving_everything(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post_many(
         [
             {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -842,9 +833,9 @@ def test_get_without_filter_is_retrieving_everything(
     ]
 
 
-def test_get_with_filter_is_retrieving_subset(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_get_with_filter_is_retrieving_subset(
+    controllers, controller1, mock_sqlalchemy_audit_datetime
+):
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller1.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert [
@@ -872,9 +863,7 @@ def test_get_with_filter_is_retrieving_subset(controllers, controller1, monkeypa
     ]
 
 
-def test_put_is_updating(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_put_is_updating(controllers, controller1, mock_sqlalchemy_audit_datetime):
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -905,9 +894,7 @@ def test_put_is_updating(controllers, controller1, monkeypatch):
     ]
 
 
-def test_put_many_is_updating(controllers, controller1, monkeypatch):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_put_many_is_updating(controllers, controller1, mock_sqlalchemy_audit_datetime):
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert (
         [{"key": "my_key1", "mandatory": 1, "optional": "my_value1"}],
@@ -939,10 +926,8 @@ def test_put_many_is_updating(controllers, controller1, monkeypatch):
 
 
 def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller1.put({"key": "my_key1", "optional": "my_value"})
     assert [] == controller1.get({"optional": "my_value1"})
@@ -969,10 +954,8 @@ def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(
 
 
 def test_delete_with_filter_is_removing_the_proper_row(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller1.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert controller1.delete({"key": "my_key1"}) == 1
@@ -1011,10 +994,8 @@ def test_delete_with_filter_is_removing_the_proper_row(
 
 
 def test_audit_filter_on_model_is_returning_only_selected_data(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller1.put({"key": "my_key1", "mandatory": 2})
     controller1.delete({"key": "my_key1"})
@@ -1050,10 +1031,8 @@ def test_audit_filter_on_model_is_returning_only_selected_data(
 
 
 def test_audit_filter_on_audit_model_is_returning_only_selected_data(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller1.put({"key": "my_key1", "mandatory": 2})
     controller1.delete({"key": "my_key1"})
@@ -1071,10 +1050,8 @@ def test_audit_filter_on_audit_model_is_returning_only_selected_data(
 
 
 def test_delete_without_filter_is_removing_everything(
-    controllers, controller1, monkeypatch
+    controllers, controller1, mock_sqlalchemy_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_sqlalchemy, "datetime", DateTimeModuleMock)
-
     controller1.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller1.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert 2 == controller1.delete({})

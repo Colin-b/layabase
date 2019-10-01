@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - layabase.database is not exposed anymore. Use layabase instead.
 - layabase.audit is not exposed anymore. It should never have been used anyway.
 
+### Added
+- layabase.testing.mock_mongo_audit_datetime pytest fixture
+- layabase.testing.mock_sqlalchemy_audit_datetime pytest fixture
+- layabase.testing.mock_mongo_health_datetime pytest fixture
+- layabase.testing.mock_sqlalchemy_health_datetime pytest fixture
+
 ## [2.0.1] - 2019-09-26
 ### Fixed
 - [SQLAlchemy] Avoid processing invalid data types when inserting or updating data.

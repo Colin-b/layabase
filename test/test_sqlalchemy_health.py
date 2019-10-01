@@ -3,8 +3,7 @@ import sqlalchemy
 
 
 import layabase
-import layabase.database_sqlalchemy
-from test import DateTimeModuleMock
+from layabase.testing import mock_sqlalchemy_health_datetime
 
 
 @pytest.fixture
@@ -19,10 +18,8 @@ def db():
     return layabase.load("sqlite:///:memory:", [layabase.CRUDController(TestModel)])
 
 
-def test_health_details(db, monkeypatch):
-    monkeypatch.setattr(layabase.database_sqlalchemy, "datetime", DateTimeModuleMock)
-    health_status = layabase.check(db)
-    expected_result = (
+def test_health_details(db, mock_sqlalchemy_health_datetime):
+    assert layabase.check(db) == (
         "pass",
         {
             "sqlite:select": {
@@ -33,7 +30,6 @@ def test_health_details(db, monkeypatch):
             }
         },
     )
-    assert expected_result == health_status
 
 
 def test_health_details_no_db(db):

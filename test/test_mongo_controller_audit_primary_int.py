@@ -2,8 +2,7 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.audit_mongo
-from test import DateTimeModuleMock
+from layabase.testing import mock_mongo_audit_datetime
 
 
 @pytest.fixture
@@ -21,9 +20,7 @@ def controller():
     return controller
 
 
-def test_int_primary_key_is_reset_after_delete(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_int_primary_key_is_reset_after_delete(controller, mock_mongo_audit_datetime):
     assert controller.post({"other": "test1"}) == {"key": 1, "other": "test1"}
     assert controller.delete({}) == 1
     assert controller.post({"other": "test1"}) == {"key": 1, "other": "test1"}

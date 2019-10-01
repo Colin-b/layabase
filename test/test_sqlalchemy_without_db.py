@@ -2,8 +2,7 @@ import sqlalchemy
 import pytest
 
 import layabase
-import layabase.database_sqlalchemy
-from test import DateTimeModuleMock
+from layabase.testing import mock_sqlalchemy_health_datetime
 
 
 @pytest.fixture
@@ -53,8 +52,9 @@ def test_remove_when_db_down(disconnected_database, controller):
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_health_details_failure(disconnected_database, monkeypatch):
-    monkeypatch.setattr(layabase.database_sqlalchemy, "datetime", DateTimeModuleMock)
+def test_health_details_failure(
+    disconnected_database, mock_sqlalchemy_health_datetime, monkeypatch
+):
     monkeypatch.setattr(
         disconnected_database.metadata.bind.dialect, "do_ping", lambda x: False
     )
@@ -71,9 +71,9 @@ def test_health_details_failure(disconnected_database, monkeypatch):
     )
 
 
-def test_health_details_failure_due_to_exception(disconnected_database, monkeypatch):
-    monkeypatch.setattr(layabase.database_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_health_details_failure_due_to_exception(
+    disconnected_database, mock_sqlalchemy_health_datetime, monkeypatch
+):
     def raise_exception(*args):
         raise Exception("This is the error")
 

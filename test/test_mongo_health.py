@@ -2,7 +2,7 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-from test import DateTimeModuleMock
+from layabase.testing import mock_mongo_health_datetime
 
 
 @pytest.fixture
@@ -15,9 +15,7 @@ def database():
     return layabase.load("mongomock", [layabase.CRUDController(TestModel)])
 
 
-def test_health_details_failure(database, monkeypatch):
-    monkeypatch.setattr(layabase.database_mongo, "datetime", DateTimeModuleMock)
-
+def test_health_details_failure(database, mock_mongo_health_datetime):
     def fail_ping(*args):
         raise Exception("Unable to ping")
 
@@ -35,8 +33,7 @@ def test_health_details_failure(database, monkeypatch):
     )
 
 
-def test_health_details_success(database, monkeypatch):
-    monkeypatch.setattr(layabase.database_mongo, "datetime", DateTimeModuleMock)
+def test_health_details_success(database, mock_mongo_health_datetime):
     assert layabase.check(database) == (
         "pass",
         {

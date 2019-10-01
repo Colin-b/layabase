@@ -7,8 +7,7 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.audit_mongo
-from test import DateTimeModuleMock
+from layabase.testing import mock_mongo_audit_datetime
 
 
 @pytest.fixture
@@ -677,9 +676,7 @@ def test_post_many_with_wrong_type_is_invalid(controller):
     assert controller.get_audit({}) == []
 
 
-def test_put_with_wrong_type_is_invalid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_put_with_wrong_type_is_invalid(controller, mock_mongo_audit_datetime):
     controller.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
         controller.put({"key": "value1", "mandatory": "invalid_value"})
@@ -701,9 +698,7 @@ def test_put_with_wrong_type_is_invalid(controller, monkeypatch):
     ]
 
 
-def test_post_without_optional_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_post_without_optional_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post({"key": "my_key", "mandatory": 1}) == {
         "optional": None,
         "mandatory": 1,
@@ -722,9 +717,7 @@ def test_post_without_optional_is_valid(controller, monkeypatch):
     ]
 
 
-def test_post_many_without_optional_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_post_many_without_optional_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post_many([{"key": "my_key", "mandatory": 1}]) == [
         {"optional": None, "mandatory": 1, "key": "my_key"}
     ]
@@ -741,9 +734,7 @@ def test_post_many_without_optional_is_valid(controller, monkeypatch):
     ]
 
 
-def test_put_many_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_put_many_is_valid(controller, mock_mongo_audit_datetime):
     controller.post_many(
         [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
     )
@@ -790,9 +781,7 @@ def test_put_many_is_valid(controller, monkeypatch):
     ]
 
 
-def test_post_with_optional_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_post_with_optional_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post(
         {"key": "my_key", "mandatory": 1, "optional": "my_value"}
     ) == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
@@ -809,9 +798,7 @@ def test_post_with_optional_is_valid(controller, monkeypatch):
     ]
 
 
-def test_post_many_with_optional_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_post_many_with_optional_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post_many(
         [{"key": "my_key", "mandatory": 1, "optional": "my_value"}]
     ) == [{"mandatory": 1, "key": "my_key", "optional": "my_value"}]
@@ -828,9 +815,7 @@ def test_post_many_with_optional_is_valid(controller, monkeypatch):
     ]
 
 
-def test_post_with_unknown_field_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_post_with_unknown_field_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post(
         {
             "key": "my_key",
@@ -853,9 +838,7 @@ def test_post_with_unknown_field_is_valid(controller, monkeypatch):
     ]
 
 
-def test_post_many_with_unknown_field_is_valid(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_post_many_with_unknown_field_is_valid(controller, mock_mongo_audit_datetime):
     assert controller.post_many(
         [
             {
@@ -880,9 +863,9 @@ def test_post_many_with_unknown_field_is_valid(controller, monkeypatch):
     ]
 
 
-def test_get_without_filter_is_retrieving_the_only_item(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_get_without_filter_is_retrieving_the_only_item(
+    controller, mock_mongo_audit_datetime
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert controller.get({}) == [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
@@ -901,10 +884,8 @@ def test_get_without_filter_is_retrieving_the_only_item(controller, monkeypatch)
 
 
 def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
-    controller, monkeypatch
+    controller, mock_mongo_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert controller.get({}) == [
@@ -933,9 +914,9 @@ def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
     ]
 
 
-def test_get_without_filter_is_retrieving_everything(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_get_without_filter_is_retrieving_everything(
+    controller, mock_mongo_audit_datetime
+):
     controller.post_many(
         [
             {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -968,9 +949,7 @@ def test_get_without_filter_is_retrieving_everything(controller, monkeypatch):
     ]
 
 
-def test_get_with_filter_is_retrieving_subset(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_get_with_filter_is_retrieving_subset(controller, mock_mongo_audit_datetime):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert controller.get({"optional": "my_value1"}) == [
@@ -998,9 +977,7 @@ def test_get_with_filter_is_retrieving_subset(controller, monkeypatch):
     ]
 
 
-def test_put_is_updating(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_put_is_updating(controller, mock_mongo_audit_datetime):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert controller.put({"key": "my_key1", "optional": "my_value"}) == (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -1032,10 +1009,8 @@ def test_put_is_updating(controller, monkeypatch):
 
 
 def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(
-    controller, monkeypatch
+    controller, mock_mongo_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.put({"key": "my_key1", "optional": "my_value"})
     assert controller.get({"optional": "my_value1"}) == []
@@ -1061,9 +1036,9 @@ def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(
     ]
 
 
-def test_delete_with_filter_is_removing_the_proper_row(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_delete_with_filter_is_removing_the_proper_row(
+    controller, mock_mongo_audit_datetime
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert controller.delete({"key": "my_key1"}) == 1
@@ -1101,9 +1076,9 @@ def test_delete_with_filter_is_removing_the_proper_row(controller, monkeypatch):
     ]
 
 
-def test_audit_filter_on_model_is_returning_only_selected_data(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_audit_filter_on_model_is_returning_only_selected_data(
+    controller, mock_mongo_audit_datetime
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.put({"key": "my_key1", "mandatory": 2})
     controller.delete({"key": "my_key1"})
@@ -1139,10 +1114,8 @@ def test_audit_filter_on_model_is_returning_only_selected_data(controller, monke
 
 
 def test_audit_filter_on_audit_model_is_returning_only_selected_data(
-    controller, monkeypatch
+    controller, mock_mongo_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.put({"key": "my_key1", "mandatory": 2})
     controller.delete({"key": "my_key1"})
@@ -1159,9 +1132,7 @@ def test_audit_filter_on_audit_model_is_returning_only_selected_data(
     ]
 
 
-def test_value_can_be_updated_to_previous_value(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_value_can_be_updated_to_previous_value(controller, mock_mongo_audit_datetime):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.put({"key": "my_key1", "mandatory": 2})
     controller.put({"key": "my_key1", "mandatory": 1})  # Put back initial value
@@ -1196,9 +1167,9 @@ def test_value_can_be_updated_to_previous_value(controller, monkeypatch):
     ]
 
 
-def test_delete_without_filter_is_removing_everything(controller, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
+def test_delete_without_filter_is_removing_everything(
+    controller, mock_mongo_audit_datetime
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert 2 == controller.delete({})
