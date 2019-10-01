@@ -15,7 +15,8 @@ from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import StaticPool
 import flask_restplus
 
-from layabase.exceptions import ControllerModelNotSet
+from layabase.exceptions import MultiSchemaNotSupported
+
 
 logger = logging.getLogger(__name__)
 
@@ -615,11 +616,6 @@ def _model_field_values(model_instance) -> dict:
 def _models_field_values(model_instances: list) -> List[dict]:
     """Return models fields values (with the proper type) as a list of dictionaries."""
     return model_instances[0].schema().dump(model_instances, many=True)
-
-
-class MultiSchemaNotSupported(Exception):
-    def __init__(self):
-        Exception.__init__(self, "SQLite does not manage multi-schemas..")
 
 
 def _clean_database_url(database_connection_url: str) -> str:

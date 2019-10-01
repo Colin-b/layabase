@@ -85,7 +85,7 @@ def load(database_connection_url: str, controllers: collections.abc.Iterable, **
 
         return database_mongo._load(database_connection_url, controllers, **kwargs)
 
-    import layabase.database_sqlalchemy as database_sqlalchemy
+    import layabase._database_sqlalchemy as database_sqlalchemy
 
     return database_sqlalchemy._load(database_connection_url, controllers, **kwargs)
 
@@ -106,7 +106,7 @@ def check(base) -> (str, dict):
 
         return database_mongo._check(base)
     else:
-        import layabase.database_sqlalchemy as database_sqlalchemy
+        import layabase._database_sqlalchemy as database_sqlalchemy
 
         return database_sqlalchemy._check(base)
 

@@ -2,7 +2,6 @@ import pytest
 import sqlalchemy
 
 import layabase
-import layabase.database_sqlalchemy
 
 
 def test_multi_schema_not_handled():
@@ -18,9 +17,7 @@ def test_multi_schema_not_handled():
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-    with pytest.raises(
-        layabase.database_sqlalchemy.MultiSchemaNotSupported
-    ) as exception_info:
+    with pytest.raises(layabase.MultiSchemaNotSupported) as exception_info:
         layabase.load(
             "sqlite:///:memory:",
             [layabase.CRUDController(TestModel), layabase.CRUDController(TestModel2)],

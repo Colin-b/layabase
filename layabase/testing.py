@@ -14,7 +14,7 @@ def reset(base):
 
         database_mongo._reset(base)
     else:
-        import layabase.database_sqlalchemy as database_sqlalchemy
+        import layabase._database_sqlalchemy as database_sqlalchemy
 
         database_sqlalchemy._reset(base)
 
@@ -47,9 +47,9 @@ def mock_mongo_audit_datetime(monkeypatch):
 
 @pytest.fixture
 def mock_sqlalchemy_health_datetime(monkeypatch):
-    import layabase.database_sqlalchemy
+    import layabase._database_sqlalchemy
 
-    monkeypatch.setattr(layabase.database_sqlalchemy, "datetime", DateTimeModuleMock)
+    monkeypatch.setattr(layabase._database_sqlalchemy, "datetime", DateTimeModuleMock)
 
 
 @pytest.fixture
