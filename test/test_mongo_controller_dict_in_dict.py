@@ -4,7 +4,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 class EnumTest(enum.Enum):
@@ -37,9 +36,8 @@ def controller():
         )
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_get_with_dot_notation_multi_level_is_valid(controller):

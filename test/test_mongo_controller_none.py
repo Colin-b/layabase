@@ -2,7 +2,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 @pytest.fixture
@@ -46,11 +45,9 @@ def controller_retrieve():
 
 @pytest.fixture
 def controllers(controller_insert, controller_not_inserted, controller_retrieve):
-    _db = layabase.load(
+    return layabase.load(
         "mongomock", [controller_insert, controller_not_inserted, controller_retrieve]
     )
-    yield _db
-    layabase.testing.reset(_db)
 
 
 def test_get_retrieve_none_field_when_not_in_model(

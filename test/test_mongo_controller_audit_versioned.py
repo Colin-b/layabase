@@ -7,7 +7,6 @@ from layaberr import ModelCouldNotBeFound
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 import layabase.audit_mongo
 from test import DateTimeModuleMock
 
@@ -42,11 +41,7 @@ def controller_versioned():
 
 @pytest.fixture
 def controllers(controller, controller_versioned):
-    _db = layabase.load(
-        "mongomock?ssl=True", [controller, controller_versioned], replicaSet="globaldb"
-    )
-    yield _db
-    layabase.testing.reset(_db)
+    return layabase.load("mongomock", [controller, controller_versioned])
 
 
 @pytest.fixture

@@ -5,7 +5,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 class EnumTest(enum.Enum):
@@ -60,12 +59,10 @@ def controller_unique():
 
 @pytest.fixture
 def controllers(controller_versioned, controller_unique, controller_versioned_unique):
-    _db = layabase.load(
+    return layabase.load(
         "mongomock",
         [controller_versioned, controller_unique, controller_versioned_unique],
     )
-    yield controller_versioned, controller_unique, controller_versioned_unique
-    layabase.testing.reset(_db)
 
 
 def test_get_url_without_primary_key_in_model_and_many_models(

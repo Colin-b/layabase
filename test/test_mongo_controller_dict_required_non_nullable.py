@@ -5,7 +5,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 class EnumTest(enum.Enum):
@@ -31,9 +30,8 @@ def controller():
         )
 
     controller = layabase.CRUDController(TestModel, history=True)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_post_without_providing_required_non_nullable_dict_column_is_invalid(

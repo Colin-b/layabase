@@ -4,7 +4,6 @@ import flask
 import flask_restplus
 
 import layabase
-import layabase.testing
 
 
 @pytest.fixture
@@ -18,9 +17,8 @@ def controller():
         optional = sqlalchemy.Column(sqlalchemy.String)
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("sqlite:///:memory:", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 @pytest.fixture

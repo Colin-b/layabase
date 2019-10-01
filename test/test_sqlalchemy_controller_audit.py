@@ -5,7 +5,6 @@ import flask_restplus
 from layaberr import ValidationFailed
 
 import layabase
-import layabase.testing
 import layabase.audit_sqlalchemy
 from test import DateTimeModuleMock
 
@@ -36,9 +35,7 @@ def controller2():
 
 @pytest.fixture
 def controllers(controller1, controller2):
-    _db = layabase.load("sqlite:///:memory:", [controller1, controller2])
-    yield _db
-    layabase.testing.reset(_db)
+    return layabase.load("sqlite:///:memory:", [controller1, controller2])
 
 
 @pytest.fixture

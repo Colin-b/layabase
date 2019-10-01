@@ -4,7 +4,6 @@ import sqlalchemy
 
 import layabase
 import layabase.database_sqlalchemy
-import layabase.testing
 from test import DateTimeModuleMock
 
 
@@ -17,9 +16,7 @@ def db():
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    _db = layabase.load("sqlite:///:memory:", [layabase.CRUDController(TestModel)])
-    yield _db
-    layabase.testing.reset(_db)
+    return layabase.load("sqlite:///:memory:", [layabase.CRUDController(TestModel)])
 
 
 def test_health_details(db, monkeypatch):

@@ -7,7 +7,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 @pytest.fixture
@@ -25,9 +24,8 @@ def controller():
         )
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture

@@ -3,7 +3,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 @pytest.fixture
@@ -17,9 +16,8 @@ def controller():
         other = layabase.database_mongo.Column(int)
 
     controller = layabase.CRUDController(TestModel, audit=True, history=True)
-    _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_auto_incremented_fields_are_not_incremented_on_post_failure(controller):

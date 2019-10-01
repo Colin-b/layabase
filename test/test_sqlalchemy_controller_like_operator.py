@@ -2,7 +2,6 @@ import pytest
 import sqlalchemy
 
 import layabase
-import layabase.testing
 
 
 @pytest.fixture
@@ -13,9 +12,8 @@ def controller():
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
     controller = layabase.CRUDController(TestModel, interpret_star_character=True)
-    _db = layabase.load("sqlite:///:memory:", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 def test_get_like_operator_double_star(controller):

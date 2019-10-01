@@ -7,7 +7,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 class EnumTest(enum.Enum):
@@ -32,9 +31,8 @@ def controller():
         )
 
     controller = layabase.CRUDController(TestModel, history=True)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
@@ -532,8 +530,8 @@ def test_rollback_to_0(controller):
             "dict_field.second_key": 1,
         }
     )
-    assert 2 == controller.rollback_to({"revision": 0})
-    assert [] == controller.get({})
+    assert controller.rollback_to({"revision": 0}) == 2
+    assert controller.get({}) == []
 
 
 def test_rollback_multiple_rows_is_valid(controller):
@@ -577,8 +575,8 @@ def test_rollback_multiple_rows_is_valid(controller):
     )
     controller.put({"key": "1", "dict_field.second_key": 2})
     # Remove key 5 and Update key 1 (Key 3 and Key 4 unchanged)
-    assert 2 == controller.rollback_to({"revision": before_insert})
-    assert [
+    assert controller.rollback_to({"revision": before_insert}) == 2
+    assert controller.get({}) == [
         {
             "dict_field": {"first_key": "Value1", "second_key": 1},
             "key": "3",
@@ -597,8 +595,8 @@ def test_rollback_multiple_rows_is_valid(controller):
             "valid_since_revision": 9,
             "valid_until_revision": -1,
         },
-    ] == controller.get({})
-    assert [
+    ]
+    assert controller.get_history({}) == [
         {
             "dict_field": {"first_key": "Value2", "second_key": 2},
             "key": "1",
@@ -647,7 +645,7 @@ def test_rollback_multiple_rows_is_valid(controller):
             "valid_since_revision": 9,
             "valid_until_revision": -1,
         },
-    ] == controller.get_history({})
+    ]
 
 
 def test_open_api_definition(client):

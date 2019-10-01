@@ -5,7 +5,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 @pytest.fixture
@@ -28,9 +27,8 @@ def controller():
         )
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
@@ -65,13 +63,7 @@ def app(controller):
 
 
 def test_within_limits_is_valid(controller):
-    assert {
-        "dict_field": {"my": 1, "test": 2},
-        "int_field": 100,
-        "float_field": 1.3,
-        "key": "111",
-        "list_field": ["1", "2", "3"],
-    } == controller.post(
+    assert controller.post(
         {
             "dict_field": {"my": 1, "test": 2},
             "key": "111",
@@ -79,7 +71,13 @@ def test_within_limits_is_valid(controller):
             "int_field": 100,
             "float_field": 1.3,
         }
-    )
+    ) == {
+        "dict_field": {"my": 1, "test": 2},
+        "int_field": 100,
+        "float_field": 1.3,
+        "key": "111",
+        "list_field": ["1", "2", "3"],
+    }
 
 
 def test_outside_upper_limits_is_invalid(controller):
@@ -93,7 +91,7 @@ def test_outside_upper_limits_is_invalid(controller):
                 "dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4},
             }
         )
-    assert {
+    assert exception_info.value.errors == {
         "int_field": ['Value "1000" is too big. Maximum value is 999.'],
         "key": ['Value "11111" is too big. Maximum length is 4.'],
         "float_field": ['Value "1.1" is too small. Minimum value is 1.25.'],
@@ -103,14 +101,14 @@ def test_outside_upper_limits_is_invalid(controller):
         "dict_field": [
             "{'my': 1, 'test': 2, 'is': 3, 'invalid': 4} contains too many values. Maximum length is 3."
         ],
-    } == exception_info.value.errors
-    assert {
+    }
+    assert exception_info.value.received_data == {
         "int_field": 1000,
         "float_field": 1.1,
         "key": "11111",
         "list_field": ["1", "2", "3", "4", "5"],
         "dict_field": {"my": 1, "test": 2, "is": 3, "invalid": 4},
-    } == exception_info.value.received_data
+    }
 
 
 def test_outside_lower_limits_is_invalid(controller):
@@ -124,7 +122,7 @@ def test_outside_lower_limits_is_invalid(controller):
                 "float_field": 2.1,
             }
         )
-    assert {
+    assert exception_info.value.errors == {
         "dict_field": [
             "{'my': 1} does not contains enough values. Minimum length is 2."
         ],
@@ -132,14 +130,14 @@ def test_outside_lower_limits_is_invalid(controller):
         "float_field": ['Value "2.1" is too big. Maximum value is 1.75.'],
         "key": ['Value "11" is too small. Minimum length is 3.'],
         "list_field": ["['1'] does not contains enough values. Minimum length is 2."],
-    } == exception_info.value.errors
-    assert {
+    }
+    assert exception_info.value.received_data == {
         "key": "11",
         "list_field": ["1"],
         "int_field": 99,
         "dict_field": {"my": 1},
         "float_field": 2.1,
-    } == exception_info.value.received_data
+    }
 
 
 def test_open_api_definition(client):

@@ -6,7 +6,6 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase.testing
 import layabase.database_mongo
 import layabase.audit_mongo
 from test import DateTimeModuleMock
@@ -22,9 +21,8 @@ def controller():
         optional = layabase.database_mongo.Column(str)
 
     controller = layabase.CRUDController(TestModel, audit=True)
-    _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
+    return controller
 
 
 @pytest.fixture

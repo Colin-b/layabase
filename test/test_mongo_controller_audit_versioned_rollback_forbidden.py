@@ -6,7 +6,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 class EnumTest(enum.Enum):
@@ -29,9 +28,8 @@ def controller():
             return {"key": ["Rollback forbidden"]}
 
     controller = layabase.CRUDController(TestModel, audit=True, history=True)
-    _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_rollback_validation_custom(controller):

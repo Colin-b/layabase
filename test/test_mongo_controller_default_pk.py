@@ -2,7 +2,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 @pytest.fixture
@@ -14,9 +13,8 @@ def controller():
         optional = layabase.database_mongo.Column()
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_post_without_primary_key_but_default_value_is_valid(controller):

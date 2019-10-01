@@ -2,7 +2,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 from test import DateTimeModuleMock
 
 
@@ -13,9 +12,7 @@ def database():
 
         id = layabase.database_mongo.Column()
 
-    _db = layabase.load("mongomock", [layabase.CRUDController(TestModel)])
-    yield _db
-    layabase.testing.reset(_db)
+    return layabase.load("mongomock", [layabase.CRUDController(TestModel)])
 
 
 def test_health_details_failure(database, monkeypatch):

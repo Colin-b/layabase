@@ -2,7 +2,6 @@ import pytest
 import sqlalchemy
 
 import layabase
-import layabase.testing
 
 
 @pytest.fixture
@@ -19,9 +18,8 @@ def controller():
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
     controller = layabase.CRUDController(TestInheritanceModel, audit=True)
-    _db = layabase.load("sqlite:///:memory:", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 def test_inheritance_does_not_throw_errors(controller):

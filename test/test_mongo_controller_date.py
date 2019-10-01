@@ -7,7 +7,6 @@ from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 @pytest.fixture
@@ -20,9 +19,8 @@ def controller():
         datetime_str = layabase.database_mongo.Column(datetime.datetime)
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
@@ -64,7 +62,13 @@ def test_put_is_updating_date(controller):
             "datetime_str": "2016-09-23T23:59:59",
         }
     )
-    assert (
+    assert controller.put(
+        {
+            "key": "my_key1",
+            "date_str": "2018-06-01",
+            "datetime_str": "1989-12-31T01:00:00",
+        }
+    ) == (
         {
             "date_str": "2017-05-15",
             "datetime_str": "2016-09-23T23:59:59",
@@ -75,20 +79,14 @@ def test_put_is_updating_date(controller):
             "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         },
-    ) == controller.put(
-        {
-            "key": "my_key1",
-            "date_str": "2018-06-01",
-            "datetime_str": "1989-12-31T01:00:00",
-        }
     )
-    assert [
+    assert controller.get({"date_str": "2018-06-01"}) == [
         {
             "date_str": "2018-06-01",
             "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         }
-    ] == controller.get({"date_str": "2018-06-01"})
+    ]
 
 
 def test_get_date_is_handled_for_valid_date(controller):
@@ -100,13 +98,13 @@ def test_get_date_is_handled_for_valid_date(controller):
         }
     )
     d = datetime.datetime.strptime("2017-05-15", "%Y-%m-%d").date()
-    assert [
+    assert controller.get({"date_str": d}) == [
         {
             "date_str": "2017-05-15",
             "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == controller.get({"date_str": d})
+    ]
 
 
 def test_post_invalid_date_is_invalid(controller):
@@ -118,26 +116,26 @@ def test_post_invalid_date_is_invalid(controller):
                 "datetime_str": "2016-09-23T23:59:59",
             }
         )
-    assert {"date_str": ["Not a valid date."]} == exception_info.value.errors
-    assert {
+    assert exception_info.value.errors == {"date_str": ["Not a valid date."]}
+    assert exception_info.value.received_data == {
         "key": "my_key1",
         "date_str": "this is not a date",
         "datetime_str": "2016-09-23T23:59:59",
-    } == exception_info.value.received_data
+    }
 
 
 def test_get_invalid_date_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.get({"date_str": "this is not a date"})
-    assert {"date_str": ["Not a valid date."]} == exception_info.value.errors
-    assert {"date_str": "this is not a date"} == exception_info.value.received_data
+    assert exception_info.value.errors == {"date_str": ["Not a valid date."]}
+    assert exception_info.value.received_data == {"date_str": "this is not a date"}
 
 
 def test_delete_invalid_date_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.delete({"date_str": "this is not a date"})
-    assert {"date_str": ["Not a valid date."]} == exception_info.value.errors
-    assert {"date_str": "this is not a date"} == exception_info.value.received_data
+    assert exception_info.value.errors == {"date_str": ["Not a valid date."]}
+    assert exception_info.value.received_data == {"date_str": "this is not a date"}
 
 
 def test_get_with_unknown_fields_is_valid(controller):
@@ -148,13 +146,13 @@ def test_get_with_unknown_fields_is_valid(controller):
             "datetime_str": "2016-09-23T23:59:59",
         }
     )
-    assert [
+    assert controller.get({"date_str": "2018-12-30", "unknown_field": "value"}) == [
         {
             "key": "my_key1",
             "date_str": "2018-12-30",
             "datetime_str": "2016-09-23T23:59:59",
         }
-    ] == controller.get({"date_str": "2018-12-30", "unknown_field": "value"})
+    ]
 
 
 def test_put_with_unknown_fields_is_valid(controller):
@@ -165,7 +163,9 @@ def test_put_with_unknown_fields_is_valid(controller):
             "datetime_str": "2016-09-23T23:59:59",
         }
     )
-    assert (
+    assert controller.put(
+        {"key": "my_key1", "date_str": "2018-12-31", "unknown_field": "value"}
+    ) == (
         {
             "key": "my_key1",
             "date_str": "2018-12-30",
@@ -176,17 +176,15 @@ def test_put_with_unknown_fields_is_valid(controller):
             "date_str": "2018-12-31",
             "datetime_str": "2016-09-23T23:59:59",
         },
-    ) == controller.put(
-        {"key": "my_key1", "date_str": "2018-12-31", "unknown_field": "value"}
     )
-    assert [
+    assert controller.get({"date_str": "2018-12-31"}) == [
         {
             "key": "my_key1",
             "date_str": "2018-12-31",
             "datetime_str": "2016-09-23T23:59:59",
         }
-    ] == controller.get({"date_str": "2018-12-31"})
-    assert [] == controller.get({"date_str": "2018-12-30"})
+    ]
+    assert controller.get({"date_str": "2018-12-30"}) == []
 
 
 def test_put_unexisting_is_invalid(controller):
@@ -199,7 +197,7 @@ def test_put_unexisting_is_invalid(controller):
     )
     with pytest.raises(ModelCouldNotBeFound) as exception_info:
         controller.put({"key": "my_key2"})
-    assert {"key": "my_key2"} == exception_info.value.requested_data
+    assert exception_info.value.requested_data == {"key": "my_key2"}
 
 
 def test_post_invalid_datetime_is_invalid(controller):
@@ -211,20 +209,16 @@ def test_post_invalid_datetime_is_invalid(controller):
                 "datetime_str": "This is not a valid datetime",
             }
         )
-    assert {"datetime_str": ["Not a valid datetime."]} == exception_info.value.errors
-    assert {
+    assert exception_info.value.errors == {"datetime_str": ["Not a valid datetime."]}
+    assert exception_info.value.received_data == {
         "key": "my_key1",
         "date_str": "2016-09-23",
         "datetime_str": "This is not a valid datetime",
-    } == exception_info.value.received_data
+    }
 
 
 def test_post_datetime_for_a_date_is_valid(controller):
-    assert {
-        "key": "my_key1",
-        "date_str": "2017-05-01",
-        "datetime_str": "2017-05-30T01:05:45",
-    } == controller.post(
+    assert controller.post(
         {
             "key": "my_key1",
             "date_str": datetime.datetime.strptime(
@@ -232,7 +226,11 @@ def test_post_datetime_for_a_date_is_valid(controller):
             ),
             "datetime_str": "2017-05-30T01:05:45",
         }
-    )
+    ) == {
+        "key": "my_key1",
+        "date_str": "2017-05-01",
+        "datetime_str": "2017-05-30T01:05:45",
+    }
 
 
 def test_get_date_is_handled_for_unused_date(controller):
@@ -244,7 +242,7 @@ def test_get_date_is_handled_for_unused_date(controller):
         }
     )
     d = datetime.datetime.strptime("2016-09-23", "%Y-%m-%d").date()
-    assert [] == controller.get({"date_str": d})
+    assert controller.get({"date_str": d}) == []
 
 
 def test_get_date_is_handled_for_valid_datetime(controller):
@@ -256,13 +254,13 @@ def test_get_date_is_handled_for_valid_datetime(controller):
         }
     )
     dt = datetime.datetime.strptime("2016-09-23T23:59:59", "%Y-%m-%dT%H:%M:%S")
-    assert [
+    assert controller.get({"datetime_str": dt}) == [
         {
             "date_str": "2017-05-15",
             "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == controller.get({"datetime_str": dt})
+    ]
 
 
 def test_get_date_is_handled_for_unused_datetime(controller):
@@ -274,7 +272,7 @@ def test_get_date_is_handled_for_unused_datetime(controller):
         }
     )
     dt = datetime.datetime.strptime("2016-09-24T23:59:59", "%Y-%m-%dT%H:%M:%S")
-    assert [] == controller.get({"datetime_str": dt})
+    assert controller.get({"datetime_str": dt}) == []
 
 
 def test_open_api_definition(client):

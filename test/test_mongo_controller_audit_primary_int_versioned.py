@@ -2,7 +2,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 import layabase.audit_mongo
 from test import DateTimeModuleMock
 
@@ -18,9 +17,8 @@ def controller():
         other = layabase.database_mongo.Column()
 
     controller = layabase.CRUDController(TestModel, audit=True, history=True)
-    _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_versioned_int_primary_key_is_reset_after_delete(controller, monkeypatch):

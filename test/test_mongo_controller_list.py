@@ -6,7 +6,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 class EnumTest(enum.Enum):
@@ -35,9 +34,8 @@ def controller():
         bool_field = layabase.database_mongo.Column(bool)
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture

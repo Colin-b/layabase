@@ -10,7 +10,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 # Use debug logging to ensure that debug logging statements have no impact
 logging.basicConfig(
@@ -30,9 +29,8 @@ def controller():
         optional = layabase.database_mongo.Column(str)
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture

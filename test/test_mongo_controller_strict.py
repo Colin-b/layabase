@@ -3,7 +3,6 @@ from layaberr import ValidationFailed
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 
 
 @pytest.fixture
@@ -16,9 +15,8 @@ def controller():
         optional = layabase.database_mongo.Column(str)
 
     controller = layabase.CRUDController(TestModel, skip_unknown_fields=False)
-    _db = layabase.load("mongomock", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_post_with_unknown_field_is_invalid(controller):

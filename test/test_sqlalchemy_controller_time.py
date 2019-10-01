@@ -4,7 +4,6 @@ import pytest
 import sqlalchemy
 
 import layabase
-import layabase.testing
 
 
 @pytest.fixture
@@ -16,9 +15,8 @@ def controller():
         time_field = sqlalchemy.Column(sqlalchemy.Time)
 
     controller = layabase.CRUDController(TestModel)
-    _db = layabase.load("sqlite:///:memory:", [controller])
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 @pytest.fixture

@@ -4,7 +4,6 @@ import pytest
 
 import layabase
 import layabase.database_mongo
-import layabase.testing
 import layabase.audit_mongo
 from test import DateTimeModuleMock
 
@@ -23,9 +22,8 @@ def controller():
         enum_fld = layabase.database_mongo.Column(EnumTest)
 
     controller = layabase.CRUDController(TestModel, audit=True)
-    _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
-    yield controller
-    layabase.testing.reset(_db)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 def test_post_with_enum_is_valid(controller, monkeypatch):
