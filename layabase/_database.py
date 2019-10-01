@@ -187,7 +187,7 @@ class CRUDController:
         # The response that is always sent for the Model Description
         self._model_description_dictionary = None
 
-    def set_model(self, model_class):
+    def _set_model(self, model_class):
         """
         Initialize related model (should extends (Version)CRUDModel).
 

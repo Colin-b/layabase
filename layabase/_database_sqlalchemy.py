@@ -538,7 +538,7 @@ def _create_model(controller, base) -> Type[CRUDModel]:
     if controller.interpret_star_character:
         ControllerModel.interpret_star_character = True
 
-    controller.set_model(ControllerModel)
+    controller._set_model(ControllerModel)
     return ControllerModel
 
 

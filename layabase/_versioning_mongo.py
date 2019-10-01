@@ -5,14 +5,14 @@ import pymongo
 import flask_restplus
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
-from layabase.database_mongo import CRUDModel, Column, IndexType
+from layabase.database_mongo import _CRUDModel, Column, IndexType
 
 logger = logging.getLogger(__name__)
 
 REVISION_COUNTER = ("revision", "shared")
 
 
-class VersionedCRUDModel(CRUDModel):
+class VersionedCRUDModel(_CRUDModel):
     """
     CRUDModel with ability to retrieve history and rollback to a previous version of a row.
     It is mandatory for at least one field to be a unique index.

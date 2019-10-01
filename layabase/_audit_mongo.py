@@ -6,7 +6,7 @@ from typing import Type
 
 import flask_restplus
 
-from layabase.database_mongo import Column, CRUDModel
+from layabase.database_mongo import Column, _CRUDModel
 from layabase._audit import current_user_name
 from layabase._versioning_mongo import VersionedCRUDModel
 
@@ -21,7 +21,7 @@ class Action(enum.IntEnum):
     Rollback = 4
 
 
-def _create_from(mixin, model: Type[CRUDModel], base):
+def _create_from(mixin, model: Type[_CRUDModel], base):
     return (
         _versioning_audit(mixin, base)
         if issubclass(model, VersionedCRUDModel)
@@ -30,7 +30,7 @@ def _create_from(mixin, model: Type[CRUDModel], base):
 
 
 def _common_audit(mixin, model, base):
-    class AuditModel(mixin, CRUDModel, base=base, skip_name_check=True):
+    class AuditModel(mixin, _CRUDModel, base=base, skip_name_check=True):
         """
         Class providing Audit fields for a MONGODB model.
         """
@@ -80,7 +80,7 @@ def _common_audit(mixin, model, base):
 
 
 def _versioning_audit(mixin, base):
-    class AuditModel(CRUDModel, base=base, skip_name_check=True):
+    class AuditModel(_CRUDModel, base=base, skip_name_check=True):
         """
         Class providing the audit for all versioned MONGODB models.
         """

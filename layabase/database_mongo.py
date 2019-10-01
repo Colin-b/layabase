@@ -979,7 +979,7 @@ class DictColumn(Column):
         :return: A CRUDModel describing every dictionary fields.
         """
 
-        class FakeModel(CRUDModel):
+        class FakeModel(_CRUDModel):
             pass
 
         for name, column in self._default_fields.items():
@@ -994,7 +994,7 @@ class DictColumn(Column):
         :return: A CRUDModel describing every dictionary fields.
         """
 
-        class FakeModel(CRUDModel):
+        class FakeModel(_CRUDModel):
             pass
 
         for name, column in self._get_fields(model_as_dict).items():
@@ -1008,7 +1008,7 @@ class DictColumn(Column):
         :return: A CRUDModel describing every index fields.
         """
 
-        class FakeModel(CRUDModel):
+        class FakeModel(_CRUDModel):
             pass
 
         for name, column in self._default_index_fields.items():
@@ -1023,7 +1023,7 @@ class DictColumn(Column):
         :return: A CRUDModel describing every index fields.
         """
 
-        class FakeModel(CRUDModel):
+        class FakeModel(_CRUDModel):
             pass
 
         for name, column in self._get_all_index_fields(model_as_dict).items():
@@ -1299,7 +1299,7 @@ class ListColumn(Column):
 _server_versions: Dict[str, str] = {}
 
 
-class CRUDModel:
+class _CRUDModel:
     """
     Class providing CRUD helper methods for a Mongo model.
     __collection__ class property must be specified in Model.
@@ -1311,7 +1311,7 @@ class CRUDModel:
     __collection__: pymongo.collection.Collection = None  # Mongo collection
     __counters__: pymongo.collection.Collection = None  # Mongo counters collection (to increment fields)
     __fields__: List[Column] = []  # All Mongo fields within this model
-    audit_model: Type["CRUDModel"] = None
+    audit_model: Type["_CRUDModel"] = None
     _skip_unknown_fields: bool = True
     _skip_log_for_unknown_fields: List[str] = []
     logger = None
@@ -2406,13 +2406,13 @@ class CRUDModel:
         return exported_fields
 
 
-def _create_model(controller, base) -> Type[CRUDModel]:
+def _create_model(controller, base) -> Type[_CRUDModel]:
     if controller.history:
         import layabase._versioning_mongo
 
         crud_model = layabase._versioning_mongo.VersionedCRUDModel
     else:
-        crud_model = CRUDModel
+        crud_model = _CRUDModel
 
     class ControllerModel(
         controller.model,
@@ -2431,7 +2431,7 @@ def _create_model(controller, base) -> Type[CRUDModel]:
             mixin=controller.model, model=ControllerModel, base=base
         )
 
-    controller.set_model(ControllerModel)
+    controller._set_model(ControllerModel)
     return ControllerModel
 
 
