@@ -2232,30 +2232,40 @@ class _CRUDModel:
             )
 
     @classmethod
-    def description_dictionary(cls) -> dict:
+    def description_dictionary(cls) -> Dict[str, str]:
         description = {"collection": cls.__tablename__}
         for field in cls.__fields__:
             description[field.name] = field.name
         return description
 
     @classmethod
-    def post_fields(cls, namespace: flask_restplus.Namespace):
+    def post_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus_fields.Raw]:
         return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def put_fields(cls, namespace: flask_restplus.Namespace):
+    def put_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus_fields.Raw]:
         return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def get_fields(cls, namespace: flask_restplus.Namespace):
+    def get_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus_fields.Raw]:
         return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def history_fields(cls, namespace: flask_restplus.Namespace):
+    def history_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus_fields.Raw]:
         return cls._flask_restplus_fields(namespace)
 
     @classmethod
-    def _flask_restplus_fields(cls, namespace: flask_restplus.Namespace) -> dict:
+    def _flask_restplus_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus_fields.Raw]:
         return {
             field.name: cls._to_flask_restplus_field(namespace, field)
             for field in cls.__fields__
@@ -2264,7 +2274,7 @@ class _CRUDModel:
     @classmethod
     def _to_flask_restplus_field(
         cls, namespace: flask_restplus.Namespace, field: Column
-    ):
+    ) -> flask_restplus_fields.Raw:
         if isinstance(field, DictColumn):
             dict_fields = field._default_description_model()._flask_restplus_fields(
                 namespace
@@ -2385,7 +2395,7 @@ class _CRUDModel:
             )
 
     @classmethod
-    def description_fields(cls) -> dict:
+    def description_fields(cls) -> Dict[str, flask_restplus_fields.Raw]:
         exported_fields = {
             "collection": flask_restplus_fields.String(
                 required=True, example="collection", description="Collection name"

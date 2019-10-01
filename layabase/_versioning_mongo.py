@@ -44,7 +44,9 @@ class VersionedCRUDModel(_CRUDModel):
                 cls.audit_model.update_indexes(document)
 
     @classmethod
-    def post_fields(cls, namespace: flask_restplus.Namespace):
+    def post_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
@@ -71,7 +73,9 @@ class VersionedCRUDModel(_CRUDModel):
             cls.audit_model.audit_add(revision)
 
     @classmethod
-    def put_fields(cls, namespace: flask_restplus.Namespace):
+    def put_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
@@ -198,7 +202,9 @@ class VersionedCRUDModel(_CRUDModel):
         return query_get_parser
 
     @classmethod
-    def get_fields(cls, namespace: flask_restplus.Namespace):
+    def get_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]

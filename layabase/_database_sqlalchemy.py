@@ -464,23 +464,31 @@ class CRUDModel:
         return description
 
     @classmethod
-    def post_fields(cls, namespace: flask_restplus.Namespace):
+    def post_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         return cls._flask_restplus_fields()
 
     @classmethod
-    def put_fields(cls, namespace: flask_restplus.Namespace):
+    def put_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         return cls._flask_restplus_fields()
 
     @classmethod
-    def get_fields(cls, namespace: flask_restplus.Namespace):
+    def get_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         return cls._flask_restplus_fields()
 
     @classmethod
-    def history_fields(cls, namespace: flask_restplus.Namespace):
+    def history_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         return cls._flask_restplus_fields()
 
     @classmethod
-    def _flask_restplus_fields(cls) -> dict:
+    def _flask_restplus_fields(cls) -> Dict[str, flask_restplus.fields.Raw]:
         return {
             marshmallow_field.name: _get_rest_plus_type(marshmallow_field)(
                 required=marshmallow_field.required,
@@ -498,7 +506,7 @@ class CRUDModel:
         return [field.name for field in cls.schema().fields.values()]
 
     @classmethod
-    def description_fields(cls) -> dict:
+    def description_fields(cls) -> Dict[str, flask_restplus.fields.Raw]:
         exported_fields = {
             "table": flask_restplus_fields.String(
                 required=True, example="table", description="Table name"
