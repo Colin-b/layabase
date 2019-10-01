@@ -9,13 +9,13 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestNumericModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         numeric_field = sqlalchemy.Column(sqlalchemy.Numeric)
 
-    controller = layabase.CRUDController(TestNumericModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("sqlite:///:memory:", [controller])
     yield controller
     layabase.testing.reset(_db)
@@ -59,12 +59,42 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestNumericModel_GetResponseModel"
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
                             },
                         }
                     },
@@ -114,36 +144,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestNumericModel_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestNumericModel_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
@@ -172,7 +172,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestNumericModel_PostRequestModel": {
+            "TestModel_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -180,7 +180,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestNumericModel_PutRequestModel": {
+            "TestModel_PutRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -188,7 +188,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestNumericModel_GetResponseModel": {
+            "TestModel_GetResponseModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},

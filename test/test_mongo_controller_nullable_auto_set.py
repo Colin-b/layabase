@@ -8,7 +8,7 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestNullableAutoSetModel:
+    class TestModel:
         __tablename__ = "test"
 
         prim_def_inc = layabase.database_mongo.Column(
@@ -21,7 +21,7 @@ def controller():
             int, is_primary_key=True, should_auto_increment=True
         )
 
-    controller = layabase.CRUDController(TestNullableAutoSetModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)

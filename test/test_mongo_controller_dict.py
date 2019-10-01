@@ -17,7 +17,7 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestDictModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
@@ -31,7 +31,7 @@ def controller():
             is_nullable=False,
         )
 
-    controller = layabase.CRUDController(TestDictModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)

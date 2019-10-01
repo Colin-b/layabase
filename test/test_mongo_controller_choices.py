@@ -10,7 +10,7 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestChoicesModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(
@@ -26,7 +26,7 @@ def controller():
             float, description="Test Documentation", choices=[1.25, 1.5, 1.75]
         )
 
-    controller = layabase.CRUDController(TestChoicesModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)

@@ -31,13 +31,13 @@ def controller():
 
 @pytest.fixture
 def controller_versioned():
-    class TestVersionedModel:
+    class TestModelVersioned:
         __tablename__ = "test_versioned"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         enum_fld = layabase.database_mongo.Column(EnumTest)
 
-    return layabase.CRUDController(TestVersionedModel, audit=True, history=True)
+    return layabase.CRUDController(TestModelVersioned, audit=True, history=True)
 
 
 @pytest.fixture
@@ -114,6 +114,21 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModelVersioned_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -123,30 +138,9 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_PutRequestModel"
+                                "$ref": "#/definitions/TestModelVersioned_PutRequestModel"
                             },
                         }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "enum_fld",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -155,7 +149,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_GetResponseModel"
+                                "$ref": "#/definitions/TestModelVersioned_GetResponseModel"
                             },
                         }
                     },
@@ -198,18 +192,24 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "post": {
+                "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
+                    "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_PostRequestModel"
-                            },
-                        }
+                            "name": "enum_fld",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -220,7 +220,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_GetAuditResponseModel"
+                                "$ref": "#/definitions/TestModelVersioned_GetAuditResponseModel"
                             },
                         }
                     },
@@ -336,7 +336,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestVersionedModel_PutRequestModel": {
+            "TestModelVersioned_PostRequestModel": {
                 "properties": {
                     "enum_fld": {
                         "type": "string",
@@ -352,7 +352,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestVersionedModel_PostRequestModel": {
+            "TestModelVersioned_PutRequestModel": {
                 "properties": {
                     "enum_fld": {
                         "type": "string",
@@ -368,7 +368,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestVersionedModel_GetResponseModel": {
+            "TestModelVersioned_GetResponseModel": {
                 "properties": {
                     "enum_fld": {
                         "type": "string",
@@ -384,7 +384,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestVersionedModel_GetAuditResponseModel": {
+            "TestModelVersioned_GetAuditResponseModel": {
                 "properties": {
                     "audit_action": {
                         "type": "string",

@@ -24,14 +24,14 @@ def controller1():
 
 @pytest.fixture
 def controller2():
-    class Test2Model:
+    class TestModel2:
         __tablename__ = "test2"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    return layabase.CRUDController(Test2Model, audit=True)
+    return layabase.CRUDController(TestModel2, audit=True)
 
 
 @pytest.fixture

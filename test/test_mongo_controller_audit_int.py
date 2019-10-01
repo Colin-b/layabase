@@ -9,12 +9,12 @@ from test import DateTimeModuleMock
 
 @pytest.fixture
 def controller():
-    class TestIntModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(int)
 
-    controller = layabase.CRUDController(TestIntModel, audit=True)
+    controller = layabase.CRUDController(TestModel, audit=True)
     _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
     yield controller
     layabase.testing.reset(_db)

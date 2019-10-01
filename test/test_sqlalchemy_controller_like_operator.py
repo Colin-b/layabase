@@ -7,14 +7,12 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestLikeOperatorModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-    controller = layabase.CRUDController(
-        TestLikeOperatorModel, interpret_star_character=True
-    )
+    controller = layabase.CRUDController(TestModel, interpret_star_character=True)
     _db = layabase.load("sqlite:///:memory:", [controller])
     yield controller
     layabase.testing.reset(_db)

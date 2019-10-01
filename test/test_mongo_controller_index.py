@@ -11,7 +11,7 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestIndexModel:
+    class TestModel:
         __tablename__ = "test"
 
         unique_key = layabase.database_mongo.Column(str, is_primary_key=True)
@@ -19,7 +19,7 @@ def controller():
             datetime.date, index_type=layabase.database_mongo.IndexType.Other
         )
 
-    controller = layabase.CRUDController(TestIndexModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)

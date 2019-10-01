@@ -7,7 +7,7 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestStringListModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
@@ -15,7 +15,7 @@ def controller():
             layabase.database_mongo.Column(), sorted=True
         )
 
-    controller = layabase.CRUDController(TestStringListModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)

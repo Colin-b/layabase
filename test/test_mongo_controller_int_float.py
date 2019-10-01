@@ -8,13 +8,13 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestIntAndFloatModel:
+    class TestModel:
         __tablename__ = "test"
 
         int_value = layabase.database_mongo.Column(int)
         float_value = layabase.database_mongo.Column(float)
 
-    controller = layabase.CRUDController(TestIntAndFloatModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)

@@ -16,13 +16,13 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestEnumModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         enum_fld = layabase.database_mongo.Column(EnumTest)
 
-    controller = layabase.CRUDController(TestEnumModel, audit=True)
+    controller = layabase.CRUDController(TestModel, audit=True)
     _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
     yield controller
     layabase.testing.reset(_db)

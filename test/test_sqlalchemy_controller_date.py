@@ -12,14 +12,14 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestDateModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         date_str = sqlalchemy.Column(sqlalchemy.Date)
         datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
 
-    controller = layabase.CRUDController(TestDateModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("sqlite:///:memory:", [controller])
     yield controller
     layabase.testing.reset(_db)
@@ -81,12 +81,42 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestDateModel_GetResponseModel"
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
                             },
                         }
                     },
@@ -142,36 +172,6 @@ def test_open_api_definition(client):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestDateModel_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestDateModel_PutRequestModel"
-                            },
-                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -294,7 +294,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestDateModel_PostRequestModel": {
+            "TestModel_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -311,7 +311,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestDateModel_PutRequestModel": {
+            "TestModel_PutRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -328,7 +328,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestDateModel_GetResponseModel": {
+            "TestModel_GetResponseModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},

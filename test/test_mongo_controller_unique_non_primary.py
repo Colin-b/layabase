@@ -15,7 +15,7 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller_versioned():
-    class TestVersionedModel:
+    class TestModelVersioned:
         __tablename__ = "test_versioned"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
@@ -29,12 +29,12 @@ def controller_versioned():
             is_required=True,
         )
 
-    return layabase.CRUDController(TestVersionedModel, history=True)
+    return layabase.CRUDController(TestModelVersioned, history=True)
 
 
 @pytest.fixture
 def controller_versioned_unique():
-    class TestVersionedUniqueNonPrimaryModel:
+    class TestModelVersionedUnique:
         __tablename__ = "test_versioned_unique"
 
         key = layabase.database_mongo.Column(int, should_auto_increment=True)
@@ -42,12 +42,12 @@ def controller_versioned_unique():
             int, index_type=layabase.database_mongo.IndexType.Unique
         )
 
-    return layabase.CRUDController(TestVersionedUniqueNonPrimaryModel, history=True)
+    return layabase.CRUDController(TestModelVersionedUnique, history=True)
 
 
 @pytest.fixture
 def controller_unique():
-    class TestUniqueNonPrimaryModel:
+    class TestModelUnique:
         __tablename__ = "test_unique"
 
         key = layabase.database_mongo.Column(int, should_auto_increment=True)
@@ -55,7 +55,7 @@ def controller_unique():
             int, index_type=layabase.database_mongo.IndexType.Unique
         )
 
-    return layabase.CRUDController(TestUniqueNonPrimaryModel)
+    return layabase.CRUDController(TestModelUnique)
 
 
 @pytest.fixture

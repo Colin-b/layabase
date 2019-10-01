@@ -17,7 +17,7 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestVersionedModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
@@ -31,7 +31,7 @@ def controller():
             is_required=True,
         )
 
-    controller = layabase.CRUDController(TestVersionedModel, history=True)
+    controller = layabase.CRUDController(TestModel, history=True)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)
@@ -657,6 +657,21 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -666,7 +681,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_PutRequestModel"
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
                             },
                         }
                     ],
@@ -677,7 +692,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_GetResponseModel"
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
                             },
                         }
                     },
@@ -724,21 +739,6 @@ def test_open_api_definition(client):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestVersionedModel_PostRequestModel"
-                            },
-                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -815,7 +815,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestVersionedModel_PutRequestModel": {
+            "TestModel_PostRequestModel": {
                 "required": ["dict_field"],
                 "properties": {
                     "dict_field": {
@@ -844,7 +844,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestVersionedModel_PostRequestModel": {
+            "TestModel_PutRequestModel": {
                 "required": ["dict_field"],
                 "properties": {
                     "dict_field": {
@@ -861,7 +861,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestVersionedModel_GetResponseModel": {
+            "TestModel_GetResponseModel": {
                 "required": ["dict_field"],
                 "properties": {
                     "dict_field": {

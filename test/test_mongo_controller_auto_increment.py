@@ -17,7 +17,7 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestAutoIncrementModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(
@@ -30,7 +30,7 @@ def controller():
             str, default_value="Test value"
         )
 
-    controller = layabase.CRUDController(TestAutoIncrementModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)
@@ -113,12 +113,42 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestAutoIncrementModel_GetResponseModel"
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
                             },
                         }
                     },
@@ -196,36 +226,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestAutoIncrementModel_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestAutoIncrementModel_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -233,7 +233,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestAutoIncrementModel_PutRequestModel": {
+            "TestModel_PostRequestModel": {
                 "properties": {
                     "enum_field": {
                         "type": "string",
@@ -252,7 +252,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestAutoIncrementModel_PostRequestModel": {
+            "TestModel_PutRequestModel": {
                 "properties": {
                     "enum_field": {
                         "type": "string",
@@ -271,7 +271,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestAutoIncrementModel_GetResponseModel": {
+            "TestModel_GetResponseModel": {
                 "properties": {
                     "enum_field": {
                         "type": "string",

@@ -12,7 +12,7 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestSupportForComparisonSignsModel:
+    class TestModel:
         __tablename__ = "test"
 
         int_value = layabase.database_mongo.Column(int, allow_comparison_signs=True)
@@ -24,7 +24,7 @@ def controller():
             datetime.datetime, allow_comparison_signs=True
         )
 
-    controller = layabase.CRUDController(TestSupportForComparisonSignsModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)
@@ -1151,6 +1151,21 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -1160,7 +1175,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel_PutRequestModel"
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
                             },
                         }
                     ],
@@ -1171,7 +1186,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel_GetResponseModel"
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
                             },
                         }
                     },
@@ -1260,21 +1275,6 @@ def test_open_api_definition(client):
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel_PostRequestModel"
-                            },
-                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -1370,7 +1370,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestSupportForComparisonSignsModel_PutRequestModel": {
+            "TestModel_PostRequestModel": {
                 "properties": {
                     "date_value": {
                         "type": "string",
@@ -1393,7 +1393,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestSupportForComparisonSignsModel_PostRequestModel": {
+            "TestModel_PutRequestModel": {
                 "properties": {
                     "date_value": {
                         "type": "string",
@@ -1416,7 +1416,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestSupportForComparisonSignsModel_GetResponseModel": {
+            "TestModel_GetResponseModel": {
                 "properties": {
                     "date_value": {
                         "type": "string",

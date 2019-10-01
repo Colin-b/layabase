@@ -8,7 +8,7 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestAutoIncAuditVersionedModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(
@@ -16,9 +16,7 @@ def controller():
         )
         other = layabase.database_mongo.Column(int)
 
-    controller = layabase.CRUDController(
-        TestAutoIncAuditVersionedModel, audit=True, history=True
-    )
+    controller = layabase.CRUDController(TestModel, audit=True, history=True)
     _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
     yield controller
     layabase.testing.reset(_db)

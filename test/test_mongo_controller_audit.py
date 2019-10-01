@@ -87,7 +87,7 @@ def test_get_all_without_data_returns_empty_list(controller):
 
 
 def test_audit_table_name_is_forbidden():
-    class TestAuditModel:
+    class TestModel:
         __tablename__ = "audit"
 
         key = layabase.database_mongo.Column(str)
@@ -95,7 +95,7 @@ def test_audit_table_name_is_forbidden():
     with pytest.raises(Exception) as exception_info:
         layabase.load(
             "mongomock?ssl=True",
-            [layabase.CRUDController(TestAuditModel)],
+            [layabase.CRUDController(TestModel)],
             replicaSet="globaldb",
         )
 
@@ -103,7 +103,7 @@ def test_audit_table_name_is_forbidden():
 
 
 def test_audited_table_name_is_forbidden():
-    class TestAuditModel:
+    class TestModel:
         __tablename__ = "audit_test"
 
         key = layabase.database_mongo.Column(str)
@@ -111,7 +111,7 @@ def test_audited_table_name_is_forbidden():
     with pytest.raises(Exception) as exception_info:
         layabase.load(
             "mongomock?ssl=True",
-            [layabase.CRUDController(TestAuditModel)],
+            [layabase.CRUDController(TestModel)],
             replicaSet="globaldb",
         )
 

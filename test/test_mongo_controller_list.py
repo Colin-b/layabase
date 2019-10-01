@@ -16,7 +16,7 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestListModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
@@ -34,7 +34,7 @@ def controller():
         )
         bool_field = layabase.database_mongo.Column(bool)
 
-    controller = layabase.CRUDController(TestListModel)
+    controller = layabase.CRUDController(TestModel)
     _db = layabase.load("mongomock", [controller])
     yield controller
     layabase.testing.reset(_db)
@@ -88,34 +88,6 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "bool_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "boolean"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "list_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "post": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "post_test_resource",
@@ -125,7 +97,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestListModel_PostRequestModel"
+                                "$ref": "#/definitions/TestModel_PostRequestModel"
                             },
                         }
                     ],
@@ -140,7 +112,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestListModel_PutRequestModel"
+                                "$ref": "#/definitions/TestModel_PutRequestModel"
                             },
                         }
                     ],
@@ -151,7 +123,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestListModel_GetResponseModel"
+                                "$ref": "#/definitions/TestModel_GetResponseModel"
                             },
                         }
                     },
@@ -201,11 +173,9 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-            },
-            "/test_parsers": {
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
+                    "operationId": "delete_test_resource",
                     "parameters": [
                         {
                             "name": "bool_field",
@@ -231,6 +201,8 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+            },
+            "/test_parsers": {
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -272,6 +244,34 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "bool_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "boolean"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
             },
         },
         "info": {"title": "API", "version": "1.0"},
@@ -279,7 +279,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestListModel_PostRequestModel": {
+            "TestModel_PostRequestModel": {
                 "properties": {
                     "bool_field": {
                         "type": "boolean",
@@ -317,7 +317,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestListModel_PutRequestModel": {
+            "TestModel_PutRequestModel": {
                 "properties": {
                     "bool_field": {
                         "type": "boolean",
@@ -343,7 +343,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestListModel_GetResponseModel": {
+            "TestModel_GetResponseModel": {
                 "properties": {
                     "bool_field": {
                         "type": "boolean",

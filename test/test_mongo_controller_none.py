@@ -7,7 +7,7 @@ import layabase.testing
 
 @pytest.fixture
 def controller_insert():
-    class TestNoneInsertModel:
+    class TestModelInsert:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(int, is_primary_key=True)
@@ -16,12 +16,12 @@ def controller_insert():
             is_required=True,
         )
 
-    return layabase.CRUDController(TestNoneInsertModel, skip_name_check=True)
+    return layabase.CRUDController(TestModelInsert, skip_name_check=True)
 
 
 @pytest.fixture
 def controller_not_inserted():
-    class TestNoneNotInsertedModel:
+    class TestModelNotInserted:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(int, is_primary_key=True)
@@ -30,18 +30,18 @@ def controller_not_inserted():
             is_required=True,
         )
 
-    return layabase.CRUDController(TestNoneNotInsertedModel)
+    return layabase.CRUDController(TestModelNotInserted)
 
 
 @pytest.fixture
 def controller_retrieve():
-    class TestNoneRetrieveModel:
+    class TestModelRetrieve:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(int, is_primary_key=True)
         my_dict = layabase.database_mongo.Column(dict, is_required=True)
 
-    return layabase.CRUDController(TestNoneRetrieveModel, skip_name_check=True)
+    return layabase.CRUDController(TestModelRetrieve, skip_name_check=True)
 
 
 @pytest.fixture

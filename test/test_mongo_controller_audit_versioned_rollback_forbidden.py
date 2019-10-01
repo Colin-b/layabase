@@ -16,7 +16,7 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestVersionedNoRollbackAllowedModel:
+    class TestModel:
         __tablename__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
@@ -28,9 +28,7 @@ def controller():
         ) -> Dict[str, List[str]]:
             return {"key": ["Rollback forbidden"]}
 
-    controller = layabase.CRUDController(
-        TestVersionedNoRollbackAllowedModel, audit=True, history=True
-    )
+    controller = layabase.CRUDController(TestModel, audit=True, history=True)
     _db = layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
     yield controller
     layabase.testing.reset(_db)
