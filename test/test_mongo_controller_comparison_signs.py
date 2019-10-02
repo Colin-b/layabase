@@ -6,7 +6,7 @@ import flask_restplus
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 
 
 @pytest.fixture
@@ -14,12 +14,14 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        int_value = layabase.database_mongo.Column(int, allow_comparison_signs=True)
-        float_value = layabase.database_mongo.Column(float, allow_comparison_signs=True)
-        date_value = layabase.database_mongo.Column(
+        int_value = layabase._database_mongo.Column(int, allow_comparison_signs=True)
+        float_value = layabase._database_mongo.Column(
+            float, allow_comparison_signs=True
+        )
+        date_value = layabase._database_mongo.Column(
             datetime.date, allow_comparison_signs=True
         )
-        datetime_value = layabase.database_mongo.Column(
+        datetime_value = layabase._database_mongo.Column(
             datetime.datetime, allow_comparison_signs=True
         )
 

@@ -1,7 +1,7 @@
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 import layabase.testing
 
 
@@ -10,7 +10,7 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(str, is_primary_key=True)
+        key = layabase._database_mongo.Column(str, is_primary_key=True)
 
     return layabase.CRUDController(TestCollection)
 

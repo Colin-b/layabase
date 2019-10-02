@@ -268,7 +268,7 @@ To link your model to the underlying collection, you will need to provide a conn
 ### Collection
 
 ```python
-from layabase.database_mongo import Column
+from layabase.mongo import Column
 
 class MyCollection:
     __collection_name__ = "my_collection"
@@ -279,10 +279,10 @@ class MyCollection:
 
 ##### String fields
 
-Fields containing string can be described using layabase.database_mongo.Column
+Fields containing string can be described using layabase.mongo.Column
 
 ```python
-from layabase.database_mongo import Column
+from layabase.mongo import Column
 
 class MyCollection:
     __collection_name__ = "my_collection"
@@ -361,11 +361,29 @@ The following parameters can also be provided when creating a column of string t
 
 ##### Dictionary fields
 
-Fields containing a dictionary can be described using layabase.database_mongo.DictColumn
+Fields containing a dictionary can be described using layabase.mongo.DictColumn
+
+```python
+from layabase.mongo import DictColumn
+
+class MyCollection:
+    __collection_name__ = "my_collection"
+
+    key = DictColumn()
+```
 
 ##### List fields
 
-Fields containing a list can be described using layabase.database_mongo.ListColumn
+Fields containing a list can be described using layabase.mongo.ListColumn
+
+```python
+from layabase.mongo import ListColumn, Column
+
+class MyCollection:
+    __collection_name__ = "my_collection"
+
+    key = ListColumn(Column())
+```
 
 ## How to install
 1. [python 3.7+](https://www.python.org/downloads/) must be installed

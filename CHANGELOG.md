@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - database.load now request a list of controller instances as parameters.
 - The ability to interpret star character should now be defined per column instead of per model.
 - History request parser do not contains anything anymore in case history is not requested. It should have never been used in this case anyway.
+- Mongo Columns and IndexType are now available via layabase.mongo
 
 ### Fixed
 - Avoid creating f-string when nothing needs to be interpreted.
@@ -21,10 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - layabase.database is not exposed anymore. Use layabase instead.
 - layabase.database_sqlalchemy is not exposed anymore.
+- layabase.database_mongo is not exposed anymore. Use layabase.mongo instead.
 - layabase.audit is not exposed anymore. It should never have been used anyway.
 - layabase.audit_mongo is not exposed anymore.
 - layabase.audit_sqlalchemy is not exposed anymore.
-- layabase.database_mongo.CRUDModel is not exposed anymore.
 
 ### Added
 - layabase.testing.mock_mongo_audit_datetime pytest fixture

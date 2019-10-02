@@ -10,7 +10,7 @@ def reset(base):
     :param base: database object as returned by the load function (Mandatory).
     """
     if hasattr(base, "is_mongos"):
-        import layabase.database_mongo as database_mongo
+        import layabase._database_mongo as database_mongo
 
         database_mongo._reset(base)
     else:
@@ -33,9 +33,9 @@ class DateTimeModuleMock:
 
 @pytest.fixture
 def mock_mongo_health_datetime(monkeypatch):
-    import layabase.database_mongo
+    import layabase._database_mongo
 
-    monkeypatch.setattr(layabase.database_mongo, "datetime", DateTimeModuleMock)
+    monkeypatch.setattr(layabase._database_mongo, "datetime", DateTimeModuleMock)
 
 
 @pytest.fixture

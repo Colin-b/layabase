@@ -1,7 +1,7 @@
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 from layabase.testing import mock_mongo_health_datetime
 
 
@@ -10,7 +10,7 @@ def database():
     class TestCollection:
         __collection_name__ = "test"
 
-        id = layabase.database_mongo.Column()
+        id = layabase._database_mongo.Column()
 
     return layabase.load("mongomock", [layabase.CRUDController(TestCollection)])
 

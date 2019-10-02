@@ -5,7 +5,7 @@ from typing import List, Union, Iterable
 from layaberr import ValidationFailed
 import flask_restplus
 
-from layabase.exceptions import ControllerModelNotSet
+from layabase._exceptions import ControllerModelNotSet
 from layabase._api import (
     add_get_query_fields,
     add_delete_query_fields,
@@ -70,7 +70,7 @@ def check(base) -> (str, dict):
         raise NoDatabaseProvided()
 
     if hasattr(base, "is_mongos"):
-        import layabase.database_mongo as database_mongo
+        import layabase._database_mongo as database_mongo
 
         return database_mongo._check(base)
     else:
@@ -388,7 +388,7 @@ def load(database_connection_url: str, controllers: Iterable[CRUDController], **
         raise NoRelatedControllers()
 
     if database_connection_url.startswith("mongo"):
-        import layabase.database_mongo as database_mongo
+        import layabase._database_mongo as database_mongo
 
         return database_mongo._load(database_connection_url, controllers, **kwargs)
 

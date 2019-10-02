@@ -1,7 +1,7 @@
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 
 
 @pytest.fixture
@@ -9,9 +9,9 @@ def controller_insert():
     class TestCollectionInsert:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(int, is_primary_key=True)
-        my_dict = layabase.database_mongo.DictColumn(
-            fields={"null_value": layabase.database_mongo.Column(store_none=True)},
+        key = layabase._database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase._database_mongo.DictColumn(
+            fields={"null_value": layabase._database_mongo.Column(store_none=True)},
             is_required=True,
         )
 
@@ -23,9 +23,9 @@ def controller_not_inserted():
     class TestCollectionNotInserted:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(int, is_primary_key=True)
-        my_dict = layabase.database_mongo.DictColumn(
-            fields={"null_value": layabase.database_mongo.Column(store_none=False)},
+        key = layabase._database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase._database_mongo.DictColumn(
+            fields={"null_value": layabase._database_mongo.Column(store_none=False)},
             is_required=True,
         )
 
@@ -37,8 +37,8 @@ def controller_retrieve():
     class TestCollectionRetrieve:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(int, is_primary_key=True)
-        my_dict = layabase.database_mongo.Column(dict, is_required=True)
+        key = layabase._database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase._database_mongo.Column(dict, is_required=True)
 
     return layabase.CRUDController(TestCollectionRetrieve, skip_name_check=True)
 

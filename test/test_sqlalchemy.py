@@ -1,5 +1,7 @@
 import layabase._database_sqlalchemy
 
+# Those test cases are here to unit test features not testable using in-memory SQLite
+
 
 def test_sybase_url():
     assert (

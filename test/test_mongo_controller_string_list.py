@@ -1,7 +1,7 @@
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 
 
 @pytest.fixture
@@ -9,9 +9,9 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(is_primary_key=True)
-        list_field = layabase.database_mongo.ListColumn(
-            layabase.database_mongo.Column(), sorted=True
+        key = layabase._database_mongo.Column(is_primary_key=True)
+        list_field = layabase._database_mongo.ListColumn(
+            layabase._database_mongo.Column(), sorted=True
         )
 
     controller = layabase.CRUDController(TestCollection)

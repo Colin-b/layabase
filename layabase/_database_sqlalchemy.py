@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import StaticPool
 import flask_restplus
 
-from layabase.exceptions import MultiSchemaNotSupported
+from layabase._exceptions import MultiSchemaNotSupported
 from layabase import CRUDController
 
 

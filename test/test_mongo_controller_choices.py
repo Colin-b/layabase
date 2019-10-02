@@ -4,7 +4,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 
 
 @pytest.fixture
@@ -12,16 +12,16 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(
+        key = layabase._database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
-        int_choices_field = layabase.database_mongo.Column(
+        int_choices_field = layabase._database_mongo.Column(
             int, description="Test Documentation", choices=[1, 2, 3]
         )
-        str_choices_field = layabase.database_mongo.Column(
+        str_choices_field = layabase._database_mongo.Column(
             str, description="Test Documentation", choices=["one", "two", "three"]
         )
-        float_choices_field = layabase.database_mongo.Column(
+        float_choices_field = layabase._database_mongo.Column(
             float, description="Test Documentation", choices=[1.25, 1.5, 1.75]
         )
 

@@ -1,7 +1,7 @@
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 from layabase.testing import mock_mongo_audit_datetime
 
 
@@ -10,10 +10,10 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(
+        key = layabase._database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
-        other = layabase.database_mongo.Column()
+        other = layabase._database_mongo.Column()
 
     controller = layabase.CRUDController(TestCollection, audit=True)
     layabase.load("mongomock", [controller])

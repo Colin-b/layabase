@@ -3,7 +3,7 @@ import enum
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 
 
 class EnumTest(enum.Enum):
@@ -16,21 +16,21 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(is_primary_key=True)
-        dict_field = layabase.database_mongo.DictColumn(
+        key = layabase._database_mongo.Column(is_primary_key=True)
+        dict_field = layabase._database_mongo.DictColumn(
             fields={
-                "first_key": layabase.database_mongo.DictColumn(
+                "first_key": layabase._database_mongo.DictColumn(
                     fields={
-                        "inner_key1": layabase.database_mongo.Column(
+                        "inner_key1": layabase._database_mongo.Column(
                             EnumTest, is_nullable=False
                         ),
-                        "inner_key2": layabase.database_mongo.Column(
+                        "inner_key2": layabase._database_mongo.Column(
                             int, is_nullable=False
                         ),
                     },
                     is_required=True,
                 ),
-                "second_key": layabase.database_mongo.Column(int, is_nullable=False),
+                "second_key": layabase._database_mongo.Column(int, is_nullable=False),
             },
             is_required=True,
         )

@@ -2,16 +2,16 @@ import pytest
 import pymongo.errors
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 
 
 def test_2entities_on_same_collection_without_pk():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(str, is_primary_key=True)
-        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-        optional = layabase.database_mongo.Column(str)
+        key = layabase._database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase._database_mongo.Column(int, is_nullable=False)
+        optional = layabase._database_mongo.Column(str)
 
     controller = layabase.CRUDController(TestCollection, history=True)
 
@@ -26,16 +26,16 @@ def test_2entities_on_same_collection_without_pk():
 
     # This call is performed using the internal function because we want to simulate an already filled database
     with pytest.raises(pymongo.errors.DuplicateKeyError):
-        layabase.database_mongo._create_model(controller, mongo_base)
+        layabase._database_mongo._create_model(controller, mongo_base)
 
 
 def test_2entities_on_same_collection_with_pk():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(str, is_primary_key=True)
-        mandatory = layabase.database_mongo.Column(int, is_nullable=False)
-        optional = layabase.database_mongo.Column(str)
+        key = layabase._database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase._database_mongo.Column(int, is_nullable=False)
+        optional = layabase._database_mongo.Column(str)
 
     controller = layabase.CRUDController(TestCollection, history=True)
 
@@ -51,7 +51,7 @@ def test_2entities_on_same_collection_with_pk():
     )
 
     # This call is performed using the internal function because we want to simulate an already filled database
-    layabase.database_mongo._create_model(controller, mongo_base)
+    layabase._database_mongo._create_model(controller, mongo_base)
 
     controller.post({"key": "3", "mandatory": 2})
     assert len(controller.get({})) == 3

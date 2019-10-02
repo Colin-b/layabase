@@ -3,7 +3,7 @@ import enum
 import pytest
 
 import layabase
-import layabase.database_mongo
+import layabase._database_mongo
 from layabase.testing import mock_mongo_audit_datetime
 
 
@@ -17,8 +17,8 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.database_mongo.Column(str, is_primary_key=True)
-        enum_fld = layabase.database_mongo.Column(EnumTest)
+        key = layabase._database_mongo.Column(str, is_primary_key=True)
+        enum_fld = layabase._database_mongo.Column(EnumTest)
 
     controller = layabase.CRUDController(TestCollection, audit=True)
     layabase.load("mongomock", [controller])
