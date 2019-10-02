@@ -8,12 +8,12 @@ import layabase.database_mongo
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         _id = layabase.database_mongo.Column(is_primary_key=True)
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
     return controller
 

@@ -12,14 +12,14 @@ from layabase.testing import mock_mongo_audit_datetime
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         mandatory = layabase.database_mongo.Column(int, is_nullable=False)
         optional = layabase.database_mongo.Column(str)
 
-    controller = layabase.CRUDController(TestModel, audit=True)
+    controller = layabase.CRUDController(TestCollection, audit=True)
     layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
     return controller
 
@@ -84,15 +84,15 @@ def test_get_all_without_data_returns_empty_list(controller):
 
 
 def test_audit_table_name_is_forbidden():
-    class TestModel:
-        __tablename__ = "audit"
+    class TestCollection:
+        __collection_name__ = "audit"
 
         key = layabase.database_mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
         layabase.load(
             "mongomock?ssl=True",
-            [layabase.CRUDController(TestModel)],
+            [layabase.CRUDController(TestCollection)],
             replicaSet="globaldb",
         )
 
@@ -100,15 +100,15 @@ def test_audit_table_name_is_forbidden():
 
 
 def test_audited_table_name_is_forbidden():
-    class TestModel:
-        __tablename__ = "audit_test"
+    class TestCollection:
+        __collection_name__ = "audit_test"
 
         key = layabase.database_mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
         layabase.load(
             "mongomock?ssl=True",
-            [layabase.CRUDController(TestModel)],
+            [layabase.CRUDController(TestCollection)],
             replicaSet="globaldb",
         )
 
@@ -122,21 +122,6 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestModel_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "post": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "post_test_resource",
@@ -146,9 +131,52 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
                             },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -157,7 +185,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_GetResponseModel"
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
                             },
                         }
                     },
@@ -207,9 +235,18 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+            },
+            "/test/audit": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetAuditResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_audit_resource",
                     "parameters": [
                         {
                             "name": "key",
@@ -232,28 +269,13 @@ def test_open_api_definition(client):
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-            },
-            "/test/audit": {
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestModel_GetAuditResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_audit_resource",
-                    "parameters": [
                         {
                             "name": "audit_action",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
+                            "enum": ["Insert", "Update", "Delete", "Rollback"],
                         },
                         {
                             "name": "audit_date_utc",
@@ -265,27 +287,6 @@ def test_open_api_definition(client):
                         },
                         {
                             "name": "audit_user",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -328,28 +329,6 @@ def test_open_api_definition(client):
                     "operationId": "get_test_audit_parser_resource",
                     "parameters": [
                         {
-                            "name": "audit_action",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "audit_date_utc",
-                            "in": "query",
-                            "type": "array",
-                            "format": "date-time",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "audit_user",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
                             "name": "key",
                             "in": "query",
                             "type": "array",
@@ -365,6 +344,29 @@ def test_open_api_definition(client):
                         },
                         {
                             "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_action",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                            "enum": ["Insert", "Update", "Delete", "Rollback"],
+                        },
+                        {
+                            "name": "audit_date_utc",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_user",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -395,6 +397,34 @@ def test_open_api_definition(client):
                 }
             },
             "/test_parsers": {
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -436,34 +466,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             },
         },
         "info": {"title": "API", "version": "1.0"},
@@ -471,7 +473,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel_PutRequestModel": {
+            "TestCollection_PostRequestModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -487,7 +489,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_PostRequestModel": {
+            "TestCollection_PutRequestModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -503,7 +505,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetResponseModel": {
+            "TestCollection_GetResponseModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -519,7 +521,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetAuditResponseModel": {
+            "TestCollection_GetAuditResponseModel": {
                 "properties": {
                     "audit_action": {
                         "type": "string",
@@ -1076,7 +1078,7 @@ def test_delete_with_filter_is_removing_the_proper_row(
     ]
 
 
-def test_audit_filter_on_model_is_returning_only_selected_data(
+def test_audit_filter_is_returning_only_selected_data(
     controller, mock_mongo_audit_datetime
 ):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
@@ -1113,7 +1115,7 @@ def test_audit_filter_on_model_is_returning_only_selected_data(
     ]
 
 
-def test_audit_filter_on_audit_model_is_returning_only_selected_data(
+def test_audit_filter_on_audit_collection_is_returning_only_selected_data(
     controller, mock_mongo_audit_datetime
 ):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
@@ -1227,10 +1229,10 @@ def test_query_get_parser(client):
 
 def test_query_get_audit_parser(client):
     response = client.get(
-        "/test_audit_parser?key=1&mandatory=2&optional=3&limit=1&offset=0&revision=1&audit_action=U&audit_user=test"
+        "/test_audit_parser?key=1&mandatory=2&optional=3&limit=1&offset=0&revision=1&audit_action=Update&audit_user=test"
     )
     assert response.json == {
-        "audit_action": ["U"],
+        "audit_action": ["Update"],
         "audit_date_utc": None,
         "audit_user": ["test"],
         "key": ["1"],

@@ -3,10 +3,10 @@ import pytest
 import layabase
 
 
-def test_controller_without_setting_model():
+def test_controller_without_collection_or_table():
     with pytest.raises(Exception) as exception_info:
         layabase.CRUDController(None)
-    assert str(exception_info.value) == "Model must be provided."
+    assert str(exception_info.value) == "Table or Collection must be provided."
 
 
 def test_none_connection_string_is_invalid():

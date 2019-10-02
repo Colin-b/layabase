@@ -7,12 +7,12 @@ import layabase.testing
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
 
-    return layabase.CRUDController(TestModel)
+    return layabase.CRUDController(TestCollection)
 
 
 @pytest.fixture

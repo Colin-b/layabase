@@ -8,14 +8,14 @@ from layabase.testing import mock_sqlalchemy_health_datetime
 
 @pytest.fixture
 def db():
-    class TestModel:
+    class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    return layabase.load("sqlite:///:memory:", [layabase.CRUDController(TestModel)])
+    return layabase.load("sqlite:///:memory:", [layabase.CRUDController(TestTable)])
 
 
 def test_health_details(db, mock_sqlalchemy_health_datetime):

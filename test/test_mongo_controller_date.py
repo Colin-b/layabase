@@ -11,14 +11,14 @@ import layabase.database_mongo
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         date_str = layabase.database_mongo.Column(datetime.date)
         datetime_str = layabase.database_mongo.Column(datetime.datetime)
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
     return controller
 
@@ -291,7 +291,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
                             },
                         }
                     ],
@@ -306,23 +306,23 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
                     ],
                     "tags": ["Test"],
                 },
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestModel_GetResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_resource",
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
                     "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "date_str",
                             "in": "query",
@@ -339,10 +339,40 @@ def test_open_api_definition(client):
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
                         {
                             "name": "key",
                             "in": "query",
                             "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "date_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
@@ -369,36 +399,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "date_str",
-                            "in": "query",
-                            "type": "array",
-                            "format": "date",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "datetime_str",
-                            "in": "query",
-                            "type": "array",
-                            "format": "date-time",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -406,7 +406,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel_PostRequestModel": {
+            "TestCollection_PostRequestModel": {
                 "properties": {
                     "date_str": {
                         "type": "string",
@@ -428,7 +428,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_PutRequestModel": {
+            "TestCollection_PutRequestModel": {
                 "properties": {
                     "date_str": {
                         "type": "string",
@@ -450,7 +450,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetResponseModel": {
+            "TestCollection_GetResponseModel": {
                 "properties": {
                     "date_str": {
                         "type": "string",

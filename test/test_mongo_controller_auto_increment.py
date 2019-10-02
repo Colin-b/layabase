@@ -16,8 +16,8 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
@@ -29,7 +29,7 @@ def controller():
             str, default_value="Test value"
         )
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
     return controller
 
@@ -120,7 +120,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
                             },
                         }
                     ],
@@ -135,23 +135,23 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
                     ],
                     "tags": ["Test"],
                 },
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestModel_GetResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_resource",
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
                     "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "enum_field",
                             "in": "query",
@@ -160,10 +160,38 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
+                            "name": "optional_with_default",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
                             "name": "key",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -196,34 +224,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "enum_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional_with_default",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -231,7 +231,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel_PostRequestModel": {
+            "TestCollection_PostRequestModel": {
                 "properties": {
                     "enum_field": {
                         "type": "string",
@@ -250,7 +250,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_PutRequestModel": {
+            "TestCollection_PutRequestModel": {
                 "properties": {
                     "enum_field": {
                         "type": "string",
@@ -269,7 +269,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetResponseModel": {
+            "TestCollection_GetResponseModel": {
                 "properties": {
                     "enum_field": {
                         "type": "string",

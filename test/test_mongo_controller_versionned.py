@@ -16,8 +16,8 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
         dict_field = layabase.database_mongo.DictColumn(
@@ -30,7 +30,7 @@ def controller():
             is_required=True,
         )
 
-    controller = layabase.CRUDController(TestModel, history=True)
+    controller = layabase.CRUDController(TestCollection, history=True)
     layabase.load("mongomock", [controller])
     return controller
 
@@ -63,6 +63,13 @@ def app(controller):
         def delete(self):
             return []
 
+    @namespace.route("/test/history")
+    class TestHistoryResource(flask_restplus.Resource):
+        @namespace.expect(controller.query_get_history_parser)
+        @namespace.marshal_with(controller.get_history_response_model)
+        def get(self):
+            return []
+
     @namespace.route("/test_rollback_parser")
     class TestRollbackParserResource(flask_restplus.Resource):
         @namespace.expect(controller.query_rollback_parser)
@@ -72,8 +79,8 @@ def app(controller):
     return application
 
 
-def test_get_url_with_primary_key_in_model_and_many_models(controller):
-    models = [
+def test_get_url_with_primary_key_in_document_and_many_documents(controller):
+    documents = [
         {
             "key": "first",
             "dict_field": {"first_key": "Value1", "second_key": 1},
@@ -87,36 +94,36 @@ def test_get_url_with_primary_key_in_model_and_many_models(controller):
             "valid_until_revision": -1,
         },
     ]
-    assert controller.get_url("/test", *models) == "/test?key=first&key=second"
+    assert controller.get_url("/test", *documents) == "/test?key=first&key=second"
 
 
-def test_get_url_with_primary_key_in_model_and_a_single_model(controller):
-    model = {
+def test_get_url_with_primary_key_in_document_and_a_single_document(controller):
+    document = {
         "key": "first",
         "dict_field": {"first_key": "Value1", "second_key": 1},
         "valid_since_revision": 1,
         "valid_until_revision": -1,
     }
-    assert controller.get_url("/test", model) == "/test?key=first"
+    assert controller.get_url("/test", document) == "/test?key=first"
 
 
-def test_get_url_with_primary_key_in_model_and_no_model(controller):
+def test_get_url_with_primary_key_in_document_and_no_document(controller):
     assert controller.get_url("/test") == "/test"
 
 
 def test_post_versioning_is_valid(controller):
-    assert {
-        "key": "first",
-        "dict_field": {"first_key": "Value1", "second_key": 1},
-        "valid_since_revision": 1,
-        "valid_until_revision": -1,
-    } == controller.post(
+    assert controller.post(
         {
             "key": "first",
             "dict_field.first_key": EnumTest.Value1,
             "dict_field.second_key": 1,
         }
-    )
+    ) == {
+        "key": "first",
+        "dict_field": {"first_key": "Value1", "second_key": 1},
+        "valid_since_revision": 1,
+        "valid_until_revision": -1,
+    }
     assert controller.get_history({}) == [
         {
             "key": "first",
@@ -148,7 +155,7 @@ def test_put_without_providing_required_nullable_dict_column_is_valid(controller
     controller.post(
         {"key": "first", "dict_field": {"first_key": "Value1", "second_key": 0}}
     )
-    assert (
+    assert controller.put({"key": "first"}) == (
         {
             "dict_field": {"first_key": "Value1", "second_key": 0},
             "key": "first",
@@ -161,7 +168,7 @@ def test_put_without_providing_required_nullable_dict_column_is_valid(controller
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         },
-    ) == controller.put({"key": "first"})
+    )
 
 
 def test_put_versioning_is_valid(controller):
@@ -172,7 +179,9 @@ def test_put_versioning_is_valid(controller):
             "dict_field.second_key": 1,
         }
     )
-    assert (
+    assert controller.put(
+        {"key": "first", "dict_field.first_key": EnumTest.Value2}
+    ) == (
         {
             "key": "first",
             "dict_field": {"first_key": "Value1", "second_key": 1},
@@ -185,8 +194,8 @@ def test_put_versioning_is_valid(controller):
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         },
-    ) == controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
-    assert [
+    )
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
@@ -199,15 +208,15 @@ def test_put_versioning_is_valid(controller):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == controller.get_history({})
-    assert [
+    ]
+    assert controller.get({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         }
-    ] == controller.get({})
+    ]
 
 
 def test_delete_versioning_is_valid(controller):
@@ -219,8 +228,8 @@ def test_delete_versioning_is_valid(controller):
         }
     )
     controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
-    assert 1 == controller.delete({"key": "first"})
-    assert [
+    assert controller.delete({"key": "first"}) == 1
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
@@ -233,8 +242,8 @@ def test_delete_versioning_is_valid(controller):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == controller.get_history({})
-    assert [] == controller.get({})
+    ]
+    assert controller.get({}) == []
 
 
 def test_rollback_deleted_versioning_is_valid(controller):
@@ -248,8 +257,8 @@ def test_rollback_deleted_versioning_is_valid(controller):
     controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
     before_delete = 2
     controller.delete({"key": "first"})
-    assert 1 == controller.rollback_to({"revision": before_delete})
-    assert [
+    assert controller.rollback_to({"revision": before_delete}) == 1
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
@@ -268,15 +277,15 @@ def test_rollback_deleted_versioning_is_valid(controller):
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         },
-    ] == controller.get_history({})
-    assert [
+    ]
+    assert controller.get({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         }
-    ] == controller.get({})
+    ]
 
 
 def test_rollback_before_update_deleted_versioning_is_valid(controller):
@@ -290,8 +299,8 @@ def test_rollback_before_update_deleted_versioning_is_valid(controller):
     before_update = 1
     controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
     controller.delete({"key": "first"})
-    assert 1 == controller.rollback_to({"revision": before_update})
-    assert [
+    assert controller.rollback_to({"revision": before_update}) == 1
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
@@ -310,15 +319,15 @@ def test_rollback_before_update_deleted_versioning_is_valid(controller):
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         },
-    ] == controller.get_history({})
-    assert [
+    ]
+    assert controller.get({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value1", "second_key": 1},
             "valid_since_revision": 4,
             "valid_until_revision": -1,
         }
-    ] == controller.get({})
+    ]
 
 
 def test_rollback_already_valid_versioning_is_valid(controller):
@@ -331,8 +340,8 @@ def test_rollback_already_valid_versioning_is_valid(controller):
     )
     controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
 
-    assert 0 == controller.rollback_to({"revision": 2})
-    assert [
+    assert controller.rollback_to({"revision": 2}) == 0
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
@@ -345,15 +354,15 @@ def test_rollback_already_valid_versioning_is_valid(controller):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == controller.get_history({})
-    assert [
+    ]
+    assert controller.get({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         }
-    ] == controller.get({})
+    ]
 
 
 def test_rollback_unknown_criteria_is_valid(controller):
@@ -367,8 +376,8 @@ def test_rollback_unknown_criteria_is_valid(controller):
     before_update = 1
     controller.put({"key": "first", "dict_field.first_key": EnumTest.Value2})
 
-    assert 0 == controller.rollback_to({"revision": before_update, "key": "unknown"})
-    assert [
+    assert controller.rollback_to({"revision": before_update, "key": "unknown"}) == 0
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
@@ -381,15 +390,15 @@ def test_rollback_unknown_criteria_is_valid(controller):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == controller.get_history({})
-    assert [
+    ]
+    assert controller.get({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
             "valid_since_revision": 2,
             "valid_until_revision": -1,
         }
-    ] == controller.get({})
+    ]
 
 
 def test_versioned_many(controller):
@@ -414,7 +423,7 @@ def test_versioned_many(controller):
         ]
     )
 
-    assert [
+    assert controller.get_history({}) == [
         {
             "key": "first",
             "dict_field": {"first_key": "Value2", "second_key": 1},
@@ -439,27 +448,27 @@ def test_versioned_many(controller):
             "valid_since_revision": 1,
             "valid_until_revision": 2,
         },
-    ] == controller.get_history({})
+    ]
 
 
 def test_rollback_without_revision_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.rollback_to({"key": "unknown"})
-    assert {
+    assert exception_info.value.errors == {
         "revision": ["Missing data for required field."]
-    } == exception_info.value.errors
-    assert {"key": "unknown"} == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == {"key": "unknown"}
 
 
 def test_rollback_with_non_int_revision_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.rollback_to({"revision": "invalid revision"})
-    assert {"revision": ["Not a valid int."]} == exception_info.value.errors
-    assert {"revision": "invalid revision"} == exception_info.value.received_data
+    assert exception_info.value.errors == {"revision": ["Not a valid int."]}
+    assert exception_info.value.received_data == {"revision": "invalid revision"}
 
 
 def test_rollback_with_negative_revision_is_valid(controller):
-    assert 0 == controller.rollback_to({"revision": -1})
+    assert controller.rollback_to({"revision": -1}) == 0
 
 
 def test_rollback_before_existing_is_valid(controller):
@@ -478,12 +487,12 @@ def test_rollback_before_existing_is_valid(controller):
             "dict_field.second_key": 1,
         }
     )
-    assert 1 == controller.rollback_to({"revision": before_insert})
-    assert [] == controller.get({"key": "second"})
+    assert controller.rollback_to({"revision": before_insert}) == 1
+    assert controller.get({"key": "second"}) == []
 
 
 def test_get_revision_is_valid_when_empty(controller):
-    assert 0 == controller._model.current_revision()
+    assert controller._model.current_revision() == 0
 
 
 def test_get_revision_is_valid_when_1(controller):
@@ -494,7 +503,7 @@ def test_get_revision_is_valid_when_1(controller):
             "dict_field.second_key": 1,
         }
     )
-    assert 1 == controller._model.current_revision()
+    assert controller._model.current_revision() == 1
 
 
 def test_get_revision_is_valid_when_2(controller):
@@ -512,7 +521,7 @@ def test_get_revision_is_valid_when_2(controller):
             "dict_field.second_key": 1,
         }
     )
-    assert 2 == controller._model.current_revision()
+    assert controller._model.current_revision() == 2
 
 
 def test_rollback_to_0(controller):
@@ -664,7 +673,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
                             },
                         }
                     ],
@@ -679,23 +688,23 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
                     ],
                     "tags": ["Test"],
                 },
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestModel_GetResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_resource",
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
                     "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "dict_field.first_key",
                             "in": "query",
@@ -710,11 +719,39 @@ def test_open_api_definition(client):
                             "items": {"type": "integer"},
                             "collectionFormat": "multi",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
                         {
                             "name": "key",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field.first_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field.second_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -740,10 +777,40 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+            },
+            "/test/history": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetHistoryResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_history_resource",
                     "parameters": [
+                        {
+                            "name": "valid_since_revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "valid_until_revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "dict_field.first_key",
                             "in": "query",
@@ -759,15 +826,28 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "key",
+                            "name": "limit",
                             "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
                         },
                     ],
                     "tags": ["Test"],
-                },
+                }
             },
             "/test_rollback_parser": {
                 "get": {
@@ -775,6 +855,13 @@ def test_open_api_definition(client):
                     "operationId": "get_test_rollback_parser_resource",
                     "parameters": [
                         {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
                             "name": "dict_field.first_key",
                             "in": "query",
                             "type": "array",
@@ -786,13 +873,6 @@ def test_open_api_definition(client):
                             "in": "query",
                             "type": "array",
                             "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -813,7 +893,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel_PostRequestModel": {
+            "TestCollection_PostRequestModel": {
                 "required": ["dict_field"],
                 "properties": {
                     "dict_field": {
@@ -842,7 +922,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_PutRequestModel": {
+            "TestCollection_PutRequestModel": {
                 "required": ["dict_field"],
                 "properties": {
                     "dict_field": {
@@ -859,7 +939,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetResponseModel": {
+            "TestCollection_GetResponseModel": {
                 "required": ["dict_field"],
                 "properties": {
                     "dict_field": {
@@ -872,6 +952,35 @@ def test_open_api_definition(client):
                         "type": "string",
                         "readOnly": False,
                         "example": "sample key",
+                    },
+                },
+                "type": "object",
+            },
+            "TestCollection_GetHistoryResponseModel": {
+                "required": ["dict_field"],
+                "properties": {
+                    "dict_field": {
+                        "readOnly": False,
+                        "default": {"first_key": None, "second_key": None},
+                        "example": {"first_key": "Value1", "second_key": 1},
+                        "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "valid_since_revision": {
+                        "type": "integer",
+                        "description": "Record is valid since this revision (included).",
+                        "readOnly": False,
+                        "example": 1,
+                    },
+                    "valid_until_revision": {
+                        "type": "integer",
+                        "description": "Record is valid until this revision (excluded).",
+                        "readOnly": False,
+                        "example": 1,
                     },
                 },
                 "type": "object",

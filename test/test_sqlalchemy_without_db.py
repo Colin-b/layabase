@@ -7,12 +7,12 @@ from layabase.testing import mock_sqlalchemy_health_datetime
 
 @pytest.fixture
 def controller():
-    class TestModel:
+    class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-    return layabase.CRUDController(TestModel)
+    return layabase.CRUDController(TestTable)
 
 
 @pytest.fixture

@@ -9,15 +9,15 @@ import layabase.database_mongo
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         float_key = layabase.database_mongo.Column(float, is_primary_key=True)
         float_with_default = layabase.database_mongo.Column(float, default_value=34)
         dict_field = layabase.database_mongo.Column(dict, is_required=True)
         list_field = layabase.database_mongo.Column(list, is_required=True)
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
     return controller
 
@@ -69,7 +69,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
                             },
                         }
                     ],
@@ -84,31 +84,16 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
                     ],
                     "tags": ["Test"],
                 },
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestModel_GetResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_resource",
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
                     "parameters": [
-                        {
-                            "name": "dict_field",
-                            "in": "query",
-                            "type": "array",
-                            "required": True,
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
                         {
                             "name": "float_key",
                             "in": "query",
@@ -121,6 +106,58 @@ def test_open_api_definition(client):
                             "in": "query",
                             "type": "array",
                             "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
+                            "required": True,
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "required": True,
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "name": "float_key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_with_default",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
+                            "required": True,
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -154,43 +191,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "dict_field",
-                            "in": "query",
-                            "type": "array",
-                            "required": True,
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_with_default",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "list_field",
-                            "in": "query",
-                            "type": "array",
-                            "required": True,
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -198,7 +198,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel_PostRequestModel": {
+            "TestCollection_PostRequestModel": {
                 "required": ["dict_field", "list_field"],
                 "properties": {
                     "dict_field": {
@@ -225,7 +225,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_PutRequestModel": {
+            "TestCollection_PutRequestModel": {
                 "required": ["dict_field", "list_field"],
                 "properties": {
                     "dict_field": {
@@ -252,7 +252,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetResponseModel": {
+            "TestCollection_GetResponseModel": {
                 "required": ["dict_field", "list_field"],
                 "properties": {
                     "dict_field": {

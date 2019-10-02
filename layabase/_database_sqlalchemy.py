@@ -379,52 +379,6 @@ class CRUDModel:
             marshmallow_field.metadata["sqlalchemy_autoincrement"] = autoincrement[0]
 
     @classmethod
-    def query_get_parser(cls) -> reqparse.RequestParser:
-        query_get_parser = cls._query_parser()
-        query_get_parser.add_argument("limit", type=inputs.positive, location="args")
-        query_get_parser.add_argument(
-            "order_by", type=str, action="append", location="args"
-        )
-        if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_parser.add_argument(
-                "offset", type=inputs.natural, location="args"
-            )
-        return query_get_parser
-
-    @classmethod
-    def query_get_history_parser(cls) -> reqparse.RequestParser:
-        query_get_hist_parser = cls._query_parser()
-        query_get_hist_parser.add_argument(
-            "limit", type=inputs.positive, location="args"
-        )
-        if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_hist_parser.add_argument(
-                "offset", type=inputs.natural, location="args"
-            )
-        return query_get_hist_parser
-
-    @classmethod
-    def query_delete_parser(cls) -> reqparse.RequestParser:
-        return cls._query_parser()
-
-    @classmethod
-    def query_rollback_parser(cls) -> None:
-        return  # Only VersionedCRUDModel allows rollback
-
-    @classmethod
-    def _query_parser(cls) -> reqparse.RequestParser:
-        query_parser = reqparse.RequestParser()
-        for marshmallow_field in cls.schema().fields.values():
-            query_parser.add_argument(
-                marshmallow_field.name,
-                required=marshmallow_field.metadata.get("required_on_query", False),
-                type=_get_python_type(marshmallow_field),
-                action="append",
-                location="args",
-            )
-        return query_parser
-
-    @classmethod
     def get_primary_keys(cls) -> List[str]:
         # TODO Replace with marshmallow_sqlalchemy.fields.get_primary_keys(cls)
         return [
@@ -532,18 +486,25 @@ class CRUDModel:
 
 
 def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
-    # TODO Create the appropriate CRUDModel in case history is requested (not supported for now)
-    class ControllerModel(controller.model, CRUDModel, base):
+    class ControllerModel(controller.table_or_collection, CRUDModel, base):
         pass
+
+    controller._model = ControllerModel
+
+    if not _supports_offset(base.metadata.bind.url.drivername):
+        controller.query_get_parser.remove_argument("offset")
+        controller.query_get_audit_parser.remove_argument("offset")
+        controller.query_get_history_parser.remove_argument("offset")
 
     if controller.audit:
         from layabase._audit_sqlalchemy import _create_from
 
         ControllerModel.audit_model = _create_from(
-            controller.model, ControllerModel, CRUDModel, base
+            controller.table_or_collection, ControllerModel, CRUDModel, base
         )
 
-    controller._set_model(ControllerModel)
+    controller._model_description_dictionary = ControllerModel.description_dictionary()
+
     return ControllerModel
 
 
@@ -733,29 +694,6 @@ def _get_default_example(marshmallow_field):
         return "15:36:09"
 
     return "sample_value"
-
-
-def _get_python_type(marshmallow_field):
-    """
-    Return the Python type corresponding to this SQL Alchemy Marshmallow field.
-
-    Default to str,
-    """
-    if isinstance(marshmallow_field, marshmallow_fields.String):
-        return str
-    if isinstance(marshmallow_field, marshmallow_fields.Integer):
-        return int
-    if isinstance(marshmallow_field, marshmallow_fields.Number):
-        return float
-    if isinstance(marshmallow_field, marshmallow_fields.Boolean):
-        return inputs.boolean
-    if isinstance(marshmallow_field, marshmallow_fields.Date):
-        return inputs.date_from_iso8601
-    if isinstance(marshmallow_field, marshmallow_fields.DateTime):
-        return inputs.datetime_from_iso8601
-
-    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
-    return str
 
 
 def _check(base) -> (str, dict):

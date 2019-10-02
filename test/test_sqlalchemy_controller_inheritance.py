@@ -9,7 +9,7 @@ def controller():
     class Inherited:
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    class TestInheritanceModel(Inherited):
+    class TestTable(Inherited):
         __tablename__ = "test"
 
         key = sqlalchemy.Column(
@@ -17,7 +17,7 @@ def controller():
         )
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
-    controller = layabase.CRUDController(TestInheritanceModel, audit=True)
+    controller = layabase.CRUDController(TestTable, audit=True)
     layabase.load("sqlite:///:memory:", [controller])
     return controller
 

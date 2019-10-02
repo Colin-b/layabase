@@ -6,7 +6,7 @@ import layabase
 
 @pytest.fixture
 def controller():
-    class TestModel:
+    class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(
@@ -15,7 +15,7 @@ def controller():
             info={"marshmallow": {"interpret_star_character": True}},
         )
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestTable)
     layabase.load("sqlite:///:memory:", [controller])
     return controller
 

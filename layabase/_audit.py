@@ -1,6 +1,5 @@
 def current_user_name(anonymous_user_name: str = "") -> str:
     """
-    TODO Should we comply with GDPR? Should we avoid storing those data in plain text?
     Provide the name of the current user performing a request (if any).
     :param anonymous_user_name: Default value in case there is no known user performing a request.
     """

@@ -8,13 +8,13 @@ import layabase
 
 @pytest.fixture
 def controller():
-    class TestModel:
+    class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         bool_field = sqlalchemy.Column(sqlalchemy.Boolean)
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestTable)
     layabase.load("sqlite:///:memory:", [controller])
     return controller
 
@@ -76,7 +76,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                                "$ref": "#/definitions/TestTable_PostRequestModel"
                             },
                         }
                     ],
@@ -91,9 +91,30 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
                             },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "bool_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "boolean"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -102,7 +123,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_GetResponseModel"
+                                "$ref": "#/definitions/TestTable_GetResponseModel"
                             },
                         }
                     },
@@ -130,17 +151,17 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
                             "name": "order_by",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "offset",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
                         },
                         {
                             "name": "X-Fields",
@@ -152,9 +173,11 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+            },
+            "/test_parsers": {
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+                    "operationId": "delete_test_parsers_resource",
                     "parameters": [
                         {
                             "name": "key",
@@ -173,8 +196,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-            },
-            "/test_parsers": {
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -201,37 +222,16 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
-                            "name": "order_by",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
                             "name": "offset",
                             "in": "query",
                             "type": "integer",
                             "minimum": 0,
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
                         {
-                            "name": "key",
+                            "name": "order_by",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "bool_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "boolean"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -244,7 +244,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel_PostRequestModel": {
+            "TestTable_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -252,7 +252,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_PutRequestModel": {
+            "TestTable_PutRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -260,7 +260,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetResponseModel": {
+            "TestTable_GetResponseModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},

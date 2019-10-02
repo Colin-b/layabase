@@ -7,12 +7,12 @@ from layabase.testing import mock_mongo_audit_datetime
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(int)
 
-    controller = layabase.CRUDController(TestModel, audit=True)
+    controller = layabase.CRUDController(TestCollection, audit=True)
     layabase.load("mongomock", [controller])
     return controller
 

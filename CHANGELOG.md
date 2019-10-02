@@ -10,9 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CRUDController does not expose class methods anymore but must be instantiated instead. Meaning there is no need for placeholder classes anymore.
 - database.load now request a list of controller instances as parameters.
 - The ability to interpret star character should now be defined per column instead of per model.
+- History request parser do not contains anything anymore in case history is not requested. It should have never been used in this case anyway.
 
 ### Fixed
 - Avoid creating f-string when nothing needs to be interpreted.
+- Retrieve mongo specific query fields from args only (do not look at body on queries).
+- Ensure that only valid audit actions can be provided by users on queries.
+- Order of column declaration in table or collection class is now kept in OpenAPI definition.
 
 ### Removed
 - layabase.database is not exposed anymore. Use layabase instead.

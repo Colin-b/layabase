@@ -17,25 +17,25 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         mandatory = layabase.database_mongo.Column(int, is_nullable=False)
         optional = layabase.database_mongo.Column(str)
 
-    return layabase.CRUDController(TestModel, audit=True)
+    return layabase.CRUDController(TestCollection, audit=True)
 
 
 @pytest.fixture
 def controller_versioned():
-    class TestModelVersioned:
-        __tablename__ = "test_versioned"
+    class TestCollectionVersioned:
+        __collection_name__ = "test_versioned"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         enum_fld = layabase.database_mongo.Column(EnumTest)
 
-    return layabase.CRUDController(TestModelVersioned, audit=True, history=True)
+    return layabase.CRUDController(TestCollectionVersioned, audit=True, history=True)
 
 
 @pytest.fixture
@@ -78,6 +78,19 @@ def app(controllers, controller_versioned):
         def get(self):
             return []
 
+    @namespace.route("/test/history")
+    class TestHistoryResource(flask_restplus.Resource):
+        @namespace.expect(controller_versioned.query_get_history_parser)
+        @namespace.marshal_with(controller_versioned.get_history_response_model)
+        def get(self):
+            return []
+
+    @namespace.route("/test/rollback")
+    class TestRollbackResource(flask_restplus.Resource):
+        @namespace.expect(controller_versioned.query_rollback_parser)
+        def get(self):
+            return []
+
     @namespace.route("/test_audit_parser")
     class TestAuditParserResource(flask_restplus.Resource):
         @namespace.expect(controller_versioned.query_get_audit_parser)
@@ -89,10 +102,10 @@ def app(controllers, controller_versioned):
 
 def test_get_versioned_audit_parser_fields(client):
     response = client.get(
-        "/test_audit_parser?audit_action=I&audit_user=test&limit=1&offset=0&revision=1"
+        "/test_audit_parser?audit_action=Insert&audit_user=test&limit=1&offset=0&revision=1"
     )
     assert response.json == {
-        "audit_action": ["I"],
+        "audit_action": ["Insert"],
         "audit_date_utc": None,
         "audit_user": ["test"],
         "limit": 1,
@@ -117,7 +130,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModelVersioned_PostRequestModel"
+                                "$ref": "#/definitions/TestCollectionVersioned_PostRequestModel"
                             },
                         }
                     ],
@@ -132,9 +145,30 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModelVersioned_PutRequestModel"
+                                "$ref": "#/definitions/TestCollectionVersioned_PutRequestModel"
                             },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_fld",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -143,21 +177,21 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestModelVersioned_GetResponseModel"
+                                "$ref": "#/definitions/TestCollectionVersioned_GetResponseModel"
                             },
                         }
                     },
                     "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "name": "enum_fld",
+                            "name": "key",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "key",
+                            "name": "enum_fld",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -186,27 +220,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "enum_fld",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             },
             "/test/audit": {
                 "get": {
@@ -214,7 +227,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestModelVersioned_GetAuditResponseModel"
+                                "$ref": "#/definitions/TestCollectionVersioned_GetAuditResponseModel"
                             },
                         }
                     },
@@ -226,6 +239,7 @@ def test_open_api_definition(client):
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
+                            "enum": ["Insert", "Update", "Delete", "Rollback"],
                         },
                         {
                             "name": "audit_date_utc",
@@ -273,6 +287,101 @@ def test_open_api_definition(client):
                     "tags": ["Test"],
                 }
             },
+            "/test/history": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollectionVersioned_GetHistoryResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_history_resource",
+                    "parameters": [
+                        {
+                            "name": "valid_since_revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "valid_until_revision",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_fld",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
+                    "tags": ["Test"],
+                }
+            },
+            "/test/rollback": {
+                "get": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "get_test_rollback_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_fld",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "revision",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                            "required": True,
+                        },
+                    ],
+                    "tags": ["Test"],
+                }
+            },
             "/test_audit_parser": {
                 "get": {
                     "responses": {"200": {"description": "Success"}},
@@ -284,6 +393,7 @@ def test_open_api_definition(client):
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
+                            "enum": ["Insert", "Update", "Delete", "Rollback"],
                         },
                         {
                             "name": "audit_date_utc",
@@ -330,7 +440,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModelVersioned_PostRequestModel": {
+            "TestCollectionVersioned_PostRequestModel": {
                 "properties": {
                     "enum_fld": {
                         "type": "string",
@@ -346,7 +456,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModelVersioned_PutRequestModel": {
+            "TestCollectionVersioned_PutRequestModel": {
                 "properties": {
                     "enum_fld": {
                         "type": "string",
@@ -362,7 +472,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModelVersioned_GetResponseModel": {
+            "TestCollectionVersioned_GetResponseModel": {
                 "properties": {
                     "enum_fld": {
                         "type": "string",
@@ -378,7 +488,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModelVersioned_GetAuditResponseModel": {
+            "TestCollectionVersioned_GetAuditResponseModel": {
                 "properties": {
                     "audit_action": {
                         "type": "string",
@@ -398,6 +508,34 @@ def test_open_api_definition(client):
                         "example": "sample audit_user",
                     },
                     "revision": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+            "TestCollectionVersioned_GetHistoryResponseModel": {
+                "properties": {
+                    "enum_fld": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "valid_since_revision": {
+                        "type": "integer",
+                        "description": "Record is valid since this revision (included).",
+                        "readOnly": False,
+                        "example": 1,
+                    },
+                    "valid_until_revision": {
+                        "type": "integer",
+                        "description": "Record is valid until this revision (excluded).",
+                        "readOnly": False,
+                        "example": 1,
+                    },
                 },
                 "type": "object",
             },

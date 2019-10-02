@@ -29,42 +29,6 @@ def test_field_with_default_value_cannot_be_non_nullable():
     )
 
 
-def test_spaces_are_forbidden_at_start_of_column_name():
-    with pytest.raises(Exception) as exception_info:
-        layabase.database_mongo.Column(name="   test")
-    assert (
-        str(exception_info.value)
-        == "   test is not a valid name. Spaces are not allowed at start or end of field names."
-    )
-
-
-def test_spaces_are_forbidden_at_end_of_column_name():
-    with pytest.raises(Exception) as exception_info:
-        layabase.database_mongo.Column(name="test   ")
-    assert (
-        str(exception_info.value)
-        == "test    is not a valid name. Spaces are not allowed at start or end of field names."
-    )
-
-
-def test_spaces_are_forbidden_at_start_and_end_of_column_name():
-    with pytest.raises(Exception) as exception_info:
-        layabase.database_mongo.Column(name="   test   ")
-    assert (
-        str(exception_info.value)
-        == "   test    is not a valid name. Spaces are not allowed at start or end of field names."
-    )
-
-
-def test_dots_are_forbidden_in_column_name():
-    with pytest.raises(Exception) as exception_info:
-        layabase.database_mongo.Column(name="te.st")
-    assert (
-        str(exception_info.value)
-        == "te.st is not a valid name. Dots are not allowed in Mongo field names."
-    )
-
-
 def test_fields_should_be_provided_in_dict_column():
     with pytest.raises(Exception) as exception_info:
         layabase.database_mongo.DictColumn(fields=None, is_nullable=False)

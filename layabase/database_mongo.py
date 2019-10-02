@@ -14,7 +14,7 @@ import pymongo.database
 from bson.errors import BSONError
 from bson.objectid import ObjectId
 import flask_restplus
-from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
+from flask_restplus import fields as flask_restplus_fields, inputs
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import ComparisonSigns, CRUDController
@@ -99,9 +99,6 @@ class Column:
         Default to False (only equality can be queried).
         """
         self.field_type = field_type or str
-        name = kwargs.pop("name", None)
-        if name:
-            self._update_name(name)
         self.get_choices = self._to_get_choices(kwargs.pop("choices", None))
         self.get_counter = self._to_get_counter(kwargs.pop("counter", None))
         self.default_value = kwargs.pop("default_value", None)
@@ -184,15 +181,7 @@ class Column:
         if self._example is not None and not isinstance(self._example, self.field_type):
             raise Exception("Example must be of field type.")
 
-    def _update_name(self, name: str) -> "Column":
-        if "." in name:
-            raise Exception(
-                f"{name} is not a valid name. Dots are not allowed in Mongo field names."
-            )
-        if name and (name[0] == " " or name[-1] == " "):
-            raise Exception(
-                f"{name} is not a valid name. Spaces are not allowed at start or end of field names."
-            )
+    def __set_name__(self, owner, name):
         self.name = name
         if "_id" == self.name:
             self.field_type = ObjectId
@@ -200,7 +189,6 @@ class Column:
         self._validate_insert = self._get_insert_update_validation_function()
         self._validate_update = self._get_insert_update_validation_function()
         self._deserialize_value = self._get_value_deserialization_function()
-        return self
 
     def _to_get_counter(self, counter):
         if counter:
@@ -977,59 +965,41 @@ class DictColumn(Column):
         """
         :return: A CRUDModel describing every dictionary fields.
         """
-
-        class FakeModel(_CRUDModel):
-            pass
-
-        for name, column in self._default_fields.items():
-            column._update_name(name)
-            FakeModel.__fields__.append(column)
-
-        return FakeModel
+        return type(
+            f"{self.name}_DefaultDescriptionModel", (_CRUDModel,), self._default_fields
+        )
 
     def _description_model(self, model_as_dict: dict):
         """
         :param model_as_dict: Data provided by the user.
         :return: A CRUDModel describing every dictionary fields.
         """
-
-        class FakeModel(_CRUDModel):
-            pass
-
-        for name, column in self._get_fields(model_as_dict).items():
-            column._update_name(name)
-            FakeModel.__fields__.append(column)
-
-        return FakeModel
+        return type(
+            f"{self.name}_DescriptionModel",
+            (_CRUDModel,),
+            self._get_fields(model_as_dict),
+        )
 
     def _default_index_description_model(self):
         """
         :return: A CRUDModel describing every index fields.
         """
-
-        class FakeModel(_CRUDModel):
-            pass
-
-        for name, column in self._default_index_fields.items():
-            column._update_name(name)
-            FakeModel.__fields__.append(column)
-
-        return FakeModel
+        return type(
+            f"{self.name}_DefaultIndexDescriptionModel",
+            (_CRUDModel,),
+            self._default_index_fields,
+        )
 
     def _index_description_model(self, model_as_dict: dict):
         """
         :param model_as_dict: Data provided by the user.
         :return: A CRUDModel describing every index fields.
         """
-
-        class FakeModel(_CRUDModel):
-            pass
-
-        for name, column in self._get_all_index_fields(model_as_dict).items():
-            column._update_name(name)
-            FakeModel.__fields__.append(column)
-
-        return FakeModel
+        return type(
+            f"{self.name}_IndexDescriptionModel",
+            (_CRUDModel,),
+            self._get_all_index_fields(model_as_dict),
+        )
 
     def _get_index_fields(
         self, index_type: IndexType, model_as_dict: Union[dict, None], prefix: str
@@ -1176,10 +1146,9 @@ class ListColumn(Column):
         self.sorted = bool(kwargs.pop("sorted", False))
         Column.__init__(self, list, **kwargs)
 
-    def _update_name(self, name: str) -> "Column":
-        Column._update_name(self, name)
-        self.list_item_column._update_name(name)
-        return self
+    def __set_name__(self, owner, name):
+        super().__set_name__(owner, name)
+        self.list_item_column.__set_name__(owner, name)
 
     def validate_insert(self, document: dict) -> dict:
         errors = Column.validate_insert(self, document)
@@ -1306,7 +1275,7 @@ class _CRUDModel:
     Calling load_from(...) will provide you those properties.
     """
 
-    __tablename__: str = None  # Name of the collection described by this model
+    __collection_name__: str = None  # Name of the collection described by this model
     __collection__: pymongo.collection.Collection = None  # Mongo collection
     __counters__: pymongo.collection.Collection = None  # Mongo counters collection (to increment fields)
     __fields__: List[Column] = []  # All Mongo fields within this model
@@ -1322,17 +1291,19 @@ class _CRUDModel:
         skip_name_check = kwargs.pop("skip_name_check", False)
         skip_update_indexes = kwargs.pop("skip_update_indexes", False)
         super().__init_subclass__(**kwargs)
-        cls.logger = logging.getLogger(f"{__name__}.{cls.__tablename__}")
+        cls.logger = logging.getLogger(f"{__name__}.{cls.__collection_name__}")
         cls.__fields__ = [
-            field._update_name(field_name)
+            field
             for field_name, field in inspect.getmembers(cls)
             if isinstance(field, Column)
         ]
         # TODO Add a way to mark a model as not connected
         if base is not None:  # Allow to not provide base to create fake models
             if not skip_name_check and cls._is_forbidden():
-                raise Exception(f"{cls.__tablename__} is a reserved collection name.")
-            cls.__collection__ = base[cls.__tablename__]
+                raise Exception(
+                    f"{cls.__collection_name__} is a reserved collection name."
+                )
+            cls.__collection__ = base[cls.__collection_name__]
             cls.__counters__ = base["counters"]
             cls._server_version = _server_versions.get(base.name, "")
             if not skip_update_indexes:
@@ -1347,9 +1318,9 @@ class _CRUDModel:
         # Counters collection is managed by layabase
         # Audit collections are managed by layabase
         return (
-            not cls.__tablename__
-            or "counters" == cls.__tablename__
-            or cls.__tablename__.startswith("audit")
+            not cls.__collection_name__
+            or "counters" == cls.__collection_name__
+            or cls.__collection_name__.startswith("audit")
         )
 
     @classmethod
@@ -1381,8 +1352,8 @@ class _CRUDModel:
             field_name
             for field_name in cls._get_index_fields(IndexType.Unique, document, "")
         ]
-        index_name = f"idx{cls.__tablename__}"
-        unique_index_name = f"uidx{cls.__tablename__}"
+        index_name = f"idx{cls.__collection_name__}"
+        unique_index_name = f"uidx{cls.__collection_name__}"
         indexes = cls.__collection__.list_indexes()
         cls.logger.debug(f"Checking existing indexes: {indexes}")
         indexes = {
@@ -1417,12 +1388,12 @@ class _CRUDModel:
             if criteria:
                 # Avoid using auto generated index name that might be too long
                 index_name = (
-                    f"uidx{cls.__tablename__}"
+                    f"uidx{cls.__collection_name__}"
                     if index_type == IndexType.Unique
-                    else f"idx{cls.__tablename__}"
+                    else f"idx{cls.__collection_name__}"
                 )
                 cls.logger.info(
-                    f"Create {index_name} {index_type.name} index on {cls.__tablename__} using {criteria} criteria."
+                    f"Create {index_name} {index_type.name} index on {cls.__collection_name__} using {criteria} criteria."
                 )
                 if condition is None or cls._server_version < "3.2":
                     cls.__collection__.create_index(
@@ -2166,74 +2137,8 @@ class _CRUDModel:
         }
 
     @classmethod
-    def query_get_parser(cls):
-        query_get_parser = cls._query_parser()
-        query_get_parser.add_argument("limit", type=inputs.positive)
-        query_get_parser.add_argument("offset", type=inputs.natural)
-        return query_get_parser
-
-    @classmethod
-    def query_get_history_parser(cls):
-        query_get_hist_parser = cls._query_parser()
-        query_get_hist_parser.add_argument("limit", type=inputs.positive)
-        query_get_hist_parser.add_argument("offset", type=inputs.natural)
-        return query_get_hist_parser
-
-    @classmethod
-    def query_delete_parser(cls):
-        return cls._query_parser()
-
-    @classmethod
-    def query_rollback_parser(cls):
-        pass  # Only VersionedCRUDModel allows rollback
-
-    @classmethod
-    def _query_parser(cls):
-        query_parser = reqparse.RequestParser()
-        for field in cls.__fields__:
-            cls._add_field_to_query_parser(query_parser, field)
-        return query_parser
-
-    @classmethod
-    def _add_field_to_query_parser(cls, query_parser, field: Column, prefix=""):
-        if isinstance(field, DictColumn):
-            # Describe every dict column field as dot notation
-            for inner_field in field._default_description_model().__fields__:
-                cls._add_field_to_query_parser(
-                    query_parser, inner_field, f"{field.name}."
-                )
-        elif isinstance(field, ListColumn):
-            # Note that List of dict or list of list might be wrongly parsed
-            query_parser.add_argument(
-                f"{prefix}{field.name}",
-                required=field.is_required,
-                type=_get_python_type(field.list_item_column),
-                action="append",
-                store_missing=not field.allow_none_as_filter,
-                location="args",
-            )
-        elif field.field_type == list:
-            query_parser.add_argument(
-                f"{prefix}{field.name}",
-                required=field.is_required,
-                type=str,  # Consider anything as valid, thus consider as str in query
-                action="append",
-                store_missing=not field.allow_none_as_filter,
-                location="args",
-            )
-        else:
-            query_parser.add_argument(
-                f"{prefix}{field.name}",
-                required=field.is_required,
-                type=_get_python_type(field),
-                action="append",  # Allow to provide multiple values in queries
-                store_missing=not field.allow_none_as_filter,
-                location="args",
-            )
-
-    @classmethod
     def description_dictionary(cls) -> Dict[str, str]:
-        description = {"collection": cls.__tablename__}
+        description = {"collection": cls.__collection_name__}
         for field in cls.__fields__:
             description[field.name] = field.name
         return description
@@ -2424,7 +2329,7 @@ def _create_model(controller: CRUDController, base) -> Type[_CRUDModel]:
         crud_model = _CRUDModel
 
     class ControllerModel(
-        controller.model,
+        controller.table_or_collection,
         crud_model,
         base=base,
         skip_name_check=controller.skip_name_check,
@@ -2433,14 +2338,17 @@ def _create_model(controller: CRUDController, base) -> Type[_CRUDModel]:
     ):
         pass
 
+    controller._model = ControllerModel
+
     if controller.audit:
         from layabase._audit_mongo import _create_from
 
         ControllerModel.audit_model = _create_from(
-            mixin=controller.model, model=ControllerModel, base=base
+            mixin=controller.table_or_collection, model=ControllerModel, base=base
         )
 
-    controller._set_model(ControllerModel)
+    controller._model_description_dictionary = ControllerModel.description_dictionary()
+
     return ControllerModel
 
 
@@ -2539,91 +2447,3 @@ def _check(base: pymongo.database.Database) -> (str, dict):
                 }
             },
         )
-
-
-def _get_python_type(field: Column) -> callable:
-    """
-    Return a function taking a single parameter (the value) and converting to the required field type.
-    """
-    if field.field_type == bool:
-        return inputs.boolean
-    if field.field_type == datetime.date:
-        return (
-            _validate_date if field.allow_comparison_signs else inputs.date_from_iso8601
-        )
-    if field.field_type == datetime.datetime:
-        return (
-            _validate_date_time
-            if field.allow_comparison_signs
-            else inputs.datetime_from_iso8601
-        )
-    if isinstance(field.field_type, enum.EnumMeta):
-        return str
-    if field.field_type == dict:
-        return json.loads
-    if field.field_type == list:
-        return json.loads
-    if field.field_type == ObjectId:
-        return str
-    if field.field_type == float:
-        return _validate_float if field.allow_comparison_signs else float
-    if field.field_type == int:
-        return _validate_int if field.allow_comparison_signs else int
-
-    return field.field_type
-
-
-def _validate_float(value):
-    if isinstance(value, str):
-        value = ComparisonSigns.deserialize(value)
-
-        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
-            return value[0], float(value[1])
-
-    return float(value)
-
-
-_validate_float.__schema__ = {"type": "string"}
-
-
-def _validate_int(value):
-    if isinstance(value, str):
-        value = ComparisonSigns.deserialize(value)
-
-        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
-            return value[0], int(value[1])
-
-    return int(value)
-
-
-_validate_int.__schema__ = {"type": "string"}
-
-
-def _validate_date_time(value):
-    if isinstance(value, str):
-        value = ComparisonSigns.deserialize(value)
-
-        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
-            return value[0], iso8601.parse_date(value[1])
-
-    return iso8601.parse_date(value)
-
-
-_validate_date_time.__schema__ = {"type": "string"}
-
-
-def _validate_date(value):
-    if isinstance(value, str):
-        value = ComparisonSigns.deserialize(value)
-
-        # When using comparison signs, the value is a tuple containing the comparison sign and the value. ex: (ComparisonSigns.Lower, 124)
-        if isinstance(value, tuple):
-            return value[0], iso8601.parse_date(value[1])
-
-    return iso8601.parse_date(value).date()
-
-
-_validate_date.__schema__ = {"type": "string"}

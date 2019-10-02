@@ -10,15 +10,15 @@ import layabase.database_mongo
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         unique_key = layabase.database_mongo.Column(str, is_primary_key=True)
         non_unique_key = layabase.database_mongo.Column(
             datetime.date, index_type=layabase.database_mongo.IndexType.Other
         )
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
     return controller
 

@@ -11,6 +11,14 @@
 Query your databases easily and transparently thanks to this module providing helpers on top of most brilliant python
 database modules (SQLAlchemy and PyMongo).
 
+## Table of Contents
+
+  * [Features](#features)
+  * [How to use](#usage)
+  * [Technical documentation](#technical)
+
+## Features
+
 Features:
 
 - Audit
@@ -27,7 +35,7 @@ Features:
 - Health check
 - Smart queries
   - HTTP query parameters are extracted and converted from HTTP query arguments
-    - Special parameter: group_by
+    - Special parameter: order_by (__Feature not available for mongo__)
     - Special parameter: limit
     - Special parameter: offset
   - Query on multiple equality via `field=value1&field=value2`
@@ -37,87 +45,211 @@ Features:
   - Query via a mix of all those features if needed as long as it make sense to you
   - Query regex thanks to `*` character via `field=v*lue` (__Feature not yet available for mongo__) 
 
-## Concept ##
+## Usage
 
-You will define a model class to help you with the manipulation of:
+You will define a class to help you with the manipulation of:
 
  * A collection if this is a MongoDB you are connecting to.
  * A table if this is a non-Mongo database you are connecting to.
 
-This model will describe:
+This class will describe:
 
  * The document fields if this is a MongoDB you are connecting to.
  * The table columns if this is a non-Mongo database you are connecting to.
 
-By providing this model to a controller class, you will automatically have flask-restplus models and arguments parsers.
+By providing this class to a layabase.CRUDController instance, you will automatically have all features described in the previous section.
 
-Every feature provided by a model if exposed via a controller so that you never have to manipulate the model yourself.
+## CRUD Controller
 
-## Installation ##
+layabase.CRUDController provides C.R.U.D. methods (and more, as listed in features) on a specified table or mongo collection.
 
-layabase is easiest to work with when installed into a virtual environment using the setup.py.
-
-To install all test required dependencies, use the following command:
-
-```python
-python -m pip install .[testing]
-```
-
-## CRUD Controller ##
-
-layabase.CRUDController provides C.R.U.D. methods (and more, as listed in features) on a specified model.
-
-### Controller definition ###
+### Controller definition
 
 ```python
 import layabase
 
+# This will be the class describing your table or collection as defined in Table or Collection sections afterwards
+table_or_collection = None 
 
-controller = layabase.CRUDController(MyModel)
+controller = layabase.CRUDController(table_or_collection)
+```
 
-# Retrieving data
-all_models_as_dict_list = controller.get({})
+### Controller features
 
-filtered_models_as_dict_list = controller.get({"value": 'value1'})
+#### Retrieving data
 
-# Inserting data
-inserted_models_as_dict_list = controller.post_many([
+You can retrieve a list of rows or documents described as dictionaries:
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+all_rows_or_documents = controller.get({})
+
+filtered_rows_or_documents = controller.get({"value": 'value1'})
+```
+
+You can retrieve a single row or document described as dictionary:
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+row_or_document = controller.get_one({"value": 'value1'})
+```
+
+#### Inserting data
+
+You can insert many rows or documents at once using dictionary representation:
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+inserted_rows_or_documents = controller.post_many([
     {'key': 'key1', 'value': 'value1'},
     {'key': 'key2', 'value': 'value2'},
 ])
+```
 
-inserted_model_as_dict = controller.post({'key': 'key1', 'value': 'value1'})
+You can insert a single row or document using dictionary representation:
 
-# Updating data
-updated_model_as_dict = controller.put({'key': 'key1', 'value': 'new value'})
+```python
+import layabase
 
-# Removing data
-nb_removed_models = controller.delete({"key": 'key1'})
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
 
-# Retrieving table mapping
-# description = {'table': 'MyModel', 'key': 'key', 'value': 'value'}
+inserted_row_or_document = controller.post({'key': 'key1', 'value': 'value1'})
+```
+
+#### Updating data
+
+You can update many rows or documents at once using (partial) dictionary representation:
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+updated_rows_or_documents = controller.put_many([{'key': 'key1', 'value': 'new value1'}, {'key': 'key2', 'value': 'new value2'}])
+```
+
+You can update a single row or document using (partial) dictionary representation:
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+updated_row_or_document = controller.put({'key': 'key1', 'value': 'new value1'})
+```
+
+#### Removing data
+
+You can remove a subset of rows or documents:
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+nb_removed_rows_or_documents = controller.delete({"key": 'key1'})
+```
+
+You can remove all rows or documents:
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+nb_removed_rows_or_documents = controller.delete({})
+```
+
+#### Retrieving table or collection mapping
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
+# non mongo description = {'table': 'MyTable', 'key': 'key', 'value': 'value'}
+# mongo description = {'table': 'MyCollection', 'key': 'key', 'value': 'value'}
 description = controller.get_model_description()
+```
 
-# Auditing
+#### Auditing
+
+```python
+import layabase
+
+# This will be the controller as created in Controller definition section
+controller: layabase.CRUDController = None
+
 all_audit_models_as_dict_list = controller.get_audit({})
 
 filtered_audit_models_as_dict_list = controller.get_audit({"value": 'value1'})
 ```
 
-## Relational databases (non-Mongo) ##
+## Link to a database
+
+### Link to a Mongo database
+
+```python
+import layabase
+
+
+# Should be a list of CRUDController inherited classes
+my_controllers = []
+layabase.load("mongodb://host:port/server_name", my_controllers)
+```
+
+### Link to a Mongo in-memory database
+
+```python
+import layabase
+
+
+# Should be a list of CRUDController inherited classes
+my_controllers = []
+layabase.load("mongomock", my_controllers)
+```
+
+### Link to a non Mongo database
+
+```python
+import layabase
+
+
+# Should be a list of CRUDController inherited classes
+my_controllers = []
+layabase.load("your_connection_string", my_controllers)
+```
+
+## Relational databases (non-Mongo)
 
 SQLAlchemy is the underlying framework used to manipulate relational databases.
 
 To create a representation of a table you will need to create a [Mixin](https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html#declarative-mixins).
 
-### SQLAlchemy model ###
-
-#### Model definition ####
+### Table
 
 ```python
 from sqlalchemy import Column, String
 
-class MyModel:
+class MyTable:
     __tablename__ = "my_table"
 
     key = Column(String, primary_key=True)
@@ -125,7 +257,7 @@ class MyModel:
     value = Column(String, info={'marshmallow': {"required_on_query": True, "interpret_star_character": True}})
 ```
 
-## MongoDB (non-relational) ##
+## MongoDB (non-relational)
 
 PyMongo is the underlying framework used to manipulate MongoDB.
 
@@ -133,29 +265,27 @@ To create a representation of a collection you will need to create a Mixin class
 
 To link your model to the underlying collection, you will need to provide a connection string.
 
-### Mongo model ###
-
-#### Model definition ####
+### Collection
 
 ```python
 from layabase.database_mongo import Column
 
-class MyModel:
-    __tablename__ = "related collection name"
+class MyCollection:
+    __collection_name__ = "my_collection"
 
     key = Column(str, is_primary_key=True)
     dict_value = Column(dict)
 ```
 
-##### String fields #####
+##### String fields
 
 Fields containing string can be described using layabase.database_mongo.Column
 
 ```python
 from layabase.database_mongo import Column
 
-class MyModel:
-    __tablename__ = "related collection name"
+class MyCollection:
+    __collection_name__ = "my_collection"
 
     key = Column()
 ```
@@ -229,41 +359,45 @@ The following parameters can also be provided when creating a column of string t
     </tr>
 </table>
 
-##### Dictionary fields #####
+##### Dictionary fields
 
 Fields containing a dictionary can be described using layabase.database_mongo.DictColumn
 
-##### List fields #####
+##### List fields
 
 Fields containing a list can be described using layabase.database_mongo.ListColumn
-
-### Link to a Mongo database ###
-
-Mongo specific dependencies must be installed, use the following command:
-
-```python
-python -m pip install .[mongo]
-```
-
-Note that to link to a fake Mongo database (in-memory), you can install the following package as well:
-```python
-python -m pip install mongomock
-```
-
-and use the following connection string: "mongomock" instead of a real mongodb connection string.
-
-```python
-import layabase
-
-
-# Should be a list of CRUDController inherited classes
-my_controllers = []
-layabase.load("mongodb://host:port/server_name", my_controllers)
-```
 
 ## How to install
 1. [python 3.7+](https://www.python.org/downloads/) must be installed
 2. Use pip to install module:
 ```sh
 python -m pip install layabase -i https://all-team-remote:tBa%40W%29tvB%5E%3C%3B2Jm3@artifactory.tools.digital.engie.com/artifactory/api/pypi/all-team-pypi-prod/simple
+```
+
+Note that depending on what you want to connect to, you will have to use a different module name than layabase:
+* Mongo database: layabase[mongo]
+* Mongo in-memory database: layabase mongomock
+* Other database: layabase[sqlalchemy]
+
+## Technical
+
+ * [Requirements](#developer-requirements)
+ * [Usage](#developer-usage)
+
+## Developer-Requirements
+
+Industrial valuation requires the following to run:
+
+  * [python 3.7+](https://www.python.org/downloads/)
+
+## Developer-Usage
+
+## Installation
+
+layabase is easiest to work with when installed into a virtual environment using the setup.py.
+
+To install all test required dependencies, use the following command:
+
+```python
+python -m pip install .[testing]
 ```

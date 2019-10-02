@@ -146,13 +146,6 @@ class VersionedCRUDModel(_CRUDModel):
         return previous_documents, new_documents
 
     @classmethod
-    def query_delete_parser(cls):
-        query_delete_parser = super().query_delete_parser()
-        query_delete_parser.remove_argument(cls.valid_since_revision.name)
-        query_delete_parser.remove_argument(cls.valid_until_revision.name)
-        return query_delete_parser
-
-    @classmethod
     def remove(cls, **filters) -> int:
         filters.pop(cls.valid_since_revision.name, None)
         filters[cls.valid_until_revision.name] = -1
@@ -170,16 +163,6 @@ class VersionedCRUDModel(_CRUDModel):
         ).modified_count
 
     @classmethod
-    def query_rollback_parser(cls):
-        query_rollback_parser = cls._query_parser()
-        query_rollback_parser.remove_argument(cls.valid_since_revision.name)
-        query_rollback_parser.remove_argument(cls.valid_until_revision.name)
-        query_rollback_parser.add_argument(
-            "revision", type=flask_restplus.inputs.positive, required=True
-        )
-        return query_rollback_parser
-
-    @classmethod
     def _get_revision(cls, filters: dict) -> int:
         # TODO Use an int Column validate + deserialize
         revision = filters.get("revision")
@@ -193,13 +176,6 @@ class VersionedCRUDModel(_CRUDModel):
 
         del filters["revision"]
         return revision
-
-    @classmethod
-    def query_get_parser(cls):
-        query_get_parser = super().query_get_parser()
-        query_get_parser.remove_argument(cls.valid_since_revision.name)
-        query_get_parser.remove_argument(cls.valid_until_revision.name)
-        return query_get_parser
 
     @classmethod
     def get_fields(

@@ -7,7 +7,7 @@ import layabase.database_mongo
 
 def test_2entities_on_same_collection_without_pk():
     class TestCollection:
-        __tablename__ = "test"
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         mandatory = layabase.database_mongo.Column(int, is_nullable=False)
@@ -20,7 +20,7 @@ def test_2entities_on_same_collection_without_pk():
     controller.post({"key": "2", "mandatory": 2})
 
     class TestCollection2:
-        __tablename__ = "test"
+        __collection_name__ = "test"
 
     controller = layabase.CRUDController(TestCollection2, history=True)
 
@@ -31,7 +31,7 @@ def test_2entities_on_same_collection_without_pk():
 
 def test_2entities_on_same_collection_with_pk():
     class TestCollection:
-        __tablename__ = "test"
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         mandatory = layabase.database_mongo.Column(int, is_nullable=False)
@@ -44,7 +44,7 @@ def test_2entities_on_same_collection_with_pk():
     controller.post({"key": "2", "mandatory": 2})
 
     class TestCollection2:
-        __tablename__ = "test"
+        __collection_name__ = "test"
 
     controller = layabase.CRUDController(
         TestCollection2, history=True, skip_update_indexes=True

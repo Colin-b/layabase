@@ -7,12 +7,12 @@ from layabase.testing import mock_mongo_health_datetime
 
 @pytest.fixture
 def database():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         id = layabase.database_mongo.Column()
 
-    return layabase.load("mongomock", [layabase.CRUDController(TestModel)])
+    return layabase.load("mongomock", [layabase.CRUDController(TestCollection)])
 
 
 def test_health_details_failure(database, mock_mongo_health_datetime):

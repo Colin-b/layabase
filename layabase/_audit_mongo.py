@@ -35,7 +35,7 @@ def _common_audit(mixin, model, base):
         Class providing Audit fields for a MONGODB model.
         """
 
-        __tablename__ = f"audit_{model.__tablename__}"
+        __collection_name__ = f"audit_{model.__collection_name__}"
 
         revision = Column(int, is_primary_key=True)
 
@@ -69,7 +69,7 @@ def _common_audit(mixin, model, base):
         def _audit_action(cls, action: Action, document: dict):
             document.pop("_id", None)
             document[cls.revision.name] = cls._increment(
-                "revision", model.__tablename__
+                "revision", model.__collection_name__
             )
             document[cls.audit_user.name] = current_user_name()
             document[cls.audit_date_utc.name] = datetime.datetime.utcnow()
@@ -85,7 +85,7 @@ def _versioning_audit(mixin, base):
         Class providing the audit for all versioned MONGODB models.
         """
 
-        __tablename__ = "audit"
+        __collection_name__ = "audit"
 
         table_name = Column(str, is_primary_key=True)
         revision = Column(int, is_primary_key=True)
@@ -93,12 +93,6 @@ def _versioning_audit(mixin, base):
         audit_user = Column(str)
         audit_date_utc = Column(datetime.datetime)
         audit_action = Column(Action)
-
-        @classmethod
-        def query_get_parser(cls):
-            query_get_parser = super().query_get_parser()
-            query_get_parser.remove_argument(cls.table_name.name)
-            return query_get_parser
 
         @classmethod
         def get_fields(
@@ -110,7 +104,7 @@ def _versioning_audit(mixin, base):
 
         @classmethod
         def get_all(cls, **filters):
-            filters[cls.table_name.name] = mixin.__tablename__
+            filters[cls.table_name.name] = mixin.__collection_name__
             return super().get_all(**filters)
 
         @classmethod
@@ -133,7 +127,7 @@ def _versioning_audit(mixin, base):
         def _audit_action(cls, action: Action, revision: int):
             cls.__collection__.insert_one(
                 {
-                    cls.table_name.name: mixin.__tablename__,
+                    cls.table_name.name: mixin.__collection_name__,
                     cls.revision.name: revision,
                     cls.audit_user.name: current_user_name(),
                     cls.audit_date_utc.name: datetime.datetime.utcnow(),

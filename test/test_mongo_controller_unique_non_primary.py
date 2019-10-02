@@ -14,8 +14,8 @@ class EnumTest(enum.Enum):
 
 @pytest.fixture
 def controller_versioned():
-    class TestModelVersioned:
-        __tablename__ = "test_versioned"
+    class TestCollectionVersioned:
+        __collection_name__ = "test_versioned"
 
         key = layabase.database_mongo.Column(is_primary_key=True)
         dict_field = layabase.database_mongo.DictColumn(
@@ -28,33 +28,33 @@ def controller_versioned():
             is_required=True,
         )
 
-    return layabase.CRUDController(TestModelVersioned, history=True)
+    return layabase.CRUDController(TestCollectionVersioned, history=True)
 
 
 @pytest.fixture
 def controller_versioned_unique():
-    class TestModelVersionedUnique:
-        __tablename__ = "test_versioned_unique"
+    class TestCollectionVersionedUnique:
+        __collection_name__ = "test_versioned_unique"
 
         key = layabase.database_mongo.Column(int, should_auto_increment=True)
         unique = layabase.database_mongo.Column(
             int, index_type=layabase.database_mongo.IndexType.Unique
         )
 
-    return layabase.CRUDController(TestModelVersionedUnique, history=True)
+    return layabase.CRUDController(TestCollectionVersionedUnique, history=True)
 
 
 @pytest.fixture
 def controller_unique():
-    class TestModelUnique:
-        __tablename__ = "test_unique"
+    class TestCollectionUnique:
+        __collection_name__ = "test_unique"
 
         key = layabase.database_mongo.Column(int, should_auto_increment=True)
         unique = layabase.database_mongo.Column(
             int, index_type=layabase.database_mongo.IndexType.Unique
         )
 
-    return layabase.CRUDController(TestModelUnique)
+    return layabase.CRUDController(TestCollectionUnique)
 
 
 @pytest.fixture
@@ -65,27 +65,27 @@ def controllers(controller_versioned, controller_unique, controller_versioned_un
     )
 
 
-def test_get_url_without_primary_key_in_model_and_many_models(
+def test_get_url_without_primary_key_in_collection_and_many_documents(
     controllers, controller_unique
 ):
-    models = [{"key": 1, "unique": 2}, {"key": 2, "unique": 3}]
-    assert controller_unique.get_url("/test", *models) == "/test"
+    documents = [{"key": 1, "unique": 2}, {"key": 2, "unique": 3}]
+    assert controller_unique.get_url("/test", *documents) == "/test"
 
 
-def test_get_url_without_primary_key_in_model_and_one_model(
+def test_get_url_without_primary_key_in_collection_and_one_document(
     controllers, controller_unique
 ):
-    model = {"key": 1, "unique": 2}
-    assert controller_unique.get_url("/test", model) == "/test"
+    document = {"key": 1, "unique": 2}
+    assert controller_unique.get_url("/test", document) == "/test"
 
 
-def test_get_url_without_primary_key_in_model_and_no_model(
+def test_get_url_without_primary_key_in_collection_and_no_document(
     controllers, controller_unique
 ):
     assert controller_unique.get_url("/test") == "/test"
 
 
-def test_revison_is_shared(
+def test_revision_is_shared(
     controllers, controller_versioned, controller_versioned_unique
 ):
     controller_versioned.post(

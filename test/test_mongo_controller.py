@@ -21,14 +21,14 @@ logging.basicConfig(
 
 @pytest.fixture
 def controller():
-    class TestModel:
-        __tablename__ = "test"
+    class TestCollection:
+        __collection_name__ = "test"
 
         key = layabase.database_mongo.Column(str, is_primary_key=True)
         mandatory = layabase.database_mongo.Column(int, is_nullable=False)
         optional = layabase.database_mongo.Column(str)
 
-    controller = layabase.CRUDController(TestModel)
+    controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
     return controller
 
@@ -483,7 +483,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_GetResponseModel"
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
                             },
                         }
                     },
@@ -570,7 +570,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PutRequestModel"
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
                     ],
@@ -585,7 +585,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_PostRequestModel"
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
                             },
                         }
                     ],
@@ -598,7 +598,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestModel_GetDescriptionResponseModel"
+                                "$ref": "#/definitions/TestCollection_GetDescriptionResponseModel"
                             },
                         }
                     },
@@ -692,7 +692,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel_PutRequestModel": {
+            "TestCollection_PutRequestModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -708,7 +708,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_PostRequestModel": {
+            "TestCollection_PostRequestModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -724,7 +724,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetResponseModel": {
+            "TestCollection_GetResponseModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -740,7 +740,7 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModel_GetDescriptionResponseModel": {
+            "TestCollection_GetDescriptionResponseModel": {
                 "required": ["collection"],
                 "properties": {
                     "collection": {
