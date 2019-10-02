@@ -104,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.1...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.0...HEAD
+[3.0.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.1...v3.0.0
 [2.0.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.0...v2.0.1
 [2.0.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.1...v2.0.0
 [1.3.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.0...v1.3.1
