@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [3.0.0] - 2019-10-02
 ### Changed
 - SQLAlchemy models do not need to extend anything. Provide [Mixins](https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html#declarative-mixins) instead of models.
 - CRUDController does not expose class methods anymore but must be instantiated instead. Meaning there is no need for placeholder classes anymore.
