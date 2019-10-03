@@ -1,7 +1,7 @@
 import datetime
 import logging
 import urllib.parse
-from typing import List, Dict
+from typing import List, Dict, Type, Iterable
 
 from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
 from marshmallow import validate, ValidationError, EXCLUDE
@@ -12,6 +12,11 @@ from sqlalchemy import create_engine, inspect, Column, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import StaticPool
+import flask_restplus
+
+from layabase._exceptions import MultiSchemaNotSupported
+from layabase import CRUDController
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +30,6 @@ class CRUDModel:
 
     _session = None
     audit_model = None
-    interpret_star_character = False
 
     @classmethod
     def _post_init(cls, session):
@@ -77,20 +81,21 @@ class CRUDModel:
 
         for column_name, value in filters.items():
             if value is not None:
+                column: Column = getattr(cls, column_name)
                 if isinstance(value, list):
                     if value:
-                        query = query.filter(getattr(cls, column_name).in_(value))
+                        query = query.filter(column.in_(value))
                 else:
                     if (
-                        cls.interpret_star_character
-                        and isinstance(value, str)
+                        isinstance(value, str)
                         and "*" in value
-                    ):
-                        query = query.filter(
-                            getattr(cls, column_name).like(value.replace("*", "%"))
+                        and column.info.get("marshmallow", {}).get(
+                            "interpret_star_character", False
                         )
+                    ):
+                        query = query.filter(column.like(value.replace("*", "%")))
                     else:
-                        query = query.filter(getattr(cls, column_name) == value)
+                        query = query.filter(column == value)
 
         if query_limit:
             query = query.limit(query_limit)
@@ -374,52 +379,6 @@ class CRUDModel:
             marshmallow_field.metadata["sqlalchemy_autoincrement"] = autoincrement[0]
 
     @classmethod
-    def query_get_parser(cls) -> reqparse.RequestParser:
-        query_get_parser = cls._query_parser()
-        query_get_parser.add_argument("limit", type=inputs.positive, location="args")
-        query_get_parser.add_argument(
-            "order_by", type=str, action="append", location="args"
-        )
-        if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_parser.add_argument(
-                "offset", type=inputs.natural, location="args"
-            )
-        return query_get_parser
-
-    @classmethod
-    def query_get_history_parser(cls) -> reqparse.RequestParser:
-        query_get_hist_parser = cls._query_parser()
-        query_get_hist_parser.add_argument(
-            "limit", type=inputs.positive, location="args"
-        )
-        if _supports_offset(cls.metadata.bind.url.drivername):
-            query_get_hist_parser.add_argument(
-                "offset", type=inputs.natural, location="args"
-            )
-        return query_get_hist_parser
-
-    @classmethod
-    def query_delete_parser(cls) -> reqparse.RequestParser:
-        return cls._query_parser()
-
-    @classmethod
-    def query_rollback_parser(cls) -> None:
-        return  # Only VersionedCRUDModel allows rollback
-
-    @classmethod
-    def _query_parser(cls) -> reqparse.RequestParser:
-        query_parser = reqparse.RequestParser()
-        for marshmallow_field in cls.schema().fields.values():
-            query_parser.add_argument(
-                marshmallow_field.name,
-                required=marshmallow_field.metadata.get("required_on_query", False),
-                type=_get_python_type(marshmallow_field),
-                action="append",
-                location="args",
-            )
-        return query_parser
-
-    @classmethod
     def get_primary_keys(cls) -> List[str]:
         # TODO Replace with marshmallow_sqlalchemy.fields.get_primary_keys(cls)
         return [
@@ -459,27 +418,31 @@ class CRUDModel:
         return description
 
     @classmethod
-    def json_post_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def post_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
+        return cls._flask_restplus_fields()
 
     @classmethod
-    def json_put_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def put_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
+        return cls._flask_restplus_fields()
 
     @classmethod
-    def get_response_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def get_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
+        return cls._flask_restplus_fields()
 
     @classmethod
-    def get_history_response_model(cls, namespace):
-        return cls._model_with_all_fields(namespace)
+    def history_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
+        return cls._flask_restplus_fields()
 
     @classmethod
-    def _model_with_all_fields(cls, namespace):
-        return namespace.model(cls.__name__, cls._flask_restplus_fields())
-
-    @classmethod
-    def _flask_restplus_fields(cls) -> dict:
+    def _flask_restplus_fields(cls) -> Dict[str, flask_restplus.fields.Raw]:
         return {
             marshmallow_field.name: _get_rest_plus_type(marshmallow_field)(
                 required=marshmallow_field.required,
@@ -497,7 +460,7 @@ class CRUDModel:
         return [field.name for field in cls.schema().fields.values()]
 
     @classmethod
-    def flask_restplus_description_fields(cls) -> dict:
+    def description_fields(cls) -> Dict[str, flask_restplus.fields.Raw]:
         exported_fields = {
             "table": flask_restplus_fields.String(
                 required=True, example="table", description="Table name"
@@ -521,37 +484,44 @@ class CRUDModel:
         )
         return exported_fields
 
-    @classmethod
-    def audit(cls) -> None:
-        """
-        Call this method to add audit to a model.
-        """
-        from layabase.audit_sqlalchemy import _create_from
 
-        cls.audit_model = _create_from(cls)
+def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
+    class ControllerModel(controller.table_or_collection, CRUDModel, base):
+        pass
 
-    @classmethod
-    def interpret_star_character_as_like(cls) -> None:
-        """
-        Call this method to interpret star character for LIKE operator.
-        """
+    controller._model = ControllerModel
 
-        cls.interpret_star_character = True
+    if not _supports_offset(base.metadata.bind.url.drivername):
+        controller.query_get_parser.remove_argument("offset")
+        controller.query_get_audit_parser.remove_argument("offset")
+        controller.query_get_history_parser.remove_argument("offset")
+
+    if controller.audit:
+        from layabase._audit_sqlalchemy import _create_from
+
+        ControllerModel.audit_model = _create_from(
+            controller.table_or_collection, ControllerModel, CRUDModel, base
+        )
+
+    controller._model_description_dictionary = ControllerModel.description_dictionary()
+
+    return ControllerModel
 
 
-def _load(database_connection_url: str, create_models_func: callable, **kwargs):
+def _load(
+    database_connection_url: str, controllers: Iterable[CRUDController], **kwargs
+):
     """
     Create all necessary tables and perform the link between models and underlying database connection.
 
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
-    :param create_models_func: Function that will be called to create models and return them (instances of CRUDModel)
-     (Mandatory).
+    :param controllers: List of all CRUDController-like instances (Mandatory).
     :param pool_recycle: Number of seconds to wait before recycling a connection pool. Default value is 60.
     :return SQLAlchemy base.
     """
     database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f"Connecting to {database_connection_url}...")
-    logger.debug(f"Creating engine...")
+    logger.debug("Creating engine...")
     if _in_memory(database_connection_url):
         engine = create_engine(
             database_connection_url,
@@ -562,10 +532,10 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
         kwargs.setdefault("pool_recycle", 60)
         engine = create_engine(database_connection_url, **kwargs)
     _prepare_engine(engine)
-    logger.debug(f"Creating base...")
+    logger.debug("Creating base...")
     base = declarative_base(bind=engine)
-    logger.debug(f"Creating models...")
-    model_classes = create_models_func(base)
+    logger.debug("Creating models...")
+    model_classes = [_create_model(controller, base) for controller in controllers]
     if _can_retrieve_metadata(database_connection_url):
         all_view_names = _get_view_names(engine, base.metadata.schema)
         all_tables_and_views = base.metadata.tables
@@ -575,7 +545,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
             for table_name, table_or_view in all_tables_and_views.items()
             if table_name not in all_view_names
         }
-        logger.debug(f"Creating tables...")
+        logger.debug("Creating tables...")
         if _in_memory(database_connection_url) and hasattr(base.metadata, "_schemas"):
             if len(base.metadata._schemas) > 1:
                 raise MultiSchemaNotSupported()
@@ -585,7 +555,7 @@ def _load(database_connection_url: str, create_models_func: callable, **kwargs):
                 )
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
-    logger.debug(f"Creating session...")
+    logger.debug("Creating session...")
     session = sessionmaker(bind=engine)()
     logger.info(f"Connected to {database_connection_url}.")
     for model_class in model_classes:
@@ -612,11 +582,6 @@ def _model_field_values(model_instance) -> dict:
 def _models_field_values(model_instances: list) -> List[dict]:
     """Return models fields values (with the proper type) as a list of dictionaries."""
     return model_instances[0].schema().dump(model_instances, many=True)
-
-
-class MultiSchemaNotSupported(Exception):
-    def __init__(self):
-        Exception.__init__(self, "SQLite does not manage multi-schemas..")
 
 
 def _clean_database_url(database_connection_url: str) -> str:
@@ -729,29 +694,6 @@ def _get_default_example(marshmallow_field):
         return "15:36:09"
 
     return "sample_value"
-
-
-def _get_python_type(marshmallow_field):
-    """
-    Return the Python type corresponding to this SQL Alchemy Marshmallow field.
-
-    Default to str,
-    """
-    if isinstance(marshmallow_field, marshmallow_fields.String):
-        return str
-    if isinstance(marshmallow_field, marshmallow_fields.Integer):
-        return int
-    if isinstance(marshmallow_field, marshmallow_fields.Number):
-        return float
-    if isinstance(marshmallow_field, marshmallow_fields.Boolean):
-        return inputs.boolean
-    if isinstance(marshmallow_field, marshmallow_fields.Date):
-        return inputs.date_from_iso8601
-    if isinstance(marshmallow_field, marshmallow_fields.DateTime):
-        return inputs.datetime_from_iso8601
-
-    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
-    return str
 
 
 def _check(base) -> (str, dict):

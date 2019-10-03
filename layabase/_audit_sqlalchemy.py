@@ -1,11 +1,12 @@
 import datetime
 import enum
+import copy
 
 from layaberr import ValidationFailed
 from marshmallow import ValidationError
-from sqlalchemy import Column, DateTime, Enum, String, inspect, Integer
+from sqlalchemy import Column, DateTime, Enum, String, Integer
 
-from layabase.audit import current_user_name
+from layabase._audit import current_user_name
 
 
 @enum.unique
@@ -15,23 +16,40 @@ class Action(enum.Enum):
     Delete = "D"
 
 
-def _column(attribute):
-    if len(attribute.columns) != 1:
-        raise Exception(
-            f"Recreating an attribute ({attribute}) based on more than one column is not handled for now."
-        )
-    column = attribute.columns[0]
-    return Column(column.name, column.type, nullable=column.nullable)
+def _to_audit_column(column):
+    """
+    Remove primary keys from mixin as revision is the unique primary key
+    Remove auto increment from mixin as value is already auto incremented by model
+    
+    :param column: SQLAlchemy column or any other attribute of the original Mixin.
+    """
+    if hasattr(column, "primary_key") and column.primary_key:
+        column = copy.deepcopy(column)
+        column.primary_key = False
+    if hasattr(column, "autoincrement") and column.autoincrement:
+        column = copy.deepcopy(column)
+        column.autoincrement = False
+
+    return column
 
 
-def _create_from(model):
-    class AuditModel(*model.__bases__):
+def _create_from(mixin, model, *bases):
+    mixin = type(
+        f"{mixin.__name__}_Copy_For_Audit",
+        mixin.__bases__,
+        {
+            key: _to_audit_column(value)
+            for key, value in mixin.__dict__.items()
+            if key not in ["__dict__", "__weakref__"]
+        },
+    )
+
+    class AuditModel(mixin, *bases):
         """
         Class providing Audit fields for a SQL Alchemy model.
         """
 
-        __tablename__ = f"audit_{model.__tablename__}"
-        _model = model
+        __tablename__ = f"audit_{mixin.__tablename__}"
 
         revision = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -41,15 +59,9 @@ def _create_from(model):
         audit_action = Column(
             Enum(
                 *[action.value for action in Action],
-                name=f"audit_{model.__tablename__}_action_type",
+                name=f"audit_{mixin.__tablename__}_action_type",
             )
         )
-
-        @classmethod
-        def get_response_model(cls, namespace):
-            return namespace.model(
-                "Audit" + cls._model.__name__, cls._flask_restplus_fields()
-            )
 
         @classmethod
         def audit_add(cls, row: dict):
@@ -70,7 +82,7 @@ def _create_from(model):
             """
             :param filters: Filters as requested.
             """
-            for removed_row in cls._model.get_all(**filters):
+            for removed_row in model.get_all(**filters):
                 cls._audit_action(Action.Delete, removed_row)
 
         @classmethod
@@ -84,10 +96,5 @@ def _create_from(model):
                 raise ValidationFailed(row, e.messages)
             # Let any error be handled by the caller (main model), same for commit
             cls._session.add(row_model)
-
-    existing_field_names = list(AuditModel.get_field_names())
-    for attribute in inspect(model).attrs:
-        if attribute.key not in existing_field_names:
-            setattr(AuditModel, attribute.key, _column(attribute))
 
     return AuditModel

@@ -1,73 +1,64 @@
 import pytest
 
-from layabase import database, database_mongo
-import layabase.testing
-
-
-class TestNoneInsertController(database.CRUDController):
-    pass
-
-
-class TestNoneRetrieveController(database.CRUDController):
-    pass
-
-
-class TestNoneNotInsertedController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestNoneNotInsertedModel(
-        database_mongo.CRUDModel, base=base, table_name="none_table_name"
-    ):
-        key = database_mongo.Column(int, is_primary_key=True)
-        my_dict = database_mongo.DictColumn(
-            fields={"null_value": database_mongo.Column(store_none=False)},
-            is_required=True,
-        )
-
-    class TestNoneInsertModel(
-        database_mongo.CRUDModel,
-        base=base,
-        table_name="none_table_name",
-        skip_name_check=True,
-    ):
-        key = database_mongo.Column(int, is_primary_key=True)
-        my_dict = database_mongo.DictColumn(
-            fields={"null_value": database_mongo.Column(store_none=True)},
-            is_required=True,
-        )
-
-    class TestNoneRetrieveModel(
-        database_mongo.CRUDModel,
-        base=base,
-        table_name="none_table_name",
-        skip_name_check=True,
-    ):
-        key = database_mongo.Column(int, is_primary_key=True)
-        my_dict = database_mongo.Column(dict, is_required=True)
-
-    TestNoneNotInsertedController.model(TestNoneNotInsertedModel)
-    TestNoneInsertController.model(TestNoneInsertModel)
-    TestNoneRetrieveController.model(TestNoneRetrieveModel)
-
-    return [TestNoneInsertModel]
+import layabase
+import layabase._database_mongo
 
 
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
+def controller_insert():
+    class TestCollectionInsert:
+        __collection_name__ = "test"
+
+        key = layabase._database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase._database_mongo.DictColumn(
+            fields={"null_value": layabase._database_mongo.Column(store_none=True)},
+            is_required=True,
+        )
+
+    return layabase.CRUDController(TestCollectionInsert, skip_name_check=True)
 
 
-def test_get_retrieve_none_field_when_not_in_model(db):
-    TestNoneInsertController.post({"key": 1, "my_dict": {"null_value": None}})
-    assert [
-        {"key": 1, "my_dict": {"null_value": None}}
-    ] == TestNoneRetrieveController.get({})
+@pytest.fixture
+def controller_not_inserted():
+    class TestCollectionNotInserted:
+        __collection_name__ = "test"
+
+        key = layabase._database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase._database_mongo.DictColumn(
+            fields={"null_value": layabase._database_mongo.Column(store_none=False)},
+            is_required=True,
+        )
+
+    return layabase.CRUDController(TestCollectionNotInserted)
 
 
-def test_get_do_not_retrieve_none_field_when_not_in_model(db):
-    TestNoneNotInsertedController.post({"key": 1, "my_dict": {"null_value": None}})
-    assert [{"key": 1, "my_dict": {}}] == TestNoneRetrieveController.get({})
+@pytest.fixture
+def controller_retrieve():
+    class TestCollectionRetrieve:
+        __collection_name__ = "test"
+
+        key = layabase._database_mongo.Column(int, is_primary_key=True)
+        my_dict = layabase._database_mongo.Column(dict, is_required=True)
+
+    return layabase.CRUDController(TestCollectionRetrieve, skip_name_check=True)
+
+
+@pytest.fixture
+def controllers(controller_insert, controller_not_inserted, controller_retrieve):
+    return layabase.load(
+        "mongomock", [controller_insert, controller_not_inserted, controller_retrieve]
+    )
+
+
+def test_get_retrieve_none_field_when_not_in_collection(
+    controllers, controller_insert, controller_retrieve
+):
+    controller_insert.post({"key": 1, "my_dict": {"null_value": None}})
+    assert controller_retrieve.get({}) == [{"key": 1, "my_dict": {"null_value": None}}]
+
+
+def test_get_do_not_retrieve_none_field_when_not_in_collection(
+    controllers, controller_not_inserted, controller_retrieve
+):
+    controller_not_inserted.post({"key": 1, "my_dict": {"null_value": None}})
+    assert controller_retrieve.get({}) == [{"key": 1, "my_dict": {}}]

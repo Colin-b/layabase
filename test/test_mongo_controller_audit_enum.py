@@ -2,10 +2,9 @@ import enum
 
 import pytest
 
-from layabase import database, database_mongo
-import layabase.testing
-import layabase.audit_mongo
-from test import DateTimeModuleMock
+import layabase
+import layabase._database_mongo
+from layabase.testing import mock_mongo_audit_datetime
 
 
 class EnumTest(enum.Enum):
@@ -13,36 +12,25 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestEnumController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestEnumModel(
-        database_mongo.CRUDModel, base=base, table_name="enum_table_name", audit=True
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        enum_fld = database_mongo.Column(EnumTest)
-
-    TestEnumController.model(TestEnumModel)
-    return [TestEnumModel]
-
-
 @pytest.fixture
-def db():
-    _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
-    yield _db
-    layabase.testing.reset(_db)
+def controller():
+    class TestCollection:
+        __collection_name__ = "test"
+
+        key = layabase._database_mongo.Column(str, is_primary_key=True)
+        enum_fld = layabase._database_mongo.Column(EnumTest)
+
+    controller = layabase.CRUDController(TestCollection, audit=True)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
-def test_post_with_enum_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert TestEnumController.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
+def test_post_with_enum_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",
     }
-    assert TestEnumController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -54,18 +42,16 @@ def test_post_with_enum_is_valid(db, monkeypatch):
     ]
 
 
-def test_put_with_enum_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert TestEnumController.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
+def test_put_with_enum_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",
     }
-    assert TestEnumController.put({"key": "my_key", "enum_fld": EnumTest.Value2}) == (
+    assert controller.put({"key": "my_key", "enum_fld": EnumTest.Value2}) == (
         {"enum_fld": "Value1", "key": "my_key"},
         {"enum_fld": "Value2", "key": "my_key"},
     )
-    assert TestEnumController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -85,15 +71,13 @@ def test_put_with_enum_is_valid(db, monkeypatch):
     ]
 
 
-def test_delete_with_enum_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert TestEnumController.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
+def test_delete_with_enum_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",
     }
-    assert TestEnumController.delete({"enum_fld": EnumTest.Value1}) == 1
-    assert TestEnumController.get_audit({}) == [
+    assert controller.delete({"enum_fld": EnumTest.Value1}) == 1
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",

@@ -1,43 +1,35 @@
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
-import layabase.testing
-
-
-class TestNullableAutoSetController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestNullableAutoSetModel(
-        database_mongo.CRUDModel, base=base, table_name="nullable_auto_set_table_name"
-    ):
-        prim_def_inc = database_mongo.Column(
-            int, is_primary_key=True, default_value=1, should_auto_increment=True
-        )
-        prim_def = database_mongo.Column(int, is_primary_key=True, default_value=1)
-        prim_inc = database_mongo.Column(
-            int, is_primary_key=True, should_auto_increment=True
-        )
-
-    TestNullableAutoSetController.model(TestNullableAutoSetModel)
-
-    return [TestNullableAutoSetModel]
+import layabase
+import layabase._database_mongo
 
 
 @pytest.fixture
-def db():
-    _db = database.load("mongomock", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
+def controller():
+    class TestCollection:
+        __collection_name__ = "test"
+
+        prim_def_inc = layabase._database_mongo.Column(
+            int, is_primary_key=True, default_value=1, should_auto_increment=True
+        )
+        prim_def = layabase._database_mongo.Column(
+            int, is_primary_key=True, default_value=1
+        )
+        prim_inc = layabase._database_mongo.Column(
+            int, is_primary_key=True, should_auto_increment=True
+        )
+
+    controller = layabase.CRUDController(TestCollection)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
-def test_put_without_primary_and_incremented_field(db):
-    TestNullableAutoSetController.post({"prim_def": 1})
+def test_put_without_primary_and_incremented_field(controller):
+    controller.post({"prim_def": 1})
     with pytest.raises(ValidationFailed) as exception_info:
-        TestNullableAutoSetController.put({"prim_def": 1})
-    assert {
+        controller.put({"prim_def": 1})
+    assert exception_info.value.errors == {
         "prim_inc": ["Missing data for required field."]
-    } == exception_info.value.errors
-    assert {"prim_def": 1} == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == {"prim_def": 1}

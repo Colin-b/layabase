@@ -1,38 +1,26 @@
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
-import layabase.testing
+import layabase
 
 
-class TestInheritanceController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
+@pytest.fixture
+def controller():
     class Inherited:
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    class TestInheritanceModel(database_sqlalchemy.CRUDModel, Inherited, base):
-        __tablename__ = "inheritance_table_name"
+    class TestTable(Inherited):
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(
             sqlalchemy.Integer, primary_key=True, autoincrement=True
         )
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 
-    TestInheritanceModel.audit()
-
-    TestInheritanceController.model(TestInheritanceModel)
-    return [TestInheritanceModel]
-
-
-@pytest.fixture
-def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
+    controller = layabase.CRUDController(TestTable, audit=True)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
-def test_inheritance_does_not_throw_errors(db):
+def test_inheritance_does_not_throw_errors(controller):
     pass

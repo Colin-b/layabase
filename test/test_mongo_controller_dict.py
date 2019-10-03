@@ -3,11 +3,10 @@ import enum
 import flask
 import flask_restplus
 import pytest
-from flask_restplus import inputs
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
-import layabase.testing
+import layabase
+import layabase._database_mongo
 
 
 class EnumTest(enum.Enum):
@@ -15,89 +14,81 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestDictController(database.CRUDController):
-    pass
+@pytest.fixture
+def controller():
+    class TestCollection:
+        __collection_name__ = "test"
 
-
-def _create_models(base):
-    class TestDictModel(
-        database_mongo.CRUDModel, base=base, table_name="dict_table_name"
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        dict_col = database_mongo.DictColumn(
+        key = layabase._database_mongo.Column(str, is_primary_key=True)
+        dict_col = layabase._database_mongo.DictColumn(
             fields={
-                "first_key": database_mongo.Column(EnumTest, is_nullable=False),
-                "second_key": database_mongo.Column(int, is_nullable=False),
+                "first_key": layabase._database_mongo.Column(
+                    EnumTest, is_nullable=False
+                ),
+                "second_key": layabase._database_mongo.Column(int, is_nullable=False),
             },
             is_nullable=False,
         )
 
-    TestDictController.model(TestDictModel)
-
-    return [TestDictModel]
-
-
-@pytest.fixture
-def db():
-    _db = database.load("mongomock", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
+    controller = layabase.CRUDController(TestCollection)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestDictController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestDictController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
-            return TestDictController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
-        @namespace.expect(TestDictController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
-            return TestDictController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 
 
-def test_post_dict_is_valid(db):
+def test_post_dict_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
 
 
-def test_get_with_dot_notation_is_valid(db):
+def test_get_with_dot_notation_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": EnumTest.Value1, "second_key": 3}}
     )
     assert [
         {"dict_col": {"first_key": "Value1", "second_key": 3}, "key": "my_key"}
-    ] == TestDictController.get({"dict_col.first_key": EnumTest.Value1})
+    ] == controller.get({"dict_col.first_key": EnumTest.Value1})
 
 
-def test_get_with_dot_notation_as_list_is_valid(db):
-    TestDictController.post(
+def test_get_with_dot_notation_as_list_is_valid(controller):
+    controller.post(
         {"key": "my_key", "dict_col": {"first_key": EnumTest.Value1, "second_key": 3}}
     )
     assert [
         {"dict_col": {"first_key": "Value1", "second_key": 3}, "key": "my_key"}
-    ] == TestDictController.get({"dict_col.first_key": [EnumTest.Value1]})
+    ] == controller.get({"dict_col.first_key": [EnumTest.Value1]})
 
 
-def test_get_with_multiple_results_dot_notation_as_list_is_valid(db):
-    TestDictController.post_many(
+def test_get_with_multiple_results_dot_notation_as_list_is_valid(controller):
+    controller.post_many(
         [
             {
                 "key": "my_key",
@@ -112,35 +103,31 @@ def test_get_with_multiple_results_dot_notation_as_list_is_valid(db):
     assert [
         {"dict_col": {"first_key": "Value1", "second_key": 3}, "key": "my_key"},
         {"dict_col": {"first_key": "Value2", "second_key": 4}, "key": "my_key2"},
-    ] == TestDictController.get(
-        {"dict_col.first_key": [EnumTest.Value1, EnumTest.Value2]}
-    )
+    ] == controller.get({"dict_col.first_key": [EnumTest.Value1, EnumTest.Value2]})
 
 
-def test_update_with_dot_notation_is_valid(db):
+def test_update_with_dot_notation_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
     assert (
         {"dict_col": {"first_key": "Value1", "second_key": 3}, "key": "my_key"},
         {"dict_col": {"first_key": "Value1", "second_key": 4}, "key": "my_key"},
-    ) == TestDictController.put({"key": "my_key", "dict_col.second_key": 4})
+    ) == controller.put({"key": "my_key", "dict_col.second_key": 4})
 
 
-def test_update_with_dot_notation_invalid_value_is_invalid(db):
+def test_update_with_dot_notation_invalid_value_is_invalid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
     with pytest.raises(ValidationFailed) as exception_info:
-        TestDictController.put(
-            {"key": "my_key", "dict_col.second_key": "invalid integer"}
-        )
+        controller.put({"key": "my_key", "dict_col.second_key": "invalid integer"})
     assert {"dict_col.second_key": ["Not a valid int."]} == exception_info.value.errors
     assert {
         "key": "my_key",
@@ -148,44 +135,44 @@ def test_update_with_dot_notation_invalid_value_is_invalid(db):
     } == exception_info.value.received_data
 
 
-def test_delete_with_dot_notation_invalid_value_is_invalid(db):
+def test_delete_with_dot_notation_invalid_value_is_invalid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
     with pytest.raises(ValidationFailed) as exception_info:
-        TestDictController.delete({"dict_col.second_key": "invalid integer"})
+        controller.delete({"dict_col.second_key": "invalid integer"})
     assert {"dict_col.second_key": ["Not a valid int."]} == exception_info.value.errors
     assert {
         "dict_col.second_key": "invalid integer"
     } == exception_info.value.received_data
 
 
-def test_delete_with_dot_notation_valid_value_is_valid(db):
+def test_delete_with_dot_notation_valid_value_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    assert 1 == TestDictController.delete({"dict_col.second_key": 3})
+    assert 1 == controller.delete({"dict_col.second_key": 3})
 
 
-def test_delete_with_dot_notation_enum_value_is_valid(db):
+def test_delete_with_dot_notation_enum_value_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    assert 1 == TestDictController.delete({"dict_col.first_key": EnumTest.Value1})
+    assert 1 == controller.delete({"dict_col.first_key": EnumTest.Value1})
 
 
-def test_post_with_dot_notation_invalid_value_is_invalid(db):
+def test_post_with_dot_notation_invalid_value_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestDictController.post(
+        controller.post(
             {
                 "key": "my_key",
                 "dict_col.first_key": "Value1",
@@ -200,111 +187,109 @@ def test_post_with_dot_notation_invalid_value_is_invalid(db):
     } == exception_info.value.received_data
 
 
-def test_post_with_dot_notation_valid_value_is_valid(db):
+def test_post_with_dot_notation_valid_value_is_valid(controller):
     assert {
         "key": "my_key",
         "dict_col": {"first_key": "Value2", "second_key": 1},
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col.first_key": "Value2", "dict_col.second_key": 1}
     )
 
 
-def test_get_with_unmatching_dot_notation_is_empty(db):
+def test_get_with_unmatching_dot_notation_is_empty(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    assert [] == TestDictController.get({"dict_col.first_key": "Value2"})
+    assert [] == controller.get({"dict_col.first_key": "Value2"})
 
 
-def test_get_with_unknown_dot_notation_returns_everything(db):
+def test_get_with_unknown_dot_notation_returns_everything(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
     assert [
         {"dict_col": {"first_key": "Value1", "second_key": 3}, "key": "my_key"}
-    ] == TestDictController.get({"dict_col.unknown": "Value1"})
+    ] == controller.get({"dict_col.unknown": "Value1"})
 
 
-def test_delete_with_dot_notation_is_valid(db):
+def test_delete_with_dot_notation_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    assert 1 == TestDictController.delete({"dict_col.first_key": "Value1"})
-    assert [] == TestDictController.get({})
+    assert 1 == controller.delete({"dict_col.first_key": "Value1"})
+    assert [] == controller.get({})
 
 
-def test_delete_with_unmatching_dot_notation_is_empty(db):
+def test_delete_with_unmatching_dot_notation_is_empty(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    assert 0 == TestDictController.delete({"dict_col.first_key": "Value2"})
+    assert 0 == controller.delete({"dict_col.first_key": "Value2"})
     assert [
         {"dict_col": {"first_key": "Value1", "second_key": 3}, "key": "my_key"}
-    ] == TestDictController.get({})
+    ] == controller.get({})
 
 
-def test_delete_with_unknown_dot_notation_deletes_everything(db):
+def test_delete_with_unknown_dot_notation_deletes_everything(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    assert 1 == TestDictController.delete({"dict_col.unknown": "Value2"})
-    assert [] == TestDictController.get({})
+    assert 1 == controller.delete({"dict_col.unknown": "Value2"})
+    assert [] == controller.get({})
 
 
-def test_put_without_primary_key_is_invalid(db):
-    TestDictController.post(
+def test_put_without_primary_key_is_invalid(controller):
+    controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
     with pytest.raises(ValidationFailed) as exception_info:
-        TestDictController.put({"dict_col": {"first_key": "Value2", "second_key": 4}})
+        controller.put({"dict_col": {"first_key": "Value2", "second_key": 4}})
     assert {"key": ["Missing data for required field."]} == exception_info.value.errors
     assert {
         "dict_col": {"first_key": "Value2", "second_key": 4}
     } == exception_info.value.received_data
 
 
-def test_post_dict_with_dot_notation_is_valid(db):
+def test_post_dict_with_dot_notation_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col.first_key": "Value1", "dict_col.second_key": 3}
     )
 
 
-def test_put_dict_with_dot_notation_is_valid(db):
+def test_put_dict_with_dot_notation_is_valid(controller):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
-    } == TestDictController.post(
+    } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
     assert (
         {"dict_col": {"first_key": "Value1", "second_key": 3}, "key": "my_key"},
         {"dict_col": {"first_key": "Value2", "second_key": 3}, "key": "my_key"},
-    ) == TestDictController.put(
-        {"key": "my_key", "dict_col.first_key": EnumTest.Value2}
-    )
+    ) == controller.put({"key": "my_key", "dict_col.first_key": EnumTest.Value2})
 
 
-def test_post_dict_is_invalid(db):
+def test_post_dict_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestDictController.post({"key": "my_key", "dict_col": {"first_key": "Value1"}})
+        controller.post({"key": "my_key", "dict_col": {"first_key": "Value1"}})
     assert {
         "dict_col.second_key": ["Missing data for required field."]
     } == exception_info.value.errors

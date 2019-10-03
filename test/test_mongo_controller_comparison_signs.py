@@ -5,70 +5,62 @@ import flask
 import flask_restplus
 import pytest
 
-from layabase import database, database_mongo, ComparisonSigns
-import layabase.testing
+import layabase
+import layabase._database_mongo
 
 
-class TestSupportForComparisonSignsController(database.CRUDController):
-    pass
+@pytest.fixture
+def controller():
+    class TestCollection:
+        __collection_name__ = "test"
 
-
-def _create_models(base):
-    class TestSupportForComparisonSignsModel(
-        database_mongo.CRUDModel, base=base, table_name="support_comparison_sign"
-    ):
-        int_value = database_mongo.Column(int, allow_comparison_signs=True)
-        float_value = database_mongo.Column(float, allow_comparison_signs=True)
-        date_value = database_mongo.Column(datetime.date, allow_comparison_signs=True)
-        datetime_value = database_mongo.Column(
+        int_value = layabase._database_mongo.Column(int, allow_comparison_signs=True)
+        float_value = layabase._database_mongo.Column(
+            float, allow_comparison_signs=True
+        )
+        date_value = layabase._database_mongo.Column(
+            datetime.date, allow_comparison_signs=True
+        )
+        datetime_value = layabase._database_mongo.Column(
             datetime.datetime, allow_comparison_signs=True
         )
 
-    TestSupportForComparisonSignsController.model(TestSupportForComparisonSignsModel)
-
-    return [TestSupportForComparisonSignsModel]
-
-
-@pytest.fixture
-def db():
-    _db = database.load("mongomock", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
+    controller = layabase.CRUDController(TestCollection)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestSupportForComparisonSignsController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestSupportForComparisonSignsController.query_get_parser)
-        @namespace.marshal_with(
-            TestSupportForComparisonSignsController.get_response_model
-        )
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestSupportForComparisonSignsController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestSupportForComparisonSignsController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestSupportForComparisonSignsController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestSupportForComparisonSignsController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
             return {
                 field: [
@@ -79,10 +71,10 @@ def app(db):
                 ]
                 if isinstance(values, collections.abc.Iterable)
                 else values
-                for field, values in TestSupportForComparisonSignsController.query_get_parser.parse_args().items()
+                for field, values in controller.query_get_parser.parse_args().items()
             }
 
-        @namespace.expect(TestSupportForComparisonSignsController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return {
                 field: [
@@ -93,16 +85,14 @@ def app(db):
                 ]
                 if isinstance(values, collections.abc.Iterable)
                 else values
-                for field, values in TestSupportForComparisonSignsController.query_delete_parser.parse_args().items()
+                for field, values in controller.query_delete_parser.parse_args().items()
             }
 
     return application
 
 
-def test_get_is_valid_with_int_and_less_than_sign_as_tuple_in_int_column(db):
-    TestSupportForComparisonSignsController.post_many(
-        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}]
-    )
+def test_get_is_valid_with_int_and_less_than_sign_as_tuple_in_int_column(controller):
+    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
     assert [
         {
             "int_value": 122,
@@ -116,13 +106,13 @@ def test_get_is_valid_with_int_and_less_than_sign_as_tuple_in_int_column(db):
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"int_value": (ComparisonSigns.Lower, 124)}
-    )
+    ] == controller.get({"int_value": (layabase.ComparisonSigns.Lower, 124)})
 
 
-def test_get_is_valid_with_float_and_less_than_sign_as_tuple_in_float_column(db):
-    TestSupportForComparisonSignsController.post_many(
+def test_get_is_valid_with_float_and_less_than_sign_as_tuple_in_float_column(
+    controller,
+):
+    controller.post_many(
         [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
     )
     assert [
@@ -138,13 +128,11 @@ def test_get_is_valid_with_float_and_less_than_sign_as_tuple_in_float_column(db)
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"float_value": (ComparisonSigns.Lower, 1.1)}
-    )
+    ] == controller.get({"float_value": (layabase.ComparisonSigns.Lower, 1.1)})
 
 
-def test_get_is_valid_with_date_and_less_than_sign_as_tuple_in_date_column(db):
-    TestSupportForComparisonSignsController.post_many(
+def test_get_is_valid_with_date_and_less_than_sign_as_tuple_in_date_column(controller):
+    controller.post_many(
         [
             {"date_value": "2019-01-01"},
             {"date_value": "2019-01-02"},
@@ -164,13 +152,20 @@ def test_get_is_valid_with_date_and_less_than_sign_as_tuple_in_date_column(db):
             "date_value": "2019-01-02",
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"date_value": (ComparisonSigns.Lower, datetime.datetime(2019, 1, 3, 0, 0, 0))}
+    ] == controller.get(
+        {
+            "date_value": (
+                layabase.ComparisonSigns.Lower,
+                datetime.datetime(2019, 1, 3, 0, 0, 0),
+            )
+        }
     )
 
 
-def test_get_is_valid_with_datetime_and_less_than_sign_as_tuple_in_datetime_column(db):
-    TestSupportForComparisonSignsController.post_many(
+def test_get_is_valid_with_datetime_and_less_than_sign_as_tuple_in_datetime_column(
+    controller,
+):
+    controller.post_many(
         [
             {"datetime_value": "2019-01-01T23:59:59"},
             {"datetime_value": "2019-01-02T23:59:59"},
@@ -190,20 +185,18 @@ def test_get_is_valid_with_datetime_and_less_than_sign_as_tuple_in_datetime_colu
             "date_value": None,
             "datetime_value": "2019-01-02T23:59:59",
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "datetime_value": (
-                ComparisonSigns.Lower,
+                layabase.ComparisonSigns.Lower,
                 datetime.datetime(2019, 1, 3, 23, 59, 59),
             )
         }
     )
 
 
-def test_get_is_valid_with_int_and_greater_than_sign_as_tuple_in_int_column(db):
-    TestSupportForComparisonSignsController.post_many(
-        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}]
-    )
+def test_get_is_valid_with_int_and_greater_than_sign_as_tuple_in_int_column(controller):
+    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
     assert [
         {
             "int_value": 123,
@@ -217,13 +210,13 @@ def test_get_is_valid_with_int_and_greater_than_sign_as_tuple_in_int_column(db):
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"int_value": (ComparisonSigns.Greater, 122)}
-    )
+    ] == controller.get({"int_value": (layabase.ComparisonSigns.Greater, 122)})
 
 
-def test_get_is_valid_with_float_and_greater_than_sign_as_tuple_in_float_column(db):
-    TestSupportForComparisonSignsController.post_many(
+def test_get_is_valid_with_float_and_greater_than_sign_as_tuple_in_float_column(
+    controller,
+):
+    controller.post_many(
         [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
     )
     assert [
@@ -239,13 +232,13 @@ def test_get_is_valid_with_float_and_greater_than_sign_as_tuple_in_float_column(
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"float_value": (ComparisonSigns.Greater, 0.9)}
-    )
+    ] == controller.get({"float_value": (layabase.ComparisonSigns.Greater, 0.9)})
 
 
-def test_get_is_valid_with_date_and_greater_than_sign_as_tuple_in_date_column(db):
-    TestSupportForComparisonSignsController.post_many(
+def test_get_is_valid_with_date_and_greater_than_sign_as_tuple_in_date_column(
+    controller,
+):
+    controller.post_many(
         [
             {"date_value": "2019-01-01"},
             {"date_value": "2019-01-02"},
@@ -265,10 +258,10 @@ def test_get_is_valid_with_date_and_greater_than_sign_as_tuple_in_date_column(db
             "date_value": "2019-01-03",
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "date_value": (
-                ComparisonSigns.Greater,
+                layabase.ComparisonSigns.Greater,
                 datetime.datetime(2019, 1, 1, 0, 0, 0),
             )
         }
@@ -276,9 +269,9 @@ def test_get_is_valid_with_date_and_greater_than_sign_as_tuple_in_date_column(db
 
 
 def test_get_is_valid_with_datetime_and_greater_than_sign_as_tuple_in_datetime_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [
             {"datetime_value": "2019-01-01T23:59:59"},
             {"datetime_value": "2019-01-02T23:59:59"},
@@ -298,20 +291,20 @@ def test_get_is_valid_with_datetime_and_greater_than_sign_as_tuple_in_datetime_c
             "date_value": None,
             "datetime_value": "2019-01-03T23:59:59",
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "datetime_value": (
-                ComparisonSigns.Greater,
+                layabase.ComparisonSigns.Greater,
                 datetime.datetime(2019, 1, 1, 23, 59, 59),
             )
         }
     )
 
 
-def test_get_is_valid_with_int_and_less_than_or_equal_sign_as_tuple_in_int_column(db):
-    TestSupportForComparisonSignsController.post_many(
-        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}]
-    )
+def test_get_is_valid_with_int_and_less_than_or_equal_sign_as_tuple_in_int_column(
+    controller,
+):
+    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
     assert [
         {
             "int_value": 122,
@@ -331,15 +324,13 @@ def test_get_is_valid_with_int_and_less_than_or_equal_sign_as_tuple_in_int_colum
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"int_value": (ComparisonSigns.LowerOrEqual, 124)}
-    )
+    ] == controller.get({"int_value": (layabase.ComparisonSigns.LowerOrEqual, 124)})
 
 
 def test_get_is_valid_with_float_and_less_than_or_equal_sign_as_tuple_in_float_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
     )
     assert [
@@ -361,13 +352,13 @@ def test_get_is_valid_with_float_and_less_than_or_equal_sign_as_tuple_in_float_c
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"float_value": (ComparisonSigns.LowerOrEqual, 1.1)}
-    )
+    ] == controller.get({"float_value": (layabase.ComparisonSigns.LowerOrEqual, 1.1)})
 
 
-def test_get_is_valid_with_date_and_less_than_or_equal_sign_as_tuple_in_date_column(db):
-    TestSupportForComparisonSignsController.post_many(
+def test_get_is_valid_with_date_and_less_than_or_equal_sign_as_tuple_in_date_column(
+    controller,
+):
+    controller.post_many(
         [
             {"date_value": "2019-01-01"},
             {"date_value": "2019-01-02"},
@@ -393,10 +384,10 @@ def test_get_is_valid_with_date_and_less_than_or_equal_sign_as_tuple_in_date_col
             "date_value": "2019-01-03",
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "date_value": (
-                ComparisonSigns.LowerOrEqual,
+                layabase.ComparisonSigns.LowerOrEqual,
                 datetime.datetime(2019, 1, 3, 0, 0, 0),
             )
         }
@@ -404,9 +395,9 @@ def test_get_is_valid_with_date_and_less_than_or_equal_sign_as_tuple_in_date_col
 
 
 def test_get_is_valid_with_datetime_and_less_than_or_equal_sign_as_tuple_in_datetime_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [
             {"datetime_value": "2019-01-01T23:59:59"},
             {"datetime_value": "2019-01-02T23:59:59"},
@@ -432,10 +423,10 @@ def test_get_is_valid_with_datetime_and_less_than_or_equal_sign_as_tuple_in_date
             "date_value": None,
             "datetime_value": "2019-01-03T23:59:59",
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "datetime_value": (
-                ComparisonSigns.LowerOrEqual,
+                layabase.ComparisonSigns.LowerOrEqual,
                 datetime.datetime(2019, 1, 3, 23, 59, 59),
             )
         }
@@ -443,11 +434,9 @@ def test_get_is_valid_with_datetime_and_less_than_or_equal_sign_as_tuple_in_date
 
 
 def test_get_is_valid_with_int_and_greater_than_or_equal_sign_as_tuple_in_int_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
-        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}]
-    )
+    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
     assert [
         {
             "int_value": 122,
@@ -467,15 +456,13 @@ def test_get_is_valid_with_int_and_greater_than_or_equal_sign_as_tuple_in_int_co
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"int_value": (ComparisonSigns.GreaterOrEqual, 122)}
-    )
+    ] == controller.get({"int_value": (layabase.ComparisonSigns.GreaterOrEqual, 122)})
 
 
 def test_get_is_valid_with_float_and_greater_than_or_equal_sign_as_tuple_in_float_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
     )
     assert [
@@ -497,15 +484,13 @@ def test_get_is_valid_with_float_and_greater_than_or_equal_sign_as_tuple_in_floa
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
-        {"float_value": (ComparisonSigns.GreaterOrEqual, 0.9)}
-    )
+    ] == controller.get({"float_value": (layabase.ComparisonSigns.GreaterOrEqual, 0.9)})
 
 
 def test_get_is_valid_with_date_and_greater_than_or_equal_sign_as_tuple_in_date_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [
             {"date_value": "2019-01-01"},
             {"date_value": "2019-01-02"},
@@ -531,10 +516,10 @@ def test_get_is_valid_with_date_and_greater_than_or_equal_sign_as_tuple_in_date_
             "date_value": "2019-01-03",
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "date_value": (
-                ComparisonSigns.GreaterOrEqual,
+                layabase.ComparisonSigns.GreaterOrEqual,
                 datetime.datetime(2019, 1, 1, 0, 0, 0),
             )
         }
@@ -542,9 +527,9 @@ def test_get_is_valid_with_date_and_greater_than_or_equal_sign_as_tuple_in_date_
 
 
 def test_get_is_valid_with_datetime_and_greater_than_or_equal_sign_as_tuple_in_datetime_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [
             {"datetime_value": "2019-01-01T23:59:59"},
             {"datetime_value": "2019-01-02T23:59:59"},
@@ -570,48 +555,48 @@ def test_get_is_valid_with_datetime_and_greater_than_or_equal_sign_as_tuple_in_d
             "date_value": None,
             "datetime_value": "2019-01-03T23:59:59",
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "datetime_value": (
-                ComparisonSigns.GreaterOrEqual,
+                layabase.ComparisonSigns.GreaterOrEqual,
                 datetime.datetime(2019, 1, 1, 23, 59, 59),
             )
         }
     )
 
 
-def test_get_is_invalid_with_int_and_unknown_as_tuple_in_int_column(db):
+def test_get_is_invalid_with_int_and_unknown_as_tuple_in_int_column(controller):
     with pytest.raises(KeyError) as exception_info:
-        TestSupportForComparisonSignsController.get({"int_value": ("test", 124)})
+        controller.get({"int_value": ("test", 124)})
     assert str(exception_info.value) == "'test'"
 
 
-def test_get_is_invalid_with_float_and_unknown_as_tuple_in_float_column(db):
+def test_get_is_invalid_with_float_and_unknown_as_tuple_in_float_column(controller):
     with pytest.raises(KeyError) as exception_info:
-        TestSupportForComparisonSignsController.get({"float_value": ("test", 1.1)})
+        controller.get({"float_value": ("test", 1.1)})
     assert str(exception_info.value) == "'test'"
 
 
-def test_get_is_invalid_with_date_and_unknown_as_tuple_in_date_column(db):
+def test_get_is_invalid_with_date_and_unknown_as_tuple_in_date_column(controller):
     with pytest.raises(KeyError) as exception_info:
-        TestSupportForComparisonSignsController.get(
-            {"date_value": ("test", datetime.date(2019, 1, 3))}
-        )
+        controller.get({"date_value": ("test", datetime.date(2019, 1, 3))})
     assert str(exception_info.value) == "'test'"
 
 
-def test_get_is_invalid_with_datetime_and_unknown_as_tuple_in_datetime_column(db):
+def test_get_is_invalid_with_datetime_and_unknown_as_tuple_in_datetime_column(
+    controller,
+):
     with pytest.raises(KeyError) as exception_info:
-        TestSupportForComparisonSignsController.get(
+        controller.get(
             {"datetime_value": ("test", datetime.datetime(2019, 1, 3, 23, 59, 59))}
         )
     assert str(exception_info.value) == "'test'"
 
 
-def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_column(db):
-    TestSupportForComparisonSignsController.post_many(
-        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}]
-    )
+def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_column(
+    controller,
+):
+    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
     assert [
         {
             "int_value": 122,
@@ -625,20 +610,20 @@ def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_colu
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "int_value": [
-                (ComparisonSigns.GreaterOrEqual, 122),
-                (ComparisonSigns.Lower, 124),
+                (layabase.ComparisonSigns.GreaterOrEqual, 122),
+                (layabase.ComparisonSigns.Lower, 124),
             ]
         }
     )
 
 
 def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
     )
     assert [
@@ -654,20 +639,20 @@ def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "float_value": [
-                (ComparisonSigns.Greater, 0.9),
-                (ComparisonSigns.LowerOrEqual, 1.1),
+                (layabase.ComparisonSigns.Greater, 0.9),
+                (layabase.ComparisonSigns.LowerOrEqual, 1.1),
             ]
         }
     )
 
 
 def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [
             {"date_value": "2019-01-01"},
             {"date_value": "2019-01-02"},
@@ -681,20 +666,26 @@ def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_co
             "date_value": "2019-01-02",
             "datetime_value": None,
         }
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "date_value": [
-                (ComparisonSigns.Greater, datetime.datetime(2019, 1, 1, 0, 0, 0)),
-                (ComparisonSigns.Lower, datetime.datetime(2019, 1, 3, 0, 0, 0)),
+                (
+                    layabase.ComparisonSigns.Greater,
+                    datetime.datetime(2019, 1, 1, 0, 0, 0),
+                ),
+                (
+                    layabase.ComparisonSigns.Lower,
+                    datetime.datetime(2019, 1, 3, 0, 0, 0),
+                ),
             ]
         }
     )
 
 
 def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_datetime_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [
             {"datetime_value": "2019-01-01T23:59:59"},
             {"datetime_value": "2019-01-02T23:59:59"},
@@ -720,15 +711,15 @@ def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_dat
             "date_value": None,
             "datetime_value": "2019-01-03T23:59:59",
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "datetime_value": [
                 (
-                    ComparisonSigns.GreaterOrEqual,
+                    layabase.ComparisonSigns.GreaterOrEqual,
                     datetime.datetime(2019, 1, 1, 23, 59, 59),
                 ),
                 (
-                    ComparisonSigns.LowerOrEqual,
+                    layabase.ComparisonSigns.LowerOrEqual,
                     datetime.datetime(2019, 1, 3, 23, 59, 59),
                 ),
             ]
@@ -737,9 +728,9 @@ def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_dat
 
 
 def test_get_is_valid_with_int_range_and_value_out_of_range_using_comparison_signs_as_tuple_in_int_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}, {"int_value": 125}]
     )
     assert [
@@ -761,11 +752,11 @@ def test_get_is_valid_with_int_range_and_value_out_of_range_using_comparison_sig
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "int_value": [
-                (ComparisonSigns.GreaterOrEqual, 122),
-                (ComparisonSigns.Lower, 124),
+                (layabase.ComparisonSigns.GreaterOrEqual, 122),
+                (layabase.ComparisonSigns.Lower, 124),
                 125,
             ]
         }
@@ -773,9 +764,9 @@ def test_get_is_valid_with_int_range_and_value_out_of_range_using_comparison_sig
 
 
 def test_get_is_valid_with_int_range_and_multiple_values_out_of_range_using_comparison_signs_as_tuple_in_int_column(
-    db,
+    controller,
 ):
-    TestSupportForComparisonSignsController.post_many(
+    controller.post_many(
         [
             {"int_value": 122},
             {"int_value": 123},
@@ -809,11 +800,11 @@ def test_get_is_valid_with_int_range_and_multiple_values_out_of_range_using_comp
             "date_value": None,
             "datetime_value": None,
         },
-    ] == TestSupportForComparisonSignsController.get(
+    ] == controller.get(
         {
             "int_value": [
-                (ComparisonSigns.GreaterOrEqual, 122),
-                (ComparisonSigns.Lower, 124),
+                (layabase.ComparisonSigns.GreaterOrEqual, 122),
+                (layabase.ComparisonSigns.Lower, 124),
                 125,
                 126,
             ]
@@ -1160,38 +1151,18 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "delete": {
+                "post": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+                    "operationId": "post_test_resource",
                     "parameters": [
                         {
-                            "name": "date_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "datetime_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "int_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -1204,38 +1175,30 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
                     ],
                     "tags": ["Test"],
                 },
-                "post": {
+                "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
+                    "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestSupportForComparisonSignsModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_resource",
-                    "parameters": [
+                            "name": "int_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "date_value",
                             "in": "query",
@@ -1250,6 +1213,27 @@ def test_open_api_definition(client):
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "name": "int_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "float_value",
                             "in": "query",
@@ -1258,7 +1242,14 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "int_value",
+                            "name": "date_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_value",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -1294,14 +1285,7 @@ def test_open_api_definition(client):
                     "operationId": "delete_test_parsers_resource",
                     "parameters": [
                         {
-                            "name": "date_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "datetime_value",
+                            "name": "int_value",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -1315,7 +1299,14 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "int_value",
+                            "name": "date_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_value",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -1329,14 +1320,7 @@ def test_open_api_definition(client):
                     "operationId": "get_test_parsers_resource",
                     "parameters": [
                         {
-                            "name": "date_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "datetime_value",
+                            "name": "int_value",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -1350,7 +1334,14 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "int_value",
+                            "name": "date_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_value",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -1379,7 +1370,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestSupportForComparisonSignsModel": {
+            "TestCollection_PostRequestModel": {
                 "properties": {
                     "date_value": {
                         "type": "string",
@@ -1401,7 +1392,53 @@ def test_open_api_definition(client):
                     "int_value": {"type": "integer", "readOnly": False, "example": 1},
                 },
                 "type": "object",
-            }
+            },
+            "TestCollection_PutRequestModel": {
+                "properties": {
+                    "date_value": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": False,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_value": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+            "TestCollection_GetResponseModel": {
+                "properties": {
+                    "date_value": {
+                        "type": "string",
+                        "format": "date",
+                        "readOnly": False,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_value": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

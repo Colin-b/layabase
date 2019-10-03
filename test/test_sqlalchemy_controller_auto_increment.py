@@ -3,17 +3,13 @@ import sqlalchemy
 import flask
 import flask_restplus
 
-from layabase import database, database_sqlalchemy
-import layabase.testing
+import layabase
 
 
-class TestAutoIncrementController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestAutoIncrementModel(database_sqlalchemy.CRUDModel, base):
-        __tablename__ = "auto_increment_table_name"
+@pytest.fixture
+def controller():
+    class TestTable:
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(
             sqlalchemy.Integer, primary_key=True, autoincrement=True
@@ -27,66 +23,62 @@ def _create_models(base):
             sqlalchemy.String, default="Test value"
         )
 
-    TestAutoIncrementController.model(TestAutoIncrementModel)
-    return [TestAutoIncrementModel]
+    controller = layabase.CRUDController(TestTable)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 @pytest.fixture
-def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
-
-
-@pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestAutoIncrementController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestAutoIncrementController.query_get_parser)
-        @namespace.marshal_with(TestAutoIncrementController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestAutoIncrementController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestAutoIncrementController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestAutoIncrementController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     return application
 
 
-def test_post_with_specified_incremented_field_is_ignored_and_valid(client):
-    assert {
+def test_post_with_specified_incremented_field_is_ignored_and_valid(controller, client):
+    assert controller.post({"key": "my_key", "enum_field": "Value1"}) == {
         "optional_with_default": "Test value",
         "key": 1,
         "enum_field": "Value1",
-    } == TestAutoIncrementController.post({"key": "my_key", "enum_field": "Value1"})
+    }
 
 
-def test_post_many_with_specified_incremented_field_is_ignored_and_valid(client):
-    assert [
-        {"optional_with_default": "Test value", "enum_field": "Value1", "key": 1},
-        {"optional_with_default": "Test value", "enum_field": "Value2", "key": 2},
-    ] == TestAutoIncrementController.post_many(
+def test_post_many_with_specified_incremented_field_is_ignored_and_valid(
+    controller, client
+):
+    assert controller.post_many(
         [
             {"key": "my_key", "enum_field": "Value1"},
             {"key": "my_key", "enum_field": "Value2"},
         ]
-    )
+    ) == [
+        {"optional_with_default": "Test value", "enum_field": "Value1", "key": 1},
+        {"optional_with_default": "Test value", "enum_field": "Value2", "key": 2},
+    ]
 
 
 def test_open_api_definition(client):
@@ -96,11 +88,71 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional_with_default",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -134,17 +186,17 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
                             "name": "order_by",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "offset",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
                         },
                         {
                             "name": "X-Fields",
@@ -156,60 +208,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestAutoIncrementModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "enum_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional_with_default",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -217,7 +215,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestAutoIncrementModel": {
+            "TestTable_PostRequestModel": {
                 "required": ["enum_field"],
                 "properties": {
                     "key": {"type": "integer", "readOnly": True, "example": 1},
@@ -234,7 +232,43 @@ def test_open_api_definition(client):
                     },
                 },
                 "type": "object",
-            }
+            },
+            "TestTable_PutRequestModel": {
+                "required": ["enum_field"],
+                "properties": {
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
+                    "enum_field": {
+                        "type": "string",
+                        "description": "Test Documentation",
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "optional_with_default": {
+                        "type": "string",
+                        "default": "Test value",
+                        "example": "Test value",
+                    },
+                },
+                "type": "object",
+            },
+            "TestTable_GetResponseModel": {
+                "required": ["enum_field"],
+                "properties": {
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
+                    "enum_field": {
+                        "type": "string",
+                        "description": "Test Documentation",
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "optional_with_default": {
+                        "type": "string",
+                        "default": "Test value",
+                        "example": "Test value",
+                    },
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

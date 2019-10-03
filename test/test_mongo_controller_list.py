@@ -4,8 +4,8 @@ import flask
 import flask_restplus
 import pytest
 
-from layabase import database, database_mongo
-import layabase.testing
+import layabase
+import layabase._database_mongo
 
 
 class EnumTest(enum.Enum):
@@ -13,74 +13,68 @@ class EnumTest(enum.Enum):
     Value2 = 2
 
 
-class TestListController(database.CRUDController):
-    pass
+@pytest.fixture
+def controller():
+    class TestCollection:
+        __collection_name__ = "test"
 
-
-def _create_models(base):
-    class TestListModel(
-        database_mongo.CRUDModel, base=base, table_name="list_table_name"
-    ):
-        key = database_mongo.Column(is_primary_key=True)
-        list_field = database_mongo.ListColumn(
-            database_mongo.DictColumn(
+        key = layabase._database_mongo.Column(is_primary_key=True)
+        list_field = layabase._database_mongo.ListColumn(
+            layabase._database_mongo.DictColumn(
                 fields={
-                    "first_key": database_mongo.Column(EnumTest, is_nullable=False),
-                    "second_key": database_mongo.Column(int, is_nullable=False),
+                    "first_key": layabase._database_mongo.Column(
+                        EnumTest, is_nullable=False
+                    ),
+                    "second_key": layabase._database_mongo.Column(
+                        int, is_nullable=False
+                    ),
                 }
             )
         )
-        bool_field = database_mongo.Column(bool)
+        bool_field = layabase._database_mongo.Column(bool)
 
-    TestListController.model(TestListModel)
-
-    return [TestListModel]
-
-
-@pytest.fixture
-def db():
-    _db = database.load("mongomock", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
+    controller = layabase.CRUDController(TestCollection)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestListController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestListController.query_get_parser)
-        @namespace.marshal_with(TestListController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestListController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestListController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestListController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestListController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
-            return TestListController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
-        @namespace.expect(TestListController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
-            return TestListController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 
@@ -88,31 +82,223 @@ def app(db):
 def test_open_api_definition(client):
     response = client.get("/swagger.json")
     assert response.json == {
+        "swagger": "2.0",
         "basePath": "/",
+        "paths": {
+            "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "bool_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "boolean"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "bool_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "boolean"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+            },
+            "/test_parsers": {
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "bool_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "boolean"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "get": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "get_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "bool_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "boolean"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+            },
+        },
+        "info": {"title": "API", "version": "1.0"},
+        "produces": ["application/json"],
         "consumes": ["application/json"],
+        "tags": [{"name": "Test"}],
         "definitions": {
-            "TestListModel": {
+            "TestCollection_PostRequestModel": {
                 "properties": {
                     "bool_field": {
-                        "example": True,
-                        "readOnly": False,
                         "type": "boolean",
+                        "readOnly": False,
+                        "example": True,
                     },
                     "key": {
-                        "example": "sample " "key",
-                        "readOnly": False,
                         "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
                     },
                     "list_field": {
+                        "type": "array",
+                        "readOnly": False,
                         "example": [{"first_key": "Value1", "second_key": 1}],
                         "items": {
-                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                            "readOnly": False,
                             "default": {"first_key": None, "second_key": None},
                             "example": {"first_key": "Value1", "second_key": 1},
-                            "readOnly": False,
+                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
                         },
-                        "readOnly": False,
-                        "type": "array",
                     },
                 },
                 "type": "object",
@@ -120,210 +306,76 @@ def test_open_api_definition(client):
             "first_key_second_key": {
                 "properties": {
                     "first_key": {
-                        "enum": ["Value1", "Value2"],
-                        "example": "Value1",
-                        "readOnly": False,
                         "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
                     },
-                    "second_key": {"example": 1, "readOnly": False, "type": "integer"},
+                    "second_key": {"type": "integer", "readOnly": False, "example": 1},
+                },
+                "type": "object",
+            },
+            "TestCollection_PutRequestModel": {
+                "properties": {
+                    "bool_field": {
+                        "type": "boolean",
+                        "readOnly": False,
+                        "example": True,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": [{"first_key": "Value1", "second_key": 1}],
+                        "items": {
+                            "readOnly": False,
+                            "default": {"first_key": None, "second_key": None},
+                            "example": {"first_key": "Value1", "second_key": 1},
+                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                        },
+                    },
+                },
+                "type": "object",
+            },
+            "TestCollection_GetResponseModel": {
+                "properties": {
+                    "bool_field": {
+                        "type": "boolean",
+                        "readOnly": False,
+                        "example": True,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "list_field": {
+                        "type": "array",
+                        "readOnly": False,
+                        "example": [{"first_key": "Value1", "second_key": 1}],
+                        "items": {
+                            "readOnly": False,
+                            "default": {"first_key": None, "second_key": None},
+                            "example": {"first_key": "Value1", "second_key": 1},
+                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
+                        },
+                    },
                 },
                 "type": "object",
             },
         },
-        "info": {"title": "API", "version": "1.0"},
-        "paths": {
-            "/test": {
-                "delete": {
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "boolean"},
-                            "name": "bool_field",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "list_field",
-                            "type": "array",
-                        },
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-                "get": {
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "boolean"},
-                            "name": "bool_field",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "list_field",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                        {
-                            "description": "An optional " "fields mask",
-                            "format": "mask",
-                            "in": "header",
-                            "name": "X-Fields",
-                            "type": "string",
-                        },
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestListModel"},
-                        }
-                    },
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {"$ref": "#/definitions/TestListModel"},
-                        }
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "in": "body",
-                            "name": "payload",
-                            "required": True,
-                            "schema": {"$ref": "#/definitions/TestListModel"},
-                        }
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-            },
-            "/test_parsers": {
-                "delete": {
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "boolean"},
-                            "name": "bool_field",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "list_field",
-                            "type": "array",
-                        },
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-                "get": {
-                    "operationId": "get_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "boolean"},
-                            "name": "bool_field",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "key",
-                            "type": "array",
-                        },
-                        {
-                            "collectionFormat": "multi",
-                            "in": "query",
-                            "items": {"type": "string"},
-                            "name": "list_field",
-                            "type": "array",
-                        },
-                        {
-                            "exclusiveMinimum": True,
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "limit",
-                            "type": "integer",
-                        },
-                        {
-                            "in": "query",
-                            "minimum": 0,
-                            "name": "offset",
-                            "type": "integer",
-                        },
-                    ],
-                    "responses": {"200": {"description": "Success"}},
-                    "tags": ["Test"],
-                },
-            },
-        },
-        "produces": ["application/json"],
         "responses": {
-            "MaskError": {"description": "When any error occurs on mask"},
             "ParseError": {"description": "When a mask can't be parsed"},
+            "MaskError": {"description": "When any error occurs on mask"},
         },
-        "swagger": "2.0",
-        "tags": [{"name": "Test"}],
     }
 
 
-def test_post_list_of_dict_is_valid(db):
+def test_post_list_of_dict_is_valid(controller):
     assert {
         "bool_field": False,
         "key": "my_key",
@@ -331,7 +383,7 @@ def test_post_list_of_dict_is_valid(db):
             {"first_key": "Value1", "second_key": 1},
             {"first_key": "Value2", "second_key": 2},
         ],
-    } == TestListController.post(
+    } == controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -343,26 +395,24 @@ def test_post_list_of_dict_is_valid(db):
     )
 
 
-def test_post_optional_missing_list_of_dict_is_valid(db):
+def test_post_optional_missing_list_of_dict_is_valid(controller):
     assert {
         "bool_field": False,
         "key": "my_key",
         "list_field": None,
-    } == TestListController.post({"key": "my_key", "bool_field": False})
+    } == controller.post({"key": "my_key", "bool_field": False})
 
 
-def test_post_optional_list_of_dict_as_none_is_valid(db):
+def test_post_optional_list_of_dict_as_none_is_valid(controller):
     assert {
         "bool_field": False,
         "key": "my_key",
         "list_field": None,
-    } == TestListController.post(
-        {"key": "my_key", "bool_field": False, "list_field": None}
-    )
+    } == controller.post({"key": "my_key", "bool_field": False, "list_field": None})
 
 
-def test_get_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_get_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -381,7 +431,7 @@ def test_get_list_of_dict_is_valid(db):
                 {"first_key": "Value2", "second_key": 2},
             ],
         }
-    ] == TestListController.get(
+    ] == controller.get(
         {
             "list_field": [
                 {"first_key": EnumTest.Value1, "second_key": 1},
@@ -391,8 +441,8 @@ def test_get_list_of_dict_is_valid(db):
     )
 
 
-def test_get_optional_list_of_dict_as_None_is_skipped(db):
-    TestListController.post(
+def test_get_optional_list_of_dict_as_none_is_skipped(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -411,11 +461,11 @@ def test_get_optional_list_of_dict_as_None_is_skipped(db):
                 {"first_key": "Value2", "second_key": 2},
             ],
         }
-    ] == TestListController.get({"list_field": None})
+    ] == controller.get({"list_field": None})
 
 
-def test_delete_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_delete_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -425,7 +475,7 @@ def test_delete_list_of_dict_is_valid(db):
             "bool_field": False,
         }
     )
-    assert 1 == TestListController.delete(
+    assert 1 == controller.delete(
         {
             "list_field": [
                 {"first_key": EnumTest.Value1, "second_key": 1},
@@ -435,8 +485,8 @@ def test_delete_list_of_dict_is_valid(db):
     )
 
 
-def test_delete_optional_list_of_dict_as_None_is_valid(db):
-    TestListController.post(
+def test_delete_optional_list_of_dict_as_none_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -446,11 +496,11 @@ def test_delete_optional_list_of_dict_as_None_is_valid(db):
             "bool_field": False,
         }
     )
-    assert 1 == TestListController.delete({"list_field": None})
+    assert 1 == controller.delete({"list_field": None})
 
 
-def test_put_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_put_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -477,7 +527,7 @@ def test_put_list_of_dict_is_valid(db):
                 {"first_key": "Value1", "second_key": 2},
             ],
         },
-    ) == TestListController.put(
+    ) == controller.put(
         {
             "key": "my_key",
             "list_field": [
@@ -489,8 +539,8 @@ def test_put_list_of_dict_is_valid(db):
     )
 
 
-def test_put_without_optional_list_of_dict_is_valid(db):
-    TestListController.post(
+def test_put_without_optional_list_of_dict_is_valid(controller):
+    controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -517,7 +567,7 @@ def test_put_without_optional_list_of_dict_is_valid(db):
                 {"first_key": "Value2", "second_key": 2},
             ],
         },
-    ) == TestListController.put({"key": "my_key", "bool_field": True})
+    ) == controller.put({"key": "my_key", "bool_field": True})
 
 
 def test_query_get_parser_with_list_of_dict(client):

@@ -1,66 +1,64 @@
 import sqlalchemy
 import pytest
 
-from layabase import database, database_sqlalchemy, CRUDController
-from test import DateTimeModuleMock
-
-
-class TestController(CRUDController):
-    pass
+import layabase
+from layabase.testing import mock_sqlalchemy_health_datetime
 
 
 @pytest.fixture
-def disconnected_database():
-    def _create_models(base):
-        class TestModel(database_sqlalchemy.CRUDModel, base):
-            __tablename__ = "sample_table_name"
+def controller():
+    class TestTable:
+        __tablename__ = "test"
 
-            key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
-        TestController.model(TestModel)
-        return [TestModel]
+    return layabase.CRUDController(TestTable)
 
-    _db = database.load("sqlite:///:memory:", _create_models)
+
+@pytest.fixture
+def disconnected_database(controller):
+    _db = layabase.load("sqlite:///:memory:", [controller])
     _db.metadata.bind.dispose()
     yield _db
 
 
-def test_get_all_when_db_down(disconnected_database):
+def test_get_all_when_db_down(disconnected_database, controller):
     with pytest.raises(Exception) as exception_info:
-        TestController.get({})
+        controller.get({})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_get_when_db_down(disconnected_database):
+def test_get_when_db_down(disconnected_database, controller):
     with pytest.raises(Exception) as exception_info:
-        TestController.get_one({})
+        controller.get_one({})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_add_when_db_down(disconnected_database):
+def test_add_when_db_down(disconnected_database, controller):
     with pytest.raises(Exception) as exception_info:
-        TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+        controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_update_when_db_down(disconnected_database):
+def test_update_when_db_down(disconnected_database, controller):
     with pytest.raises(Exception) as exception_info:
-        TestController.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+        controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_remove_when_db_down(disconnected_database):
+def test_remove_when_db_down(disconnected_database, controller):
     with pytest.raises(Exception) as exception_info:
-        TestController.delete({})
+        controller.delete({})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_health_details_failure(disconnected_database, monkeypatch):
-    monkeypatch.setattr(database_sqlalchemy, "datetime", DateTimeModuleMock)
+def test_health_details_failure(
+    disconnected_database, mock_sqlalchemy_health_datetime, monkeypatch
+):
     monkeypatch.setattr(
         disconnected_database.metadata.bind.dialect, "do_ping", lambda x: False
     )
-    assert database.check(disconnected_database) == (
+    assert layabase.check(disconnected_database) == (
         "fail",
         {
             "sqlite:select": {
@@ -73,16 +71,16 @@ def test_health_details_failure(disconnected_database, monkeypatch):
     )
 
 
-def test_health_details_failure_due_to_exception(disconnected_database, monkeypatch):
-    monkeypatch.setattr(database_sqlalchemy, "datetime", DateTimeModuleMock)
-
+def test_health_details_failure_due_to_exception(
+    disconnected_database, mock_sqlalchemy_health_datetime, monkeypatch
+):
     def raise_exception(*args):
         raise Exception("This is the error")
 
     monkeypatch.setattr(
         disconnected_database.metadata.bind.dialect, "do_ping", raise_exception
     )
-    assert database.check(disconnected_database) == (
+    assert layabase.check(disconnected_database) == (
         "fail",
         {
             "sqlite:select": {

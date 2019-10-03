@@ -3,65 +3,55 @@ import sqlalchemy
 import flask
 import flask_restplus
 
-from layabase import database, database_sqlalchemy
-import layabase.testing
+import layabase
 
 
-class TestController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestModel(database_sqlalchemy.CRUDModel, base):
-        __tablename__ = "sample_table_name"
+@pytest.fixture
+def controller():
+    class TestTable:
+        __tablename__ = "test"
         __table_args__ = {u"schema": "schema_name"}
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
         optional = sqlalchemy.Column(sqlalchemy.String)
 
-    TestController.model(TestModel)
-    return [TestModel]
+    controller = layabase.CRUDController(TestTable)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 @pytest.fixture
-def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
-
-
-@pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_parser)
-        @namespace.marshal_with(TestController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test/description")
     class TestDescriptionResource(flask_restplus.Resource):
-        @namespace.marshal_with(TestController.get_model_description_response_model)
+        @namespace.marshal_with(controller.get_model_description_response_model)
         def get(self):
             return {}
 
@@ -75,6 +65,21 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -83,8 +88,38 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                            },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -92,7 +127,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -126,17 +163,17 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
                             "name": "order_by",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "offset",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
                         },
                         {
                             "name": "X-Fields",
@@ -148,54 +185,15 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
             },
             "/test/description": {
                 "get": {
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModelDescription"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_GetDescriptionResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_description_resource",
@@ -217,7 +215,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel": {
+            "TestTable_PostRequestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -226,7 +224,25 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "TestModelDescription": {
+            "TestTable_PutRequestModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": 1},
+                    "optional": {"type": "string", "example": "sample_value"},
+                },
+                "type": "object",
+            },
+            "TestTable_GetResponseModel": {
+                "required": ["key", "mandatory"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "mandatory": {"type": "integer", "example": 1},
+                    "optional": {"type": "string", "example": "sample_value"},
+                },
+                "type": "object",
+            },
+            "TestTable_GetDescriptionResponseModel": {
                 "required": ["key", "mandatory", "schema", "table"],
                 "properties": {
                     "table": {
@@ -253,11 +269,11 @@ def test_open_api_definition(client):
     }
 
 
-def test_get_model_description_returns_description(db):
-    assert TestController.get_model_description() == {
+def test_get_model_description_returns_description(controller):
+    assert controller.get_model_description() == {
         "key": "key",
         "mandatory": "mandatory",
         "optional": "optional",
         "schema": "schema_name",
-        "table": "sample_table_name",
+        "table": "test",
     }
