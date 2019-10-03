@@ -5,114 +5,114 @@ import flask_restplus
 import pytest
 from layaberr import ValidationFailed
 
-from layabase import database, database_mongo
-import layabase.testing
-import layabase.audit_mongo
-from test import DateTimeModuleMock
-
-
-class TestController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestModel(
-        database_mongo.CRUDModel, base=base, table_name="sample_table_name", audit=True
-    ):
-        key = database_mongo.Column(str, is_primary_key=True)
-        mandatory = database_mongo.Column(int, is_nullable=False)
-        optional = database_mongo.Column(str)
-
-    TestController.model(TestModel)
-    return [TestModel]
+import layabase
+import layabase._database_mongo
+from layabase.testing import mock_mongo_audit_datetime
 
 
 @pytest.fixture
-def db():
-    _db = database.load("mongomock?ssl=True", _create_models, replicaSet="globaldb")
-    yield _db
-    layabase.testing.reset(_db)
+def controller():
+    class TestCollection:
+        __collection_name__ = "test"
+
+        key = layabase._database_mongo.Column(str, is_primary_key=True)
+        mandatory = layabase._database_mongo.Column(int, is_nullable=False)
+        optional = layabase._database_mongo.Column(str)
+
+    controller = layabase.CRUDController(TestCollection, audit=True)
+    layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
+    return controller
 
 
 @pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_parser)
-        @namespace.marshal_with(TestController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test/audit")
     class TestAuditResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_audit_parser)
-        @namespace.marshal_with(TestController.get_audit_response_model)
+        @namespace.expect(controller.query_get_audit_parser)
+        @namespace.marshal_with(controller.get_audit_response_model)
         def get(self):
             return []
 
     @namespace.route("/test_audit_parser")
     class TestAuditParserResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_audit_parser)
+        @namespace.expect(controller.query_get_audit_parser)
         def get(self):
-            return TestController.query_get_audit_parser.parse_args()
+            return controller.query_get_audit_parser.parse_args()
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
-            return TestController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
-        @namespace.expect(TestController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
-            return TestController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 
 
-def test_get_all_without_data_returns_empty_list(db):
-    assert [] == TestController.get({})
-    assert TestController.get_audit({}) == []
+def test_get_all_without_data_returns_empty_list(controller):
+    assert controller.get({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_audit_table_name_is_forbidden(db):
+def test_audit_table_name_is_forbidden():
+    class TestCollection:
+        __collection_name__ = "audit"
+
+        key = layabase._database_mongo.Column(str)
+
     with pytest.raises(Exception) as exception_info:
-
-        class TestAuditModel(database_mongo.CRUDModel, base=db, table_name="audit"):
-            key = database_mongo.Column(str)
+        layabase.load(
+            "mongomock?ssl=True",
+            [layabase.CRUDController(TestCollection)],
+            replicaSet="globaldb",
+        )
 
     assert "audit is a reserved collection name." == str(exception_info.value)
 
 
-def test_audited_table_name_is_forbidden(db):
+def test_audited_table_name_is_forbidden():
+    class TestCollection:
+        __collection_name__ = "audit_test"
+
+        key = layabase._database_mongo.Column(str)
+
     with pytest.raises(Exception) as exception_info:
+        layabase.load(
+            "mongomock?ssl=True",
+            [layabase.CRUDController(TestCollection)],
+            replicaSet="globaldb",
+        )
 
-        class TestAuditModel(
-            database_mongo.CRUDModel, base=db, table_name="audit_int_table_name"
-        ):
-            key = database_mongo.Column(str)
-
-    assert "audit_int_table_name is a reserved collection name." == str(
-        exception_info.value
-    )
+    assert str(exception_info.value) == "audit_test is a reserved collection name."
 
 
 def test_open_api_definition(client):
@@ -122,6 +122,21 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -130,8 +145,38 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
+                            },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -139,7 +184,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -188,22 +235,18 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {"$ref": "#/definitions/TestModel"},
+            },
+            "/test/audit": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_GetAuditResponseModel"
+                            },
                         }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+                    },
+                    "operationId": "get_test_audit_resource",
                     "parameters": [
                         {
                             "name": "key",
@@ -226,26 +269,13 @@ def test_open_api_definition(client):
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-            },
-            "/test/audit": {
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {"$ref": "#/definitions/AuditTestModel"},
-                        }
-                    },
-                    "operationId": "get_test_audit_resource",
-                    "parameters": [
                         {
                             "name": "audit_action",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
+                            "enum": ["Insert", "Update", "Delete", "Rollback"],
                         },
                         {
                             "name": "audit_date_utc",
@@ -257,27 +287,6 @@ def test_open_api_definition(client):
                         },
                         {
                             "name": "audit_user",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -320,28 +329,6 @@ def test_open_api_definition(client):
                     "operationId": "get_test_audit_parser_resource",
                     "parameters": [
                         {
-                            "name": "audit_action",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "audit_date_utc",
-                            "in": "query",
-                            "type": "array",
-                            "format": "date-time",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "audit_user",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
                             "name": "key",
                             "in": "query",
                             "type": "array",
@@ -357,6 +344,29 @@ def test_open_api_definition(client):
                         },
                         {
                             "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_action",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                            "enum": ["Insert", "Update", "Delete", "Rollback"],
+                        },
+                        {
+                            "name": "audit_date_utc",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "audit_user",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -387,6 +397,34 @@ def test_open_api_definition(client):
                 }
             },
             "/test_parsers": {
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -428,34 +466,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
             },
         },
         "info": {"title": "API", "version": "1.0"},
@@ -463,7 +473,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestModel": {
+            "TestCollection_PostRequestModel": {
                 "properties": {
                     "key": {
                         "type": "string",
@@ -479,7 +489,39 @@ def test_open_api_definition(client):
                 },
                 "type": "object",
             },
-            "AuditTestModel": {
+            "TestCollection_PutRequestModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "TestCollection_GetResponseModel": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample optional",
+                    },
+                },
+                "type": "object",
+            },
+            "TestCollection_GetAuditResponseModel": {
                 "properties": {
                     "audit_action": {
                         "type": "string",
@@ -521,133 +563,131 @@ def test_open_api_definition(client):
     }
 
 
-def test_post_with_nothing_is_invalid(db):
+def test_post_with_nothing_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
+        controller.post(None)
+    assert exception_info.value.errors == {"": ["No data provided."]}
     assert not exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_with_nothing_is_invalid(db):
+def test_post_many_with_nothing_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert [] == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+        controller.post_many(None)
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == []
+    assert controller.get_audit({}) == []
 
 
-def test_post_with_empty_dict_is_invalid(db):
+def test_post_with_empty_dict_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({})
+        controller.post({})
     assert {
         "key": ["Missing data for required field."],
         "mandatory": ["Missing data for required field."],
     } == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    assert exception_info.value.received_data == {}
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_with_empty_list_is_invalid(db):
+def test_post_many_with_empty_list_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([])
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert [] == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+        controller.post_many([])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == []
+    assert controller.get_audit({}) == []
 
 
-def test_put_with_nothing_is_invalid(db):
+def test_put_with_nothing_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.put(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
+        controller.put(None)
+    assert exception_info.value.errors == {"": ["No data provided."]}
     assert not exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    assert controller.get_audit({}) == []
 
 
-def test_put_with_empty_dict_is_invalid(db):
+def test_put_with_empty_dict_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.put({})
-    assert {"key": ["Missing data for required field."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+        controller.put({})
+    assert exception_info.value.errors == {"key": ["Missing data for required field."]}
+    assert exception_info.value.received_data == {}
+    assert controller.get_audit({}) == []
 
 
-def test_delete_without_nothing_do_not_fail(db):
-    assert 0 == TestController.delete({})
-    assert TestController.get_audit({}) == []
+def test_delete_without_nothing_do_not_fail(controller):
+    assert controller.delete({}) == 0
+    assert controller.get_audit({}) == []
 
 
-def test_post_without_mandatory_field_is_invalid(db):
+def test_post_without_mandatory_field_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({"key": "my_key"})
-    assert {
+        controller.post({"key": "my_key"})
+    assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
-    } == exception_info.value.errors
-    assert {"key": "my_key"} == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    }
+    assert exception_info.value.received_data == {"key": "my_key"}
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_without_mandatory_field_is_invalid(db):
+def test_post_many_without_mandatory_field_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([{"key": "my_key"}])
-    assert {
+        controller.post_many([{"key": "my_key"}])
+    assert exception_info.value.errors == {
         0: {"mandatory": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"key": "my_key"}] == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    }
+    assert exception_info.value.received_data == [{"key": "my_key"}]
+    assert controller.get_audit({}) == []
 
 
-def test_post_without_key_is_invalid(db):
+def test_post_without_key_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({"mandatory": 1})
-    assert {"key": ["Missing data for required field."]} == exception_info.value.errors
-    assert {"mandatory": 1} == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+        controller.post({"mandatory": 1})
+    assert exception_info.value.errors == {"key": ["Missing data for required field."]}
+    assert exception_info.value.received_data == {"mandatory": 1}
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_without_key_is_invalid(db):
+def test_post_many_without_key_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([{"mandatory": 1}])
-    assert {
+        controller.post_many([{"mandatory": 1}])
+    assert exception_info.value.errors == {
         0: {"key": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"mandatory": 1}] == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    }
+    assert exception_info.value.received_data == [{"mandatory": 1}]
+    assert controller.get_audit({}) == []
 
 
-def test_post_with_wrong_type_is_invalid(db):
+def test_post_with_wrong_type_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post({"key": datetime.date(2007, 12, 5), "mandatory": 1})
-    assert {"key": ["Not a valid str."]} == exception_info.value.errors
-    assert {
+        controller.post({"key": datetime.date(2007, 12, 5), "mandatory": 1})
+    assert exception_info.value.errors == {"key": ["Not a valid str."]}
+    assert exception_info.value.received_data == {
         "key": datetime.date(2007, 12, 5),
         "mandatory": 1,
-    } == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    }
+    assert controller.get_audit({}) == []
 
 
-def test_post_many_with_wrong_type_is_invalid(db):
+def test_post_many_with_wrong_type_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.post_many([{"key": datetime.date(2007, 12, 5), "mandatory": 1}])
-    assert {0: {"key": ["Not a valid str."]}} == exception_info.value.errors
-    assert [
+        controller.post_many([{"key": datetime.date(2007, 12, 5), "mandatory": 1}])
+    assert exception_info.value.errors == {0: {"key": ["Not a valid str."]}}
+    assert exception_info.value.received_data == [
         {"key": datetime.date(2007, 12, 5), "mandatory": 1}
-    ] == exception_info.value.received_data
-    assert TestController.get_audit({}) == []
+    ]
+    assert controller.get_audit({}) == []
 
 
-def test_put_with_wrong_type_is_invalid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "value1", "mandatory": 1})
+def test_put_with_wrong_type_is_invalid(controller, mock_mongo_audit_datetime):
+    controller.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
-        TestController.put({"key": "value1", "mandatory": "invalid_value"})
-    assert {"mandatory": ["Not a valid int."]} == exception_info.value.errors
-    assert {
+        controller.put({"key": "value1", "mandatory": "invalid_value"})
+    assert exception_info.value.errors == {"mandatory": ["Not a valid int."]}
+    assert exception_info.value.received_data == {
         "key": "value1",
         "mandatory": "invalid_value",
-    } == exception_info.value.received_data
-    assert TestController.get_audit({}) == [
+    }
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -660,13 +700,13 @@ def test_put_with_wrong_type_is_invalid(db, monkeypatch):
     ]
 
 
-def test_post_without_optional_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert {"optional": None, "mandatory": 1, "key": "my_key"} == TestController.post(
-        {"key": "my_key", "mandatory": 1}
-    )
-    assert TestController.get_audit({}) == [
+def test_post_without_optional_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post({"key": "my_key", "mandatory": 1}) == {
+        "optional": None,
+        "mandatory": 1,
+        "key": "my_key",
+    }
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -679,13 +719,11 @@ def test_post_without_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_many_without_optional_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert [
+def test_post_many_without_optional_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post_many([{"key": "my_key", "mandatory": 1}]) == [
         {"optional": None, "mandatory": 1, "key": "my_key"}
-    ] == TestController.post_many([{"key": "my_key", "mandatory": 1}])
-    assert TestController.get_audit({}) == [
+    ]
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -698,16 +736,14 @@ def test_post_many_without_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_put_many_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post_many(
+def test_put_many_is_valid(controller, mock_mongo_audit_datetime):
+    controller.post_many(
         [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
     )
-    TestController.put_many(
+    controller.put_many(
         [{"key": "my_key", "optional": "test"}, {"key": "my_key2", "mandatory": 3}]
     )
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -747,13 +783,11 @@ def test_put_many_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_with_optional_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert TestController.post(
+def test_post_with_optional_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post(
         {"key": "my_key", "mandatory": 1, "optional": "my_value"}
     ) == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -766,13 +800,11 @@ def test_post_with_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_many_with_optional_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert TestController.post_many(
+def test_post_many_with_optional_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post_many(
         [{"key": "my_key", "mandatory": 1, "optional": "my_value"}]
     ) == [{"mandatory": 1, "key": "my_key", "optional": "my_value"}]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -785,10 +817,8 @@ def test_post_many_with_optional_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_with_unknown_field_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert TestController.post(
+def test_post_with_unknown_field_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post(
         {
             "key": "my_key",
             "mandatory": 1,
@@ -797,7 +827,7 @@ def test_post_with_unknown_field_is_valid(db, monkeypatch):
             "unknown": "my_value",
         }
     ) == {"optional": "my_value", "mandatory": 1, "key": "my_key"}
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -810,10 +840,8 @@ def test_post_with_unknown_field_is_valid(db, monkeypatch):
     ]
 
 
-def test_post_many_with_unknown_field_is_valid(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    assert TestController.post_many(
+def test_post_many_with_unknown_field_is_valid(controller, mock_mongo_audit_datetime):
+    assert controller.post_many(
         [
             {
                 "key": "my_key",
@@ -824,7 +852,7 @@ def test_post_many_with_unknown_field_is_valid(db, monkeypatch):
             }
         ]
     ) == [{"optional": "my_value", "mandatory": 1, "key": "my_key"}]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -837,14 +865,14 @@ def test_post_many_with_unknown_field_is_valid(db, monkeypatch):
     ]
 
 
-def test_get_without_filter_is_retrieving_the_only_item(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert TestController.get({}) == [
+def test_get_without_filter_is_retrieving_the_only_item(
+    controller, mock_mongo_audit_datetime
+):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert controller.get({}) == [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -858,17 +886,15 @@ def test_get_without_filter_is_retrieving_the_only_item(db, monkeypatch):
 
 
 def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
-    db, monkeypatch
+    controller, mock_mongo_audit_datetime
 ):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert TestController.get({}) == [
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.get({}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -890,20 +916,20 @@ def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
     ]
 
 
-def test_get_without_filter_is_retrieving_everything(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post_many(
+def test_get_without_filter_is_retrieving_everything(
+    controller, mock_mongo_audit_datetime
+):
+    controller.post_many(
         [
             {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
             {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
         ]
     )
-    assert TestController.get({}) == [
+    assert controller.get({}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -925,15 +951,13 @@ def test_get_without_filter_is_retrieving_everything(db, monkeypatch):
     ]
 
 
-def test_get_with_filter_is_retrieving_subset(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert TestController.get({"optional": "my_value1"}) == [
+def test_get_with_filter_is_retrieving_subset(controller, mock_mongo_audit_datetime):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.get({"optional": "my_value1"}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -955,18 +979,16 @@ def test_get_with_filter_is_retrieving_subset(db, monkeypatch):
     ]
 
 
-def test_put_is_updating(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert TestController.put({"key": "my_key1", "optional": "my_value"}) == (
+def test_put_is_updating(controller, mock_mongo_audit_datetime):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert controller.put({"key": "my_key1", "optional": "my_value"}) == (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"},
     )
-    assert TestController.get({"mandatory": 1}) == [
+    assert controller.get({"mandatory": 1}) == [
         {"key": "my_key1", "mandatory": 1, "optional": "my_value"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -988,13 +1010,13 @@ def test_put_is_updating(db, monkeypatch):
     ]
 
 
-def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "optional": "my_value"})
-    assert TestController.get({"optional": "my_value1"}) == []
-    assert TestController.get_audit({}) == [
+def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(
+    controller, mock_mongo_audit_datetime
+):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "optional": "my_value"})
+    assert controller.get({"optional": "my_value1"}) == []
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1016,16 +1038,16 @@ def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(db, monkeyp
     ]
 
 
-def test_delete_with_filter_is_removing_the_proper_row(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert TestController.delete({"key": "my_key1"}) == 1
-    assert TestController.get({}) == [
+def test_delete_with_filter_is_removing_the_proper_row(
+    controller, mock_mongo_audit_datetime
+):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.delete({"key": "my_key1"}) == 1
+    assert controller.get({}) == [
         {"key": "my_key2", "mandatory": 2, "optional": "my_value2"}
     ]
-    assert TestController.get_audit({}) == [
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1056,13 +1078,13 @@ def test_delete_with_filter_is_removing_the_proper_row(db, monkeypatch):
     ]
 
 
-def test_audit_filter_on_model_is_returning_only_selected_data(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "mandatory": 2})
-    TestController.delete({"key": "my_key1"})
-    assert TestController.get_audit({"key": "my_key1"}) == [
+def test_audit_filter_is_returning_only_selected_data(
+    controller, mock_mongo_audit_datetime
+):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "mandatory": 2})
+    controller.delete({"key": "my_key1"})
+    assert controller.get_audit({"key": "my_key1"}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1093,13 +1115,13 @@ def test_audit_filter_on_model_is_returning_only_selected_data(db, monkeypatch):
     ]
 
 
-def test_audit_filter_on_audit_model_is_returning_only_selected_data(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "mandatory": 2})
-    TestController.delete({"key": "my_key1"})
-    assert TestController.get_audit({"audit_action": "Update"}) == [
+def test_audit_filter_on_audit_collection_is_returning_only_selected_data(
+    controller, mock_mongo_audit_datetime
+):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "mandatory": 2})
+    controller.delete({"key": "my_key1"})
+    assert controller.get_audit({"audit_action": "Update"}) == [
         {
             "audit_action": "Update",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1112,13 +1134,11 @@ def test_audit_filter_on_audit_model_is_returning_only_selected_data(db, monkeyp
     ]
 
 
-def test_value_can_be_updated_to_previous_value(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.put({"key": "my_key1", "mandatory": 2})
-    TestController.put({"key": "my_key1", "mandatory": 1})  # Put back initial value
-    assert TestController.get_audit({}) == [
+def test_value_can_be_updated_to_previous_value(controller, mock_mongo_audit_datetime):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.put({"key": "my_key1", "mandatory": 2})
+    controller.put({"key": "my_key1", "mandatory": 1})  # Put back initial value
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1149,14 +1169,14 @@ def test_value_can_be_updated_to_previous_value(db, monkeypatch):
     ]
 
 
-def test_delete_without_filter_is_removing_everything(db, monkeypatch):
-    monkeypatch.setattr(layabase.audit_mongo, "datetime", DateTimeModuleMock)
-
-    TestController.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    TestController.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    assert 2 == TestController.delete({})
-    assert [] == TestController.get({})
-    assert TestController.get_audit({}) == [
+def test_delete_without_filter_is_removing_everything(
+    controller, mock_mongo_audit_datetime
+):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert 2 == controller.delete({})
+    assert [] == controller.get({})
+    assert controller.get_audit({}) == [
         {
             "audit_action": "Insert",
             "audit_date_utc": "2018-10-11T15:05:05.663000",
@@ -1209,10 +1229,10 @@ def test_query_get_parser(client):
 
 def test_query_get_audit_parser(client):
     response = client.get(
-        "/test_audit_parser?key=1&mandatory=2&optional=3&limit=1&offset=0&revision=1&audit_action=U&audit_user=test"
+        "/test_audit_parser?key=1&mandatory=2&optional=3&limit=1&offset=0&revision=1&audit_action=Update&audit_user=test"
     )
     assert response.json == {
-        "audit_action": ["U"],
+        "audit_action": ["Update"],
         "audit_date_utc": None,
         "audit_user": ["test"],
         "key": ["1"],

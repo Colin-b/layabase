@@ -2,17 +2,17 @@ import logging
 from typing import List, Dict
 
 import pymongo
-from flask_restplus import inputs
+import flask_restplus
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
-from layabase.database_mongo import CRUDModel, Column, IndexType
+from layabase._database_mongo import _CRUDModel, Column, IndexType
 
 logger = logging.getLogger(__name__)
 
 REVISION_COUNTER = ("revision", "shared")
 
 
-class VersionedCRUDModel(CRUDModel):
+class VersionedCRUDModel(_CRUDModel):
     """
     CRUDModel with ability to retrieve history and rollback to a previous version of a row.
     It is mandatory for at least one field to be a unique index.
@@ -44,11 +44,13 @@ class VersionedCRUDModel(CRUDModel):
                 cls.audit_model.update_indexes(document)
 
     @classmethod
-    def json_post_model(cls, namespace):
+    def post_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
-        return namespace.model(f"{cls.__name__}_Versioned", all_fields)
+        return all_fields
 
     @classmethod
     def _insert_one(cls, document: dict) -> dict:
@@ -71,11 +73,13 @@ class VersionedCRUDModel(CRUDModel):
             cls.audit_model.audit_add(revision)
 
     @classmethod
-    def json_put_model(cls, namespace):
+    def put_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
-        return namespace.model(f"{cls.__name__}_Versioned", all_fields)
+        return all_fields
 
     @classmethod
     def _update_one(cls, document: dict) -> (dict, dict):
@@ -142,13 +146,6 @@ class VersionedCRUDModel(CRUDModel):
         return previous_documents, new_documents
 
     @classmethod
-    def query_delete_parser(cls):
-        query_delete_parser = super().query_delete_parser()
-        query_delete_parser.remove_argument(cls.valid_since_revision.name)
-        query_delete_parser.remove_argument(cls.valid_until_revision.name)
-        return query_delete_parser
-
-    @classmethod
     def remove(cls, **filters) -> int:
         filters.pop(cls.valid_since_revision.name, None)
         filters[cls.valid_until_revision.name] = -1
@@ -166,16 +163,6 @@ class VersionedCRUDModel(CRUDModel):
         ).modified_count
 
     @classmethod
-    def query_rollback_parser(cls):
-        query_rollback_parser = cls._query_parser()
-        query_rollback_parser.remove_argument(cls.valid_since_revision.name)
-        query_rollback_parser.remove_argument(cls.valid_until_revision.name)
-        query_rollback_parser.add_argument(
-            "revision", type=inputs.positive, required=True
-        )
-        return query_rollback_parser
-
-    @classmethod
     def _get_revision(cls, filters: dict) -> int:
         # TODO Use an int Column validate + deserialize
         revision = filters.get("revision")
@@ -191,18 +178,13 @@ class VersionedCRUDModel(CRUDModel):
         return revision
 
     @classmethod
-    def query_get_parser(cls):
-        query_get_parser = super().query_get_parser()
-        query_get_parser.remove_argument(cls.valid_since_revision.name)
-        query_get_parser.remove_argument(cls.valid_until_revision.name)
-        return query_get_parser
-
-    @classmethod
-    def get_response_model(cls, namespace):
+    def get_fields(
+        cls, namespace: flask_restplus.Namespace
+    ) -> Dict[str, flask_restplus.fields.Raw]:
         all_fields = cls._flask_restplus_fields(namespace)
         del all_fields[cls.valid_since_revision.name]
         del all_fields[cls.valid_until_revision.name]
-        return namespace.model(f"{cls.__name__}_Versioned", all_fields)
+        return all_fields
 
     @classmethod
     def get(cls, **filters) -> dict:

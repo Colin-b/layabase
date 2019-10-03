@@ -6,77 +6,67 @@ import flask_restplus
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
-import layabase.testing
+import layabase
 
 
-class TestDateController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestDateModel(database_sqlalchemy.CRUDModel, base):
-        __tablename__ = "date_table_name"
+@pytest.fixture
+def controller():
+    class TestTable:
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         date_str = sqlalchemy.Column(sqlalchemy.Date)
         datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
 
-    TestDateController.model(TestDateModel)
-    return [TestDateModel]
+    controller = layabase.CRUDController(TestTable)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 @pytest.fixture
-def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
-
-
-@pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestDateController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestDateController.query_get_parser)
-        @namespace.marshal_with(TestDateController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestDateController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestDateController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestDateController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestDateController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
             return {
                 field: [str(value) for value in values]
                 if isinstance(values, collections.abc.Iterable)
                 else values
-                for field, values in TestDateController.query_get_parser.parse_args().items()
+                for field, values in controller.query_get_parser.parse_args().items()
             }
 
-        @namespace.expect(TestDateController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return {
                 field: [str(value) for value in values]
-                for field, values in TestDateController.query_delete_parser.parse_args().items()
+                for field, values in controller.query_delete_parser.parse_args().items()
             }
 
     return application
@@ -97,7 +87,9 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PostRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -110,8 +102,40 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                            },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "date_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -119,7 +143,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestDateModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -155,17 +181,17 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
                             "name": "order_by",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "offset",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
                         },
                         {
                             "name": "X-Fields",
@@ -177,9 +203,11 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+            },
+            "/test_parsers": {
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+                    "operationId": "delete_test_parsers_resource",
                     "parameters": [
                         {
                             "name": "key",
@@ -207,8 +235,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-            },
-            "/test_parsers": {
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -244,45 +270,15 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
-                            "name": "order_by",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
                             "name": "offset",
                             "in": "query",
                             "type": "integer",
                             "minimum": 0,
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
                         {
-                            "name": "key",
+                            "name": "order_by",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "date_str",
-                            "in": "query",
-                            "type": "array",
-                            "format": "date",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "datetime_str",
-                            "in": "query",
-                            "type": "array",
-                            "format": "date-time",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
@@ -296,7 +292,7 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestDateModel": {
+            "TestTable_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
@@ -312,7 +308,41 @@ def test_open_api_definition(client):
                     },
                 },
                 "type": "object",
-            }
+            },
+            "TestTable_PutRequestModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2017-09-24T15:36:09",
+                    },
+                },
+                "type": "object",
+            },
+            "TestTable_GetResponseModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2017-09-24T15:36:09",
+                    },
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},
@@ -321,8 +351,8 @@ def test_open_api_definition(client):
     }
 
 
-def test_put_is_updating_date(db):
-    TestDateController.post(
+def test_put_is_updating_date(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -340,7 +370,7 @@ def test_put_is_updating_date(db):
             "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         },
-    ) == TestDateController.put(
+    ) == controller.put(
         {
             "key": "my_key1",
             "date_str": "2018-06-01",
@@ -353,11 +383,11 @@ def test_put_is_updating_date(db):
             "datetime_str": "1989-12-31T01:00:00",
             "key": "my_key1",
         }
-    ] == TestDateController.get({"date_str": "2018-06-01"})
+    ] == controller.get({"date_str": "2018-06-01"})
 
 
-def test_get_date_is_handled_for_valid_date(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_valid_date(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -370,11 +400,11 @@ def test_get_date_is_handled_for_valid_date(db):
             "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == TestDateController.get({"date_str": datetime.date(2017, 5, 15)})
+    ] == controller.get({"date_str": datetime.date(2017, 5, 15)})
 
 
-def test_get_date_is_handled_for_unused_date(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_unused_date(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -382,11 +412,11 @@ def test_get_date_is_handled_for_unused_date(db):
         }
     )
     d = datetime.datetime.strptime("2016-09-23", "%Y-%m-%d").date()
-    assert [] == TestDateController.get({"date_str": d})
+    assert [] == controller.get({"date_str": d})
 
 
-def test_get_date_is_handled_for_valid_datetime(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_valid_datetime(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -399,13 +429,11 @@ def test_get_date_is_handled_for_valid_datetime(db):
             "datetime_str": "2016-09-23T23:59:59",
             "key": "my_key1",
         }
-    ] == TestDateController.get(
-        {"datetime_str": datetime.datetime(2016, 9, 23, 23, 59, 59)}
-    )
+    ] == controller.get({"datetime_str": datetime.datetime(2016, 9, 23, 23, 59, 59)})
 
 
-def test_get_date_is_handled_for_unused_datetime(db):
-    TestDateController.post(
+def test_get_date_is_handled_for_unused_datetime(controller):
+    controller.post(
         {
             "key": "my_key1",
             "date_str": "2017-05-15",
@@ -413,7 +441,7 @@ def test_get_date_is_handled_for_unused_datetime(db):
         }
     )
     dt = datetime.datetime.strptime("2016-09-24T23:59:59", "%Y-%m-%dT%H:%M:%S")
-    assert [] == TestDateController.get({"datetime_str": dt})
+    assert [] == controller.get({"datetime_str": dt})
 
 
 def test_query_get_parser(client):

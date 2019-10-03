@@ -3,69 +3,59 @@ import flask_restplus
 import pytest
 import sqlalchemy
 
-from layabase import database, database_sqlalchemy
-import layabase.testing
+import layabase
 
 
-class TestFloatController(database.CRUDController):
-    pass
-
-
-def _create_models(base):
-    class TestFloatModel(database_sqlalchemy.CRUDModel, base):
-        __tablename__ = "float_table_name"
+@pytest.fixture
+def controller():
+    class TestTable:
+        __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
         float_field = sqlalchemy.Column(sqlalchemy.Float)
 
-    TestFloatController.model(TestFloatModel)
-    return [TestFloatModel]
+    controller = layabase.CRUDController(TestTable)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 @pytest.fixture
-def db():
-    _db = database.load("sqlite:///:memory:", _create_models)
-    yield _db
-    layabase.testing.reset(_db)
-
-
-@pytest.fixture
-def app(db):
+def app(controller):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    TestFloatController.namespace(namespace)
+    controller.namespace(namespace)
 
     @namespace.route("/test")
     class TestResource(flask_restplus.Resource):
-        @namespace.expect(TestFloatController.query_get_parser)
-        @namespace.marshal_with(TestFloatController.get_response_model)
+        @namespace.expect(controller.query_get_parser)
+        @namespace.marshal_with(controller.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(TestFloatController.json_post_model)
+        @namespace.expect(controller.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(TestFloatController.json_put_model)
+        @namespace.expect(controller.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(TestFloatController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
     class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(TestFloatController.query_get_parser)
+        @namespace.expect(controller.query_get_parser)
         def get(self):
-            return TestFloatController.query_get_parser.parse_args()
+            return controller.query_get_parser.parse_args()
 
-        @namespace.expect(TestFloatController.query_delete_parser)
+        @namespace.expect(controller.query_delete_parser)
         def delete(self):
-            return TestFloatController.query_delete_parser.parse_args()
+            return controller.query_delete_parser.parse_args()
 
     return application
 
@@ -85,7 +75,9 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestFloatModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PostRequestModel"
+                            },
                         }
                     ],
                     "tags": ["Test"],
@@ -98,8 +90,31 @@ def test_open_api_definition(client):
                             "name": "payload",
                             "required": True,
                             "in": "body",
-                            "schema": {"$ref": "#/definitions/TestFloatModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                            },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -107,7 +122,9 @@ def test_open_api_definition(client):
                     "responses": {
                         "200": {
                             "description": "Success",
-                            "schema": {"$ref": "#/definitions/TestFloatModel"},
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_GetResponseModel"
+                            },
                         }
                     },
                     "operationId": "get_test_resource",
@@ -134,17 +151,17 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
                             "name": "order_by",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "offset",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
                         },
                         {
                             "name": "X-Fields",
@@ -156,9 +173,11 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+            },
+            "/test_parsers": {
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+                    "operationId": "delete_test_parsers_resource",
                     "parameters": [
                         {
                             "name": "key",
@@ -177,8 +196,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-            },
-            "/test_parsers": {
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -205,37 +222,16 @@ def test_open_api_definition(client):
                             "exclusiveMinimum": True,
                         },
                         {
-                            "name": "order_by",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
                             "name": "offset",
                             "in": "query",
                             "type": "integer",
                             "minimum": 0,
                         },
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
                         {
-                            "name": "key",
+                            "name": "order_by",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -248,14 +244,30 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestFloatModel": {
+            "TestTable_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
                     "key": {"type": "string", "example": "sample_value"},
                     "float_field": {"type": "number", "example": 1.4},
                 },
                 "type": "object",
-            }
+            },
+            "TestTable_PutRequestModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "float_field": {"type": "number", "example": 1.4},
+                },
+                "type": "object",
+            },
+            "TestTable_GetResponseModel": {
+                "required": ["key"],
+                "properties": {
+                    "key": {"type": "string", "example": "sample_value"},
+                    "float_field": {"type": "number", "example": 1.4},
+                },
+                "type": "object",
+            },
         },
         "responses": {
             "ParseError": {"description": "When a mask can't be parsed"},

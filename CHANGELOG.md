@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2019-10-02
+### Changed
+- SQLAlchemy models do not need to extend anything. Provide [Mixins](https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html#declarative-mixins) instead of models.
+- CRUDController does not expose class methods anymore but must be instantiated instead. Meaning there is no need for placeholder classes anymore.
+- database.load now request a list of controller instances as parameters.
+- The ability to interpret star character should now be defined per column instead of per model.
+- History request parser do not contains anything anymore in case history is not requested. It should have never been used in this case anyway.
+- Mongo Columns and IndexType are now available via layabase.mongo
+
+### Fixed
+- Avoid creating f-string when nothing needs to be interpreted.
+- Retrieve mongo specific query fields from args only (do not look at body on queries).
+- Ensure that only valid audit actions can be provided by users on queries.
+- Order of column declaration in table or collection class is now kept in OpenAPI definition.
+
+### Removed
+- layabase.database is not exposed anymore. Use layabase instead.
+- layabase.database_sqlalchemy is not exposed anymore.
+- layabase.database_mongo is not exposed anymore. Use layabase.mongo instead.
+- layabase.audit is not exposed anymore. It should never have been used anyway.
+- layabase.audit_mongo is not exposed anymore.
+- layabase.audit_sqlalchemy is not exposed anymore.
+
+### Added
+- layabase.testing.mock_mongo_audit_datetime pytest fixture
+- layabase.testing.mock_sqlalchemy_audit_datetime pytest fixture
+- layabase.testing.mock_mongo_health_datetime pytest fixture
+- layabase.testing.mock_sqlalchemy_health_datetime pytest fixture
+
 ## [2.0.1] - 2019-09-26
 ### Fixed
 - [SQLAlchemy] Avoid processing invalid data types when inserting or updating data.
@@ -75,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.1...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.0...HEAD
+[3.0.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.1...v3.0.0
 [2.0.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.0...v2.0.1
 [2.0.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.1...v2.0.0
 [1.3.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v1.3.0...v1.3.1

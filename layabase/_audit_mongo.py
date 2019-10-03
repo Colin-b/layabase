@@ -2,11 +2,13 @@ import logging
 import datetime
 import enum
 import copy
-from typing import Type
+from typing import Type, Dict
 
-from layabase.database_mongo import Column, CRUDModel
-from layabase.audit import current_user_name
-from layabase.versioning_mongo import VersionedCRUDModel
+import flask_restplus
+
+from layabase._database_mongo import Column, _CRUDModel
+from layabase._audit import current_user_name
+from layabase._versioning_mongo import VersionedCRUDModel
 
 logger = logging.getLogger(__name__)
 
@@ -19,37 +21,27 @@ class Action(enum.IntEnum):
     Rollback = 4
 
 
-def _create_from(model: Type[CRUDModel], base):
+def _create_from(mixin, model: Type[_CRUDModel], base):
     return (
-        _versioning_audit(model, base)
+        _versioning_audit(mixin, base)
         if issubclass(model, VersionedCRUDModel)
-        else _common_audit(model, base)
+        else _common_audit(mixin, model, base)
     )
 
 
-def _common_audit(model: Type[CRUDModel], base):
-    class AuditModel(
-        model,
-        base=base,
-        table_name=f"audit_{model.__tablename__}",
-        audit=False,
-        skip_name_check=True,
-    ):
+def _common_audit(mixin, model, base):
+    class AuditModel(mixin, _CRUDModel, base=base, skip_name_check=True):
         """
         Class providing Audit fields for a MONGODB model.
         """
+
+        __collection_name__ = f"audit_{model.__collection_name__}"
 
         revision = Column(int, is_primary_key=True)
 
         audit_user = Column(str)
         audit_date_utc = Column(datetime.datetime)
         audit_action = Column(Action)
-
-        @classmethod
-        def get_response_model(cls, namespace):
-            return namespace.model(
-                "Audit" + model.__name__, cls._flask_restplus_fields(namespace)
-            )
 
         @classmethod
         def audit_add(cls, document: dict):
@@ -77,7 +69,7 @@ def _common_audit(model: Type[CRUDModel], base):
         def _audit_action(cls, action: Action, document: dict):
             document.pop("_id", None)
             document[cls.revision.name] = cls._increment(
-                "revision", model.__tablename__
+                "revision", model.__collection_name__
             )
             document[cls.audit_user.name] = current_user_name()
             document[cls.audit_date_utc.name] = datetime.datetime.utcnow()
@@ -87,13 +79,13 @@ def _common_audit(model: Type[CRUDModel], base):
     return AuditModel
 
 
-def _versioning_audit(model: Type[VersionedCRUDModel], base):
-    class AuditModel(
-        CRUDModel, base=base, table_name="audit", audit=False, skip_name_check=True
-    ):
+def _versioning_audit(mixin, base):
+    class AuditModel(_CRUDModel, base=base, skip_name_check=True):
         """
         Class providing the audit for all versioned MONGODB models.
         """
+
+        __collection_name__ = "audit"
 
         table_name = Column(str, is_primary_key=True)
         revision = Column(int, is_primary_key=True)
@@ -103,20 +95,16 @@ def _versioning_audit(model: Type[VersionedCRUDModel], base):
         audit_action = Column(Action)
 
         @classmethod
-        def query_get_parser(cls):
-            query_get_parser = super().query_get_parser()
-            query_get_parser.remove_argument(cls.table_name.name)
-            return query_get_parser
-
-        @classmethod
-        def get_response_model(cls, namespace):
+        def get_fields(
+            cls, namespace: flask_restplus.Namespace
+        ) -> Dict[str, flask_restplus.fields.Raw]:
             all_fields = cls._flask_restplus_fields(namespace)
             del all_fields[cls.table_name.name]
-            return namespace.model("AuditModel", all_fields)
+            return all_fields
 
         @classmethod
         def get_all(cls, **filters):
-            filters[cls.table_name.name] = model.__tablename__
+            filters[cls.table_name.name] = mixin.__collection_name__
             return super().get_all(**filters)
 
         @classmethod
@@ -139,7 +127,7 @@ def _versioning_audit(model: Type[VersionedCRUDModel], base):
         def _audit_action(cls, action: Action, revision: int):
             cls.__collection__.insert_one(
                 {
-                    cls.table_name.name: model.__tablename__,
+                    cls.table_name.name: mixin.__collection_name__,
                     cls.revision.name: revision,
                     cls.audit_user.name: current_user_name(),
                     cls.audit_date_utc.name: datetime.datetime.utcnow(),
