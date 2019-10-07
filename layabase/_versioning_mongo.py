@@ -2,7 +2,6 @@ import logging
 from typing import List, Dict
 
 import pymongo
-import flask_restplus
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase._database_mongo import _CRUDModel
@@ -45,15 +44,6 @@ class VersionedCRUDModel(_CRUDModel):
                 cls.audit_model.update_indexes(document)
 
     @classmethod
-    def post_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus.fields.Raw]:
-        all_fields = cls._flask_restplus_fields(namespace)
-        del all_fields[cls.valid_since_revision.name]
-        del all_fields[cls.valid_until_revision.name]
-        return all_fields
-
-    @classmethod
     def _insert_one(cls, document: dict) -> dict:
         revision = cls._increment(*REVISION_COUNTER)
         document[cls.valid_since_revision.name] = revision
@@ -72,15 +62,6 @@ class VersionedCRUDModel(_CRUDModel):
         cls.__collection__.insert_many(documents)
         if cls.audit_model:
             cls.audit_model.audit_add(revision)
-
-    @classmethod
-    def put_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus.fields.Raw]:
-        all_fields = cls._flask_restplus_fields(namespace)
-        del all_fields[cls.valid_since_revision.name]
-        del all_fields[cls.valid_until_revision.name]
-        return all_fields
 
     @classmethod
     def _update_one(cls, document: dict) -> (dict, dict):
@@ -177,15 +158,6 @@ class VersionedCRUDModel(_CRUDModel):
 
         del filters["revision"]
         return revision
-
-    @classmethod
-    def get_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus.fields.Raw]:
-        all_fields = cls._flask_restplus_fields(namespace)
-        del all_fields[cls.valid_since_revision.name]
-        del all_fields[cls.valid_until_revision.name]
-        return all_fields
 
     @classmethod
     def get(cls, **filters) -> dict:

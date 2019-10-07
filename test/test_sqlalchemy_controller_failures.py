@@ -4,23 +4,6 @@ import sqlalchemy
 import layabase
 
 
-def test_namespace_method_without_connecting_to_database():
-    class TestTable:
-        __tablename__ = "test"
-
-        id = sqlalchemy.Column()
-
-    class TestNamespace:
-        pass
-
-    with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        layabase.CRUDController(TestTable).namespace(TestNamespace)
-    assert (
-        str(exception_info.value)
-        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
-    )
-
-
 def test_get_method_without_connecting_to_database():
     class TestTable:
         __tablename__ = "test"

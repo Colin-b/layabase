@@ -948,6 +948,7 @@ class DictColumn(Column):
 
         Column.__init__(self, dict, **kwargs)
 
+    # TODO Get rid of this model creation and use the list of default fields instead ?
     def _default_description_model(self):
         """
         :return: A CRUDModel describing every dictionary fields.

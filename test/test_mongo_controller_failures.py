@@ -4,23 +4,6 @@ import layabase
 import layabase.mongo
 
 
-def test_namespace_method_without_connecting_to_database():
-    class TestNamespace:
-        pass
-
-    class TestCollection:
-        __collection_name__ = "test"
-
-        id = layabase.mongo.Column()
-
-    with pytest.raises(layabase.ControllerModelNotSet) as exception_info:
-        layabase.CRUDController(TestCollection).namespace(TestNamespace)
-    assert (
-        str(exception_info.value)
-        == "layabase.load must be called with this CRUDController instance before using any provided CRUDController feature."
-    )
-
-
 def test_counters_table_name_is_forbidden():
     class TestCollection:
         __collection_name__ = "counters"

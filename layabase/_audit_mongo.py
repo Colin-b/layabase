@@ -2,9 +2,7 @@ import logging
 import datetime
 import enum
 import copy
-from typing import Type, Dict
-
-import flask_restplus
+from typing import Type
 
 from layabase._database_mongo import _CRUDModel
 from layabase.mongo import Column
@@ -94,14 +92,6 @@ def _versioning_audit(mixin, base):
         audit_user = Column(str)
         audit_date_utc = Column(datetime.datetime)
         audit_action = Column(Action)
-
-        @classmethod
-        def get_fields(
-            cls, namespace: flask_restplus.Namespace
-        ) -> Dict[str, flask_restplus.fields.Raw]:
-            all_fields = cls._flask_restplus_fields(namespace)
-            del all_fields[cls.table_name.name]
-            return all_fields
 
         @classmethod
         def get_all(cls, **filters):

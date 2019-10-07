@@ -12,6 +12,12 @@ from layabase._api import (
     add_history_query_fields,
     add_rollback_query_fields,
     add_get_audit_query_fields,
+    get_response_fields,
+    get_history_response_fields,
+    get_audit_response_fields,
+    get_description_response_fields,
+    post_request_fields,
+    put_request_fields,
 )
 
 logger = logging.getLogger(__name__)
@@ -160,36 +166,35 @@ class CRUDController:
     def namespace(self, namespace: flask_restplus.Namespace):
         """
         Create Flask RestPlus models that can be used to marshall results (and document service).
-        This method should always be called AFTER controller has already been provided as parameter of layabase.load function
 
         :param namespace: Flask RestPlus API.
         """
-        if not self._model:
-            raise ControllerModelNotSet(self)
         self.json_post_model = namespace.model(
             f"{self.table_or_collection.__name__}_PostRequestModel",
-            self._model.post_fields(namespace),
+            post_request_fields(self.table_or_collection, namespace),
         )
         self.json_put_model = namespace.model(
             f"{self.table_or_collection.__name__}_PutRequestModel",
-            self._model.put_fields(namespace),
+            put_request_fields(self.table_or_collection, namespace),
         )
         self.get_response_model = namespace.model(
             f"{self.table_or_collection.__name__}_GetResponseModel",
-            self._model.get_fields(namespace),
+            get_response_fields(self.table_or_collection, namespace),
         )
         self.get_history_response_model = namespace.model(
             f"{self.table_or_collection.__name__}_GetHistoryResponseModel",
-            self._model.history_fields(namespace),
+            get_history_response_fields(self.table_or_collection, namespace),
         )
-        if self._model.audit_model:
+        if self.audit:
             self.get_audit_response_model = namespace.model(
                 f"{self.table_or_collection.__name__}_GetAuditResponseModel",
-                self._model.audit_model.get_fields(namespace),
+                get_audit_response_fields(
+                    self.table_or_collection, self.history, namespace
+                ),
             )
         self.get_model_description_response_model = namespace.model(
             f"{self.table_or_collection.__name__}_GetDescriptionResponseModel",
-            self._model.description_fields(),
+            get_description_response_fields(self.table_or_collection),
         )
 
     def get(self, request_arguments: dict) -> List[dict]:
