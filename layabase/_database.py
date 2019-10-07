@@ -71,12 +71,10 @@ def check(base) -> (str, dict):
 
     if hasattr(base, "is_mongos"):
         from layabase._database_mongo import _check
-
-        return _check(base)
     else:
-        import layabase._database_sqlalchemy as database_sqlalchemy
+        from layabase._database_sqlalchemy import _check
 
-        return database_sqlalchemy._check(base)
+    return _check(base)
 
 
 def _ignore_read_only_fields(model_properties: dict, model_as_dict: dict):
@@ -391,9 +389,7 @@ def load(database_connection_url: str, controllers: Iterable[CRUDController], **
 
     if database_connection_url.startswith("mongo"):
         from layabase._database_mongo import _load
+    else:
+        from layabase._database_sqlalchemy import _load
 
-        return _load(database_connection_url, controllers, **kwargs)
-
-    import layabase._database_sqlalchemy as database_sqlalchemy
-
-    return database_sqlalchemy._load(database_connection_url, controllers, **kwargs)
+    return _load(database_connection_url, controllers, **kwargs)
