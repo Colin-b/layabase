@@ -13,7 +13,7 @@ from flask_restplus import fields as flask_restplus_fields
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import CRUDController
-from layabase.mongo import Column, DictColumn, ListColumn, IndexType
+from layabase.mongo import Column, DictColumn, ListColumn, IndexType, link
 
 logger = logging.getLogger(__name__)
 
@@ -1074,38 +1074,6 @@ class _CRUDModel:
         return exported_fields
 
 
-def _create_model(controller: CRUDController, base) -> Type[_CRUDModel]:
-    if controller.history:
-        import layabase._versioning_mongo
-
-        crud_model = layabase._versioning_mongo.VersionedCRUDModel
-    else:
-        crud_model = _CRUDModel
-
-    class ControllerModel(
-        controller.table_or_collection,
-        crud_model,
-        base=base,
-        skip_name_check=controller.skip_name_check,
-        skip_unknown_fields=controller.skip_unknown_fields,
-        skip_update_indexes=controller.skip_update_indexes,
-    ):
-        pass
-
-    controller._model = ControllerModel
-
-    if controller.audit:
-        from layabase._audit_mongo import _create_from
-
-        ControllerModel.audit_model = _create_from(
-            mixin=controller.table_or_collection, model=ControllerModel, base=base
-        )
-
-    controller._model_description_dictionary = ControllerModel.description_dictionary()
-
-    return ControllerModel
-
-
 def _load(
     database_connection_url: str, controllers: Iterable[CRUDController], **kwargs
 ) -> pymongo.database.Database:
@@ -1138,7 +1106,7 @@ def _load(
         _server_versions.setdefault(base.name, server_info.get("version", ""))
     logger.debug(f"Creating models...")
     for controller in controllers:
-        _create_model(controller, base)
+        link(controller, base)
     return base
 
 

@@ -4,7 +4,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 class EnumTest(enum.Enum):
@@ -17,13 +17,11 @@ def controller_versioned():
     class TestCollectionVersioned:
         __collection_name__ = "test_versioned"
 
-        key = layabase._database_mongo.Column(is_primary_key=True)
-        dict_field = layabase._database_mongo.DictColumn(
+        key = layabase.mongo.Column(is_primary_key=True)
+        dict_field = layabase.mongo.DictColumn(
             fields={
-                "first_key": layabase._database_mongo.Column(
-                    EnumTest, is_nullable=False
-                ),
-                "second_key": layabase._database_mongo.Column(int, is_nullable=False),
+                "first_key": layabase.mongo.Column(EnumTest, is_nullable=False),
+                "second_key": layabase.mongo.Column(int, is_nullable=False),
             },
             is_required=True,
         )
@@ -36,10 +34,8 @@ def controller_versioned_unique():
     class TestCollectionVersionedUnique:
         __collection_name__ = "test_versioned_unique"
 
-        key = layabase._database_mongo.Column(int, should_auto_increment=True)
-        unique = layabase._database_mongo.Column(
-            int, index_type=layabase._database_mongo.IndexType.Unique
-        )
+        key = layabase.mongo.Column(int, should_auto_increment=True)
+        unique = layabase.mongo.Column(int, index_type=layabase.mongo.IndexType.Unique)
 
     return layabase.CRUDController(TestCollectionVersionedUnique, history=True)
 
@@ -49,10 +45,8 @@ def controller_unique():
     class TestCollectionUnique:
         __collection_name__ = "test_unique"
 
-        key = layabase._database_mongo.Column(int, should_auto_increment=True)
-        unique = layabase._database_mongo.Column(
-            int, index_type=layabase._database_mongo.IndexType.Unique
-        )
+        key = layabase.mongo.Column(int, should_auto_increment=True)
+        unique = layabase.mongo.Column(int, index_type=layabase.mongo.IndexType.Unique)
 
     return layabase.CRUDController(TestCollectionUnique)
 

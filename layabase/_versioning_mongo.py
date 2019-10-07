@@ -5,7 +5,8 @@ import pymongo
 import flask_restplus
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
-from layabase._database_mongo import _CRUDModel, Column, IndexType
+from layabase._database_mongo import _CRUDModel
+from layabase.mongo import Column, IndexType
 
 logger = logging.getLogger(__name__)
 

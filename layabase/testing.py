@@ -10,9 +10,9 @@ def reset(base):
     :param base: database object as returned by the load function (Mandatory).
     """
     if hasattr(base, "is_mongos"):
-        import layabase._database_mongo as database_mongo
+        from layabase._database_mongo import _reset
 
-        database_mongo._reset(base)
+        _reset(base)
     else:
         import layabase._database_sqlalchemy as database_sqlalchemy
 

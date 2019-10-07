@@ -7,7 +7,7 @@ import iso8601
 from bson.objectid import ObjectId
 
 from layabase import ComparisonSigns
-from layabase._database_mongo import Column, DictColumn, ListColumn
+from layabase.mongo import Column, DictColumn, ListColumn
 
 
 def add_all_fields(collection, parser):

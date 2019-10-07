@@ -6,7 +6,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 from layabase.testing import mock_mongo_audit_datetime
 
 
@@ -15,9 +15,9 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(str, is_primary_key=True)
-        mandatory = layabase._database_mongo.Column(int, is_nullable=False)
-        optional = layabase._database_mongo.Column(str)
+        key = layabase.mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.mongo.Column(int, is_nullable=False)
+        optional = layabase.mongo.Column(str)
 
     controller = layabase.CRUDController(TestCollection, audit=True)
     layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
@@ -87,7 +87,7 @@ def test_audit_table_name_is_forbidden():
     class TestCollection:
         __collection_name__ = "audit"
 
-        key = layabase._database_mongo.Column(str)
+        key = layabase.mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
         layabase.load(
@@ -103,7 +103,7 @@ def test_audited_table_name_is_forbidden():
     class TestCollection:
         __collection_name__ = "audit_test"
 
-        key = layabase._database_mongo.Column(str)
+        key = layabase.mongo.Column(str)
 
     with pytest.raises(Exception) as exception_info:
         layabase.load(

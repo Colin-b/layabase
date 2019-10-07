@@ -6,7 +6,7 @@ import iso8601
 from bson.objectid import ObjectId
 from bson.errors import BSONError
 
-from layabase import ComparisonSigns
+from layabase import ComparisonSigns, CRUDController
 
 
 @enum.unique
@@ -1257,3 +1257,41 @@ class ListColumn(Column):
 
     def example(self):
         return [self.list_item_column.example()]
+
+
+def link(controller: CRUDController, base):
+    """
+    Link controller related collection to provided database.
+
+    :param base: As returned by layabase.load function
+    """
+    if controller.history:
+        import layabase._versioning_mongo
+
+        crud_model = layabase._versioning_mongo.VersionedCRUDModel
+    else:
+        from layabase._database_mongo import _CRUDModel
+
+        crud_model = _CRUDModel
+
+    class ControllerModel(
+        controller.table_or_collection,
+        crud_model,
+        base=base,
+        skip_name_check=controller.skip_name_check,
+        skip_unknown_fields=controller.skip_unknown_fields,
+        skip_update_indexes=controller.skip_update_indexes,
+        skip_log_for_unknown_fields=controller.skip_log_for_unknown_fields,
+    ):
+        pass
+
+    controller._model = ControllerModel
+
+    if controller.audit:
+        from layabase._audit_mongo import _create_from
+
+        ControllerModel.audit_model = _create_from(
+            mixin=controller.table_or_collection, model=ControllerModel, base=base
+        )
+
+    controller._model_description_dictionary = ControllerModel.description_dictionary()

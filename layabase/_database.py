@@ -70,9 +70,9 @@ def check(base) -> (str, dict):
         raise NoDatabaseProvided()
 
     if hasattr(base, "is_mongos"):
-        import layabase._database_mongo as database_mongo
+        from layabase._database_mongo import _check
 
-        return database_mongo._check(base)
+        return _check(base)
     else:
         import layabase._database_sqlalchemy as database_sqlalchemy
 
@@ -111,6 +111,7 @@ class CRUDController:
         :param skip_name_check: True to be able to force the usage of forbidden table or collection names. Name check is enforced by default. (Mongo only)
         :param skip_unknown_fields: False to use strict field name check. Ignore unknown fields by default. (Mongo only)
         :param skip_update_indexes: True to never update indexes. Warning, this might lead to invalid indexes on the underlying table or collection. (Mongo only)
+        :param skip_log_for_unknown_fields: List of unknown field names that are to be expected.
         """
         if not table_or_collection:
             raise Exception("Table or Collection must be provided.")
@@ -121,6 +122,7 @@ class CRUDController:
         self.skip_name_check = kwargs.pop("skip_name_check", False)
         self.skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
         self.skip_update_indexes = kwargs.pop("skip_update_indexes", False)
+        self.skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
 
         # CRUD request parsers
         self.query_get_parser = flask_restplus.reqparse.RequestParser()
@@ -388,9 +390,9 @@ def load(database_connection_url: str, controllers: Iterable[CRUDController], **
         raise NoRelatedControllers()
 
     if database_connection_url.startswith("mongo"):
-        import layabase._database_mongo as database_mongo
+        from layabase._database_mongo import _load
 
-        return database_mongo._load(database_connection_url, controllers, **kwargs)
+        return _load(database_connection_url, controllers, **kwargs)
 
     import layabase._database_sqlalchemy as database_sqlalchemy
 

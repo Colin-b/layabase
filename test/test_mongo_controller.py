@@ -9,7 +9,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 # Use debug logging to ensure that debug logging statements have no impact
 logging.basicConfig(
@@ -24,9 +24,9 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(str, is_primary_key=True)
-        mandatory = layabase._database_mongo.Column(int, is_nullable=False)
-        optional = layabase._database_mongo.Column(str)
+        key = layabase.mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.mongo.Column(int, is_nullable=False)
+        optional = layabase.mongo.Column(str)
 
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])

@@ -2,7 +2,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 @pytest.fixture
@@ -10,13 +10,11 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        prim_def_inc = layabase._database_mongo.Column(
+        prim_def_inc = layabase.mongo.Column(
             int, is_primary_key=True, default_value=1, should_auto_increment=True
         )
-        prim_def = layabase._database_mongo.Column(
-            int, is_primary_key=True, default_value=1
-        )
-        prim_inc = layabase._database_mongo.Column(
+        prim_def = layabase.mongo.Column(int, is_primary_key=True, default_value=1)
+        prim_inc = layabase.mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
 

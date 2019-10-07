@@ -2,7 +2,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 @pytest.fixture
@@ -10,10 +10,10 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(
+        key = layabase.mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
-        other = layabase._database_mongo.Column(int)
+        other = layabase.mongo.Column(int)
 
     controller = layabase.CRUDController(TestCollection, audit=True, history=True)
     layabase.load("mongomock", [controller])

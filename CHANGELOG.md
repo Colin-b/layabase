@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2019-10-07
+### Fixed
+- The ability to link a Mongo controller to a collection after loading the database was lost in 3.0.0. It is now available via layabase.mongo.link(controller, base)
+- The ability to skip logging of unknown fields was lost in 3.0.0. It is now available again via the CRUDController parameter.
+
 ## [3.0.0] - 2019-10-02
 ### Changed
 - SQLAlchemy models do not need to extend anything. Provide [Mixins](https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html#declarative-mixins) instead of models.

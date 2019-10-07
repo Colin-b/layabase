@@ -6,7 +6,8 @@ from typing import Type, Dict
 
 import flask_restplus
 
-from layabase._database_mongo import Column, _CRUDModel
+from layabase._database_mongo import _CRUDModel
+from layabase.mongo import Column
 from layabase._audit import current_user_name
 from layabase._versioning_mongo import VersionedCRUDModel
 
