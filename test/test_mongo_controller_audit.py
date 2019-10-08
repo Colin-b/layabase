@@ -42,11 +42,21 @@ def app(controller):
 
         @namespace.expect(controller.json_post_model)
         def post(self):
-            return []
+            # Simulate the fact that layabauth is used
+            class User:
+                name = "test user"
+
+            flask.g.current_user = User
+            return controller.post({"key": "audit_test", "mandatory": 1})
 
         @namespace.expect(controller.json_put_model)
         def put(self):
-            return []
+            # Simulate the fact that flask is not available
+            def raise_import_error():
+                raise ImportError()
+
+            flask.has_request_context = raise_import_error
+            return controller.put({"key": "audit_test", "mandatory": 2})
 
         @namespace.expect(controller.query_delete_parser)
         def delete(self):
@@ -57,7 +67,7 @@ def app(controller):
         @namespace.expect(controller.query_get_audit_parser)
         @namespace.marshal_with(controller.get_audit_response_model)
         def get(self):
-            return []
+            return controller.get_audit({})
 
     @namespace.route("/test_audit_parser")
     class TestAuditParserResource(flask_restplus.Resource):
@@ -1247,3 +1257,29 @@ def test_query_get_audit_parser(client):
 def test_query_delete_parser(client):
     response = client.delete("/test_parsers?key=1&mandatory=2&optional=3")
     assert response.json == {"key": ["1"], "mandatory": [2], "optional": ["3"]}
+
+
+def test_audit_user_name(client, mock_mongo_audit_datetime):
+    client.post("/test")
+    client.put("/test")
+    response = client.get("/test/audit")
+    assert response.json == [
+        {
+            "audit_action": "Insert",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "test user",
+            "key": "audit_test",
+            "mandatory": 1,
+            "optional": None,
+            "revision": 1,
+        },
+        {
+            "audit_action": "Update",
+            "audit_date_utc": "2018-10-11T15:05:05.663000",
+            "audit_user": "",
+            "key": "audit_test",
+            "mandatory": 2,
+            "optional": None,
+            "revision": 2,
+        },
+    ]
