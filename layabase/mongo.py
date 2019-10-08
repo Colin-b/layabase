@@ -2,6 +2,7 @@ import enum
 import datetime
 from typing import Dict, List, Union
 
+import pymongo.database
 import iso8601
 from bson.objectid import ObjectId
 from bson.errors import BSONError
@@ -1252,7 +1253,7 @@ class ListColumn(Column):
         return [self.list_item_column.example()]
 
 
-def link(controller: CRUDController, base):
+def link(controller: CRUDController, base: pymongo.database.Database):
     """
     Link controller related collection to provided database.
 
