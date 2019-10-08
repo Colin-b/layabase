@@ -3,7 +3,7 @@ import logging
 import urllib.parse
 from typing import List, Dict, Type, Iterable
 
-from marshmallow import validate, ValidationError, EXCLUDE
+from marshmallow import ValidationError, EXCLUDE
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from layaberr import ValidationFailed, ModelCouldNotBeFound

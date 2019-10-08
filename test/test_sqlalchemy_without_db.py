@@ -16,37 +16,56 @@ def controller():
 
 
 @pytest.fixture
-def disconnected_database(controller):
+def disconnected_database(controller: layabase.CRUDController):
     _db = layabase.load("sqlite:///:memory:", [controller])
     _db.metadata.bind.dispose()
     yield _db
 
 
-def test_get_all_when_db_down(disconnected_database, controller):
+def test_get_all_when_db_down(
+    disconnected_database, controller: layabase.CRUDController
+):
     with pytest.raises(Exception) as exception_info:
         controller.get({})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_get_when_db_down(disconnected_database, controller):
+def test_get_when_db_down(disconnected_database, controller: layabase.CRUDController):
     with pytest.raises(Exception) as exception_info:
         controller.get_one({})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_add_when_db_down(disconnected_database, controller):
+def test_add_when_db_down(disconnected_database, controller: layabase.CRUDController):
     with pytest.raises(Exception) as exception_info:
         controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_update_when_db_down(disconnected_database, controller):
+def test_post_many_when_db_down(
+    disconnected_database, controller: layabase.CRUDController
+):
+    with pytest.raises(Exception) as exception_info:
+        controller.post_many(
+            [
+                {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+                {"key": "my_key2", "mandatory": 1, "optional": "my_value1"},
+            ]
+        )
+    assert str(exception_info.value) == "Database could not be reached."
+
+
+def test_update_when_db_down(
+    disconnected_database, controller: layabase.CRUDController
+):
     with pytest.raises(Exception) as exception_info:
         controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert str(exception_info.value) == "Database could not be reached."
 
 
-def test_remove_when_db_down(disconnected_database, controller):
+def test_remove_when_db_down(
+    disconnected_database, controller: layabase.CRUDController
+):
     with pytest.raises(Exception) as exception_info:
         controller.delete({})
     assert str(exception_info.value) == "Database could not be reached."

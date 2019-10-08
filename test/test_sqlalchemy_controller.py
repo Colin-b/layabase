@@ -141,6 +141,10 @@ def test_post_many_with_empty_dict_is_invalid(controller: layabase.CRUDControlle
     assert exception_info.value.received_data == {}
 
 
+def test_get_field_names(controller: layabase.CRUDController):
+    assert controller.get_field_names() == ["key", "mandatory", "optional"]
+
+
 def test_primary_keys_are_returned(controller: layabase.CRUDController):
     inserted = controller.post_many(
         [
