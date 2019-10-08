@@ -158,6 +158,196 @@ def test_primary_keys_are_returned(controller: layabase.CRUDController):
     )
 
 
+def test_dbapierror_when_inserting_many(
+    controller: layabase.CRUDController, monkeypatch
+):
+    def raise_dbapi_error(*args):
+        import sqlalchemy.orm.exc
+
+        raise sqlalchemy.orm.exc.sa_exc.DBAPIError(
+            "SELECT * FROM test", params={}, orig="orig test"
+        )
+
+    monkeypatch.setattr(controller._model._session, "add_all", raise_dbapi_error)
+    with pytest.raises(Exception) as exception_info:
+        controller.post_many(
+            [
+                {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+                {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+            ]
+        )
+    assert str(exception_info.value) == "Database could not be reached."
+
+
+def test_exception_when_inserting_many(
+    controller: layabase.CRUDController, monkeypatch
+):
+    def raise_exception(*args):
+        raise Exception("This is the error message")
+
+    monkeypatch.setattr(controller._model._session, "add_all", raise_exception)
+    with pytest.raises(Exception) as exception_info:
+        controller.post_many(
+            [
+                {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+                {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+            ]
+        )
+    assert str(exception_info.value) == "This is the error message"
+
+
+def test_dbapierror_when_inserting_one(
+    controller: layabase.CRUDController, monkeypatch
+):
+    def raise_dbapi_error(*args):
+        import sqlalchemy.orm.exc
+
+        raise sqlalchemy.orm.exc.sa_exc.DBAPIError(
+            "SELECT * FROM test", params={}, orig="orig test"
+        )
+
+    monkeypatch.setattr(controller._model._session, "add", raise_dbapi_error)
+    with pytest.raises(Exception) as exception_info:
+        controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert str(exception_info.value) == "Database could not be reached."
+
+
+def test_exception_when_inserting_one(controller: layabase.CRUDController, monkeypatch):
+    def raise_exception(*args):
+        raise Exception("This is the error message")
+
+    monkeypatch.setattr(controller._model._session, "add", raise_exception)
+    with pytest.raises(Exception) as exception_info:
+        controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert str(exception_info.value) == "This is the error message"
+
+
+def test_dbapierror_when_updating_many_retrieval(
+    controller: layabase.CRUDController, monkeypatch
+):
+    controller.post_many(
+        [
+            {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+            {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+        ]
+    )
+
+    def raise_dbapi_error(*args):
+        import sqlalchemy.orm.exc
+
+        raise sqlalchemy.orm.exc.sa_exc.DBAPIError(
+            "SELECT * FROM test", params={}, orig="orig test"
+        )
+
+    monkeypatch.setattr(controller._model._session, "query", raise_dbapi_error)
+    with pytest.raises(Exception) as exception_info:
+        controller.put_many(
+            [
+                {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+                {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+            ]
+        )
+    assert str(exception_info.value) == "Database could not be reached."
+
+
+def test_dbapierror_when_updating_many(
+    controller: layabase.CRUDController, monkeypatch
+):
+    controller.post_many(
+        [
+            {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+            {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+        ]
+    )
+
+    def raise_dbapi_error(*args):
+        import sqlalchemy.orm.exc
+
+        raise sqlalchemy.orm.exc.sa_exc.DBAPIError(
+            "SELECT * FROM test", params={}, orig="orig test"
+        )
+
+    monkeypatch.setattr(controller._model._session, "add_all", raise_dbapi_error)
+    with pytest.raises(Exception) as exception_info:
+        controller.put_many(
+            [
+                {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+                {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+            ]
+        )
+    assert str(exception_info.value) == "Database could not be reached."
+
+
+def test_exception_when_updating_many(controller: layabase.CRUDController, monkeypatch):
+    controller.post_many(
+        [
+            {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+            {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+        ]
+    )
+
+    def raise_exception(*args):
+        raise Exception("This is the error message")
+
+    monkeypatch.setattr(controller._model._session, "add_all", raise_exception)
+    with pytest.raises(Exception) as exception_info:
+        controller.put_many(
+            [
+                {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+                {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+            ]
+        )
+    assert str(exception_info.value) == "This is the error message"
+
+
+def test_dbapierror_when_updating_one(controller: layabase.CRUDController, monkeypatch):
+    controller.post_many(
+        [
+            {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+            {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+        ]
+    )
+
+    def raise_dbapi_error(*args):
+        import sqlalchemy.orm.exc
+
+        raise sqlalchemy.orm.exc.sa_exc.DBAPIError(
+            "SELECT * FROM test", params={}, orig="orig test"
+        )
+
+    monkeypatch.setattr(controller._model._session, "add", raise_dbapi_error)
+    with pytest.raises(Exception) as exception_info:
+        controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert str(exception_info.value) == "Database could not be reached."
+
+
+def test_exception_when_updating_one(controller: layabase.CRUDController, monkeypatch):
+    controller.post_many(
+        [
+            {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+            {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+        ]
+    )
+
+    def raise_exception(*args):
+        raise Exception("This is the error message")
+
+    monkeypatch.setattr(controller._model._session, "add", raise_exception)
+    with pytest.raises(Exception) as exception_info:
+        controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    assert str(exception_info.value) == "This is the error message"
+
+
+def test_exception_when_deleting(controller: layabase.CRUDController, monkeypatch):
+    def raise_exception(*args):
+        raise Exception("This is the error message")
+
+    monkeypatch.setattr(controller._model._session, "commit", raise_exception)
+    with pytest.raises(Exception) as exception_info:
+        controller.delete({})
+    assert str(exception_info.value) == "This is the error message"
+
+
 def test_post_with_empty_dict_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post({})
