@@ -548,7 +548,10 @@ def test_open_api_definition(client):
 
 
 def test_revision_not_shared_if_not_versioned(
-    controllers, controller, controller_versioned, mock_mongo_audit_datetime
+    controllers,
+    controller,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
 ):
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == controller.post(
         {"key": "my_key", "mandatory": 1}
@@ -577,7 +580,9 @@ def test_revision_not_shared_if_not_versioned(
 
 
 def test_revision_on_versioned_audit_after_put_failure(
-    controllers, controller_versioned, mock_mongo_audit_datetime
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
 ):
     controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     with pytest.raises(ModelCouldNotBeFound):
@@ -601,8 +606,73 @@ def test_revision_on_versioned_audit_after_put_failure(
     ]
 
 
+def test_get_versioned_audit_after_post_put(
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
+):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
+    assert controller_versioned.get_one({"key": "my_key"}) == {
+        "enum_fld": "Value2",
+        "key": "my_key",
+        "valid_since_revision": 2,
+        "valid_until_revision": -1,
+    }
+
+
+def test_post_and_put_many(
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
+):
+    controller_versioned.post_many(
+        [
+            {"key": "my_key1", "enum_fld": EnumTest.Value1},
+            {"key": "my_key2", "enum_fld": EnumTest.Value1},
+        ]
+    )
+    assert controller_versioned.put_many(
+        [
+            {"key": "my_key1", "enum_fld": EnumTest.Value2},
+            {"key": "my_key2", "enum_fld": EnumTest.Value2},
+        ]
+    ) == (
+        [
+            {
+                "enum_fld": "Value1",
+                "key": "my_key1",
+                "valid_since_revision": 1,
+                "valid_until_revision": -1,
+            },
+            {
+                "enum_fld": "Value1",
+                "key": "my_key2",
+                "valid_since_revision": 1,
+                "valid_until_revision": -1,
+            },
+        ],
+        [
+            {
+                "enum_fld": "Value2",
+                "key": "my_key1",
+                "valid_since_revision": 2,
+                "valid_until_revision": -1,
+            },
+            {
+                "enum_fld": "Value2",
+                "key": "my_key2",
+                "valid_since_revision": 2,
+                "valid_until_revision": -1,
+            },
+        ],
+    )
+
+
 def test_versioned_audit_after_post_put_delete_rollback(
-    controllers, controller_versioned, mock_mongo_audit_datetime
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
 ):
     controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
