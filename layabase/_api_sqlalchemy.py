@@ -74,8 +74,6 @@ def request_field_type(column_type) -> Type[flask_restplus.fields.Raw]:
     Default to String field.
     TODO Faster to use a dict from type to field ?
     """
-    if isinstance(column_type, sqlalchemy.String):
-        return flask_restplus.fields.String
     if isinstance(column_type, sqlalchemy.Integer):
         return flask_restplus.fields.Integer
     if isinstance(column_type, sqlalchemy.Numeric):
@@ -89,7 +87,6 @@ def request_field_type(column_type) -> Type[flask_restplus.fields.Raw]:
     if isinstance(column_type, sqlalchemy.Time):
         return flask_restplus.fields.DateTime
 
-    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
     return flask_restplus.fields.String
 
 

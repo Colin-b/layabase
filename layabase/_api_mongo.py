@@ -22,23 +22,15 @@ def _add_query_field(
 ):
     if isinstance(field, DictColumn):
         # Describe every dict column field as dot notation
-        for inner_field in field._default_description_model().__fields__:
-            _add_query_field(parser, inner_field, f"{field.name}.")
+        for inner_field in field._default_description_model().__dict__.values():
+            if isinstance(inner_field, Column):
+                _add_query_field(parser, inner_field, f"{field.name}.")
     elif isinstance(field, ListColumn):
         # Note that List of dict or list of list might be wrongly parsed
         parser.add_argument(
             f"{prefix}{field.name}",
             required=field.is_required,
             type=_get_parser_type(field.list_item_column),
-            action="append",
-            store_missing=not field.allow_none_as_filter,
-            location="args",
-        )
-    elif field.field_type == list:
-        parser.add_argument(
-            f"{prefix}{field.name}",
-            required=field.is_required,
-            type=str,  # Consider anything as valid, thus consider as str in query
             action="append",
             store_missing=not field.allow_none_as_filter,
             location="args",

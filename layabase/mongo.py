@@ -948,16 +948,12 @@ class DictColumn(Column):
 
         Column.__init__(self, dict, **kwargs)
 
-    # TODO Get rid of this model creation and use the list of default fields instead ?
     def _default_description_model(self):
         """
-        :return: A CRUDModel describing every dictionary fields.
+        :return: A class describing every dictionary fields.
         """
-        from layabase._database_mongo import _CRUDModel
-
-        return type(
-            f"{self.name}_DefaultDescriptionModel", (_CRUDModel,), self._default_fields
-        )
+        # Create a class to ensure Column name is set
+        return type(f"{self.name}_DefaultDescriptionModel", (), self._default_fields)
 
     def _description_model(self, model_as_dict: dict):
         """

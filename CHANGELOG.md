@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The ability to link a Mongo controller to a collection after loading the database was lost in 3.0.0. It is now available via layabase.mongo.link(controller, base)
 - The ability to skip logging of unknown fields was lost in 3.0.0. It is now available again via the CRUDController parameter.
 - The ability to retrieve Flask-RestPlus models without having to link to a database was lost in 3.0.0. It is now available again for Mongo and it is now available for SQLAlchemy.
+- [Mongo] Column with list type (not ListColumn) were parsed as str instead of lists.
 - Update [marshmallow](https://marshmallow.readthedocs.io/en/latest/changelog.html) to version 3.2.1
 - Update [SQLAlchemy](https://docs.sqlalchemy.org/en/13/changelog/index.html) to version 1.3.9
 

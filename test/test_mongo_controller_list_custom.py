@@ -1,5 +1,3 @@
-import enum
-
 import flask
 import flask_restplus
 import pytest
@@ -8,26 +6,13 @@ import layabase
 import layabase.mongo
 
 
-class EnumTest(enum.Enum):
-    Value1 = 1
-    Value2 = 2
-
-
 @pytest.fixture
 def controller():
     class TestCollection:
         __collection_name__ = "test"
 
         key = layabase.mongo.Column(is_primary_key=True)
-        list_field = layabase.mongo.ListColumn(
-            layabase.mongo.DictColumn(
-                fields={
-                    "first_key": layabase.mongo.Column(EnumTest, is_nullable=False),
-                    "second_key": layabase.mongo.Column(int, is_nullable=False),
-                }
-            )
-        )
-        bool_field = layabase.mongo.Column(bool)
+        list_field = layabase.mongo.Column(list)
 
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
@@ -130,13 +115,6 @@ def test_open_api_definition(client):
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
-                        {
-                            "name": "bool_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "boolean"},
-                            "collectionFormat": "multi",
-                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -166,13 +144,6 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "bool_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "boolean"},
-                            "collectionFormat": "multi",
-                        },
-                        {
                             "name": "limit",
                             "in": "query",
                             "type": "integer",
@@ -197,34 +168,6 @@ def test_open_api_definition(client):
                 },
             },
             "/test_parsers": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "list_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "bool_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "boolean"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
@@ -244,13 +187,6 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "bool_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "boolean"},
-                            "collectionFormat": "multi",
-                        },
-                        {
                             "name": "limit",
                             "in": "query",
                             "type": "integer",
@@ -266,6 +202,27 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
             },
         },
         "info": {"title": "API", "version": "1.0"},
@@ -275,11 +232,6 @@ def test_open_api_definition(client):
         "definitions": {
             "TestCollection_PostRequestModel": {
                 "properties": {
-                    "bool_field": {
-                        "type": "boolean",
-                        "readOnly": False,
-                        "example": True,
-                    },
                     "key": {
                         "type": "string",
                         "readOnly": False,
@@ -288,36 +240,14 @@ def test_open_api_definition(client):
                     "list_field": {
                         "type": "array",
                         "readOnly": False,
-                        "example": [{"first_key": "Value1", "second_key": 1}],
-                        "items": {
-                            "readOnly": False,
-                            "default": {"first_key": None, "second_key": None},
-                            "example": {"first_key": "Value1", "second_key": 1},
-                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
-                        },
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
                     },
-                },
-                "type": "object",
-            },
-            "first_key_second_key": {
-                "properties": {
-                    "first_key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "Value1",
-                        "enum": ["Value1", "Value2"],
-                    },
-                    "second_key": {"type": "integer", "readOnly": False, "example": 1},
                 },
                 "type": "object",
             },
             "TestCollection_PutRequestModel": {
                 "properties": {
-                    "bool_field": {
-                        "type": "boolean",
-                        "readOnly": False,
-                        "example": True,
-                    },
                     "key": {
                         "type": "string",
                         "readOnly": False,
@@ -326,24 +256,14 @@ def test_open_api_definition(client):
                     "list_field": {
                         "type": "array",
                         "readOnly": False,
-                        "example": [{"first_key": "Value1", "second_key": 1}],
-                        "items": {
-                            "readOnly": False,
-                            "default": {"first_key": None, "second_key": None},
-                            "example": {"first_key": "Value1", "second_key": 1},
-                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
-                        },
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
                     },
                 },
                 "type": "object",
             },
             "TestCollection_GetResponseModel": {
                 "properties": {
-                    "bool_field": {
-                        "type": "boolean",
-                        "readOnly": False,
-                        "example": True,
-                    },
                     "key": {
                         "type": "string",
                         "readOnly": False,
@@ -352,13 +272,8 @@ def test_open_api_definition(client):
                     "list_field": {
                         "type": "array",
                         "readOnly": False,
-                        "example": [{"first_key": "Value1", "second_key": 1}],
-                        "items": {
-                            "readOnly": False,
-                            "default": {"first_key": None, "second_key": None},
-                            "example": {"first_key": "Value1", "second_key": 1},
-                            "allOf": [{"$ref": "#/definitions/first_key_second_key"}],
-                        },
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
                     },
                 },
                 "type": "object",
@@ -376,33 +291,28 @@ def test_post_list_of_dict_is_valid(controller):
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": EnumTest.Value2, "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
-            "bool_field": False,
         }
     ) == {
-        "bool_field": False,
         "key": "my_key",
         "list_field": [
-            {"first_key": "Value1", "second_key": 1},
-            {"first_key": "Value2", "second_key": 2},
+            {"first_key": "key1", "second_key": 1},
+            {"first_key": "key2", "second_key": 2},
         ],
     }
 
 
 def test_post_optional_missing_list_of_dict_is_valid(controller):
-    assert controller.post({"key": "my_key", "bool_field": False}) == {
-        "bool_field": False,
-        "key": "my_key",
-        "list_field": None,
-    }
+    assert controller.post({"key": "my_key"}) == {"key": "my_key", "list_field": None}
 
 
 def test_post_optional_list_of_dict_as_none_is_valid(controller):
-    assert controller.post(
-        {"key": "my_key", "bool_field": False, "list_field": None}
-    ) == {"bool_field": False, "key": "my_key", "list_field": None}
+    assert controller.post({"key": "my_key", "list_field": None}) == {
+        "key": "my_key",
+        "list_field": None,
+    }
 
 
 def test_get_list_of_dict_is_valid(controller):
@@ -410,26 +320,24 @@ def test_get_list_of_dict_is_valid(controller):
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": EnumTest.Value2, "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
-            "bool_field": False,
         }
     )
     assert controller.get(
         {
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ]
         }
     ) == [
         {
-            "bool_field": False,
             "key": "my_key",
             "list_field": [
-                {"first_key": "Value1", "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
         }
     ]
@@ -440,19 +348,17 @@ def test_get_optional_list_of_dict_as_none_is_skipped(controller):
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": EnumTest.Value2, "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
-            "bool_field": False,
         }
     )
     assert controller.get({"list_field": None}) == [
         {
-            "bool_field": False,
             "key": "my_key",
             "list_field": [
-                {"first_key": "Value1", "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
         }
     ]
@@ -463,18 +369,17 @@ def test_delete_list_of_dict_is_valid(controller):
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": EnumTest.Value2, "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
-            "bool_field": False,
         }
     )
     assert (
         controller.delete(
             {
                 "list_field": [
-                    {"first_key": EnumTest.Value1, "second_key": 1},
-                    {"first_key": "Value2", "second_key": 2},
+                    {"first_key": "key1", "second_key": 1},
+                    {"first_key": "key2", "second_key": 2},
                 ]
             }
         )
@@ -487,10 +392,9 @@ def test_delete_optional_list_of_dict_as_none_is_valid(controller):
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": EnumTest.Value2, "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
-            "bool_field": False,
         }
     )
     assert controller.delete({"list_field": None}) == 1
@@ -501,36 +405,32 @@ def test_put_list_of_dict_is_valid(controller):
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": EnumTest.Value2, "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
-            "bool_field": False,
         }
     )
     assert controller.put(
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value2, "second_key": 10},
-                {"first_key": EnumTest.Value1, "second_key": 2},
+                {"first_key": "key2", "second_key": 10},
+                {"first_key": "key1", "second_key": 2},
             ],
-            "bool_field": True,
         }
     ) == (
         {
-            "bool_field": False,
             "key": "my_key",
             "list_field": [
-                {"first_key": "Value1", "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
         },
         {
-            "bool_field": True,
             "key": "my_key",
             "list_field": [
-                {"first_key": "Value2", "second_key": 10},
-                {"first_key": "Value1", "second_key": 2},
+                {"first_key": "key2", "second_key": 10},
+                {"first_key": "key1", "second_key": 2},
             ],
         },
     )
@@ -541,38 +441,32 @@ def test_put_without_optional_list_of_dict_is_valid(controller):
         {
             "key": "my_key",
             "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": EnumTest.Value2, "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
-            "bool_field": False,
         }
     )
-    assert controller.put({"key": "my_key", "bool_field": True}) == (
+    assert controller.put({"key": "my_key"}) == (
         {
-            "bool_field": False,
             "key": "my_key",
             "list_field": [
-                {"first_key": "Value1", "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
         },
         {
-            "bool_field": True,
             "key": "my_key",
             "list_field": [
-                {"first_key": "Value1", "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
+                {"first_key": "key1", "second_key": 1},
+                {"first_key": "key2", "second_key": 2},
             ],
         },
     )
 
 
-def test_query_get_parser_with_list_of_dict(client):
-    response = client.get(
-        "/test_parsers?bool_field=true&key=test&list_field=[1,2]&limit=1&offset=0"
-    )
+def test_query_get_parser_with_list(client):
+    response = client.get("/test_parsers?key=test&list_field=[1,2]&limit=1&offset=0")
     assert response.json == {
-        "bool_field": [True],
         "key": ["test"],
         "limit": 1,
         "list_field": [[1, 2]],
@@ -580,10 +474,6 @@ def test_query_get_parser_with_list_of_dict(client):
     }
 
 
-def test_query_delete_parser_with_list_of_dict(client):
-    response = client.delete("/test_parsers?bool_field=true&key=test&list_field=[1,2]")
-    assert response.json == {
-        "bool_field": [True],
-        "key": ["test"],
-        "list_field": [[1, 2]],
-    }
+def test_query_delete_parser_with_list(client):
+    response = client.delete("/test_parsers?key=test&list_field=[1,2]")
+    assert response.json == {"key": ["test"], "list_field": [[1, 2]]}
