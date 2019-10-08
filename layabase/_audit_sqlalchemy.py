@@ -90,11 +90,7 @@ def _create_from(mixin, model, *bases):
             row["audit_user"] = current_user_name()
             row["audit_date_utc"] = datetime.datetime.utcnow().isoformat()
             row["audit_action"] = action.value
-            try:
-                row_model = cls.schema().load(row, session=cls._session)
-            except ValidationError as e:
-                raise ValidationFailed(row, e.messages)
             # Let any error be handled by the caller (main model), same for commit
-            cls._session.add(row_model)
+            cls._session.add(cls.schema().load(row, session=cls._session))
 
     return AuditModel
