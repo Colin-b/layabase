@@ -114,64 +114,6 @@ def test_open_api_definition(client, controller1):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
@@ -231,6 +173,64 @@ def test_open_api_definition(client, controller1):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "mandatory",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -360,14 +360,14 @@ def test_open_api_definition(client, controller1):
                 }
             },
             "/test_parsers": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
                     "tags": ["Test"],
                 },
             },
@@ -380,27 +380,51 @@ def test_open_api_definition(client, controller1):
             "TestTable_PostRequestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": 1},
-                    "optional": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },
             "TestTable_PutRequestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": 1},
-                    "optional": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },
             "TestTable_GetResponseModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": 1},
-                    "optional": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },
@@ -421,21 +445,35 @@ def test_open_api_definition(client, controller1):
             "TestTable_GetAuditResponseModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": 1},
-                    "optional": {"type": "string", "example": "sample_value"},
-                    "revision": {"type": "integer", "readOnly": True, "example": 1},
-                    "audit_user": {"type": "string", "example": "sample_value"},
-                    "audit_date_utc": {
+                    "key": {
                         "type": "string",
-                        "format": "date-time",
-                        "example": "2017-09-24T15:36:09",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
                     },
                     "audit_action": {
                         "type": "string",
+                        "readOnly": False,
                         "example": "I",
                         "enum": ["I", "U", "D"],
                     },
+                    "audit_date_utc": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
+                    },
+                    "audit_user": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample audit_user",
+                    },
+                    "revision": {"type": "integer", "readOnly": True, "example": 1},
                 },
                 "type": "object",
             },

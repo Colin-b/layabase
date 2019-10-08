@@ -59,7 +59,7 @@ def request_field(column: sqlalchemy.Column) -> flask_restplus.fields.Raw:
     return request_field_type(column.type)(
         required=column.primary_key or column.nullable is False,
         example=_get_example(column),
-        description=column.description,
+        description=column.doc,
         enum=_get_choices(column),
         default=column.default.arg if column.default else None,
         # Compare to True because value might be set to "auto" str
@@ -143,7 +143,7 @@ def get_description_response_fields(table) -> Dict[str, flask_restplus.fields.Ra
             name: flask_restplus.fields.String(
                 required=column.primary_key or column.nullable is False,
                 example="column",
-                description=column.description,
+                description=column.doc,
             )
             for name, column in table.__dict__.items()
             if isinstance(column, sqlalchemy.Column)

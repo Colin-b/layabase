@@ -179,7 +179,7 @@ def get_audit_response_fields(
     fields["audit_user"] = flask_restplus.fields.String(
         example="sample audit_user", readonly=False
     )
-    fields["revision"] = flask_restplus.fields.Integer(example=1, readonly=False)
+    fields["revision"] = flask_restplus.fields.Integer(example=1, readonly=True)
 
     return fields
 

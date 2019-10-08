@@ -121,57 +121,6 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestCollectionVersioned_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestCollectionVersioned_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "enum_fld",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
@@ -217,6 +166,57 @@ def test_open_api_definition(client):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollectionVersioned_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_fld",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollectionVersioned_PutRequestModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -442,48 +442,48 @@ def test_open_api_definition(client):
         "definitions": {
             "TestCollectionVersioned_PostRequestModel": {
                 "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
                     "enum_fld": {
                         "type": "string",
                         "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
                     },
                 },
                 "type": "object",
             },
             "TestCollectionVersioned_PutRequestModel": {
                 "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
                     "enum_fld": {
                         "type": "string",
                         "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
                     },
                 },
                 "type": "object",
             },
             "TestCollectionVersioned_GetResponseModel": {
                 "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
                     "enum_fld": {
                         "type": "string",
                         "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
                     },
                 },
                 "type": "object",
@@ -507,23 +507,12 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample audit_user",
                     },
-                    "revision": {"type": "integer", "readOnly": False, "example": 1},
+                    "revision": {"type": "integer", "readOnly": True, "example": 1},
                 },
                 "type": "object",
             },
             "TestCollectionVersioned_GetHistoryResponseModel": {
                 "properties": {
-                    "enum_fld": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "Value1",
-                        "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
-                    },
                     "valid_since_revision": {
                         "type": "integer",
                         "description": "Record is valid since this revision (included).",
@@ -535,6 +524,17 @@ def test_open_api_definition(client):
                         "description": "Record is valid until this revision (excluded).",
                         "readOnly": False,
                         "example": 1,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "enum_fld": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
                     },
                 },
                 "type": "object",
