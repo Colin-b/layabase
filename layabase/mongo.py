@@ -201,7 +201,7 @@ class Column:
         )
 
     def __str__(self):
-        return f"{self.name}"
+        return self.name
 
     def validate_query(self, filters: dict) -> dict:
         """
@@ -560,10 +560,6 @@ class Column:
             return {self.name: [f"Not a valid {self.field_type.__name__}."]}
 
         return {}
-
-    @staticmethod
-    def _deserialize_comparison_signs_if_exists(comparison_sign, value):
-        return {_operators[comparison_sign]: value}
 
     def deserialize_query(self, filters: dict):
         """
