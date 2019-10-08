@@ -6,7 +6,7 @@ import pytest
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 @pytest.fixture
@@ -14,9 +14,9 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(str, is_primary_key=True)
-        date_str = layabase._database_mongo.Column(datetime.date)
-        datetime_str = layabase._database_mongo.Column(datetime.datetime)
+        key = layabase.mongo.Column(str, is_primary_key=True)
+        date_str = layabase.mongo.Column(datetime.date)
+        datetime_str = layabase.mongo.Column(datetime.datetime)
 
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])

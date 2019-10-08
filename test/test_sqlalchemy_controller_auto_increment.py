@@ -103,49 +103,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "enum_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional_with_default",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
@@ -208,6 +165,49 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional_with_default",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
             }
         },
         "info": {"title": "API", "version": "1.0"},
@@ -222,11 +222,13 @@ def test_open_api_definition(client):
                     "enum_field": {
                         "type": "string",
                         "description": "Test Documentation",
+                        "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
                     },
                     "optional_with_default": {
                         "type": "string",
+                        "readOnly": False,
                         "default": "Test value",
                         "example": "Test value",
                     },
@@ -240,11 +242,13 @@ def test_open_api_definition(client):
                     "enum_field": {
                         "type": "string",
                         "description": "Test Documentation",
+                        "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
                     },
                     "optional_with_default": {
                         "type": "string",
+                        "readOnly": False,
                         "default": "Test value",
                         "example": "Test value",
                     },
@@ -258,11 +262,13 @@ def test_open_api_definition(client):
                     "enum_field": {
                         "type": "string",
                         "description": "Test Documentation",
+                        "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
                     },
                     "optional_with_default": {
                         "type": "string",
+                        "readOnly": False,
                         "default": "Test value",
                         "example": "Test value",
                     },

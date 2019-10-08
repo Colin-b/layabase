@@ -9,6 +9,13 @@ def test_str_column_cannot_auto_increment():
     assert str(exception_info.value) == "Only int fields can be auto incremented."
 
 
+def test_column_str():
+    class TestCollection:
+        my_column = layabase.mongo.Column()
+
+    assert str(TestCollection.my_column) == "my_column"
+
+
 def test_auto_incremented_field_cannot_be_non_nullable():
     with pytest.raises(Exception) as exception_info:
         layabase.mongo.Column(int, should_auto_increment=True, is_nullable=False)

@@ -4,7 +4,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 @pytest.fixture
@@ -12,10 +12,10 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        float_key = layabase._database_mongo.Column(float, is_primary_key=True)
-        float_with_default = layabase._database_mongo.Column(float, default_value=34)
-        dict_field = layabase._database_mongo.Column(dict, is_required=True)
-        list_field = layabase._database_mongo.Column(list, is_required=True)
+        float_key = layabase.mongo.Column(float, is_primary_key=True)
+        float_with_default = layabase.mongo.Column(float, default_value=34)
+        dict_field = layabase.mongo.Column(dict, is_required=True)
+        list_field = layabase.mongo.Column(list, is_required=True)
 
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])

@@ -218,27 +218,51 @@ def test_open_api_definition(client):
             "TestTable_PostRequestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": 1},
-                    "optional": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },
             "TestTable_PutRequestModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": 1},
-                    "optional": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },
             "TestTable_GetResponseModel": {
                 "required": ["key", "mandatory"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "mandatory": {"type": "integer", "example": 1},
-                    "optional": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },

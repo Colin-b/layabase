@@ -5,7 +5,7 @@ import flask_restplus
 import pytest
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 class EnumTest(enum.Enum):
@@ -18,20 +18,16 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(is_primary_key=True)
-        list_field = layabase._database_mongo.ListColumn(
-            layabase._database_mongo.DictColumn(
+        key = layabase.mongo.Column(is_primary_key=True)
+        list_field = layabase.mongo.ListColumn(
+            layabase.mongo.DictColumn(
                 fields={
-                    "first_key": layabase._database_mongo.Column(
-                        EnumTest, is_nullable=False
-                    ),
-                    "second_key": layabase._database_mongo.Column(
-                        int, is_nullable=False
-                    ),
+                    "first_key": layabase.mongo.Column(EnumTest, is_nullable=False),
+                    "second_key": layabase.mongo.Column(int, is_nullable=False),
                 }
             )
         )
-        bool_field = layabase._database_mongo.Column(bool)
+        bool_field = layabase.mongo.Column(bool)
 
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
@@ -376,14 +372,7 @@ def test_open_api_definition(client):
 
 
 def test_post_list_of_dict_is_valid(controller):
-    assert {
-        "bool_field": False,
-        "key": "my_key",
-        "list_field": [
-            {"first_key": "Value1", "second_key": 1},
-            {"first_key": "Value2", "second_key": 2},
-        ],
-    } == controller.post(
+    assert controller.post(
         {
             "key": "my_key",
             "list_field": [
@@ -392,23 +381,28 @@ def test_post_list_of_dict_is_valid(controller):
             ],
             "bool_field": False,
         }
-    )
+    ) == {
+        "bool_field": False,
+        "key": "my_key",
+        "list_field": [
+            {"first_key": "Value1", "second_key": 1},
+            {"first_key": "Value2", "second_key": 2},
+        ],
+    }
 
 
 def test_post_optional_missing_list_of_dict_is_valid(controller):
-    assert {
+    assert controller.post({"key": "my_key", "bool_field": False}) == {
         "bool_field": False,
         "key": "my_key",
         "list_field": None,
-    } == controller.post({"key": "my_key", "bool_field": False})
+    }
 
 
 def test_post_optional_list_of_dict_as_none_is_valid(controller):
-    assert {
-        "bool_field": False,
-        "key": "my_key",
-        "list_field": None,
-    } == controller.post({"key": "my_key", "bool_field": False, "list_field": None})
+    assert controller.post(
+        {"key": "my_key", "bool_field": False, "list_field": None}
+    ) == {"bool_field": False, "key": "my_key", "list_field": None}
 
 
 def test_get_list_of_dict_is_valid(controller):
@@ -422,7 +416,14 @@ def test_get_list_of_dict_is_valid(controller):
             "bool_field": False,
         }
     )
-    assert [
+    assert controller.get(
+        {
+            "list_field": [
+                {"first_key": EnumTest.Value1, "second_key": 1},
+                {"first_key": "Value2", "second_key": 2},
+            ]
+        }
+    ) == [
         {
             "bool_field": False,
             "key": "my_key",
@@ -431,14 +432,7 @@ def test_get_list_of_dict_is_valid(controller):
                 {"first_key": "Value2", "second_key": 2},
             ],
         }
-    ] == controller.get(
-        {
-            "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
-            ]
-        }
-    )
+    ]
 
 
 def test_get_optional_list_of_dict_as_none_is_skipped(controller):
@@ -452,7 +446,7 @@ def test_get_optional_list_of_dict_as_none_is_skipped(controller):
             "bool_field": False,
         }
     )
-    assert [
+    assert controller.get({"list_field": None}) == [
         {
             "bool_field": False,
             "key": "my_key",
@@ -461,7 +455,7 @@ def test_get_optional_list_of_dict_as_none_is_skipped(controller):
                 {"first_key": "Value2", "second_key": 2},
             ],
         }
-    ] == controller.get({"list_field": None})
+    ]
 
 
 def test_delete_list_of_dict_is_valid(controller):
@@ -475,13 +469,16 @@ def test_delete_list_of_dict_is_valid(controller):
             "bool_field": False,
         }
     )
-    assert 1 == controller.delete(
-        {
-            "list_field": [
-                {"first_key": EnumTest.Value1, "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
-            ]
-        }
+    assert (
+        controller.delete(
+            {
+                "list_field": [
+                    {"first_key": EnumTest.Value1, "second_key": 1},
+                    {"first_key": "Value2", "second_key": 2},
+                ]
+            }
+        )
+        == 1
     )
 
 
@@ -496,7 +493,7 @@ def test_delete_optional_list_of_dict_as_none_is_valid(controller):
             "bool_field": False,
         }
     )
-    assert 1 == controller.delete({"list_field": None})
+    assert controller.delete({"list_field": None}) == 1
 
 
 def test_put_list_of_dict_is_valid(controller):
@@ -510,7 +507,16 @@ def test_put_list_of_dict_is_valid(controller):
             "bool_field": False,
         }
     )
-    assert (
+    assert controller.put(
+        {
+            "key": "my_key",
+            "list_field": [
+                {"first_key": EnumTest.Value2, "second_key": 10},
+                {"first_key": EnumTest.Value1, "second_key": 2},
+            ],
+            "bool_field": True,
+        }
+    ) == (
         {
             "bool_field": False,
             "key": "my_key",
@@ -527,15 +533,6 @@ def test_put_list_of_dict_is_valid(controller):
                 {"first_key": "Value1", "second_key": 2},
             ],
         },
-    ) == controller.put(
-        {
-            "key": "my_key",
-            "list_field": [
-                {"first_key": EnumTest.Value2, "second_key": 10},
-                {"first_key": EnumTest.Value1, "second_key": 2},
-            ],
-            "bool_field": True,
-        }
     )
 
 
@@ -550,7 +547,7 @@ def test_put_without_optional_list_of_dict_is_valid(controller):
             "bool_field": False,
         }
     )
-    assert (
+    assert controller.put({"key": "my_key", "bool_field": True}) == (
         {
             "bool_field": False,
             "key": "my_key",
@@ -567,7 +564,7 @@ def test_put_without_optional_list_of_dict_is_valid(controller):
                 {"first_key": "Value2", "second_key": 2},
             ],
         },
-    ) == controller.put({"key": "my_key", "bool_field": True})
+    )
 
 
 def test_query_get_parser_with_list_of_dict(client):

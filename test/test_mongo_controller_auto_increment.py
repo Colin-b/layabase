@@ -6,7 +6,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 class EnumTest(enum.Enum):
@@ -19,15 +19,13 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(
+        key = layabase.mongo.Column(
             int, is_primary_key=True, should_auto_increment=True
         )
-        enum_field = layabase._database_mongo.Column(
+        enum_field = layabase.mongo.Column(
             EnumTest, is_nullable=False, description="Test Documentation"
         )
-        optional_with_default = layabase._database_mongo.Column(
-            str, default_value="Test value"
-        )
+        optional_with_default = layabase.mongo.Column(str, default_value="Test value")
 
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])

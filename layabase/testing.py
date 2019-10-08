@@ -10,13 +10,11 @@ def reset(base):
     :param base: database object as returned by the load function (Mandatory).
     """
     if hasattr(base, "is_mongos"):
-        import layabase._database_mongo as database_mongo
-
-        database_mongo._reset(base)
+        from layabase._database_mongo import _reset
     else:
-        import layabase._database_sqlalchemy as database_sqlalchemy
+        from layabase._database_sqlalchemy import _reset
 
-        database_sqlalchemy._reset(base)
+    _reset(base)
 
 
 _date_time_for_tests = datetime.datetime(2018, 10, 11, 15, 5, 5, 663979)

@@ -173,10 +173,15 @@ def test_open_api_definition(client):
             "TestTable_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                     "time_field": {
                         "type": "string",
                         "format": "date-time",
+                        "readOnly": False,
                         "example": "15:36:09",
                     },
                 },
@@ -185,10 +190,15 @@ def test_open_api_definition(client):
             "TestTable_PutRequestModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                     "time_field": {
                         "type": "string",
                         "format": "date-time",
+                        "readOnly": False,
                         "example": "15:36:09",
                     },
                 },
@@ -197,10 +207,15 @@ def test_open_api_definition(client):
             "TestTable_GetResponseModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                     "time_field": {
                         "type": "string",
                         "format": "date-time",
+                        "readOnly": False,
                         "example": "15:36:09",
                     },
                 },

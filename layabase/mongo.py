@@ -2,11 +2,12 @@ import enum
 import datetime
 from typing import Dict, List, Union
 
+import pymongo.database
 import iso8601
 from bson.objectid import ObjectId
 from bson.errors import BSONError
 
-from layabase import ComparisonSigns
+from layabase import ComparisonSigns, CRUDController
 
 
 @enum.unique
@@ -201,7 +202,7 @@ class Column:
         )
 
     def __str__(self):
-        return f"{self.name}"
+        return self.name
 
     def validate_query(self, filters: dict) -> dict:
         """
@@ -560,10 +561,6 @@ class Column:
             return {self.name: [f"Not a valid {self.field_type.__name__}."]}
 
         return {}
-
-    @staticmethod
-    def _deserialize_comparison_signs_if_exists(comparison_sign, value):
-        return {_operators[comparison_sign]: value}
 
     def deserialize_query(self, filters: dict):
         """
@@ -950,13 +947,10 @@ class DictColumn(Column):
 
     def _default_description_model(self):
         """
-        :return: A CRUDModel describing every dictionary fields.
+        :return: A class describing every dictionary fields.
         """
-        from layabase._database_mongo import _CRUDModel
-
-        return type(
-            f"{self.name}_DefaultDescriptionModel", (_CRUDModel,), self._default_fields
-        )
+        # Create a class to ensure Column name is set
+        return type(f"{self.name}_DefaultDescriptionModel", (), self._default_fields)
 
     def _description_model(self, model_as_dict: dict):
         """
@@ -1257,3 +1251,41 @@ class ListColumn(Column):
 
     def example(self):
         return [self.list_item_column.example()]
+
+
+def link(controller: CRUDController, base: pymongo.database.Database):
+    """
+    Link controller related collection to provided database.
+
+    :param base: As returned by layabase.load function
+    """
+    if controller.history:
+        import layabase._versioning_mongo
+
+        crud_model = layabase._versioning_mongo.VersionedCRUDModel
+    else:
+        from layabase._database_mongo import _CRUDModel
+
+        crud_model = _CRUDModel
+
+    class ControllerModel(
+        controller.table_or_collection,
+        crud_model,
+        base=base,
+        skip_name_check=controller.skip_name_check,
+        skip_unknown_fields=controller.skip_unknown_fields,
+        skip_update_indexes=controller.skip_update_indexes,
+        skip_log_for_unknown_fields=controller.skip_log_for_unknown_fields,
+    ):
+        pass
+
+    controller._model = ControllerModel
+
+    if controller.audit:
+        from layabase._audit_mongo import _create_from
+
+        ControllerModel.audit_model = _create_from(
+            mixin=controller.table_or_collection, model=ControllerModel, base=base
+        )
+
+    controller._model_description_dictionary = ControllerModel.description_dictionary()
