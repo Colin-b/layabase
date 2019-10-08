@@ -10,8 +10,10 @@ def test_str_column_cannot_auto_increment():
 
 
 def test_column_str():
-    my_column = layabase.mongo.Column()
-    assert str(my_column) == "my_column"
+    class TestCollection:
+        my_column = layabase.mongo.Column()
+
+    assert str(TestCollection.my_column) == "my_column"
 
 
 def test_auto_incremented_field_cannot_be_non_nullable():
