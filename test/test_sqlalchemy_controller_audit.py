@@ -888,6 +888,24 @@ def test_open_api_definition_without_offset_support(monkeypatch):
     }
 
 
+def test_query_without_being_in_memory(monkeypatch):
+    class TestTable:
+        __tablename__ = "test"
+
+        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        optional = sqlalchemy.Column(sqlalchemy.String)
+
+    controller = layabase.CRUDController(TestTable, audit=True)
+    monkeypatch.setattr(
+        layabase._database_sqlalchemy, "_in_memory", lambda *args: False
+    )
+    layabase.load("sqlite:///:memory:", [controller])
+
+    # Assert that connection still works
+    assert controller.get({}) == []
+
+
 def test_post_with_nothing_is_invalid(controllers, controller1):
     with pytest.raises(ValidationFailed) as exception_info:
         controller1.post(None)
