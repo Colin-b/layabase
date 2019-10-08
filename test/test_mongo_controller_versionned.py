@@ -3,7 +3,7 @@ import enum
 import flask
 import flask_restplus
 import pytest
-from layaberr import ValidationFailed
+from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 import layabase
 import layabase.mongo
@@ -34,7 +34,7 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
@@ -77,7 +77,9 @@ def app(controller):
     return application
 
 
-def test_get_url_with_primary_key_in_document_and_many_documents(controller):
+def test_get_url_with_primary_key_in_document_and_many_documents(
+    controller: layabase.CRUDController,
+):
     documents = [
         {
             "key": "first",
@@ -95,7 +97,9 @@ def test_get_url_with_primary_key_in_document_and_many_documents(controller):
     assert controller.get_url("/test", *documents) == "/test?key=first&key=second"
 
 
-def test_get_url_with_primary_key_in_document_and_a_single_document(controller):
+def test_get_url_with_primary_key_in_document_and_a_single_document(
+    controller: layabase.CRUDController,
+):
     document = {
         "key": "first",
         "dict_field": {"first_key": "Value1", "second_key": 1},
@@ -105,11 +109,13 @@ def test_get_url_with_primary_key_in_document_and_a_single_document(controller):
     assert controller.get_url("/test", document) == "/test?key=first"
 
 
-def test_get_url_with_primary_key_in_document_and_no_document(controller):
+def test_get_url_with_primary_key_in_document_and_no_document(
+    controller: layabase.CRUDController,
+):
     assert controller.get_url("/test") == "/test"
 
 
-def test_post_versioning_is_valid(controller):
+def test_post_versioning_is_valid(controller: layabase.CRUDController):
     assert controller.post(
         {
             "key": "first",
@@ -140,7 +146,9 @@ def test_post_versioning_is_valid(controller):
     ]
 
 
-def test_post_without_providing_required_nullable_dict_column_is_valid(controller):
+def test_post_without_providing_required_nullable_dict_column_is_valid(
+    controller: layabase.CRUDController,
+):
     assert controller.post({"key": "first"}) == {
         "dict_field": {"first_key": None, "second_key": None},
         "key": "first",
@@ -149,7 +157,29 @@ def test_post_without_providing_required_nullable_dict_column_is_valid(controlle
     }
 
 
-def test_put_without_providing_required_nullable_dict_column_is_valid(controller):
+def test_put_many_without_previous(controller: layabase.CRUDController):
+    controller.post({"key": "first"})
+    with pytest.raises(ModelCouldNotBeFound) as exception_info:
+        controller.put_many([{"key": "unknown"}])
+    assert exception_info.value.requested_data == {
+        "key": "unknown",
+        "valid_until_revision": -1,
+    }
+
+
+def test_rollback_invalid_query(controller: layabase.CRUDController):
+    controller.post({"key": "first"})
+    with pytest.raises(ValidationFailed) as exception_info:
+        controller.rollback_to({"revision": 0, "dict_field.second_key": "invalid"})
+    assert exception_info.value.errors == {
+        "dict_field.second_key": ["Not a valid int."]
+    }
+    assert exception_info.value.received_data == {"dict_field.second_key": "invalid"}
+
+
+def test_put_without_providing_required_nullable_dict_column_is_valid(
+    controller: layabase.CRUDController,
+):
     controller.post(
         {"key": "first", "dict_field": {"first_key": "Value1", "second_key": 0}}
     )
@@ -169,7 +199,7 @@ def test_put_without_providing_required_nullable_dict_column_is_valid(controller
     )
 
 
-def test_put_versioning_is_valid(controller):
+def test_put_versioning_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -217,7 +247,7 @@ def test_put_versioning_is_valid(controller):
     ]
 
 
-def test_delete_versioning_is_valid(controller):
+def test_delete_versioning_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -244,7 +274,7 @@ def test_delete_versioning_is_valid(controller):
     assert controller.get({}) == []
 
 
-def test_rollback_deleted_versioning_is_valid(controller):
+def test_rollback_deleted_versioning_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -286,7 +316,9 @@ def test_rollback_deleted_versioning_is_valid(controller):
     ]
 
 
-def test_rollback_before_update_deleted_versioning_is_valid(controller):
+def test_rollback_before_update_deleted_versioning_is_valid(
+    controller: layabase.CRUDController,
+):
     controller.post(
         {
             "key": "first",
@@ -328,7 +360,9 @@ def test_rollback_before_update_deleted_versioning_is_valid(controller):
     ]
 
 
-def test_rollback_already_valid_versioning_is_valid(controller):
+def test_rollback_already_valid_versioning_is_valid(
+    controller: layabase.CRUDController,
+):
     controller.post(
         {
             "key": "first",
@@ -363,7 +397,7 @@ def test_rollback_already_valid_versioning_is_valid(controller):
     ]
 
 
-def test_rollback_unknown_criteria_is_valid(controller):
+def test_rollback_unknown_criteria_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -399,7 +433,7 @@ def test_rollback_unknown_criteria_is_valid(controller):
     ]
 
 
-def test_versioned_many(controller):
+def test_versioned_many(controller: layabase.CRUDController):
     controller.post_many(
         [
             {
@@ -449,7 +483,7 @@ def test_versioned_many(controller):
     ]
 
 
-def test_rollback_without_revision_is_invalid(controller):
+def test_rollback_without_revision_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.rollback_to({"key": "unknown"})
     assert exception_info.value.errors == {
@@ -458,18 +492,18 @@ def test_rollback_without_revision_is_invalid(controller):
     assert exception_info.value.received_data == {"key": "unknown"}
 
 
-def test_rollback_with_non_int_revision_is_invalid(controller):
+def test_rollback_with_non_int_revision_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.rollback_to({"revision": "invalid revision"})
     assert exception_info.value.errors == {"revision": ["Not a valid int."]}
     assert exception_info.value.received_data == {"revision": "invalid revision"}
 
 
-def test_rollback_with_negative_revision_is_valid(controller):
+def test_rollback_with_negative_revision_is_valid(controller: layabase.CRUDController):
     assert controller.rollback_to({"revision": -1}) == 0
 
 
-def test_rollback_before_existing_is_valid(controller):
+def test_rollback_before_existing_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -489,11 +523,11 @@ def test_rollback_before_existing_is_valid(controller):
     assert controller.get({"key": "second"}) == []
 
 
-def test_get_revision_is_valid_when_empty(controller):
+def test_get_revision_is_valid_when_empty(controller: layabase.CRUDController):
     assert controller._model.current_revision() == 0
 
 
-def test_get_revision_is_valid_when_1(controller):
+def test_get_revision_is_valid_when_1(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -504,7 +538,7 @@ def test_get_revision_is_valid_when_1(controller):
     assert controller._model.current_revision() == 1
 
 
-def test_get_revision_is_valid_when_2(controller):
+def test_get_revision_is_valid_when_2(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -522,7 +556,7 @@ def test_get_revision_is_valid_when_2(controller):
     assert controller._model.current_revision() == 2
 
 
-def test_rollback_to_0(controller):
+def test_rollback_to_0(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "first",
@@ -541,7 +575,7 @@ def test_rollback_to_0(controller):
     assert controller.get({}) == []
 
 
-def test_rollback_multiple_rows_is_valid(controller):
+def test_rollback_multiple_rows_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "1",
