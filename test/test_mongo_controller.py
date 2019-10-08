@@ -108,6 +108,16 @@ def test_post_with_empty_dict_is_invalid(controller):
     assert exception_info.value.received_data == {}
 
 
+def test_post_with_empty_dict_is_invalid_with_schemas(controller, client):
+    with pytest.raises(ValidationFailed) as exception_info:
+        controller.post({})
+    assert exception_info.value.errors == {
+        "key": ["Missing data for required field."],
+        "mandatory": ["Missing data for required field."],
+    }
+    assert exception_info.value.received_data == {}
+
+
 def test_post_with_list_is_invalid(controller):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post([""])
