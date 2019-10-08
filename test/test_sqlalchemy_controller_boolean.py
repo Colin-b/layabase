@@ -247,24 +247,48 @@ def test_open_api_definition(client):
             "TestTable_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "bool_field": {"type": "boolean", "example": True},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "bool_field": {
+                        "type": "boolean",
+                        "readOnly": False,
+                        "example": True,
+                    },
                 },
                 "type": "object",
             },
             "TestTable_PutRequestModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "bool_field": {"type": "boolean", "example": True},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "bool_field": {
+                        "type": "boolean",
+                        "readOnly": False,
+                        "example": True,
+                    },
                 },
                 "type": "object",
             },
             "TestTable_GetResponseModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
-                    "bool_field": {"type": "boolean", "example": True},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "bool_field": {
+                        "type": "boolean",
+                        "readOnly": False,
+                        "example": True,
+                    },
                 },
                 "type": "object",
             },
