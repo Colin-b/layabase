@@ -57,7 +57,8 @@ def all_request_fields(table) -> Dict[str, flask_restplus.fields.Raw]:
 
 def request_field(column: sqlalchemy.Column) -> flask_restplus.fields.Raw:
     return request_field_type(column.type)(
-        required=column.primary_key or column.nullable is False,
+        required=(column.primary_key or column.nullable is False)
+        and column.autoincrement is not True,
         example=_get_example(column),
         description=column.doc,
         enum=_get_choices(column),
@@ -141,7 +142,8 @@ def get_description_response_fields(table) -> Dict[str, flask_restplus.fields.Ra
     fields.update(
         {
             name: flask_restplus.fields.String(
-                required=column.primary_key or column.nullable is False,
+                required=(column.primary_key or column.nullable is False)
+                and column.autoincrement is not True,
                 example="column",
                 description=column.doc,
             )
