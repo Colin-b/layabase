@@ -1179,6 +1179,11 @@ def test_value_can_be_updated_to_previous_value(controller, mock_mongo_audit_dat
     ]
 
 
+def test_update_index(controller: layabase.CRUDController):
+    # Assert no error is thrown
+    controller._model.update_indexes()
+
+
 def test_delete_without_filter_is_removing_everything(
     controller, mock_mongo_audit_datetime
 ):

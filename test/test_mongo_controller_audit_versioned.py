@@ -621,6 +621,11 @@ def test_get_versioned_audit_after_post_put(
     }
 
 
+def test_update_index(controllers, controller_versioned: layabase.CRUDController):
+    # Assert no error is thrown
+    controller_versioned._model.update_indexes()
+
+
 def test_post_and_put_many(
     controllers,
     controller_versioned: layabase.CRUDController,

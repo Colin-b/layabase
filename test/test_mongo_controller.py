@@ -34,7 +34,7 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
@@ -80,25 +80,51 @@ def app(controller):
     return application
 
 
-def test_get_all_without_data_returns_empty_list(controller):
+def test_get_all_without_data_returns_empty_list(controller: layabase.CRUDController):
     assert controller.get({}) == []
 
 
-def test_post_with_nothing_is_invalid(controller):
+def test_get_one_with_validation_failure(controller: layabase.CRUDController):
+    with pytest.raises(ValidationFailed) as exception_info:
+        controller.get_one({"mandatory": "failure"})
+    assert exception_info.value.errors == {"mandatory": ["Not a valid int."]}
+    assert exception_info.value.received_data == {"mandatory": "failure"}
+
+
+def test_get_last(controller: layabase.CRUDController):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.get_last({"key": "my_key1"}) == {
+        "key": "my_key1",
+        "mandatory": 1,
+        "optional": "my_value1",
+    }
+
+
+def test_get_history(controller: layabase.CRUDController):
+    controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
+    controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
+    assert controller.get_history({}) == [
+        {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
+        {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
+    ]
+
+
+def test_post_with_nothing_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert not exception_info.value.received_data
 
 
-def test_post_list_with_nothing_is_invalid(controller):
+def test_post_list_with_nothing_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post_many(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == []
 
 
-def test_post_with_empty_dict_is_invalid(controller):
+def test_post_with_empty_dict_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post({})
     assert exception_info.value.errors == {
@@ -118,127 +144,145 @@ def test_post_with_empty_dict_is_invalid_with_schemas(controller, client):
     assert exception_info.value.received_data == {}
 
 
-def test_post_with_list_is_invalid(controller):
+def test_post_with_list_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post([""])
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert [""] == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == [""]
 
 
 def test_post_many_with_dict_is_invalid(controller, client):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post_many({""})
-    assert {"": ["Must be a list of dictionaries."]} == exception_info.value.errors
-    assert {""} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a list of dictionaries."]}
+    assert exception_info.value.received_data == {""}
 
 
-def test_put_with_list_is_invalid(controller):
+def test_post_many_with_dict_is_invalid_without_schema(controller):
+    with pytest.raises(ValidationFailed) as exception_info:
+        controller.post_many({""})
+    assert exception_info.value.errors == {"": ["Must be a list."]}
+    assert exception_info.value.received_data == {""}
+
+
+def test_put_with_list_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.put([""])
-    assert {"": ["Must be a dictionary."]} == exception_info.value.errors
-    assert [""] == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
+    assert exception_info.value.received_data == [""]
 
 
-def test_put_many_with_dict_is_invalid(controller):
+def test_put_many_with_dict_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.put_many({""})
-    assert {"": ["Must be a list."]} == exception_info.value.errors
-    assert {""} == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["Must be a list."]}
+    assert exception_info.value.received_data == {""}
 
 
-def test_post_many_with_empty_list_is_invalid(controller):
+def test_put_many_with_empty_list_is_invalid(controller: layabase.CRUDController):
+    with pytest.raises(ValidationFailed) as exception_info:
+        controller.put_many([])
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == []
+
+
+def test_post_many_with_empty_list_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post_many([])
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert [] == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data == []
 
 
-def test_put_with_nothing_is_invalid(controller):
+def test_put_with_nothing_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.put(None)
-    assert {"": ["No data provided."]} == exception_info.value.errors
-    assert None == exception_info.value.received_data
+    assert exception_info.value.errors == {"": ["No data provided."]}
+    assert exception_info.value.received_data is None
 
 
-def test_put_with_empty_dict_is_invalid(controller):
+def test_put_with_empty_dict_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.put({})
-    assert {"key": ["Missing data for required field."]} == exception_info.value.errors
-    assert {} == exception_info.value.received_data
+    assert exception_info.value.errors == {"key": ["Missing data for required field."]}
+    assert exception_info.value.received_data == {}
 
 
-def test_delete_without_nothing_do_not_fail(controller):
-    assert 0 == controller.delete({})
+def test_delete_without_nothing_do_not_fail(controller: layabase.CRUDController):
+    assert controller.delete({}) == 0
 
 
-def test_post_without_mandatory_field_is_invalid(controller):
+def test_post_without_mandatory_field_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post({"key": "my_key"})
-    assert {
+    assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
-    } == exception_info.value.errors
-    assert {"key": "my_key"} == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == {"key": "my_key"}
 
 
-def test_post_many_without_mandatory_field_is_invalid(controller):
+def test_post_many_without_mandatory_field_is_invalid(
+    controller: layabase.CRUDController,
+):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post_many([{"key": "my_key"}])
-    assert {
+    assert exception_info.value.errors == {
         0: {"mandatory": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"key": "my_key"}] == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == [{"key": "my_key"}]
 
 
-def test_post_without_key_is_invalid(controller):
+def test_post_without_key_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post({"mandatory": 1})
-    assert {"key": ["Missing data for required field."]} == exception_info.value.errors
-    assert {"mandatory": 1} == exception_info.value.received_data
+    assert exception_info.value.errors == {"key": ["Missing data for required field."]}
+    assert exception_info.value.received_data == {"mandatory": 1}
 
 
-def test_post_many_without_key_is_invalid(controller):
+def test_post_many_without_key_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post_many([{"mandatory": 1}])
-    assert {
+    assert exception_info.value.errors == {
         0: {"key": ["Missing data for required field."]}
-    } == exception_info.value.errors
-    assert [{"mandatory": 1}] == exception_info.value.received_data
+    }
+    assert exception_info.value.received_data == [{"mandatory": 1}]
 
 
-def test_post_with_wrong_type_is_invalid(controller):
+def test_post_with_wrong_type_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post({"key": datetime.date(2007, 12, 5), "mandatory": 1})
-    assert {"key": ["Not a valid str."]} == exception_info.value.errors
-    assert {
+    assert exception_info.value.errors == {"key": ["Not a valid str."]}
+    assert exception_info.value.received_data == {
         "key": datetime.date(2007, 12, 5),
         "mandatory": 1,
-    } == exception_info.value.received_data
+    }
 
 
-def test_post_int_instead_of_str_is_valid(controller):
-    assert {"key": "3", "mandatory": 1, "optional": None} == controller.post(
-        {"key": 3, "mandatory": 1}
-    )
+def test_post_int_instead_of_str_is_valid(controller: layabase.CRUDController):
+    assert controller.post({"key": 3, "mandatory": 1}) == {
+        "key": "3",
+        "mandatory": 1,
+        "optional": None,
+    }
 
 
-def test_post_boolean_instead_of_str_is_invalid(controller):
+def test_post_boolean_instead_of_str_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post({"key": True, "mandatory": 1})
     assert {"key": ["Not a valid str."]} == exception_info.value.errors
     assert {"key": True, "mandatory": 1} == exception_info.value.received_data
 
 
-def test_post_float_instead_of_str_is_valid(controller):
+def test_post_float_instead_of_str_is_valid(controller: layabase.CRUDController):
     assert {"key": "1.5", "mandatory": 1, "optional": None} == controller.post(
         {"key": 1.5, "mandatory": 1}
     )
 
 
-def test_rollback_without_versioning_is_valid(controller):
+def test_rollback_without_versioning_is_valid(controller: layabase.CRUDController):
     assert 0 == controller.rollback_to({"revision": "invalid revision"})
 
 
-def test_post_many_with_wrong_type_is_invalid(controller):
+def test_post_many_with_wrong_type_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post_many([{"key": datetime.date(2007, 12, 5), "mandatory": 1}])
     assert {0: {"key": ["Not a valid str."]}} == exception_info.value.errors
@@ -247,7 +291,7 @@ def test_post_many_with_wrong_type_is_invalid(controller):
     ] == exception_info.value.received_data
 
 
-def test_put_with_wrong_type_is_invalid(controller):
+def test_put_with_wrong_type_is_invalid(controller: layabase.CRUDController):
     controller.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
         controller.put({"key": "value1", "mandatory": "invalid value"})
@@ -258,13 +302,13 @@ def test_put_with_wrong_type_is_invalid(controller):
     } == exception_info.value.received_data
 
 
-def test_put_with_optional_as_none_is_valid(controller):
+def test_put_with_optional_as_none_is_valid(controller: layabase.CRUDController):
     controller.post({"key": "value1", "mandatory": 1})
     controller.put({"key": "value1", "mandatory": 1, "optional": None})
     assert [{"mandatory": 1, "key": "value1", "optional": None}] == controller.get({})
 
 
-def test_put_with_non_nullable_as_none_is_invalid(controller):
+def test_put_with_non_nullable_as_none_is_invalid(controller: layabase.CRUDController):
     controller.post({"key": "value1", "mandatory": 1})
     with pytest.raises(ValidationFailed) as exception_info:
         controller.put({"key": "value1", "mandatory": None})
@@ -274,13 +318,13 @@ def test_put_with_non_nullable_as_none_is_invalid(controller):
     assert {"key": "value1", "mandatory": None} == exception_info.value.received_data
 
 
-def test_post_without_optional_is_valid(controller):
+def test_post_without_optional_is_valid(controller: layabase.CRUDController):
     assert {"mandatory": 1, "key": "my_key", "optional": None} == controller.post(
         {"key": "my_key", "mandatory": 1}
     )
 
 
-def test_get_with_non_nullable_none_is_valid(controller):
+def test_get_with_non_nullable_none_is_valid(controller: layabase.CRUDController):
     assert {"mandatory": 1, "key": "my_key", "optional": None} == controller.post(
         {"key": "my_key", "mandatory": 1}
     )
@@ -289,7 +333,7 @@ def test_get_with_non_nullable_none_is_valid(controller):
     )
 
 
-def test_post_many_without_optional_is_valid(controller):
+def test_post_many_without_optional_is_valid(controller: layabase.CRUDController):
     assert [
         {"mandatory": 1, "key": "my_key", "optional": None},
         {"mandatory": 2, "key": "my_key2", "optional": None},
@@ -298,7 +342,7 @@ def test_post_many_without_optional_is_valid(controller):
     )
 
 
-def test_put_many_is_valid(controller):
+def test_put_many_is_valid(controller: layabase.CRUDController):
     controller.post_many(
         [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
     )
@@ -316,13 +360,13 @@ def test_put_many_is_valid(controller):
     )
 
 
-def test_post_with_optional_is_valid(controller):
+def test_post_with_optional_is_valid(controller: layabase.CRUDController):
     assert {"mandatory": 1, "key": "my_key", "optional": "my_value"} == controller.post(
         {"key": "my_key", "mandatory": 1, "optional": "my_value"}
     )
 
 
-def test_post_many_with_optional_is_valid(controller):
+def test_post_many_with_optional_is_valid(controller: layabase.CRUDController):
     assert [
         {"mandatory": 1, "key": "my_key", "optional": "my_value"},
         {"mandatory": 2, "key": "my_key2", "optional": "my_value2"},
@@ -334,7 +378,7 @@ def test_post_many_with_optional_is_valid(controller):
     )
 
 
-def test_post_with_unknown_field_is_valid(controller):
+def test_post_with_unknown_field_is_valid(controller: layabase.CRUDController):
     assert {"mandatory": 1, "key": "my_key", "optional": "my_value"} == controller.post(
         {
             "key": "my_key",
@@ -346,7 +390,7 @@ def test_post_with_unknown_field_is_valid(controller):
     )
 
 
-def test_post_many_with_unknown_field_is_valid(controller):
+def test_post_many_with_unknown_field_is_valid(controller: layabase.CRUDController):
     assert controller.post_many(
         [
             {
@@ -370,14 +414,16 @@ def test_post_many_with_unknown_field_is_valid(controller):
     ]
 
 
-def test_get_without_filter_is_retrieving_the_only_item(controller):
+def test_get_without_filter_is_retrieving_the_only_item(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert controller.get({}) == [
         {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
     ]
 
 
-def test_get_from_another_thread_than_post(controller):
+def test_get_from_another_thread_than_post(controller: layabase.CRUDController):
     def save_get_result():
         assert controller.get({}) == [
             {"mandatory": 1, "optional": "my_value1", "key": "my_key1"}
@@ -390,7 +436,9 @@ def test_get_from_another_thread_than_post(controller):
     get_thread.join()
 
 
-def test_get_without_filter_is_retrieving_everything_with_multiple_posts(controller):
+def test_get_without_filter_is_retrieving_everything_with_multiple_posts(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert controller.get({}) == [
@@ -399,7 +447,9 @@ def test_get_without_filter_is_retrieving_everything_with_multiple_posts(control
     ]
 
 
-def test_get_without_filter_is_retrieving_everything(controller):
+def test_get_without_filter_is_retrieving_everything(
+    controller: layabase.CRUDController,
+):
     controller.post_many(
         [
             {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -412,7 +462,9 @@ def test_get_without_filter_is_retrieving_everything(controller):
     ] == controller.get({})
 
 
-def test_get_with_filter_is_retrieving_subset_with_multiple_posts(controller):
+def test_get_with_filter_is_retrieving_subset_with_multiple_posts(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert [
@@ -420,7 +472,7 @@ def test_get_with_filter_is_retrieving_subset_with_multiple_posts(controller):
     ] == controller.get({"optional": "my_value1"})
 
 
-def test_get_with_filter_is_retrieving_subset(controller):
+def test_get_with_filter_is_retrieving_subset(controller: layabase.CRUDController):
     controller.post_many(
         [
             {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -432,7 +484,7 @@ def test_get_with_filter_is_retrieving_subset(controller):
     ] == controller.get({"optional": "my_value1"})
 
 
-def test_put_is_updating(controller):
+def test_put_is_updating(controller: layabase.CRUDController):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert (
         {"key": "my_key1", "mandatory": 1, "optional": "my_value1"},
@@ -443,13 +495,17 @@ def test_put_is_updating(controller):
     ] == controller.get({"mandatory": 1})
 
 
-def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(controller):
+def test_put_is_updating_and_previous_value_cannot_be_used_to_filter(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.put({"key": "my_key1", "optional": "my_value"})
     assert [] == controller.get({"optional": "my_value1"})
 
 
-def test_delete_with_filter_is_removing_the_proper_row(controller):
+def test_delete_with_filter_is_removing_the_proper_row(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert 1 == controller.delete({"key": "my_key1"})
@@ -458,7 +514,9 @@ def test_delete_with_filter_is_removing_the_proper_row(controller):
     ] == controller.get({})
 
 
-def test_delete_without_filter_is_removing_everything(controller):
+def test_delete_without_filter_is_removing_everything(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     assert 2 == controller.delete({})
@@ -772,7 +830,9 @@ def test_open_api_definition(client):
     }
 
 
-def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(controller):
+def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     controller.post({"key": "my_key3", "mandatory": 3, "optional": "my_value3"})
@@ -782,7 +842,9 @@ def test_get_with_limit_2_is_retrieving_subset_of_2_first_elements(controller):
     ] == controller.get({"limit": 2})
 
 
-def test_get_with_offset_1_is_retrieving_subset_of_n_minus_1_first_elements(controller):
+def test_get_with_offset_1_is_retrieving_subset_of_n_minus_1_first_elements(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     controller.post({"key": "my_key3", "mandatory": 3, "optional": "my_value3"})
@@ -792,7 +854,9 @@ def test_get_with_offset_1_is_retrieving_subset_of_n_minus_1_first_elements(cont
     ] == controller.get({"offset": 1})
 
 
-def test_get_with_limit_1_and_offset_1_is_retrieving_middle_element(controller):
+def test_get_with_limit_1_and_offset_1_is_retrieving_middle_element(
+    controller: layabase.CRUDController,
+):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
     controller.post({"key": "my_key3", "mandatory": 3, "optional": "my_value3"})
@@ -801,7 +865,7 @@ def test_get_with_limit_1_and_offset_1_is_retrieving_middle_element(controller):
     ] == controller.get({"offset": 1, "limit": 1})
 
 
-def test_get_model_description_returns_description(controller):
+def test_get_model_description_returns_description(controller: layabase.CRUDController):
     assert {
         "key": "key",
         "mandatory": "mandatory",
