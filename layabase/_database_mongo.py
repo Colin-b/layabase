@@ -49,7 +49,7 @@ class _CRUDModel:
             for field_name, field in inspect.getmembers(cls)
             if isinstance(field, Column)
         ]
-        # TODO Add a way to mark a model as not connected
+        # TODO Remove the need for this check, only create models with a base
         if base is not None:  # Allow to not provide base to create fake models
             if not skip_name_check and cls._is_forbidden():
                 raise Exception(

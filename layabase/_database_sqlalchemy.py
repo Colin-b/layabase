@@ -336,6 +336,7 @@ class CRUDModel:
     def schema(cls) -> ModelSchema:
         """
         Create a new Marshmallow SQL Alchemy schema instance.
+        TODO Remove the need for a new schema instance every time. Create it once and for all
 
         :return: The newly created schema instance.
         """
@@ -346,36 +347,7 @@ class CRUDModel:
                 ordered = True
                 unknown = EXCLUDE
 
-        # TODO Schema enrichment is now useless, remove it
-        schema = Schema(session=cls._session)
-        mapper = inspect(cls)
-        for attr in mapper.attrs:
-            schema_field = schema.fields.get(attr.key, None)
-            if schema_field:
-                cls._enrich_schema_field(schema_field, attr)
-
-        return schema
-
-    @classmethod
-    def _enrich_schema_field(
-        cls, marshmallow_field: marshmallow_fields.Field, sql_alchemy_field: Column
-    ):
-        # Default value
-        defaults = [
-            column.default.arg for column in sql_alchemy_field.columns if column.default
-        ]
-        if defaults:
-            # TODO Set marshmallow_field.default instead ?
-            marshmallow_field.metadata["sqlalchemy_default"] = defaults[0]
-
-        # Auto incremented field
-        autoincrement = [
-            column.autoincrement
-            for column in sql_alchemy_field.columns
-            if column.autoincrement
-        ]
-        if autoincrement and isinstance(autoincrement[0], bool):
-            marshmallow_field.metadata["sqlalchemy_autoincrement"] = autoincrement[0]
+        return Schema(session=cls._session)
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
