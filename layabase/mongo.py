@@ -1174,7 +1174,7 @@ class ListColumn(Column):
     def validate_update(self, document: dict) -> dict:
         errors = Column.validate_update(self, document)
         if not errors:
-            values = document[self.name]
+            values = document[self.name] or []
             for index, value in enumerate(values):
                 document_with_list_item = {**document, self.name: value}
                 list_item_errors = self.list_item_column.validate_update(
@@ -1191,8 +1191,9 @@ class ListColumn(Column):
     def deserialize_update(self, document: dict):
         values = document.get(self.name)
         if values is None:
-            # Ensure that None value are not stored to save space and allow to change default value.
-            document.pop(self.name, None)
+            if not self._store_none:
+                # Ensure that None value are not stored to save space and allow to change default value.
+                document.pop(self.name, None)
         else:
             new_values = []
             for value in values:
