@@ -914,20 +914,11 @@ class DictColumn(Column):
             raise Exception("fields or get_fields must be provided.")
 
         self._default_fields = fields or {}
-        self._get_fields = (
-            get_fields if get_fields else lambda model_as_dict: self._default_fields
-        )
+        self._get_fields = get_fields or (lambda model_as_dict: self._default_fields)
 
-        if index_fields:
-            self._get_all_index_fields = (
-                get_index_fields
-                if get_index_fields
-                else lambda model_as_dict: index_fields
-            )
-            self._default_index_fields = index_fields
-        else:
-            self._get_all_index_fields = self._get_fields
-            self._default_index_fields = self._default_fields
+        self._get_all_index_fields = get_index_fields or (
+            (lambda model_as_dict: index_fields) if index_fields else self._get_fields
+        )
 
         if bool(
             kwargs.get("is_nullable", True)
@@ -965,18 +956,6 @@ class DictColumn(Column):
             self._get_fields(model_as_dict),
         )
 
-    def _default_index_description_model(self):
-        """
-        :return: A CRUDModel describing every index fields.
-        """
-        from layabase._database_mongo import _CRUDModel
-
-        return type(
-            f"{self.name}_DefaultIndexDescriptionModel",
-            (_CRUDModel,),
-            self._default_index_fields,
-        )
-
     def _index_description_model(self, model_as_dict: dict):
         """
         :param model_as_dict: Data provided by the user.
@@ -993,10 +972,6 @@ class DictColumn(Column):
     def _get_index_fields(
         self, index_type: IndexType, model_as_dict: Union[dict, None], prefix: str
     ) -> List[str]:
-        if model_as_dict is None:
-            return self._default_index_description_model()._get_index_fields(
-                index_type, None, f"{prefix}{self.name}."
-            )
         return self._index_description_model(model_as_dict)._get_index_fields(
             index_type, model_as_dict, f"{prefix}{self.name}."
         )

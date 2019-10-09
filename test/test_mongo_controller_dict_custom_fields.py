@@ -6,8 +6,12 @@ import layabase.mongo
 
 
 def test_post_failure_in_get_fields():
+    should_fail = False
+
     def get_fields_failure(document):
-        raise Exception("Original failure reason")
+        if should_fail:
+            raise Exception("Original failure reason")
+        return {}
 
     class TestCollection:
         __collection_name__ = "test"
@@ -18,6 +22,7 @@ def test_post_failure_in_get_fields():
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
 
+    should_fail = True
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post({"key": "my_key", "dict_col": {}})
     assert exception_info.value.errors == {"dict_col": ["Original failure reason"]}

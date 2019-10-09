@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - [Mongo] Allow to update a ListColumn field to None.
+- [Mongo] Allow to provide indexes for a DictColumn via get_index_fields function only.
 
 ## [3.0.1] - 2019-10-08
 ### Fixed
