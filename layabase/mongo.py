@@ -673,9 +673,6 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
-
         if isinstance(value, str):
             value = iso8601.parse_date(value)
 
@@ -729,10 +726,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
-
-        if not isinstance(value, ObjectId):
+        if value is not None and not isinstance(value, ObjectId):
             value = ObjectId(value)
 
         return value
@@ -744,13 +738,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
-
-        if isinstance(value, str):
-            value = int(value)
-
-        return value
+        return int(value) if isinstance(value, str) else value
 
     def _deserialize_float(self, value):
         """
@@ -759,13 +747,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
-
-        if isinstance(value, str):
-            value = float(value)
-
-        return value
+        return float(value) if isinstance(value, str) else value
 
     def _deserialize_str(self, value):
         """
@@ -774,10 +756,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
-
-        if not isinstance(value, str):
+        if value is not None and not isinstance(value, str):
             value = str(value)
 
         return value
