@@ -1,6 +1,8 @@
 import pytest
 
 import layabase.mongo
+import layabase._database_mongo
+import mongomock
 
 
 def test_str_column_cannot_auto_increment():
@@ -14,6 +16,22 @@ def test_column_str():
         my_column = layabase.mongo.Column()
 
     assert str(TestCollection.my_column) == "my_column"
+
+
+def test_load_create_mongo_client(monkeypatch):
+    class TestCollection:
+        __collection_name__ = "test"
+
+        my_column = layabase.mongo.Column()
+
+    monkeypatch.setattr(
+        layabase._database_mongo.pymongo, "MongoClient", mongomock.MongoClient
+    )
+    base = layabase.load(
+        "mongodb://localhost:1586/test", [layabase.CRUDController(TestCollection)]
+    )
+
+    assert isinstance(base, mongomock.database.Database)
 
 
 def test_auto_incremented_field_cannot_be_non_nullable():
