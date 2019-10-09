@@ -394,10 +394,13 @@ class CRUDModel:
 
 
 def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
-    class ControllerModel(controller.table_or_collection, CRUDModel, base):
-        pass
+    model: Type[CRUDModel] = type(
+        f"{controller.table_or_collection.__tablename__}_SQLAlchemyModel",
+        (controller.table_or_collection, CRUDModel, base),
+        {},
+    )
 
-    controller._model = ControllerModel
+    controller._model = model
 
     if not _supports_offset(base.metadata.bind.url.drivername):
         controller.query_get_parser.remove_argument("offset")
@@ -407,13 +410,13 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
     if controller.audit:
         from layabase._audit_sqlalchemy import _create_from
 
-        ControllerModel.audit_model = _create_from(
-            controller.table_or_collection, ControllerModel, CRUDModel, base
+        model.audit_model = _create_from(
+            controller.table_or_collection, model, CRUDModel, base
         )
 
-    controller._model_description_dictionary = ControllerModel.description_dictionary()
+    controller._model_description_dictionary = model.description_dictionary()
 
-    return ControllerModel
+    return model
 
 
 def _load(
