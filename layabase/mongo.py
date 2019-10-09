@@ -578,40 +578,46 @@ class Column:
         elif isinstance(value, list) and self.field_type != list:
             if value:  # Discard empty list as filter on non list field
                 mongo_values = [
-                    self._deserialize_value(value_in_list) for value_in_list in value
+                    self._deserialize_value(value_in_list)
+                    if value_in_list is not None
+                    else None
+                    for value_in_list in value
                 ]
-                if self.get_default_value(filters) in mongo_values:
-                    or_filter = filters.setdefault("$or", [])
-                    or_filter.append({self.name: {"$exists": False}})
-                    or_filter.append({self.name: {"$in": mongo_values}})
-                else:
-                    mongo_filters = {}
-                    other_values = []
-                    for val in mongo_values:
-                        if isinstance(val, tuple):
-                            mongo_filters.update({_operators[val[0]]: val[1]})
-                        else:
-                            other_values.append(val)
-
-                    if mongo_filters and other_values:
-                        or_filter = filters.setdefault("$or", [])
-                        or_filter.append({self.name: mongo_filters})
-                        or_filter.append({self.name: {"$in": mongo_values}})
-                    else:
-                        filters[self.name] = (
-                            {"$in": other_values} if other_values else mongo_filters
+                comparison_filters = {}
+                equality_values = []
+                for mongo_value in mongo_values:
+                    if isinstance(mongo_value, tuple):
+                        comparison_filters.update(
+                            {_operators[mongo_value[0]]: mongo_value[1]}
                         )
+                    else:
+                        equality_values.append(mongo_value)
+
+                filters_on_field = []
+
+                if self.get_default_value(filters) in equality_values:
+                    filters_on_field.append({self.name: {"$exists": False}})
+
+                if equality_values:
+                    filters_on_field.append({self.name: {"$in": equality_values}})
+
+                if comparison_filters:
+                    filters_on_field.append({self.name: comparison_filters})
+
+                if len(filters_on_field) == 1:
+                    filters[self.name] = filters_on_field[0][self.name]
+                else:
+                    filters.setdefault("$or", []).extend(filters_on_field)
         else:
             mongo_value = self._deserialize_value(value)
             if self.get_default_value(filters) == mongo_value:
                 or_filter = filters.setdefault("$or", [])
                 or_filter.append({self.name: {"$exists": False}})
                 or_filter.append({self.name: mongo_value})
+            elif isinstance(mongo_value, tuple):
+                filters[self.name] = {_operators[mongo_value[0]]: mongo_value[1]}
             else:
-                if isinstance(mongo_value, tuple):
-                    filters[self.name] = {_operators[mongo_value[0]]: mongo_value[1]}
-                else:
-                    filters[self.name] = mongo_value
+                filters[self.name] = mongo_value
 
     def deserialize_insert(self, document: dict):
         """
@@ -673,10 +679,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if isinstance(value, str):
-            value = iso8601.parse_date(value)
-
-        return value
+        return iso8601.parse_date(value) if isinstance(value, str) else value
 
     def _deserialize_date(self, value):
         """
@@ -684,9 +687,6 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
-
         if isinstance(value, str):
             value = iso8601.parse_date(value)
         elif isinstance(value, datetime.date):
@@ -708,9 +708,6 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is None:
-            return None
-
         # Enum cannot be stored in Mongo, use enum value instead
         if isinstance(value, enum.Enum):
             value = value.value
@@ -726,10 +723,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is not None and not isinstance(value, ObjectId):
-            value = ObjectId(value)
-
-        return value
+        return value if isinstance(value, ObjectId) else ObjectId(value)
 
     def _deserialize_int(self, value):
         """
@@ -756,10 +750,7 @@ class Column:
         :param value: Received field value.
         :return Mongo valid value.
         """
-        if value is not None and not isinstance(value, str):
-            value = str(value)
-
-        return value
+        return value if isinstance(value, str) else str(value)
 
     def serialize(self, document: dict):
         """

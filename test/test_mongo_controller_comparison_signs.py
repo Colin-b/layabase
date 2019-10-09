@@ -593,7 +593,14 @@ def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_colu
     controller,
 ):
     controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
-    assert [
+    assert controller.get(
+        {
+            "int_value": [
+                (layabase.ComparisonSigns.GreaterOrEqual, 122),
+                (layabase.ComparisonSigns.Lower, 124),
+            ]
+        }
+    ) == [
         {
             "int_value": 122,
             "float_value": None,
@@ -606,14 +613,7 @@ def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_colu
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get(
-        {
-            "int_value": [
-                (layabase.ComparisonSigns.GreaterOrEqual, 122),
-                (layabase.ComparisonSigns.Lower, 124),
-            ]
-        }
-    )
+    ]
 
 
 def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_column(
@@ -622,7 +622,14 @@ def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_
     controller.post_many(
         [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
     )
-    assert [
+    assert controller.get(
+        {
+            "float_value": [
+                (layabase.ComparisonSigns.Greater, 0.9),
+                (layabase.ComparisonSigns.LowerOrEqual, 1.1),
+            ]
+        }
+    ) == [
         {
             "int_value": None,
             "float_value": 1.0,
@@ -635,14 +642,7 @@ def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get(
-        {
-            "float_value": [
-                (layabase.ComparisonSigns.Greater, 0.9),
-                (layabase.ComparisonSigns.LowerOrEqual, 1.1),
-            ]
-        }
-    )
+    ]
 
 
 def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_column(
@@ -655,14 +655,7 @@ def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_co
             {"date_value": "2019-01-03"},
         ]
     )
-    assert [
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": "2019-01-02",
-            "datetime_value": None,
-        }
-    ] == controller.get(
+    assert controller.get(
         {
             "date_value": [
                 (
@@ -675,7 +668,14 @@ def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_co
                 ),
             ]
         }
-    )
+    ) == [
+        {
+            "int_value": None,
+            "float_value": None,
+            "date_value": "2019-01-02",
+            "datetime_value": None,
+        }
+    ]
 
 
 def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_datetime_column(
@@ -688,7 +688,20 @@ def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_dat
             {"datetime_value": "2019-01-03T23:59:59"},
         ]
     )
-    assert [
+    assert controller.get(
+        {
+            "datetime_value": [
+                (
+                    layabase.ComparisonSigns.GreaterOrEqual,
+                    datetime.datetime(2019, 1, 1, 23, 59, 59),
+                ),
+                (
+                    layabase.ComparisonSigns.LowerOrEqual,
+                    datetime.datetime(2019, 1, 3, 23, 59, 59),
+                ),
+            ]
+        }
+    ) == [
         {
             "int_value": None,
             "float_value": None,
@@ -707,20 +720,7 @@ def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_dat
             "date_value": None,
             "datetime_value": "2019-01-03T23:59:59",
         },
-    ] == controller.get(
-        {
-            "datetime_value": [
-                (
-                    layabase.ComparisonSigns.GreaterOrEqual,
-                    datetime.datetime(2019, 1, 1, 23, 59, 59),
-                ),
-                (
-                    layabase.ComparisonSigns.LowerOrEqual,
-                    datetime.datetime(2019, 1, 3, 23, 59, 59),
-                ),
-            ]
-        }
-    )
+    ]
 
 
 def test_get_is_valid_with_int_range_and_value_out_of_range_using_comparison_signs_as_tuple_in_int_column(

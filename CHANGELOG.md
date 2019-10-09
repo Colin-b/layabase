@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - [Mongo] Allow to update a ListColumn field to None.
 - [Mongo] Allow to provide indexes for a DictColumn via get_index_fields function only.
+- [Mongo] Allow to query by comparison signs AND default value AND equality at the same time
 
 ## [3.0.1] - 2019-10-08
 ### Fixed
