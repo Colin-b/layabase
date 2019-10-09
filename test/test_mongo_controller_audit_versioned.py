@@ -6,7 +6,7 @@ import pytest
 from layaberr import ModelCouldNotBeFound
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 from layabase.testing import mock_mongo_audit_datetime
 
 
@@ -20,9 +20,9 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(str, is_primary_key=True)
-        mandatory = layabase._database_mongo.Column(int, is_nullable=False)
-        optional = layabase._database_mongo.Column(str)
+        key = layabase.mongo.Column(str, is_primary_key=True)
+        mandatory = layabase.mongo.Column(int, is_nullable=False)
+        optional = layabase.mongo.Column(str)
 
     return layabase.CRUDController(TestCollection, audit=True)
 
@@ -32,8 +32,8 @@ def controller_versioned():
     class TestCollectionVersioned:
         __collection_name__ = "test_versioned"
 
-        key = layabase._database_mongo.Column(str, is_primary_key=True)
-        enum_fld = layabase._database_mongo.Column(EnumTest)
+        key = layabase.mongo.Column(str, is_primary_key=True)
+        enum_fld = layabase.mongo.Column(EnumTest)
 
     return layabase.CRUDController(TestCollectionVersioned, audit=True, history=True)
 
@@ -121,57 +121,6 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestCollectionVersioned_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestCollectionVersioned_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "enum_fld",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {
                         "200": {
@@ -217,6 +166,57 @@ def test_open_api_definition(client):
                             "format": "mask",
                             "description": "An optional fields mask",
                         },
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollectionVersioned_PostRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_fld",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollectionVersioned_PutRequestModel"
+                            },
+                        }
                     ],
                     "tags": ["Test"],
                 },
@@ -442,48 +442,48 @@ def test_open_api_definition(client):
         "definitions": {
             "TestCollectionVersioned_PostRequestModel": {
                 "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
                     "enum_fld": {
                         "type": "string",
                         "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
                     },
                 },
                 "type": "object",
             },
             "TestCollectionVersioned_PutRequestModel": {
                 "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
                     "enum_fld": {
                         "type": "string",
                         "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
                     },
                 },
                 "type": "object",
             },
             "TestCollectionVersioned_GetResponseModel": {
                 "properties": {
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
                     "enum_fld": {
                         "type": "string",
                         "readOnly": False,
                         "example": "Value1",
                         "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
                     },
                 },
                 "type": "object",
@@ -507,23 +507,12 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample audit_user",
                     },
-                    "revision": {"type": "integer", "readOnly": False, "example": 1},
+                    "revision": {"type": "integer", "readOnly": True, "example": 1},
                 },
                 "type": "object",
             },
             "TestCollectionVersioned_GetHistoryResponseModel": {
                 "properties": {
-                    "enum_fld": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "Value1",
-                        "enum": ["Value1", "Value2"],
-                    },
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample key",
-                    },
                     "valid_since_revision": {
                         "type": "integer",
                         "description": "Record is valid since this revision (included).",
@@ -535,6 +524,17 @@ def test_open_api_definition(client):
                         "description": "Record is valid until this revision (excluded).",
                         "readOnly": False,
                         "example": 1,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample key",
+                    },
+                    "enum_fld": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
                     },
                 },
                 "type": "object",
@@ -548,7 +548,10 @@ def test_open_api_definition(client):
 
 
 def test_revision_not_shared_if_not_versioned(
-    controllers, controller, controller_versioned, mock_mongo_audit_datetime
+    controllers,
+    controller,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
 ):
     assert {"optional": None, "mandatory": 1, "key": "my_key"} == controller.post(
         {"key": "my_key", "mandatory": 1}
@@ -577,7 +580,9 @@ def test_revision_not_shared_if_not_versioned(
 
 
 def test_revision_on_versioned_audit_after_put_failure(
-    controllers, controller_versioned, mock_mongo_audit_datetime
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
 ):
     controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     with pytest.raises(ModelCouldNotBeFound):
@@ -601,8 +606,78 @@ def test_revision_on_versioned_audit_after_put_failure(
     ]
 
 
+def test_get_versioned_audit_after_post_put(
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
+):
+    controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
+    controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})
+    assert controller_versioned.get_one({"key": "my_key"}) == {
+        "enum_fld": "Value2",
+        "key": "my_key",
+        "valid_since_revision": 2,
+        "valid_until_revision": -1,
+    }
+
+
+def test_update_index(controllers, controller_versioned: layabase.CRUDController):
+    # Assert no error is thrown
+    controller_versioned._model.update_indexes()
+
+
+def test_post_and_put_many(
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
+):
+    controller_versioned.post_many(
+        [
+            {"key": "my_key1", "enum_fld": EnumTest.Value1},
+            {"key": "my_key2", "enum_fld": EnumTest.Value1},
+        ]
+    )
+    assert controller_versioned.put_many(
+        [
+            {"key": "my_key1", "enum_fld": EnumTest.Value2},
+            {"key": "my_key2", "enum_fld": EnumTest.Value2},
+        ]
+    ) == (
+        [
+            {
+                "enum_fld": "Value1",
+                "key": "my_key1",
+                "valid_since_revision": 1,
+                "valid_until_revision": -1,
+            },
+            {
+                "enum_fld": "Value1",
+                "key": "my_key2",
+                "valid_since_revision": 1,
+                "valid_until_revision": -1,
+            },
+        ],
+        [
+            {
+                "enum_fld": "Value2",
+                "key": "my_key1",
+                "valid_since_revision": 2,
+                "valid_until_revision": -1,
+            },
+            {
+                "enum_fld": "Value2",
+                "key": "my_key2",
+                "valid_since_revision": 2,
+                "valid_until_revision": -1,
+            },
+        ],
+    )
+
+
 def test_versioned_audit_after_post_put_delete_rollback(
-    controllers, controller_versioned, mock_mongo_audit_datetime
+    controllers,
+    controller_versioned: layabase.CRUDController,
+    mock_mongo_audit_datetime,
 ):
     controller_versioned.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     controller_versioned.put({"key": "my_key", "enum_fld": EnumTest.Value2})

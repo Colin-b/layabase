@@ -20,8 +20,8 @@ extra_requirements = {
     ],
     # Used to Manage Non-Mongo Database
     "sqlalchemy": [
-        "marshmallow==3.2.0",
-        "SQLAlchemy==1.3.8",
+        "marshmallow==3.2.1",
+        "SQLAlchemy==1.3.9",
         "marshmallow_sqlalchemy==0.19.0",
     ],
 }
@@ -48,7 +48,7 @@ setup(
     extras_require=extra_requirements,
     python_requires=">=3.6",
     project_urls={
-        "Changelog": "https://github.tools.digital.engie.com/gempy/layabase/blob/development/CHANGELOG.md",
+        "Changelog": "https://github.tools.digital.engie.com/gempy/layabase/blob/master/CHANGELOG.md",
         "Issues": "https://github.tools.digital.engie.com/gempy/layabase/issues",
     },
     license="MIT",

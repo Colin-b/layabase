@@ -295,15 +295,21 @@ def test_open_api_definition(client):
             "TestTable_PostRequestModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                     "date_str": {
                         "type": "string",
                         "format": "date",
+                        "readOnly": False,
                         "example": "2017-09-24",
                     },
                     "datetime_str": {
                         "type": "string",
                         "format": "date-time",
+                        "readOnly": False,
                         "example": "2017-09-24T15:36:09",
                     },
                 },
@@ -312,15 +318,21 @@ def test_open_api_definition(client):
             "TestTable_PutRequestModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                     "date_str": {
                         "type": "string",
                         "format": "date",
+                        "readOnly": False,
                         "example": "2017-09-24",
                     },
                     "datetime_str": {
                         "type": "string",
                         "format": "date-time",
+                        "readOnly": False,
                         "example": "2017-09-24T15:36:09",
                     },
                 },
@@ -329,15 +341,21 @@ def test_open_api_definition(client):
             "TestTable_GetResponseModel": {
                 "required": ["key"],
                 "properties": {
-                    "key": {"type": "string", "example": "sample_value"},
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                     "date_str": {
                         "type": "string",
                         "format": "date",
+                        "readOnly": False,
                         "example": "2017-09-24",
                     },
                     "datetime_str": {
                         "type": "string",
                         "format": "date-time",
+                        "readOnly": False,
                         "example": "2017-09-24T15:36:09",
                     },
                 },

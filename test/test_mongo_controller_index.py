@@ -5,7 +5,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 @pytest.fixture
@@ -13,9 +13,9 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        unique_key = layabase._database_mongo.Column(str, is_primary_key=True)
-        non_unique_key = layabase._database_mongo.Column(
-            datetime.date, index_type=layabase._database_mongo.IndexType.Other
+        unique_key = layabase.mongo.Column(str, is_primary_key=True)
+        non_unique_key = layabase.mongo.Column(
+            datetime.date, index_type=layabase.mongo.IndexType.Other
         )
 
     controller = layabase.CRUDController(TestCollection)

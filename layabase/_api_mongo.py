@@ -1,13 +1,14 @@
 import json
 import enum
 import datetime
+from typing import Dict
 
 import flask_restplus
 import iso8601
 from bson.objectid import ObjectId
 
 from layabase import ComparisonSigns
-from layabase._database_mongo import Column, DictColumn, ListColumn
+from layabase.mongo import Column, DictColumn, ListColumn
 
 
 def add_all_fields(collection, parser):
@@ -21,23 +22,15 @@ def _add_query_field(
 ):
     if isinstance(field, DictColumn):
         # Describe every dict column field as dot notation
-        for inner_field in field._default_description_model().__fields__:
-            _add_query_field(parser, inner_field, f"{field.name}.")
+        for inner_field in field._default_description_model().__dict__.values():
+            if isinstance(inner_field, Column):
+                _add_query_field(parser, inner_field, f"{field.name}.")
     elif isinstance(field, ListColumn):
         # Note that List of dict or list of list might be wrongly parsed
         parser.add_argument(
             f"{prefix}{field.name}",
             required=field.is_required,
             type=_get_parser_type(field.list_item_column),
-            action="append",
-            store_missing=not field.allow_none_as_filter,
-            location="args",
-        )
-    elif field.field_type == list:
-        parser.add_argument(
-            f"{prefix}{field.name}",
-            required=field.is_required,
-            type=str,  # Consider anything as valid, thus consider as str in query
             action="append",
             store_missing=not field.allow_none_as_filter,
             location="args",
@@ -145,3 +138,155 @@ def _validate_date(value):
 
 
 _validate_date.__schema__ = {"type": "string"}
+
+
+def all_request_fields(
+    collection, namespace: flask_restplus.Namespace
+) -> Dict[str, flask_restplus.fields.Raw]:
+    return {
+        column.name: request_field(column, namespace)
+        for column in collection.__dict__.values()
+        if isinstance(column, Column)
+    }
+
+
+def request_field(
+    field: Column, namespace: flask_restplus.Namespace
+) -> flask_restplus.fields.Raw:
+    if isinstance(field, DictColumn):
+        dict_fields = all_request_fields(field._default_description_model(), namespace)
+        if dict_fields:
+            # Nested field cannot contains nothing
+            return flask_restplus.fields.Nested(
+                namespace.model("_".join(dict_fields), dict_fields),
+                required=field.is_required,
+                example=field.example(),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.default_value,
+                readonly=field.should_auto_increment,
+                skip_none=True,
+            )
+        else:
+            return flask_restplus.fields.Raw(
+                required=field.is_required,
+                example=field.example(),
+                description=field.description,
+                enum=field.get_choices(),
+                default=field.default_value,
+                readonly=field.should_auto_increment,
+            )
+    elif isinstance(field, ListColumn):
+        return flask_restplus.fields.List(
+            request_field(field.list_item_column, namespace),
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+            min_items=field.min_length,
+            max_items=field.max_length,
+        )
+    elif field.field_type == list:
+        return flask_restplus.fields.List(
+            flask_restplus.fields.String,
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+            min_items=field.min_length,
+            max_items=field.max_length,
+        )
+    elif field.field_type == int:
+        return flask_restplus.fields.Integer(
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+            min=field.min_value,
+            max=field.max_value,
+        )
+    elif field.field_type == float:
+        return flask_restplus.fields.Float(
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+            min=field.min_value,
+            max=field.max_value,
+        )
+    elif field.field_type == bool:
+        return flask_restplus.fields.Boolean(
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+        )
+    elif field.field_type == datetime.date:
+        return flask_restplus.fields.Date(
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+        )
+    elif field.field_type == datetime.datetime:
+        return flask_restplus.fields.DateTime(
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+        )
+    elif field.field_type == dict:
+        return flask_restplus.fields.Raw(
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+        )
+    else:
+        return flask_restplus.fields.String(
+            required=field.is_required,
+            example=field.example(),
+            description=field.description,
+            enum=field.get_choices(),
+            default=field.default_value,
+            readonly=field.should_auto_increment,
+            min_length=field.min_length,
+            max_length=field.max_length,
+        )
+
+
+def get_description_response_fields(collection) -> Dict[str, flask_restplus.fields.Raw]:
+    exported_fields = {
+        "collection": flask_restplus.fields.String(
+            required=True, example="collection", description="Collection name"
+        )
+    }
+
+    exported_fields.update(
+        {
+            column.name: flask_restplus.fields.String(
+                required=column.is_required,
+                example="column",
+                description=column.description,
+            )
+            for column in collection.__dict__.values()
+            if isinstance(column, Column)
+        }
+    )
+    return exported_fields

@@ -5,7 +5,7 @@ import pytest
 from layaberr import ValidationFailed
 
 import layabase
-import layabase._database_mongo
+import layabase.mongo
 
 
 class EnumTest(enum.Enum):
@@ -18,8 +18,8 @@ def controller():
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase._database_mongo.Column(str, is_primary_key=True)
-        enum_fld = layabase._database_mongo.Column(EnumTest)
+        key = layabase.mongo.Column(str, is_primary_key=True)
+        enum_fld = layabase.mongo.Column(EnumTest)
 
         @classmethod
         def validate_rollback(

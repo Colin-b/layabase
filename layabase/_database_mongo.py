@@ -8,12 +8,10 @@ from typing import List, Dict, Union, Type, Iterable
 import pymongo
 import pymongo.errors
 import pymongo.database
-import flask_restplus
-from flask_restplus import fields as flask_restplus_fields
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import CRUDController
-from layabase.mongo import Column, DictColumn, ListColumn, IndexType
+from layabase.mongo import Column, DictColumn, IndexType, link
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +49,7 @@ class _CRUDModel:
             for field_name, field in inspect.getmembers(cls)
             if isinstance(field, Column)
         ]
-        # TODO Add a way to mark a model as not connected
+        # TODO Remove the need for this check, only create models with a base
         if base is not None:  # Allow to not provide base to create fake models
             if not skip_name_check and cls._is_forbidden():
                 raise Exception(
@@ -897,214 +895,6 @@ class _CRUDModel:
             description[field.name] = field.name
         return description
 
-    @classmethod
-    def post_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus_fields.Raw]:
-        return cls._flask_restplus_fields(namespace)
-
-    @classmethod
-    def put_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus_fields.Raw]:
-        return cls._flask_restplus_fields(namespace)
-
-    @classmethod
-    def get_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus_fields.Raw]:
-        return cls._flask_restplus_fields(namespace)
-
-    @classmethod
-    def history_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus_fields.Raw]:
-        return cls._flask_restplus_fields(namespace)
-
-    @classmethod
-    def _flask_restplus_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus_fields.Raw]:
-        return {
-            field.name: cls._to_flask_restplus_field(namespace, field)
-            for field in cls.__fields__
-        }
-
-    @classmethod
-    def _to_flask_restplus_field(
-        cls, namespace: flask_restplus.Namespace, field: Column
-    ) -> flask_restplus_fields.Raw:
-        if isinstance(field, DictColumn):
-            dict_fields = field._default_description_model()._flask_restplus_fields(
-                namespace
-            )
-            if dict_fields:
-                # Nested field cannot contains nothing
-                return flask_restplus_fields.Nested(
-                    namespace.model("_".join(dict_fields), dict_fields),
-                    required=field.is_required,
-                    example=field.example(),
-                    description=field.description,
-                    enum=field.get_choices(),
-                    default=field.default_value,
-                    readonly=field.should_auto_increment,
-                    skip_none=True,
-                )
-            else:
-                return flask_restplus_fields.Raw(
-                    required=field.is_required,
-                    example=field.example(),
-                    description=field.description,
-                    enum=field.get_choices(),
-                    default=field.default_value,
-                    readonly=field.should_auto_increment,
-                )
-        elif isinstance(field, ListColumn):
-            return flask_restplus_fields.List(
-                cls._to_flask_restplus_field(namespace, field.list_item_column),
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-                min_items=field.min_length,
-                max_items=field.max_length,
-            )
-        elif field.field_type == list:
-            return flask_restplus_fields.List(
-                flask_restplus_fields.String,
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-                min_items=field.min_length,
-                max_items=field.max_length,
-            )
-        elif field.field_type == int:
-            return flask_restplus_fields.Integer(
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-                min=field.min_value,
-                max=field.max_value,
-            )
-        elif field.field_type == float:
-            return flask_restplus_fields.Float(
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-                min=field.min_value,
-                max=field.max_value,
-            )
-        elif field.field_type == bool:
-            return flask_restplus_fields.Boolean(
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-            )
-        elif field.field_type == datetime.date:
-            return flask_restplus_fields.Date(
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-            )
-        elif field.field_type == datetime.datetime:
-            return flask_restplus_fields.DateTime(
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-            )
-        elif field.field_type == dict:
-            return flask_restplus_fields.Raw(
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-            )
-        else:
-            return flask_restplus_fields.String(
-                required=field.is_required,
-                example=field.example(),
-                description=field.description,
-                enum=field.get_choices(),
-                default=field.default_value,
-                readonly=field.should_auto_increment,
-                min_length=field.min_length,
-                max_length=field.max_length,
-            )
-
-    @classmethod
-    def description_fields(cls) -> Dict[str, flask_restplus_fields.Raw]:
-        exported_fields = {
-            "collection": flask_restplus_fields.String(
-                required=True, example="collection", description="Collection name"
-            )
-        }
-
-        exported_fields.update(
-            {
-                field.name: flask_restplus_fields.String(
-                    required=field.is_required,
-                    example="column",
-                    description=field.description,
-                )
-                for field in cls.__fields__
-            }
-        )
-        return exported_fields
-
-
-def _create_model(controller: CRUDController, base) -> Type[_CRUDModel]:
-    if controller.history:
-        import layabase._versioning_mongo
-
-        crud_model = layabase._versioning_mongo.VersionedCRUDModel
-    else:
-        crud_model = _CRUDModel
-
-    class ControllerModel(
-        controller.table_or_collection,
-        crud_model,
-        base=base,
-        skip_name_check=controller.skip_name_check,
-        skip_unknown_fields=controller.skip_unknown_fields,
-        skip_update_indexes=controller.skip_update_indexes,
-    ):
-        pass
-
-    controller._model = ControllerModel
-
-    if controller.audit:
-        from layabase._audit_mongo import _create_from
-
-        ControllerModel.audit_model = _create_from(
-            mixin=controller.table_or_collection, model=ControllerModel, base=base
-        )
-
-    controller._model_description_dictionary = ControllerModel.description_dictionary()
-
-    return ControllerModel
-
 
 def _load(
     database_connection_url: str, controllers: Iterable[CRUDController], **kwargs
@@ -1138,7 +928,7 @@ def _load(
         _server_versions.setdefault(base.name, server_info.get("version", ""))
     logger.debug(f"Creating models...")
     for controller in controllers:
-        _create_model(controller, base)
+        link(controller, base)
     return base
 
 

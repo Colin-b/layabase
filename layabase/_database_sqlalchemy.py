@@ -3,8 +3,7 @@ import logging
 import urllib.parse
 from typing import List, Dict, Type, Iterable
 
-from flask_restplus import fields as flask_restplus_fields, reqparse, inputs
-from marshmallow import validate, ValidationError, EXCLUDE
+from marshmallow import ValidationError, EXCLUDE
 from marshmallow_sqlalchemy import ModelSchema
 from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from layaberr import ValidationFailed, ModelCouldNotBeFound
@@ -12,7 +11,6 @@ from sqlalchemy import create_engine, inspect, Column, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import StaticPool
-import flask_restplus
 
 from layabase._exceptions import MultiSchemaNotSupported
 from layabase import CRUDController
@@ -338,6 +336,7 @@ class CRUDModel:
     def schema(cls) -> ModelSchema:
         """
         Create a new Marshmallow SQL Alchemy schema instance.
+        TODO Remove the need for a new schema instance every time. Create it once and for all
 
         :return: The newly created schema instance.
         """
@@ -348,35 +347,7 @@ class CRUDModel:
                 ordered = True
                 unknown = EXCLUDE
 
-        schema = Schema(session=cls._session)
-        mapper = inspect(cls)
-        for attr in mapper.attrs:
-            schema_field = schema.fields.get(attr.key, None)
-            if schema_field:
-                cls._enrich_schema_field(schema_field, attr)
-
-        return schema
-
-    @classmethod
-    def _enrich_schema_field(
-        cls, marshmallow_field: marshmallow_fields.Field, sql_alchemy_field: Column
-    ):
-        # Default value
-        defaults = [
-            column.default.arg for column in sql_alchemy_field.columns if column.default
-        ]
-        if defaults:
-            # TODO Set marshmallow_field.default instead ?
-            marshmallow_field.metadata["sqlalchemy_default"] = defaults[0]
-
-        # Auto incremented field
-        autoincrement = [
-            column.autoincrement
-            for column in sql_alchemy_field.columns
-            if column.autoincrement
-        ]
-        if autoincrement and isinstance(autoincrement[0], bool):
-            marshmallow_field.metadata["sqlalchemy_autoincrement"] = autoincrement[0]
+        return Schema(session=cls._session)
 
     @classmethod
     def get_primary_keys(cls) -> List[str]:
@@ -418,71 +389,8 @@ class CRUDModel:
         return description
 
     @classmethod
-    def post_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus.fields.Raw]:
-        return cls._flask_restplus_fields()
-
-    @classmethod
-    def put_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus.fields.Raw]:
-        return cls._flask_restplus_fields()
-
-    @classmethod
-    def get_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus.fields.Raw]:
-        return cls._flask_restplus_fields()
-
-    @classmethod
-    def history_fields(
-        cls, namespace: flask_restplus.Namespace
-    ) -> Dict[str, flask_restplus.fields.Raw]:
-        return cls._flask_restplus_fields()
-
-    @classmethod
-    def _flask_restplus_fields(cls) -> Dict[str, flask_restplus.fields.Raw]:
-        return {
-            marshmallow_field.name: _get_rest_plus_type(marshmallow_field)(
-                required=marshmallow_field.required,
-                example=_get_example(marshmallow_field),
-                description=marshmallow_field.metadata.get("description", None),
-                enum=_get_choices(marshmallow_field),
-                default=_get_default_value(marshmallow_field),
-                readonly=_is_read_only_value(marshmallow_field),
-            )
-            for marshmallow_field in cls.schema().fields.values()
-        }
-
-    @classmethod
     def get_field_names(cls) -> List[str]:
         return [field.name for field in cls.schema().fields.values()]
-
-    @classmethod
-    def description_fields(cls) -> Dict[str, flask_restplus.fields.Raw]:
-        exported_fields = {
-            "table": flask_restplus_fields.String(
-                required=True, example="table", description="Table name"
-            )
-        }
-
-        if hasattr(cls, "__table_args__"):
-            exported_fields["schema"] = flask_restplus_fields.String(
-                required=True, example="schema", description="Table schema"
-            )
-
-        exported_fields.update(
-            {
-                marshmallow_field.name: flask_restplus_fields.String(
-                    required=marshmallow_field.required,
-                    example="column",
-                    description=marshmallow_field.metadata.get("description", None),
-                )
-                for marshmallow_field in cls.schema().fields.values()
-            }
-        )
-        return exported_fields
 
 
 def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
@@ -615,85 +523,6 @@ def _prepare_engine(engine):
 def _get_view_names(engine, schema) -> list:
     with engine.connect() as conn:
         return engine.dialect.get_view_names(conn, schema)
-
-
-def _get_rest_plus_type(marshmallow_field):
-    """
-    Return the Flask RestPlus field type (as a class) corresponding to this SQL Alchemy Marshmallow field.
-    Default to String field.
-    TODO Faster to use a dict from type to field ?
-    """
-    if isinstance(marshmallow_field, marshmallow_fields.String):
-        return flask_restplus_fields.String
-    if isinstance(marshmallow_field, marshmallow_fields.Integer):
-        return flask_restplus_fields.Integer
-    if isinstance(marshmallow_field, marshmallow_fields.Decimal):
-        return flask_restplus_fields.Fixed
-    if isinstance(marshmallow_field, marshmallow_fields.Float):
-        return flask_restplus_fields.Float
-    if isinstance(marshmallow_field, marshmallow_fields.Boolean):
-        return flask_restplus_fields.Boolean
-    if isinstance(marshmallow_field, marshmallow_fields.Date):
-        return flask_restplus_fields.Date
-    if isinstance(marshmallow_field, marshmallow_fields.DateTime):
-        return flask_restplus_fields.DateTime
-    if isinstance(marshmallow_field, marshmallow_fields.Time):
-        return flask_restplus_fields.DateTime
-
-    # SQLAlchemy Enum fields will be converted to Marshmallow Raw Field
-    return flask_restplus_fields.String
-
-
-def _get_example(marshmallow_field) -> str:
-    default_value = _get_default_value(marshmallow_field)
-    if default_value:
-        return str(default_value)
-
-    choices = _get_choices(marshmallow_field)
-    return str(choices[0]) if choices else _get_default_example(marshmallow_field)
-
-
-def _get_choices(marshmallow_field):
-    if marshmallow_field:
-        for validator in marshmallow_field.validators:
-            if isinstance(validator, validate.OneOf):
-                return validator.choices
-
-
-def _get_default_value(marshmallow_field):
-    return (
-        marshmallow_field.metadata.get("sqlalchemy_default", None)
-        if marshmallow_field
-        else None
-    )
-
-
-def _is_read_only_value(marshmallow_field) -> bool:
-    return (
-        marshmallow_field.metadata.get("sqlalchemy_autoincrement", None)
-        if marshmallow_field
-        else None
-    )
-
-
-def _get_default_example(marshmallow_field):
-    """
-    Return an Example value corresponding to this SQL Alchemy Marshmallow field.
-    """
-    if isinstance(marshmallow_field, marshmallow_fields.Integer):
-        return 1
-    if isinstance(marshmallow_field, marshmallow_fields.Number):
-        return 1.4
-    if isinstance(marshmallow_field, marshmallow_fields.Boolean):
-        return True
-    if isinstance(marshmallow_field, marshmallow_fields.Date):
-        return "2017-09-24"
-    if isinstance(marshmallow_field, marshmallow_fields.DateTime):
-        return "2017-09-24T15:36:09"
-    if isinstance(marshmallow_field, marshmallow_fields.Time):
-        return "15:36:09"
-
-    return "sample_value"
 
 
 def _check(base) -> (str, dict):
