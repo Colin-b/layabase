@@ -1,9 +1,11 @@
 import pytest
 import sqlalchemy
+from sqlalchemy.exc import SAWarning
 
 import layabase
 
 
+@pytest.mark.filterwarnings("ignore", category=SAWarning)
 def test_multi_schema_not_handled():
     class TestTable:
         __tablename__ = "test"
