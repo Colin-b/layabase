@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Mongo] Allow to provide indexes for a DictColumn via get_index_fields function only.
 - [Mongo] Allow to query by comparison signs AND default value AND equality at the same time
 
+### Removed
+- [Mongo] Do not expect BulkWriteError on update many as it should be triggered only on insertion.
+
 ## [3.0.1] - 2019-10-08
 ### Fixed
 - The ability to link a Mongo controller to a collection after loading the database was lost in 3.0.0. It is now available via layabase.mongo.link(controller, base)
