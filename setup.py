@@ -21,7 +21,7 @@ extra_requirements = {
     # Used to Manage Non-Mongo Database
     "sqlalchemy": [
         "marshmallow==3.2.1",
-        "SQLAlchemy==1.3.9",
+        "SQLAlchemy==1.3.10",
         "marshmallow_sqlalchemy==0.19.0",
     ],
 }
