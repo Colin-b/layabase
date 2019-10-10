@@ -24,7 +24,6 @@ def test_2entities_on_same_collection_without_pk():
 
     controller = layabase.CRUDController(TestCollection2, history=True)
 
-    # This call is performed using the internal function because we want to simulate an already filled database
     with pytest.raises(pymongo.errors.DuplicateKeyError):
         layabase.mongo.link(controller, mongo_base)
 
@@ -50,7 +49,6 @@ def test_2entities_on_same_collection_with_pk():
         TestCollection2, history=True, skip_update_indexes=True
     )
 
-    # This call is performed using the internal function because we want to simulate an already filled database
     layabase.mongo.link(controller, mongo_base)
 
     controller.post({"key": "3", "mandatory": 2})
