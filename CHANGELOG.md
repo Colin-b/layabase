@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.3] - 2019-10-10
+### Fixed
+- Update [SQLAlchemy](https://docs.sqlalchemy.org/en/13/changelog/index.html) to version 1.3.10
+
 ## [3.0.2] - 2019-10-10
 ### Fixed
 - [Mongo] Allow to update a ListColumn field to None.
@@ -122,7 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.2...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.3...HEAD
+[3.0.3]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.2...v3.0.3
 [3.0.2]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.1...v3.0.2
 [3.0.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.0...v3.0.1
 [3.0.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v2.0.1...v3.0.0
