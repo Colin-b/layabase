@@ -394,10 +394,13 @@ class CRUDModel:
 
 
 def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
-    class ControllerModel(controller.table_or_collection, CRUDModel, base):
-        pass
+    model: Type[CRUDModel] = type(
+        f"{controller.table_or_collection.__name__}_SQLAlchemyModel",
+        (controller.table_or_collection, CRUDModel, base),
+        {},
+    )
 
-    controller._model = ControllerModel
+    controller._model = model
 
     if not _supports_offset(base.metadata.bind.url.drivername):
         controller.query_get_parser.remove_argument("offset")
@@ -405,15 +408,27 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
         controller.query_get_history_parser.remove_argument("offset")
 
     if controller.audit:
-        from layabase._audit_sqlalchemy import _create_from
+        from layabase._audit_sqlalchemy import _create_from, _to_audit_column
 
-        ControllerModel.audit_model = _create_from(
-            controller.table_or_collection, ControllerModel, CRUDModel, base
+        table_copy = type(
+            f"{controller.table_or_collection.__name__}_Copy_For_Audit",
+            controller.table_or_collection.__bases__,
+            {
+                key: _to_audit_column(value)
+                for key, value in controller.table_or_collection.__dict__.items()
+                if key not in ["__dict__", "__weakref__"]
+            },
         )
 
-    controller._model_description_dictionary = ControllerModel.description_dictionary()
+        model.audit_model = type(
+            f"{controller.table_or_collection.__name__}_SQLAlchemyAuditModel",
+            (_create_from(model), table_copy, CRUDModel, base),
+            {"__tablename__": f"audit_{controller.table_or_collection.__tablename__}"},
+        )
 
-    return ControllerModel
+    controller._model_description_dictionary = model.description_dictionary()
+
+    return model
 
 
 def _load(

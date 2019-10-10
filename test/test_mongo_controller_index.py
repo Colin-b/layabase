@@ -1,5 +1,4 @@
 import datetime
-import re
 
 import pytest
 from layaberr import ValidationFailed
@@ -145,13 +144,6 @@ def test_get_field_names_valid(controller):
     assert ["non_unique_key", "unique_key"] == controller.get_field_names()
 
 
-def _assert_regex(expected, actual):
-    assert re.match(
-        f"{expected}".replace("[", "\\[").replace("]", "\\]").replace("\\\\", "\\"),
-        f"{actual}",
-    )
-
-
 def test_get_all_with_none_primary_key_is_valid(controller):
     assert {"non_unique_key": "2017-01-01", "unique_key": "test"} == controller.post(
         {"unique_key": "test", "non_unique_key": "2017-01-01"}
@@ -159,30 +151,6 @@ def test_get_all_with_none_primary_key_is_valid(controller):
     assert [{"non_unique_key": "2017-01-01", "unique_key": "test"}] == controller.get(
         {"unique_key": None}
     )
-
-
-def test_post_many_with_same_unique_index_is_invalid(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
-        controller.post_many(
-            [
-                {"unique_key": "test", "non_unique_key": "2017-01-01"},
-                {"unique_key": "test", "non_unique_key": "2017-01-01"},
-            ]
-        )
-    assert re.match(
-        "{'writeErrors': [{'index': 1, 'code': 11000, 'errmsg': 'E11000 Duplicate Key Error', 'op': {'unique_key': 'test', 'non_unique_key': "
-        "datetime.datetime(2017, 1, 1, 0, 0), '_id': ObjectId('.*')}}], 'nInserted': 1}".replace(
-            "[", "\["
-        )
-        .replace("]", "\]")
-        .replace("(", "\(")
-        .replace(")", "\)"),
-        str(exception_info.value.errors[""][0]),
-    )
-    assert [
-        {"unique_key": "test", "non_unique_key": "2017-01-01"},
-        {"unique_key": "test", "non_unique_key": "2017-01-01"},
-    ] == exception_info.value.received_data
 
 
 def test_post_different_unique_index_is_valid(controller):

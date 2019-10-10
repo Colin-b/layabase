@@ -659,8 +659,6 @@ class _CRUDModel:
                 [cls.serialize(document) for document in previous_documents],
                 [cls.serialize(document) for document in updated_documents],
             )
-        except pymongo.errors.BulkWriteError as e:
-            raise ValidationFailed(documents, message=str(e.details))
         except pymongo.errors.DuplicateKeyError:
             raise ValidationFailed(
                 [cls.serialize(document) for document in documents],

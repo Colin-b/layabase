@@ -25,7 +25,8 @@ def controller():
                     "first_key": layabase.mongo.Column(EnumTest, is_nullable=False),
                     "second_key": layabase.mongo.Column(int, is_nullable=False),
                 }
-            )
+            ),
+            store_none=True,
         )
         bool_field = layabase.mongo.Column(bool)
 
@@ -556,14 +557,7 @@ def test_put_list_as_none_is_valid(controller):
                 {"first_key": "Value2", "second_key": 2},
             ],
         },
-        {
-            "bool_field": False,
-            "key": "my_key",
-            "list_field": [
-                {"first_key": "Value1", "second_key": 1},
-                {"first_key": "Value2", "second_key": 2},
-            ],
-        },
+        {"bool_field": False, "key": "my_key", "list_field": None},
     )
 
 

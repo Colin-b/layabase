@@ -31,23 +31,17 @@ def _to_audit_column(column):
     return column
 
 
-def _create_from(mixin, model, *bases):
-    mixin = type(
-        f"{mixin.__name__}_Copy_For_Audit",
-        mixin.__bases__,
-        {
-            key: _to_audit_column(value)
-            for key, value in mixin.__dict__.items()
-            if key not in ["__dict__", "__weakref__"]
-        },
-    )
+def _create_from(model):
+    """
 
-    class AuditModel(mixin, *bases):
-        """
-        Class providing Audit fields for a SQL Alchemy model.
-        """
+    :param model: CRUDModel of the table that should be audited.
+    :return The class providing additional audit fields and features.
+    """
 
-        __tablename__ = f"audit_{mixin.__tablename__}"
+    class AuditModel:
+        """
+        Class providing Audit fields.
+        """
 
         revision = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -57,7 +51,7 @@ def _create_from(mixin, model, *bases):
         audit_action = Column(
             Enum(
                 *[action.value for action in Action],
-                name=f"audit_{mixin.__tablename__}_action_type",
+                name=f"audit_{model.__tablename__}_action_type",
             )
         )
 
