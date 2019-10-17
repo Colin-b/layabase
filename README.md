@@ -263,6 +263,12 @@ If the field can be queried with comparison signs such as >, <, >=, <=:
 info={'marshmallow': {"allow_comparison_signs": True}}
 ```
 
+When querying, provide a single value of a list of values.
+
+if provided in `order_by` parameter, it will be considered as ascending order, add ` desc` at the end of the value to explicitly order by in descending order.
+
+If the field allow comparison signs (`allow_comparison_signs`), you can add `>`, `>=`, `<`, `<=` in front of the value.
+
 ```python
 from sqlalchemy import Column, String
 
