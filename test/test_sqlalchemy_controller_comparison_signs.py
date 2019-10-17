@@ -6,23 +6,31 @@ import flask_restplus
 import pytest
 
 import layabase
-import layabase.mongo
+import sqlalchemy
 
 
 @pytest.fixture
 def controller():
-    class TestCollection:
-        __collection_name__ = "test"
+    class TestTable:
+        __tablename__ = "test"
 
-        int_value = layabase.mongo.Column(int, allow_comparison_signs=True)
-        float_value = layabase.mongo.Column(float, allow_comparison_signs=True)
-        date_value = layabase.mongo.Column(datetime.date, allow_comparison_signs=True)
-        datetime_value = layabase.mongo.Column(
-            datetime.datetime, allow_comparison_signs=True
+        id = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+
+        int_value = sqlalchemy.Column(
+            sqlalchemy.Integer, info={"marshmallow": {"allow_comparison_signs": True}}
+        )
+        float_value = sqlalchemy.Column(
+            sqlalchemy.Float, info={"marshmallow": {"allow_comparison_signs": True}}
+        )
+        date_value = sqlalchemy.Column(
+            sqlalchemy.Date, info={"marshmallow": {"allow_comparison_signs": True}}
+        )
+        datetime_value = sqlalchemy.Column(
+            sqlalchemy.DateTime, info={"marshmallow": {"allow_comparison_signs": True}}
         )
 
-    controller = layabase.CRUDController(TestCollection)
-    layabase.load("mongomock", [controller])
+    controller = layabase.CRUDController(TestTable)
+    layabase.load("sqlite:///:memory:", [controller])
     return controller
 
 
@@ -88,74 +96,85 @@ def app(controller):
 
 
 def test_get_is_valid_with_int_and_less_than_sign_as_tuple_in_int_column(controller):
-    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
-    assert [
+    controller.post_many(
+        [
+            {"id": "1", "int_value": 122},
+            {"id": "2", "int_value": 123},
+            {"id": "3", "int_value": 124},
+        ]
+    )
+    assert controller.get({"int_value": (layabase.ComparisonSigns.Lower, 124)}) == [
         {
+            "id": "1",
             "int_value": 122,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": 123,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get({"int_value": (layabase.ComparisonSigns.Lower, 124)})
+    ]
 
 
 def test_get_is_valid_with_float_and_less_than_sign_as_tuple_in_float_column(
     controller,
 ):
     controller.post_many(
-        [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
+        [
+            {"id": "1", "float_value": 0.9},
+            {"id": "2", "float_value": 1.0},
+            {"id": "3", "float_value": 1.1},
+        ]
     )
-    assert [
+    assert controller.get({"float_value": (layabase.ComparisonSigns.Lower, 1.1)}) == [
         {
+            "id": "1",
             "int_value": None,
             "float_value": 0.9,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": None,
             "float_value": 1.0,
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get({"float_value": (layabase.ComparisonSigns.Lower, 1.1)})
+    ]
 
 
 def test_get_is_valid_with_date_and_less_than_sign_as_tuple_in_date_column(controller):
     controller.post_many(
         [
-            {"date_value": "2019-01-01"},
-            {"date_value": "2019-01-02"},
-            {"date_value": "2019-01-03"},
+            {"id": "1", "date_value": "2019-01-01"},
+            {"id": "2", "date_value": "2019-01-02"},
+            {"id": "3", "date_value": "2019-01-03"},
         ]
     )
-    assert [
+    assert controller.get(
+        {"date_value": (layabase.ComparisonSigns.Lower, datetime.date(2019, 1, 3))}
+    ) == [
         {
+            "id": "1",
             "int_value": None,
             "float_value": None,
             "date_value": "2019-01-01",
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": None,
             "float_value": None,
             "date_value": "2019-01-02",
             "datetime_value": None,
         },
-    ] == controller.get(
-        {
-            "date_value": (
-                layabase.ComparisonSigns.Lower,
-                datetime.datetime(2019, 1, 3, 0, 0, 0),
-            )
-        }
-    )
+    ]
 
 
 def test_get_is_valid_with_datetime_and_less_than_sign_as_tuple_in_datetime_column(
@@ -163,72 +182,88 @@ def test_get_is_valid_with_datetime_and_less_than_sign_as_tuple_in_datetime_colu
 ):
     controller.post_many(
         [
-            {"datetime_value": "2019-01-01T23:59:59"},
-            {"datetime_value": "2019-01-02T23:59:59"},
-            {"datetime_value": "2019-01-03T23:59:59"},
+            {"id": "1", "datetime_value": "2019-01-01T23:59:59"},
+            {"id": "2", "datetime_value": "2019-01-02T23:59:59"},
+            {"id": "3", "datetime_value": "2019-01-03T23:59:59"},
         ]
     )
-    assert [
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": "2019-01-01T23:59:59",
-        },
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": "2019-01-02T23:59:59",
-        },
-    ] == controller.get(
+    assert controller.get(
         {
             "datetime_value": (
                 layabase.ComparisonSigns.Lower,
                 datetime.datetime(2019, 1, 3, 23, 59, 59),
             )
         }
-    )
+    ) == [
+        {
+            "id": "1",
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-01T23:59:59",
+        },
+        {
+            "id": "2",
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-02T23:59:59",
+        },
+    ]
 
 
 def test_get_is_valid_with_int_and_greater_than_sign_as_tuple_in_int_column(controller):
-    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
-    assert [
+    controller.post_many(
+        [
+            {"id": "1", "int_value": 122},
+            {"id": "2", "int_value": 123},
+            {"id": "3", "int_value": 124},
+        ]
+    )
+    assert controller.get({"int_value": (layabase.ComparisonSigns.Greater, 122)}) == [
         {
+            "id": "2",
             "int_value": 123,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": 124,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get({"int_value": (layabase.ComparisonSigns.Greater, 122)})
+    ]
 
 
 def test_get_is_valid_with_float_and_greater_than_sign_as_tuple_in_float_column(
     controller,
 ):
     controller.post_many(
-        [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
+        [
+            {"id": "1", "float_value": 0.9},
+            {"id": "2", "float_value": 1.0},
+            {"id": "3", "float_value": 1.1},
+        ]
     )
-    assert [
+    assert controller.get({"float_value": (layabase.ComparisonSigns.Greater, 0.9)}) == [
         {
+            "id": "2",
             "int_value": None,
             "float_value": 1.0,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": None,
             "float_value": 1.1,
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get({"float_value": (layabase.ComparisonSigns.Greater, 0.9)})
+    ]
 
 
 def test_get_is_valid_with_date_and_greater_than_sign_as_tuple_in_date_column(
@@ -236,32 +271,34 @@ def test_get_is_valid_with_date_and_greater_than_sign_as_tuple_in_date_column(
 ):
     controller.post_many(
         [
-            {"date_value": "2019-01-01"},
-            {"date_value": "2019-01-02"},
-            {"date_value": "2019-01-03"},
+            {"id": "1", "date_value": "2019-01-01"},
+            {"id": "2", "date_value": "2019-01-02"},
+            {"id": "3", "date_value": "2019-01-03"},
         ]
     )
-    assert [
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": "2019-01-02",
-            "datetime_value": None,
-        },
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": "2019-01-03",
-            "datetime_value": None,
-        },
-    ] == controller.get(
+    assert controller.get(
         {
             "date_value": (
                 layabase.ComparisonSigns.Greater,
                 datetime.datetime(2019, 1, 1, 0, 0, 0),
             )
         }
-    )
+    ) == [
+        {
+            "id": "2",
+            "int_value": None,
+            "float_value": None,
+            "date_value": "2019-01-02",
+            "datetime_value": None,
+        },
+        {
+            "id": "3",
+            "int_value": None,
+            "float_value": None,
+            "date_value": "2019-01-03",
+            "datetime_value": None,
+        },
+    ]
 
 
 def test_get_is_valid_with_datetime_and_greater_than_sign_as_tuple_in_datetime_column(
@@ -269,86 +306,108 @@ def test_get_is_valid_with_datetime_and_greater_than_sign_as_tuple_in_datetime_c
 ):
     controller.post_many(
         [
-            {"datetime_value": "2019-01-01T23:59:59"},
-            {"datetime_value": "2019-01-02T23:59:59"},
-            {"datetime_value": "2019-01-03T23:59:59"},
+            {"id": "1", "datetime_value": "2019-01-01T23:59:59"},
+            {"id": "2", "datetime_value": "2019-01-02T23:59:59"},
+            {"id": "3", "datetime_value": "2019-01-03T23:59:59"},
         ]
     )
-    assert [
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": "2019-01-02T23:59:59",
-        },
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": "2019-01-03T23:59:59",
-        },
-    ] == controller.get(
+    assert controller.get(
         {
             "datetime_value": (
                 layabase.ComparisonSigns.Greater,
                 datetime.datetime(2019, 1, 1, 23, 59, 59),
             )
         }
-    )
+    ) == [
+        {
+            "id": "2",
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-02T23:59:59",
+        },
+        {
+            "id": "3",
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-03T23:59:59",
+        },
+    ]
 
 
 def test_get_is_valid_with_int_and_less_than_or_equal_sign_as_tuple_in_int_column(
     controller,
 ):
-    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
-    assert [
+    controller.post_many(
+        [
+            {"id": "1", "int_value": 122},
+            {"id": "2", "int_value": 123},
+            {"id": "3", "int_value": 124},
+        ]
+    )
+    assert controller.get(
+        {"int_value": (layabase.ComparisonSigns.LowerOrEqual, 124)}
+    ) == [
         {
+            "id": "1",
             "int_value": 122,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": 123,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": 124,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get({"int_value": (layabase.ComparisonSigns.LowerOrEqual, 124)})
+    ]
 
 
 def test_get_is_valid_with_float_and_less_than_or_equal_sign_as_tuple_in_float_column(
     controller,
 ):
     controller.post_many(
-        [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
+        [
+            {"id": "1", "float_value": 0.9},
+            {"id": "2", "float_value": 1.0},
+            {"id": "3", "float_value": 1.1},
+        ]
     )
-    assert [
+    assert controller.get(
+        {"float_value": (layabase.ComparisonSigns.LowerOrEqual, 1.1)}
+    ) == [
         {
+            "id": "1",
             "int_value": None,
             "float_value": 0.9,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": None,
             "float_value": 1.0,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": None,
             "float_value": 1.1,
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get({"float_value": (layabase.ComparisonSigns.LowerOrEqual, 1.1)})
+    ]
 
 
 def test_get_is_valid_with_date_and_less_than_or_equal_sign_as_tuple_in_date_column(
@@ -356,38 +415,41 @@ def test_get_is_valid_with_date_and_less_than_or_equal_sign_as_tuple_in_date_col
 ):
     controller.post_many(
         [
-            {"date_value": "2019-01-01"},
-            {"date_value": "2019-01-02"},
-            {"date_value": "2019-01-03"},
+            {"id": "1", "date_value": "2019-01-01"},
+            {"id": "2", "date_value": "2019-01-02"},
+            {"id": "3", "date_value": "2019-01-03"},
         ]
     )
-    assert [
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": "2019-01-01",
-            "datetime_value": None,
-        },
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": "2019-01-02",
-            "datetime_value": None,
-        },
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": "2019-01-03",
-            "datetime_value": None,
-        },
-    ] == controller.get(
+    assert controller.get(
         {
             "date_value": (
                 layabase.ComparisonSigns.LowerOrEqual,
                 datetime.datetime(2019, 1, 3, 0, 0, 0),
             )
         }
-    )
+    ) == [
+        {
+            "id": "1",
+            "int_value": None,
+            "float_value": None,
+            "date_value": "2019-01-01",
+            "datetime_value": None,
+        },
+        {
+            "id": "2",
+            "int_value": None,
+            "float_value": None,
+            "date_value": "2019-01-02",
+            "datetime_value": None,
+        },
+        {
+            "id": "3",
+            "int_value": None,
+            "float_value": None,
+            "date_value": "2019-01-03",
+            "datetime_value": None,
+        },
+    ]
 
 
 def test_get_is_valid_with_datetime_and_less_than_or_equal_sign_as_tuple_in_datetime_column(
@@ -395,86 +457,107 @@ def test_get_is_valid_with_datetime_and_less_than_or_equal_sign_as_tuple_in_date
 ):
     controller.post_many(
         [
-            {"datetime_value": "2019-01-01T23:59:59"},
-            {"datetime_value": "2019-01-02T23:59:59"},
-            {"datetime_value": "2019-01-03T23:59:59"},
+            {"id": "1", "datetime_value": "2019-01-01T23:59:59"},
+            {"id": "2", "datetime_value": "2019-01-02T23:59:59"},
+            {"id": "3", "datetime_value": "2019-01-03T23:59:59"},
         ]
     )
-    assert [
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": "2019-01-01T23:59:59",
-        },
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": "2019-01-02T23:59:59",
-        },
-        {
-            "int_value": None,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": "2019-01-03T23:59:59",
-        },
-    ] == controller.get(
+    assert controller.get(
         {
             "datetime_value": (
                 layabase.ComparisonSigns.LowerOrEqual,
                 datetime.datetime(2019, 1, 3, 23, 59, 59),
             )
         }
-    )
+    ) == [
+        {
+            "id": "1",
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-01T23:59:59",
+        },
+        {
+            "id": "2",
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-02T23:59:59",
+        },
+        {
+            "id": "3",
+            "int_value": None,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": "2019-01-03T23:59:59",
+        },
+    ]
 
 
 def test_get_is_valid_with_int_and_greater_than_or_equal_sign_as_tuple_in_int_column(
     controller,
 ):
-    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
-    assert [
+    controller.post_many(
+        [
+            {"id": "1", "int_value": 122},
+            {"id": "2", "int_value": 123},
+            {"id": "3", "int_value": 124},
+        ]
+    )
+    assert controller.get(
+        {"int_value": (layabase.ComparisonSigns.GreaterOrEqual, 122)}
+    ) == [
         {
+            "id": "1",
             "int_value": 122,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": 123,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": 124,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
-    ] == controller.get({"int_value": (layabase.ComparisonSigns.GreaterOrEqual, 122)})
+    ]
 
 
 def test_get_is_valid_with_float_and_greater_than_or_equal_sign_as_tuple_in_float_column(
     controller,
 ):
     controller.post_many(
-        [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
+        [
+            {"id": "1", "float_value": 0.9},
+            {"id": "2", "float_value": 1.0},
+            {"id": "3", "float_value": 1.1},
+        ]
     )
     assert [
         {
+            "id": "1",
             "int_value": None,
             "float_value": 0.9,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": None,
             "float_value": 1.0,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": None,
             "float_value": 1.1,
             "date_value": None,
@@ -488,25 +571,28 @@ def test_get_is_valid_with_date_and_greater_than_or_equal_sign_as_tuple_in_date_
 ):
     controller.post_many(
         [
-            {"date_value": "2019-01-01"},
-            {"date_value": "2019-01-02"},
-            {"date_value": "2019-01-03"},
+            {"id": "1", "date_value": "2019-01-01"},
+            {"id": "2", "date_value": "2019-01-02"},
+            {"id": "3", "date_value": "2019-01-03"},
         ]
     )
     assert [
         {
+            "id": "1",
             "int_value": None,
             "float_value": None,
             "date_value": "2019-01-01",
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": None,
             "float_value": None,
             "date_value": "2019-01-02",
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": None,
             "float_value": None,
             "date_value": "2019-01-03",
@@ -516,7 +602,7 @@ def test_get_is_valid_with_date_and_greater_than_or_equal_sign_as_tuple_in_date_
         {
             "date_value": (
                 layabase.ComparisonSigns.GreaterOrEqual,
-                datetime.datetime(2019, 1, 1, 0, 0, 0),
+                datetime.date(2019, 1, 1),
             )
         }
     )
@@ -527,25 +613,28 @@ def test_get_is_valid_with_datetime_and_greater_than_or_equal_sign_as_tuple_in_d
 ):
     controller.post_many(
         [
-            {"datetime_value": "2019-01-01T23:59:59"},
-            {"datetime_value": "2019-01-02T23:59:59"},
-            {"datetime_value": "2019-01-03T23:59:59"},
+            {"id": "1", "datetime_value": "2019-01-01T23:59:59"},
+            {"id": "2", "datetime_value": "2019-01-02T23:59:59"},
+            {"id": "3", "datetime_value": "2019-01-03T23:59:59"},
         ]
     )
     assert [
         {
+            "id": "1",
             "int_value": None,
             "float_value": None,
             "date_value": None,
             "datetime_value": "2019-01-01T23:59:59",
         },
         {
+            "id": "2",
             "int_value": None,
             "float_value": None,
             "date_value": None,
             "datetime_value": "2019-01-02T23:59:59",
         },
         {
+            "id": "3",
             "int_value": None,
             "float_value": None,
             "date_value": None,
@@ -592,7 +681,13 @@ def test_get_is_invalid_with_datetime_and_unknown_as_tuple_in_datetime_column(
 def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_column(
     controller,
 ):
-    controller.post_many([{"int_value": 122}, {"int_value": 123}, {"int_value": 124}])
+    controller.post_many(
+        [
+            {"id": "1", "int_value": 122},
+            {"id": "2", "int_value": 123},
+            {"id": "3", "int_value": 124},
+        ]
+    )
     assert controller.get(
         {
             "int_value": [
@@ -602,12 +697,14 @@ def test_get_is_valid_with_int_range_using_comparison_signs_as_tuple_in_int_colu
         }
     ) == [
         {
+            "id": "1",
             "int_value": 122,
             "float_value": None,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "2",
             "int_value": 123,
             "float_value": None,
             "date_value": None,
@@ -620,7 +717,11 @@ def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_
     controller,
 ):
     controller.post_many(
-        [{"float_value": 0.9}, {"float_value": 1.0}, {"float_value": 1.1}]
+        [
+            {"id": "1", "float_value": 0.9},
+            {"id": "2", "float_value": 1.0},
+            {"id": "3", "float_value": 1.1},
+        ]
     )
     assert controller.get(
         {
@@ -631,12 +732,14 @@ def test_get_is_valid_with_float_range_using_comparison_signs_as_tuple_in_float_
         }
     ) == [
         {
+            "id": "2",
             "int_value": None,
             "float_value": 1.0,
             "date_value": None,
             "datetime_value": None,
         },
         {
+            "id": "3",
             "int_value": None,
             "float_value": 1.1,
             "date_value": None,
@@ -650,26 +753,21 @@ def test_get_is_valid_with_date_range_using_comparison_signs_as_tuple_in_date_co
 ):
     controller.post_many(
         [
-            {"date_value": "2019-01-01"},
-            {"date_value": "2019-01-02"},
-            {"date_value": "2019-01-03"},
+            {"id": "1", "date_value": "2019-01-01"},
+            {"id": "2", "date_value": "2019-01-02"},
+            {"id": "3", "date_value": "2019-01-03"},
         ]
     )
     assert controller.get(
         {
             "date_value": [
-                (
-                    layabase.ComparisonSigns.Greater,
-                    datetime.datetime(2019, 1, 1, 0, 0, 0),
-                ),
-                (
-                    layabase.ComparisonSigns.Lower,
-                    datetime.datetime(2019, 1, 3, 0, 0, 0),
-                ),
+                (layabase.ComparisonSigns.Greater, datetime.date(2019, 1, 1)),
+                (layabase.ComparisonSigns.Lower, datetime.date(2019, 1, 3)),
             ]
         }
     ) == [
         {
+            "id": "2",
             "int_value": None,
             "float_value": None,
             "date_value": "2019-01-02",
@@ -683,9 +781,9 @@ def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_dat
 ):
     controller.post_many(
         [
-            {"datetime_value": "2019-01-01T23:59:59"},
-            {"datetime_value": "2019-01-02T23:59:59"},
-            {"datetime_value": "2019-01-03T23:59:59"},
+            {"id": "1", "datetime_value": "2019-01-01T23:59:59"},
+            {"id": "2", "datetime_value": "2019-01-02T23:59:59"},
+            {"id": "3", "datetime_value": "2019-01-03T23:59:59"},
         ]
     )
     assert controller.get(
@@ -703,18 +801,21 @@ def test_get_is_valid_with_datetime_range_using_comparison_signs_as_tuple_in_dat
         }
     ) == [
         {
+            "id": "1",
             "int_value": None,
             "float_value": None,
             "date_value": None,
             "datetime_value": "2019-01-01T23:59:59",
         },
         {
+            "id": "2",
             "int_value": None,
             "float_value": None,
             "date_value": None,
             "datetime_value": "2019-01-02T23:59:59",
         },
         {
+            "id": "3",
             "int_value": None,
             "float_value": None,
             "date_value": None,
@@ -727,28 +828,14 @@ def test_get_is_valid_with_int_range_and_value_out_of_range_using_comparison_sig
     controller,
 ):
     controller.post_many(
-        [{"int_value": 122}, {"int_value": 123}, {"int_value": 124}, {"int_value": 125}]
+        [
+            {"id": "1", "int_value": 122},
+            {"id": "2", "int_value": 123},
+            {"id": "3", "int_value": 124},
+            {"id": "4", "int_value": 125},
+        ]
     )
-    assert [
-        {
-            "int_value": 122,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": None,
-        },
-        {
-            "int_value": 123,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": None,
-        },
-        {
-            "int_value": 125,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": None,
-        },
-    ] == controller.get(
+    assert controller.get(
         {
             "int_value": [
                 (layabase.ComparisonSigns.GreaterOrEqual, 122),
@@ -756,7 +843,29 @@ def test_get_is_valid_with_int_range_and_value_out_of_range_using_comparison_sig
                 125,
             ]
         }
-    )
+    ) == [
+        {
+            "id": "1",
+            "int_value": 122,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "id": "2",
+            "int_value": 123,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "id": "4",
+            "int_value": 125,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+    ]
 
 
 def test_get_is_valid_with_int_range_and_multiple_values_out_of_range_using_comparison_signs_as_tuple_in_int_column(
@@ -764,39 +873,14 @@ def test_get_is_valid_with_int_range_and_multiple_values_out_of_range_using_comp
 ):
     controller.post_many(
         [
-            {"int_value": 122},
-            {"int_value": 123},
-            {"int_value": 124},
-            {"int_value": 125},
-            {"int_value": 126},
+            {"id": "1", "int_value": 122},
+            {"id": "2", "int_value": 123},
+            {"id": "3", "int_value": 124},
+            {"id": "4", "int_value": 125},
+            {"id": "5", "int_value": 126},
         ]
     )
-    assert [
-        {
-            "int_value": 122,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": None,
-        },
-        {
-            "int_value": 123,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": None,
-        },
-        {
-            "int_value": 125,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": None,
-        },
-        {
-            "int_value": 126,
-            "float_value": None,
-            "date_value": None,
-            "datetime_value": None,
-        },
-    ] == controller.get(
+    assert controller.get(
         {
             "int_value": [
                 (layabase.ComparisonSigns.GreaterOrEqual, 122),
@@ -805,42 +889,77 @@ def test_get_is_valid_with_int_range_and_multiple_values_out_of_range_using_comp
                 126,
             ]
         }
-    )
+    ) == [
+        {
+            "id": "1",
+            "int_value": 122,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "id": "2",
+            "int_value": 123,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "id": "4",
+            "int_value": 125,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+        {
+            "id": "5",
+            "int_value": 126,
+            "float_value": None,
+            "date_value": None,
+            "datetime_value": None,
+        },
+    ]
 
 
 def test_query_with_int_and_less_than_sign_in_int_column_returns_tuple(client):
     response = client.get("/test_parsers?int_value=<1")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": None,
         "int_value": ["(<ComparisonSigns.Lower: '<'>, 1)"],
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
 def test_query_with_int_and_greater_than_sign_in_int_column_returns_tuple(client):
     response = client.get("/test_parsers?int_value=>1")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": None,
         "int_value": ["(<ComparisonSigns.Greater: '>'>, 1)"],
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
 def test_query_with_int_and_less_than_or_equal_sign_in_int_column_returns_tuple(client):
     response = client.get("/test_parsers?int_value=<=1")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": None,
         "int_value": ["(<ComparisonSigns.LowerOrEqual: '<='>, 1)"],
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -849,36 +968,42 @@ def test_query_with_int_and_greater_than_or_equal_sign_in_int_column_returns_tup
 ):
     response = client.get("/test_parsers?int_value=>=1")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": None,
         "int_value": ["(<ComparisonSigns.GreaterOrEqual: '>='>, 1)"],
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
 def test_query_with_float_and_less_than_sign_in_float_column_returns_tuple(client):
     response = client.get("/test_parsers?float_value=<0.9")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": ["(<ComparisonSigns.Lower: '<'>, 0.9)"],
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
 def test_query_with_float_and_greater_than_sign_in_float_column_returns_tuple(client):
     response = client.get("/test_parsers?float_value=>0.9")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": ["(<ComparisonSigns.Greater: '>'>, 0.9)"],
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -887,12 +1012,14 @@ def test_query_with_float_and_less_than_or_equal_sign_in_float_column_returns_tu
 ):
     response = client.get("/test_parsers?float_value=<=0.9")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": ["(<ComparisonSigns.LowerOrEqual: '<='>, 0.9)"],
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -901,36 +1028,42 @@ def test_query_with_float_and_greater_than_or_equal_sign_in_float_column_returns
 ):
     response = client.get("/test_parsers?float_value=>=0.9")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": ["(<ComparisonSigns.GreaterOrEqual: '>='>, 0.9)"],
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
 def test_query_with_date_and_less_than_sign_in_date_column_returns_tuple(client):
     response = client.get("/test_parsers?date_value=<2019-01-01")
     assert response.json == {
+        "id": None,
         "date_value": ["(<ComparisonSigns.Lower: '<'>, datetime.date(2019, 1, 1))"],
         "datetime_value": None,
         "float_value": None,
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
 def test_query_with_date_and_greater_than_sign_in_date_column_returns_tuple(client):
     response = client.get("/test_parsers?date_value=>2019-01-01")
     assert response.json == {
+        "id": None,
         "date_value": ["(<ComparisonSigns.Greater: '>'>, datetime.date(2019, 1, 1))"],
         "datetime_value": None,
         "float_value": None,
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -939,6 +1072,7 @@ def test_query_with_date_and_less_than_or_equal_sign_in_date_column_returns_tupl
 ):
     response = client.get("/test_parsers?date_value=<=2019-01-01")
     assert response.json == {
+        "id": None,
         "date_value": [
             "(<ComparisonSigns.LowerOrEqual: '<='>, " "datetime.date(2019, 1, 1))"
         ],
@@ -947,6 +1081,7 @@ def test_query_with_date_and_less_than_or_equal_sign_in_date_column_returns_tupl
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -955,6 +1090,7 @@ def test_query_with_date_and_greater_than_or_equal_sign_in_date_column_returns_t
 ):
     response = client.get("/test_parsers?date_value=>=2019-01-01")
     assert response.json == {
+        "id": None,
         "date_value": [
             "(<ComparisonSigns.GreaterOrEqual: '>='>, " "datetime.date(2019, 1, 1))"
         ],
@@ -963,6 +1099,7 @@ def test_query_with_date_and_greater_than_or_equal_sign_in_date_column_returns_t
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -971,15 +1108,17 @@ def test_query_with_datetime_and_less_than_sign_in_datetime_column_returns_tuple
 ):
     response = client.get("/test_parsers?datetime_value=<2019-01-02T23:59:59")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": [
             "(<ComparisonSigns.Lower: '<'>, datetime.datetime(2019, 1, "
-            "2, 23, 59, 59, tzinfo=datetime.timezone.utc))"
+            "2, 23, 59, 59))"
         ],
         "float_value": None,
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -988,15 +1127,17 @@ def test_query_with_datetime_and_greater_than_sign_in_datetime_column_returns_tu
 ):
     response = client.get("/test_parsers?datetime_value=>2019-01-02T23:59:59")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": [
             "(<ComparisonSigns.Greater: '>'>, datetime.datetime(2019, "
-            "1, 2, 23, 59, 59, tzinfo=datetime.timezone.utc))"
+            "1, 2, 23, 59, 59))"
         ],
         "float_value": None,
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1005,16 +1146,17 @@ def test_query_with_datetime_and_less_than_or_equal_sign_in_datetime_column_retu
 ):
     response = client.get("/test_parsers?datetime_value=<=2019-01-02T23:59:59")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": [
             "(<ComparisonSigns.LowerOrEqual: '<='>, "
-            "datetime.datetime(2019, 1, 2, 23, 59, 59, "
-            "tzinfo=datetime.timezone.utc))"
+            "datetime.datetime(2019, 1, 2, 23, 59, 59))"
         ],
         "float_value": None,
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1023,16 +1165,17 @@ def test_query_with_datetime_and_greater_than_or_equal_sign_in_datetime_column_r
 ):
     response = client.get("/test_parsers?datetime_value=>=2019-01-02T23:59:59")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": [
             "(<ComparisonSigns.GreaterOrEqual: '>='>, "
-            "datetime.datetime(2019, 1, 2, 23, 59, 59, "
-            "tzinfo=datetime.timezone.utc))"
+            "datetime.datetime(2019, 1, 2, 23, 59, 59))"
         ],
         "float_value": None,
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1041,6 +1184,7 @@ def test_query_with_int_range_using_comparison_signs_in_int_column_returns_list_
 ):
     response = client.get("/test_parsers?int_value=>=122&int_value=<124")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": None,
@@ -1050,6 +1194,7 @@ def test_query_with_int_range_using_comparison_signs_in_int_column_returns_list_
         ],
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1058,6 +1203,7 @@ def test_query_with_float_range_using_comparison_signs_in_float_column_returns_l
 ):
     response = client.get("/test_parsers?float_value=>0.9&float_value=<=1.1")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": [
@@ -1067,6 +1213,7 @@ def test_query_with_float_range_using_comparison_signs_in_float_column_returns_l
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1075,6 +1222,7 @@ def test_query_with_date_range_using_comparison_signs_in_date_column_returns_lis
 ):
     response = client.get("/test_parsers?date_value=>2019-01-01&date_value=<2019-01-03")
     assert response.json == {
+        "id": None,
         "date_value": [
             "(<ComparisonSigns.Greater: '>'>, datetime.date(2019, 1, 1))",
             "(<ComparisonSigns.Lower: '<'>, datetime.date(2019, 1, 3))",
@@ -1084,6 +1232,7 @@ def test_query_with_date_range_using_comparison_signs_in_date_column_returns_lis
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1094,19 +1243,19 @@ def test_query_with_datetime_range_using_comparison_signs_in_datetime_column_ret
         "/test_parsers?datetime_value=>=2019-01-01T23:59:59&datetime_value=<=2019-01-03T23:59:59"
     )
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": [
             "(<ComparisonSigns.GreaterOrEqual: '>='>, "
-            "datetime.datetime(2019, 1, 1, 23, 59, 59, "
-            "tzinfo=datetime.timezone.utc))",
+            "datetime.datetime(2019, 1, 1, 23, 59, 59))",
             "(<ComparisonSigns.LowerOrEqual: '<='>, "
-            "datetime.datetime(2019, 1, 3, 23, 59, 59, "
-            "tzinfo=datetime.timezone.utc))",
+            "datetime.datetime(2019, 1, 3, 23, 59, 59))",
         ],
         "float_value": None,
         "int_value": None,
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1115,6 +1264,7 @@ def test_query_with_int_range_and_value_out_of_range_using_comparison_signs_in_i
 ):
     response = client.get("/test_parsers?int_value=>=122&int_value=<124&int_value=125")
     assert response.json == {
+        "id": None,
         "date_value": None,
         "datetime_value": None,
         "float_value": None,
@@ -1125,6 +1275,7 @@ def test_query_with_int_range_and_value_out_of_range_using_comparison_signs_in_i
         ],
         "limit": None,
         "offset": None,
+        "order_by": None,
     }
 
 
@@ -1135,21 +1286,6 @@ def test_open_api_definition(client):
         "basePath": "/",
         "paths": {
             "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestCollection_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -1159,7 +1295,22 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestCollection_PutRequestModel"
+                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "post": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "post_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_PostRequestModel"
                             },
                         }
                     ],
@@ -1169,6 +1320,13 @@ def test_open_api_definition(client):
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_resource",
                     "parameters": [
+                        {
+                            "name": "id",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "int_value",
                             "in": "query",
@@ -1205,12 +1363,19 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestCollection_GetResponseModel"
+                                "$ref": "#/definitions/TestTable_GetResponseModel"
                             },
                         }
                     },
                     "operationId": "get_test_resource",
                     "parameters": [
+                        {
+                            "name": "id",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "int_value",
                             "in": "query",
@@ -1251,6 +1416,13 @@ def test_open_api_definition(client):
                             "in": "query",
                             "type": "integer",
                             "minimum": 0,
+                        },
+                        {
+                            "name": "order_by",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
                         },
                         {
                             "name": "X-Fields",
@@ -1264,45 +1436,17 @@ def test_open_api_definition(client):
                 },
             },
             "/test_parsers": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "int_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "date_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "datetime_value",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
                     "parameters": [
+                        {
+                            "name": "id",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                         {
                             "name": "int_value",
                             "in": "query",
@@ -1344,6 +1488,55 @@ def test_open_api_definition(client):
                             "type": "integer",
                             "minimum": 0,
                         },
+                        {
+                            "name": "order_by",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "date_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_value",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -1354,8 +1547,20 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestCollection_PostRequestModel": {
+            "TestTable_PutRequestModel": {
+                "required": ["id"],
                 "properties": {
+                    "id": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
                     "date_value": {
                         "type": "string",
                         "format": "date",
@@ -1368,17 +1573,23 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "2017-09-24T15:36:09",
                     },
-                    "float_value": {
-                        "type": "number",
-                        "readOnly": False,
-                        "example": 1.4,
-                    },
-                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
                 },
                 "type": "object",
             },
-            "TestCollection_PutRequestModel": {
+            "TestTable_PostRequestModel": {
+                "required": ["id"],
                 "properties": {
+                    "id": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
                     "date_value": {
                         "type": "string",
                         "format": "date",
@@ -1391,17 +1602,23 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "2017-09-24T15:36:09",
                     },
-                    "float_value": {
-                        "type": "number",
-                        "readOnly": False,
-                        "example": 1.4,
-                    },
-                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
                 },
                 "type": "object",
             },
-            "TestCollection_GetResponseModel": {
+            "TestTable_GetResponseModel": {
+                "required": ["id"],
                 "properties": {
+                    "id": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
+                    "float_value": {
+                        "type": "number",
+                        "readOnly": False,
+                        "example": 1.4,
+                    },
                     "date_value": {
                         "type": "string",
                         "format": "date",
@@ -1414,12 +1631,6 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "2017-09-24T15:36:09",
                     },
-                    "float_value": {
-                        "type": "number",
-                        "readOnly": False,
-                        "example": 1.4,
-                    },
-                    "int_value": {"type": "integer", "readOnly": False, "example": 1},
                 },
                 "type": "object",
             },
@@ -1436,12 +1647,14 @@ def test_query_get_parser_without_signs(client):
         "/test_parsers?date_value=2019-02-25&datetime_value=2019-02-25T15:56:59&float_value=2.5&int_value=15&limit=1&offset=0"
     )
     assert response.json == {
+        "id": None,
         "date_value": ["2019-02-25"],
-        "datetime_value": ["2019-02-25 15:56:59+00:00"],
+        "datetime_value": ["2019-02-25 15:56:59"],
         "float_value": [2.5],
         "int_value": [15],
         "limit": 1,
         "offset": 0,
+        "order_by": None,
     }
 
 
@@ -1450,8 +1663,9 @@ def test_query_delete_parser_without_signs(client):
         "/test_parsers?date_value=2019-02-25&datetime_value=2019-02-25T15:56:59&float_value=2.5&int_value=15"
     )
     assert response.json == {
+        "id": None,
         "date_value": ["2019-02-25"],
-        "datetime_value": ["2019-02-25 15:56:59+00:00"],
+        "datetime_value": ["2019-02-25 15:56:59"],
         "float_value": [2.5],
         "int_value": [15],
     }
@@ -1462,18 +1676,19 @@ def test_query_get_parser_with_signs(client):
         "/test_parsers?date_value=>=2019-02-25&datetime_value=<=2019-02-25T15:56:59&float_value=>2.5&int_value=<15&limit=1&offset=0"
     )
     assert response.json == {
+        "id": None,
         "date_value": [
             "(<ComparisonSigns.GreaterOrEqual: '>='>, " "datetime.date(2019, 2, 25))"
         ],
         "datetime_value": [
             "(<ComparisonSigns.LowerOrEqual: '<='>, "
-            "datetime.datetime(2019, 2, 25, 15, 56, 59, "
-            "tzinfo=datetime.timezone.utc))"
+            "datetime.datetime(2019, 2, 25, 15, 56, 59))"
         ],
         "float_value": ["(<ComparisonSigns.Greater: '>'>, 2.5)"],
         "int_value": ["(<ComparisonSigns.Lower: '<'>, 15)"],
         "limit": 1,
         "offset": 0,
+        "order_by": None,
     }
 
 
@@ -1482,13 +1697,13 @@ def test_query_delete_parser_with_signs(client):
         "/test_parsers?date_value=>=2019-02-25&datetime_value=<=2019-02-25T15:56:59&float_value=>2.5&int_value=<15"
     )
     assert response.json == {
+        "id": None,
         "date_value": [
             "(<ComparisonSigns.GreaterOrEqual: '>='>, " "datetime.date(2019, 2, 25))"
         ],
         "datetime_value": [
             "(<ComparisonSigns.LowerOrEqual: '<='>, "
-            "datetime.datetime(2019, 2, 25, 15, 56, 59, "
-            "tzinfo=datetime.timezone.utc))"
+            "datetime.datetime(2019, 2, 25, 15, 56, 59))"
         ],
         "float_value": ["(<ComparisonSigns.Greater: '>'>, 2.5)"],
         "int_value": ["(<ComparisonSigns.Lower: '<'>, 15)"],

@@ -39,8 +39,8 @@ Features:
     - Special parameter: limit
     - Special parameter: offset
   - Query on multiple equality via `field=value1&field=value2`
-  - Query on excluded intervals via `field=>value1&field=<value2` (__Feature not yet available for sqla__)
-  - Query on included intervals via `field=>=value1&field=<=value2` (__Feature not yet available for sqla__)
+  - Query on excluded intervals via `field=>value1&field=<value2`
+  - Query on included intervals via `field=>=value1&field=<=value2`
   - Query on restricted values via `field=!=value1&field=!=value2` (__Feature not yet available__)
   - Query via a mix of all those features if needed as long as it make sense to you
   - Query regex thanks to `*` character via `field=v*lue` (__Feature not yet available for mongo__) 
@@ -246,6 +246,29 @@ To create a representation of a table you will need to create a [Mixin](https://
 
 ### Table
 
+You can add extra information to a column thanks to the info parameter.
+
+If the field should be required on queries: 
+```python
+info={'marshmallow': {"required_on_query": True}}
+```
+
+If `*` character in queries values should be interpreted as any characters: 
+```python
+info={'marshmallow': {"interpret_star_character": True}}
+```
+
+If the field can be queried with comparison signs such as >, <, >=, <=: 
+```python
+info={'marshmallow': {"allow_comparison_signs": True}}
+```
+
+When querying, provide a single value of a list of values.
+
+if provided in `order_by` parameter, it will be considered as ascending order, add ` desc` at the end of the value to explicitly order by in descending order.
+
+If the field allow comparison signs (`allow_comparison_signs`), you can add `>`, `>=`, `<`, `<=` in front of the value.
+
 ```python
 from sqlalchemy import Column, String
 
@@ -253,8 +276,7 @@ class MyTable:
     __tablename__ = "my_table"
 
     key = Column(String, primary_key=True)
-    # info can be used to provide information to marshmallow, such as requiring the field to be set on queries or interpreting star character as like
-    value = Column(String, info={'marshmallow': {"required_on_query": True, "interpret_star_character": True}})
+    value = Column(String)
 ```
 
 ## MongoDB (non-relational)

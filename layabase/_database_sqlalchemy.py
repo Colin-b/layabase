@@ -2,21 +2,30 @@ import datetime
 import logging
 import urllib.parse
 from typing import List, Dict, Type, Iterable
+import operator
 
 from marshmallow import ValidationError, EXCLUDE
 from marshmallow_sqlalchemy import ModelSchema
-from marshmallow_sqlalchemy.fields import fields as marshmallow_fields
 from layaberr import ValidationFailed, ModelCouldNotBeFound
-from sqlalchemy import create_engine, inspect, Column, text
+from sqlalchemy import create_engine, inspect, Column, text, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
+from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 
 from layabase._exceptions import MultiSchemaNotSupported
-from layabase import CRUDController
+from layabase import ComparisonSigns, CRUDController
 
 
 logger = logging.getLogger(__name__)
+
+
+_operators = {
+    ComparisonSigns.Greater: operator.gt,
+    ComparisonSigns.GreaterOrEqual: operator.ge,
+    ComparisonSigns.Lower: operator.lt,
+    ComparisonSigns.LowerOrEqual: operator.le,
+}
 
 
 class CRUDModel:
@@ -80,20 +89,42 @@ class CRUDModel:
         for column_name, value in filters.items():
             if value is not None:
                 column: Column = getattr(cls, column_name)
-                if isinstance(value, list):
-                    if value:
-                        query = query.filter(column.in_(value))
-                else:
-                    if (
-                        isinstance(value, str)
-                        and "*" in value
-                        and column.info.get("marshmallow", {}).get(
-                            "interpret_star_character", False
+                allow_like = column.info.get("marshmallow", {}).get(
+                    "interpret_star_character", False
+                )
+                allow_comparison_signs = column.info.get("marshmallow", {}).get(
+                    "allow_comparison_signs", False
+                )
+                equality_values = []
+                comparison_filters = []
+                column_filters = []
+
+                for v in value if isinstance(value, list) else [value]:
+                    if allow_like and isinstance(v, str) and "*" in v:
+                        column_filters.append(column.like(v.replace("*", "%")))
+                    elif allow_comparison_signs and isinstance(v, tuple):
+                        comparison_filters.append(
+                            column.operate(_operators[v[0]], v[1])
                         )
-                    ):
-                        query = query.filter(column.like(value.replace("*", "%")))
                     else:
-                        query = query.filter(column == value)
+                        equality_values.append(v)
+
+                if len(comparison_filters) > 1:
+                    column_filters.append(and_(*comparison_filters))
+                elif comparison_filters:
+                    column_filters.append(comparison_filters[0])
+
+                if len(equality_values) > 1:
+                    column_filters.append(column.in_(equality_values))
+                elif equality_values:
+                    column_filters.append(column == equality_values[0])
+
+                if len(column_filters) > 1:
+                    query = query.filter(or_(*column_filters))
+                elif column_filters:
+                    query = query.filter(column_filters[0])
+
+        query = cls.customize_query(query)
 
         if query_limit:
             query = query.limit(query_limit)
@@ -106,6 +137,10 @@ class CRUDModel:
             return result
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
+
+    @classmethod
+    def customize_query(cls, query: Query) -> Query:
+        return query  # No custom behavior by default
 
     @classmethod
     def _handle_connection_failure(cls):

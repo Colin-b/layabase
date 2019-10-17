@@ -25,6 +25,24 @@ def test_get_like_operator_double_star(controller):
     assert [{"key": "my_key"}, {"key": "my_key2"}] == controller.get({"key": "*y_k*"})
 
 
+def test_get_like_operators_and_values(controller):
+    controller.post_many(
+        [
+            {"key": "my_key"},
+            {"key": "my_key2"},
+            {"key": "other"},
+            {"key": "totoro"},
+            {"key": "totoro2"},
+        ]
+    )
+    assert controller.get({"key": ["my*", "totoro", "*th*"]}) == [
+        {"key": "my_key"},
+        {"key": "my_key2"},
+        {"key": "other"},
+        {"key": "totoro"},
+    ]
+
+
 def test_get_like_operator_star_at_start(controller):
     controller.post_many(
         [{"key": "my_key"}, {"key": "my_key2"}, {"key": "my_ey"}, {"key": "my_k"}]
