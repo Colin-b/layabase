@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2019-10-17
+### Added
+- [SQLAlchemy] You can now query on something else than equality: >, >=, <, <=. Refer to documentation for details.
+- Explicit support for Python 3.8
+
+### Fixed
+- [Mongo] Avoid temporary usage of a datetime when sending a query on >, <, >= or <= on a datetime.date field.
+- [SQLAlchemy] Interpret star characters even if more than one value is sent.
+
 ## [3.0.3] - 2019-10-10
 ### Fixed
 - Update [SQLAlchemy](https://docs.sqlalchemy.org/en/13/changelog/index.html) to version 1.3.10
@@ -91,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - 2019-09-24
 ### Added
-- You can now query mongo on something else than equality: >, >=, <, <=. Refer to documentation for details.
+- [Mongo] You can now query on something else than equality: >, >=, <, <=. Refer to documentation for details.
 
 ### Deprecated
 - database.dump
@@ -126,7 +135,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.3...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.1.0...HEAD
+[3.1.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.3...v3.1.0
 [3.0.3]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.2...v3.0.3
 [3.0.2]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.1...v3.0.2
 [3.0.1]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.0...v3.0.1
