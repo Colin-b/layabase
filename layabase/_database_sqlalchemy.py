@@ -10,6 +10,7 @@ from layaberr import ValidationFailed, ModelCouldNotBeFound
 from sqlalchemy import create_engine, inspect, Column, text, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
+from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 
 from layabase._exceptions import MultiSchemaNotSupported
@@ -123,6 +124,8 @@ class CRUDModel:
                 elif column_filters:
                     query = query.filter(column_filters[0])
 
+        query = cls.customize_query(query)
+
         if query_limit:
             query = query.limit(query_limit)
         if query_offset:
@@ -134,6 +137,10 @@ class CRUDModel:
             return result
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
+
+    @classmethod
+    def customize_query(cls, query: Query) -> Query:
+        return query  # No custom behavior by default
 
     @classmethod
     def _handle_connection_failure(cls):
