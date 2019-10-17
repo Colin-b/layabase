@@ -3,6 +3,8 @@ from typing import Dict, Type
 import flask_restplus
 import sqlalchemy
 
+from layabase import ComparisonSigns
+
 
 def add_all_fields(table, parser):
     for name, column in table.__dict__.items():
@@ -16,35 +18,105 @@ def _add_query_field(
     parser.add_argument(
         name,
         required=column.info.get("marshmallow", {}).get("required_on_query", False),
-        type=_get_parser_type(column.type),
+        type=_get_parser_type(column),
         action="append",
         location="args",
     )
 
 
-def _get_parser_type(column_type):
+def _get_parser_type(column: sqlalchemy.Column) -> callable:
     """
-    Return the Python type corresponding to this SQL Alchemy Marshmallow field.
-
-    Default to str,
+    Return a function taking a single parameter (the value) and converting to the required field type.
     """
+    column_type = column.type
+    allow_comparison_signs = column.info.get("marshmallow", {}).get(
+        "allow_comparison_signs", False
+    )
     if isinstance(column_type, sqlalchemy.String) or isinstance(
         column_type, sqlalchemy.Enum
     ):
         return str
     if isinstance(column_type, sqlalchemy.Integer):
-        return int
+        return _validate_int if allow_comparison_signs else int
     if isinstance(column_type, sqlalchemy.Numeric):
-        return float
+        return _validate_float if allow_comparison_signs else float
     if isinstance(column_type, sqlalchemy.Boolean):
         return flask_restplus.inputs.boolean
     if isinstance(column_type, sqlalchemy.Date):
-        return flask_restplus.inputs.date_from_iso8601
+        return (
+            _validate_date
+            if allow_comparison_signs
+            else flask_restplus.inputs.date_from_iso8601
+        )
     if isinstance(column_type, sqlalchemy.DateTime):
-        return flask_restplus.inputs.datetime_from_iso8601
+        return (
+            _validate_date_time
+            if allow_comparison_signs
+            else flask_restplus.inputs.datetime_from_iso8601
+        )
 
     # Default to str for unhandled types
     return str
+
+
+def _validate_float(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value.
+        # ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], float(value[1])
+
+    return float(value)
+
+
+_validate_float.__schema__ = {"type": "string"}
+
+
+def _validate_int(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value.
+        # ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], int(value[1])
+
+    return int(value)
+
+
+_validate_int.__schema__ = {"type": "string"}
+
+
+def _validate_date_time(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value.
+        # ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], flask_restplus.inputs.datetime_from_iso8601(value[1])
+
+    return flask_restplus.inputs.datetime_from_iso8601(value)
+
+
+_validate_date_time.__schema__ = {"type": "string"}
+
+
+def _validate_date(value):
+    if isinstance(value, str):
+        value = ComparisonSigns.deserialize(value)
+
+        # When using comparison signs, the value is a tuple containing the comparison sign and the value.
+        # ex: (ComparisonSigns.Lower, 124)
+        if isinstance(value, tuple):
+            return value[0], flask_restplus.inputs.date_from_iso8601(value[1])
+
+    return flask_restplus.inputs.date_from_iso8601(value)
+
+
+_validate_date.__schema__ = {"type": "string"}
 
 
 def all_request_fields(table) -> Dict[str, flask_restplus.fields.Raw]:
