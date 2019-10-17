@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - [SQLAlchemy] You can now query on something else than equality: >, >=, <, <=. Refer to documentation for details.
 - Explicit support for Python 3.8
+- [SQLAlchemy] You can now add custom pre-processing before sending the query to the database (to execute SQLAlchemy specifics).
 
 ### Fixed
 - [Mongo] Avoid temporary usage of a datetime when sending a query on >, <, >= or <= on a datetime.date field.
