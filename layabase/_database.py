@@ -379,8 +379,11 @@ def load(database_connection_url: str, controllers: Iterable[CRUDController], **
      - Sybase: sybase+pyodbc:///?odbc_connect=DRIVER={FreeTDS};TDS_Version=5.0;Server=host;Port=port;Database=server_name;UID=user_name;PWD=user_password;APP=sybase_application_name
     :param controllers: List of CRUDController-like instances (Mandatory).
     :param kwargs: Additional custom parameters:
-     In case database connection URL is related to a non mongo database: SQLAlchemy.create_engine methods parameters.
-     Otherwise (mongo): pymongo.MongoClient constructor parameters.
+     In case database connection URL is related to a non mongo database:
+        SQLAlchemy.create_engine methods parameters.
+        base_parameters can be set to a dictionary containing parameters to use when calling SQLAlchemy.declarative_base
+     Otherwise (mongo):
+        pymongo.MongoClient constructor parameters.
     :return Database object.
      In case database connection URL is related to a non mongo database: SQLAlchemy base instance.
      Otherwise (mongo): pymongo.Database instance.
