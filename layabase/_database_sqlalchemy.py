@@ -12,6 +12,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.engine.base import Engine
 
 from layabase._exceptions import MultiSchemaNotSupported
 from layabase import ComparisonSigns, CRUDController
@@ -475,11 +476,13 @@ def _load(
     :param database_connection_url: URL formatted as a standard database connection string (Mandatory).
     :param controllers: List of all CRUDController-like instances (Mandatory).
     :param pool_recycle: Number of seconds to wait before recycling a connection pool. Default value is 60.
+    :param base_parameters: Dictionary containing the parameters that will be sent for base creation.
     :return SQLAlchemy base.
     """
     database_connection_url = _clean_database_url(database_connection_url)
     logger.info(f"Connecting to {database_connection_url}...")
     logger.debug("Creating engine...")
+    base_parameters = kwargs.pop("base_parameters", None) or {}
     if _in_memory(database_connection_url):
         engine = create_engine(
             database_connection_url,
@@ -491,7 +494,7 @@ def _load(
         engine = create_engine(database_connection_url, **kwargs)
     _prepare_engine(engine)
     logger.debug("Creating base...")
-    base = declarative_base(bind=engine)
+    base = declarative_base(bind=engine, **base_parameters)
     logger.debug("Creating models...")
     model_classes = [_create_model(controller, base) for controller in controllers]
     if _can_retrieve_metadata(database_connection_url):
@@ -564,15 +567,19 @@ def _in_memory(database_connection_url: str) -> bool:
     return ":memory:" in database_connection_url
 
 
-def _prepare_engine(engine):
+def _prepare_engine(engine: Engine):
     if engine.url.drivername.startswith("sybase"):
         engine.dialect.identifier_preparer.initial_quote = "["
         engine.dialect.identifier_preparer.final_quote = "]"
 
 
-def _get_view_names(engine, schema) -> list:
+def _get_view_names(engine: Engine, schema: str) -> list:
+    """Return a list of view names, upper cased and prefixed by schema if needed."""
     with engine.connect() as conn:
-        return engine.dialect.get_view_names(conn, schema)
+        return [
+            f"{f'{schema}.' if schema else ''}{view_name.upper()}"
+            for view_name in engine.dialect.get_view_names(conn, schema)
+        ]
 
 
 def _check(base) -> (str, dict):
