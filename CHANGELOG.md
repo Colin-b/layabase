@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2019-10-22
+### Added
+- [SQLAlchemy] It is now possible to specify base creation additional parameters.
+
+### Fixed
+- [SQLAlchemy] View names are now upper cased and prefixed with schema (to match the way table names are expressed in metadata, at least in Oracle dialect).
+
 ## [3.1.0] - 2019-10-17
 ### Added
 - [SQLAlchemy] You can now query on something else than equality: >, >=, <, <=. Refer to documentation for details.
@@ -136,7 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Initial release.
 
-[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.1.0...HEAD
+[Unreleased]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.2.0...HEAD
+[3.2.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.1.0...v3.2.0
 [3.1.0]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.3...v3.1.0
 [3.0.3]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.2...v3.0.3
 [3.0.2]:https://github.tools.digital.engie.com/gempy/layabase/compare/v3.0.1...v3.0.2
