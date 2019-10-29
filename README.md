@@ -1,11 +1,11 @@
 <h2 align="center">Database for layab</h2>
 
 <p align="center">
-<a href='https://github.tools.digital.engie.com/gempy/layabase/releases/latest'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/layabase/master&config=version'></a>
-<a href='https://pse.tools.digital.engie.com/drm-all.gem/job/team/view/Python%20modules/job/layabase/job/master/'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/layabase/master'></a>
-<a href='https://pse.tools.digital.engie.com/drm-all.gem/job/team/view/Python%20modules/job/layabase/job/master/cobertura/'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/layabase/master&config=testCoverage'></a>
+<a href='https://github.tools.digital.engie.com/gempy/layabase/releases/latest'><img src='https://pse.tools.digital.engie.com/all/buildStatus/icon?job=team/layabase/master&config=version'></a>
+<a href='https://pse.tools.digital.engie.com/all/job/team/view/Python%20modules/job/layabase/job/master/'><img src='https://pse.tools.digital.engie.com/all/buildStatus/icon?job=team/layabase/master'></a>
+<a href='https://pse.tools.digital.engie.com/all/job/team/view/Python%20modules/job/layabase/job/master/cobertura/'><img src='https://pse.tools.digital.engie.com/all/buildStatus/icon?job=team/layabase/master&config=testCoverage'></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-<a href='https://pse.tools.digital.engie.com/drm-all.gem/job/team/view/Python%20modules/job/layabase/job/master/lastSuccessfulBuild/testReport/'><img src='https://pse.tools.digital.engie.com/drm-all.gem/buildStatus/icon?job=team/layabase/master&config=testCount'></a>
+<a href='https://pse.tools.digital.engie.com/all/job/team/view/Python%20modules/job/layabase/job/master/lastSuccessfulBuild/testReport/'><img src='https://pse.tools.digital.engie.com/all/buildStatus/icon?job=team/layabase/master&config=testCount'></a>
 </p>
 
 Query your databases easily and transparently thanks to this module providing helpers on top of most brilliant python
@@ -408,7 +408,7 @@ class MyCollection:
 ```
 
 ## How to install
-1. [python 3.7+](https://www.python.org/downloads/) must be installed
+1. [python 3.6+](https://www.python.org/downloads/) must be installed
 2. Use pip to install module:
 ```sh
 python -m pip install layabase -i https://all-team-remote:tBa%40W%29tvB%5E%3C%3B2Jm3@artifactory.tools.digital.engie.com/artifactory/api/pypi/all-team-pypi-prod/simple
@@ -426,18 +426,26 @@ Note that depending on what you want to connect to, you will have to use a diffe
 
 ## Developer-Requirements
 
-Industrial valuation requires the following to run:
+The module requires the following to run:
 
-  * [python 3.7+](https://www.python.org/downloads/)
+  * [python 3.6+](https://www.python.org/downloads/)
 
 ## Developer-Usage
 
 ## Installation
 
-layabase is easiest to work with when installed into a virtual environment using the setup.py.
+Dependencies can be installed via `setup.py`:
 
-To install all test required dependencies, use the following command:
+```sh
+python -m pip install .
+```
 
-```python
+### Testing
+
+Test specific dependencies can be installed via `setup.py` `testing` optional:
+
+```sh
 python -m pip install .[testing]
 ```
+
+Then you can launch tests using py.test launcher.

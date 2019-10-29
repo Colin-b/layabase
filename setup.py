@@ -9,20 +9,20 @@ with open(os.path.join(this_dir, "README.md"), "r") as f:
 extra_requirements = {
     "testing": [
         # Used to run test cases
-        "pytest-flask==0.15.0",
+        "pytest-flask==0.15.*",
         # Used to manage testing of Mongo
-        "mongomock==3.18.0",
+        "mongomock==3.*",
     ],
     "mongo": [
-        "pymongo[tls]==3.9.0",
+        "pymongo[tls]==3.*",
         # Used to manage date and datetime deserialization
-        "iso8601==0.1.12",
+        "iso8601==0.1.*",
     ],
     # Used to Manage Non-Mongo Database
     "sqlalchemy": [
-        "marshmallow==3.2.1",
-        "SQLAlchemy==1.3.10",
-        "marshmallow_sqlalchemy==0.19.0",
+        "marshmallow==3.*",
+        "SQLAlchemy==1.*",
+        "marshmallow_sqlalchemy==0.19.*",
     ],
 }
 
@@ -43,7 +43,7 @@ setup(
     packages=find_packages(exclude=["test"]),
     install_requires=[
         # Used to handle errors
-        "layaberr==2.0.0"
+        "layaberr==2.*"
     ],
     extras_require=extra_requirements,
     python_requires=">=3.6",
