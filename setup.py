@@ -12,6 +12,8 @@ extra_requirements = {
         "pytest-flask==0.15.*",
         # Used to manage testing of Mongo
         "mongomock==3.*",
+        # Used to check coverage
+        "pytest-cov==2.*",
     ],
     "mongo": [
         "pymongo[tls]==3.*",
@@ -37,20 +39,15 @@ extra_requirements["testing"] += [
 setup(
     name="layabase",
     version=open("layabase/version.py").readlines()[-1].split()[-1].strip("\"'"),
+    author="Colin Bounouar",
+    author_email="colin.bounouar.dev@gmail.com",
+    maintainer="Colin Bounouar",
+    maintainer_email="colin.bounouar.dev@gmail.com",
+    url="https://colin-b.github.io/layabase/",
     description="Database for layab",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=find_packages(exclude=["test"]),
-    install_requires=[
-        # Used to handle errors
-        "layaberr==2.*"
-    ],
-    extras_require=extra_requirements,
-    python_requires=">=3.6",
-    project_urls={
-        "Changelog": "https://github.tools.digital.engie.com/gempy/layabase/blob/master/CHANGELOG.md",
-        "Issues": "https://github.tools.digital.engie.com/gempy/layabase/issues",
-    },
+    download_url="https://pypi.org/project/layabase/",
     license="MIT",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -65,5 +62,17 @@ setup(
         "Topic :: Software Development :: Build Tools",
     ],
     keywords=["mongo", "sqla", "db", "flask"],
+    packages=find_packages(exclude=["tests*"]),
+    install_requires=[
+        # Used to handle errors
+        "layaberr==2.*"
+    ],
+    extras_require=extra_requirements,
+    python_requires=">=3.6",
+    project_urls={
+        "GitHub": "https://github.com/Colin-b/layabase",
+        "Changelog": "https://github.com/Colin-b/layabase/blob/master/CHANGELOG.md",
+        "Issues": "https://github.com/Colin-b/layabase/issues",
+    },
     platforms=["Windows", "Linux"],
 )
