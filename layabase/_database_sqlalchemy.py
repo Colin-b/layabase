@@ -9,7 +9,7 @@ from marshmallow_sqlalchemy import ModelSchema
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 from sqlalchemy import create_engine, inspect, Column, text, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, exc
+from sqlalchemy.orm import sessionmaker, exc, ColumnProperty
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.engine.base import Engine
@@ -89,7 +89,7 @@ class CRUDModel:
 
         for column_name, value in filters.items():
             if value is not None:
-                column: Column = getattr(cls, column_name)
+                column: Column = cls.get_column(column_name)
                 allow_like = column.info.get("marshmallow", {}).get(
                     "interpret_star_character", False
                 )
@@ -382,6 +382,7 @@ class CRUDModel:
                 model = cls
                 ordered = True
                 unknown = EXCLUDE
+                include_fk = True
 
         return Schema(session=cls._session)
 
@@ -420,13 +421,18 @@ class CRUDModel:
 
         mapper = inspect(cls)
         for column in mapper.attrs:
-            description[column.key] = column.columns[0].name
+            if isinstance(column, ColumnProperty):
+                description[column.key] = column.columns[0].name
 
         return description
 
     @classmethod
     def get_field_names(cls) -> List[str]:
         return [field.name for field in cls.schema().fields.values()]
+
+    @classmethod
+    def get_column(cls, column_name):
+        return getattr(cls, column_name)
 
 
 def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
