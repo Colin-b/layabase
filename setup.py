@@ -16,7 +16,7 @@ extra_requirements = {
         "pytest-cov==2.*",
     ],
     "mongo": [
-        "pymongo[tls]==3.*",
+        "pymongo[tls, srv]==3.*",
         # Used to manage date and datetime deserialization
         "iso8601==0.1.*",
     ],
