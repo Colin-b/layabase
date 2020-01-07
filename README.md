@@ -10,7 +10,7 @@
 </p>
 
 Query your databases easily and transparently thanks to this module providing helpers on top of most brilliant python
-database modules (SQLAlchemy and PyMongo).
+database modules ([SQLAlchemy](https://docs.sqlalchemy.org) and [PyMongo](https://api.mongodb.com/python/current/)).
 
 ## Table of Contents
 
@@ -23,7 +23,7 @@ database modules (SQLAlchemy and PyMongo).
 Features:
 
 - Audit
-  - Automatic audit support (if `layabauth` python module is used, user will be logged as well)
+  - Automatic audit support (if [`layabauth`](https://pypi.org/project/layabauth/) python module is used, user will be logged as well)
 - Rollback
   - Automatic rollback support (when history is activated)
 - History
@@ -241,7 +241,7 @@ layabase.load("your_connection_string", my_controllers)
 
 ## Relational databases (non-Mongo)
 
-SQLAlchemy is the underlying framework used to manipulate relational databases.
+[SQLAlchemy](https://docs.sqlalchemy.org) is the underlying framework used to manipulate relational databases.
 
 To create a representation of a table you will need to create a [Mixin](https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html#declarative-mixins).
 
@@ -282,7 +282,7 @@ class MyTable:
 
 ## MongoDB (non-relational)
 
-PyMongo is the underlying framework used to manipulate MongoDB.
+[PyMongo](https://api.mongodb.com/python/current/) is the underlying framework used to manipulate MongoDB.
 
 To create a representation of a collection you will need to create a Mixin class.
 
@@ -449,4 +449,4 @@ Test specific dependencies can be installed via `setup.py` `testing` optional:
 python -m pip install .[testing]
 ```
 
-Then you can launch tests using py.test launcher.
+Then you can launch tests using [pytest](http://doc.pytest.org/en/latest/).
