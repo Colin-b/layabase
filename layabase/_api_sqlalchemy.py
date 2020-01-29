@@ -21,6 +21,7 @@ def _add_query_field(
         type=_get_parser_type(column),
         action="append",
         location="args",
+        choices=column.info.get("marshmallow", {}).get("choices")
     )
 
 

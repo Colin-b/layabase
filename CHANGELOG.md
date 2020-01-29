@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.0] - 2020-01-29
+### Changed
+- On Sqlalchemy allow to use choices on argument parsing
+
+
 ## [3.5.0] - 2020-01-07
 ### Changed
 - Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) to version 0.21.*
@@ -14,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release.
 
-[Unreleased]: https://github.com/Colin-b/layabase/compare/v3.5.0...HEAD
+[Unreleased]: https://github.com/Colin-b/layabase/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/Colin-b/layabase/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/Colin-b/layabase/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/Colin-b/layabase/releases/tag/v3.4.0
