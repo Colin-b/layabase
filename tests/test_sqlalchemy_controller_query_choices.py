@@ -211,13 +211,51 @@ def test_post_controller_with_valid_value_for_field(controller):
     }
 
 
-#
-# def test_put_controller_with_valid_value_for_field(controller):
-#     assert controller.put({'key': '0', 'test_field': 'chose1'}) == ({},{'key': '0', 'test_field': 'chose1'})
-
-
 def test_post_controller_with_invalid_value_for_field(controller):
-    assert controller.post({"key": "0", "test_field": "chose_invalid"}) == {}
+    with pytest.raises(ValidationFailed) as exception_info:
+        controller.post({"key": "0", "test_field": "chose_invalid"})
+    assert exception_info.value.received_data == {
+        "key": "0",
+        "test_field": "chose_invalid",
+    }
+    assert exception_info.value.errors == {
+        "chose_invalid": [
+            "Field value not allowed. The allowed values are: ['chose1', 'chose2']"
+        ]
+    }
+
+
+def test_put_controller_with_valid_value_for_field(controller):
+    controller.post({"key": "0", "test_field": "chose1"})
+    assert controller.put({"key": "0", "test_field": "chose2"}) == (
+        {"key": "0", "test_field": "chose1"},
+        {"key": "0", "test_field": "chose2"},
+    )
+
+
+def test_put_controller_with_invalid_value_for_field(controller):
+    with pytest.raises(ValidationFailed) as exception_info:
+        controller.put({"key": "0", "test_field": "chose_invalid"})
+    assert exception_info.value.received_data == {
+        "key": "0",
+        "test_field": "chose_invalid",
+    }
+    assert exception_info.value.errors == {
+        "chose_invalid": [
+            "Field value not allowed. The allowed values are: ['chose1', 'chose2']"
+        ]
+    }
+
+
+def test_put_multiple_rows_controller_with_valid_value_for_field(controller):
+    controller.post({"key": "0", "test_field": "chose1"})
+    controller.post({"key": "1", "test_field": "chose2"})
+    assert controller.put_many(
+        [{"key": "0", "test_field": "chose2"}, {"key": "1", "test_field": "chose1"}]
+    ) == (
+        [{"key": "0", "test_field": "chose1"}, {"key": "1", "test_field": "chose2"}],
+        [{"key": "0", "test_field": "chose2"}, {"key": "1", "test_field": "chose1"}],
+    )
 
 
 def test_open_api_definition(client):

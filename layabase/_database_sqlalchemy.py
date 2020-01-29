@@ -209,6 +209,7 @@ class CRUDModel:
             cls._session.add_all(models)
             if cls.audit_model:
                 for row in rows:
+                    cls._check_choices_query_fields(row)
                     cls.audit_model.audit_add(row)
             cls._session.commit()
             return _models_field_values(models)
@@ -267,6 +268,7 @@ class CRUDModel:
         for row in rows:
             if not isinstance(row, dict):
                 raise ValidationFailed(row, message="Must be a dictionary.")
+            cls._check_choices_query_fields(row)
             try:
                 previous_model = cls.schema().get_instance(row)
             except exc.sa_exc.DBAPIError:
@@ -313,6 +315,7 @@ class CRUDModel:
             raise ValidationFailed({}, message="No data provided.")
         if not isinstance(row, dict):
             raise ValidationFailed(row, message="Must be a dictionary.")
+        cls._check_choices_query_fields(row)
         try:
             previous_model = cls.schema().get_instance(row)
         except exc.sa_exc.DBAPIError:
@@ -431,6 +434,7 @@ class CRUDModel:
         for marshmallow_field in cls.schema().fields.values():
             if marshmallow_field.metadata.get("choices"):
                 return marshmallow_field.metadata.get("choices"), marshmallow_field.name
+        return None, None
 
     @classmethod
     def description_dictionary(cls) -> Dict[str, str]:
