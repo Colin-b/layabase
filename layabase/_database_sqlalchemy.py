@@ -227,6 +227,7 @@ class CRUDModel:
         :raises ValidationFailed in case Marshmallow validation fail.
         :returns The inserted model formatted as a dictionary.
         """
+        cls._check_choices_query_fields(row)
         if not row:
             raise ValidationFailed({}, message="No data provided.")
         try:
@@ -410,6 +411,26 @@ class CRUDModel:
             for marshmallow_field in cls.schema().fields.values()
             if marshmallow_field.metadata.get("required_on_query", False)
         ]
+
+    @classmethod
+    def _check_choices_query_fields(cls, row):
+        choice_options, name = cls._get_choices_query_fields()
+        if name is not None:
+            if row.get(name) not in choice_options:
+                raise ValidationFailed(
+                    row,
+                    errors={
+                        row.get(name): [
+                            f"Field value not allowed. The allowed values are: {choice_options}"
+                        ]
+                    },
+                )
+
+    @classmethod
+    def _get_choices_query_fields(cls):
+        for marshmallow_field in cls.schema().fields.values():
+            if marshmallow_field.metadata.get("choices"):
+                return marshmallow_field.metadata.get("choices"), marshmallow_field.name
 
     @classmethod
     def description_dictionary(cls) -> Dict[str, str]:

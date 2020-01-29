@@ -158,12 +158,12 @@ def test_query_delete_parser_with_valid_values_for_field(client):
     assert response.json == {"key": None, "test_field": ["chose1", "chose2"]}
 
 
-def test_post_controller_with_valid_value_for_field(client):
+def test_post_request_with_valid_value_for_field(client):
     response = client.post("/test", json={"key": "1", "test_field": "chose2"})
     assert response.status_code == 200
 
 
-def test_post_controller_with_invalid_value_for_field(client):
+def test_post_request_with_invalid_value_for_field(client):
     response = client.post("/test", json={"key": "1", "test_field": "chose_invalid"})
     assert response.status_code == 400
     assert response.json == {
@@ -172,13 +172,52 @@ def test_post_controller_with_invalid_value_for_field(client):
     }
 
 
-def test_post_controller_with_empty_value_for_field(client):
+def test_post_request_with_empty_value_for_field(client):
     response = client.post("/test", json={"key": "1", "test_field": ""})
     assert response.status_code == 400
     assert response.json == {
         "errors": {"test_field": "'' is not one of ['chose1', 'chose2']"},
         "message": "Input payload validation failed",
     }
+
+
+def test_put_request_with_valid_value_for_field(client):
+    response = client.put("/test", json={"key": "1", "test_field": "chose2"})
+    assert response.status_code == 200
+
+
+def test_put_request_with_invalid_value_for_field(client):
+    response = client.put("/test", json={"key": "1", "test_field": "chose_invalid"})
+    assert response.status_code == 400
+    assert response.json == {
+        "errors": {"test_field": "'chose_invalid' is not one of ['chose1', 'chose2']"},
+        "message": "Input payload validation failed",
+    }
+
+
+def test_put_request_with_empty_value_for_field(client):
+    response = client.put("/test", json={"key": "1", "test_field": ""})
+    assert response.status_code == 400
+    assert response.json == {
+        "errors": {"test_field": "'' is not one of ['chose1', 'chose2']"},
+        "message": "Input payload validation failed",
+    }
+
+
+def test_post_controller_with_valid_value_for_field(controller):
+    assert controller.post({"key": "0", "test_field": "chose1"}) == {
+        "key": "0",
+        "test_field": "chose1",
+    }
+
+
+#
+# def test_put_controller_with_valid_value_for_field(controller):
+#     assert controller.put({'key': '0', 'test_field': 'chose1'}) == ({},{'key': '0', 'test_field': 'chose1'})
+
+
+def test_post_controller_with_invalid_value_for_field(controller):
+    assert controller.post({"key": "0", "test_field": "chose_invalid"}) == {}
 
 
 def test_open_api_definition(client):
