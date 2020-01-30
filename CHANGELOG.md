@@ -5,11 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-## [3.6.0] - 2020-01-29
-### Changed
-- On Sqlalchemy allow to use choices on argument parsing
-
+### Fixed
+- Parsing arguments now uses enum column type to restrict values a user can use
 
 ## [3.5.0] - 2020-01-07
 ### Changed
