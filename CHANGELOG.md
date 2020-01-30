@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- [SQLAlchemy] Flask-RestPlus argument parsers (for GET and DELETE queries) are now restricting values in case the underlying field is of Enum type.
 
 ## [3.5.0] - 2020-01-07
 ### Changed
