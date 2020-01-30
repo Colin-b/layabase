@@ -21,7 +21,7 @@ def _add_query_field(
         type=_get_parser_type(column),
         action="append",
         location="args",
-        choices=column.info.get("marshmallow", {}).get("choices"),
+        choices=_get_choices(column),
     )
 
 
@@ -175,7 +175,6 @@ def _get_example(column: sqlalchemy.Column) -> str:
 def _get_choices(column: sqlalchemy.Column):
     if isinstance(column.type, sqlalchemy.Enum):
         return column.type.enums
-    return column.info.get("marshmallow", {}).get("choices")
 
 
 def _get_default_example(column_type):
