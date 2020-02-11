@@ -5,11 +5,11 @@ from typing import List, Dict, Type, Iterable
 import operator
 
 from marshmallow import ValidationError, EXCLUDE
-from marshmallow_sqlalchemy import ModelSchema
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from layaberr import ValidationFailed, ModelCouldNotBeFound
 from sqlalchemy import create_engine, inspect, Column, text, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, exc
+from sqlalchemy.orm import sessionmaker, exc, PropComparator
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.engine.base import Engine
@@ -90,10 +90,10 @@ class CRUDModel:
         for column_name, value in filters.items():
             if value is not None:
                 column: Column = getattr(cls, column_name)
-                allow_like = column.info.get("marshmallow", {}).get(
+                allow_like = column.info.get("layabase", {}).get(
                     "interpret_star_character", False
                 )
-                allow_comparison_signs = column.info.get("marshmallow", {}).get(
+                allow_comparison_signs = column.info.get("layabase", {}).get(
                     "allow_comparison_signs", False
                 )
                 equality_values = []
@@ -369,7 +369,7 @@ class CRUDModel:
             raise
 
     @classmethod
-    def schema(cls) -> ModelSchema:
+    def schema(cls) -> SQLAlchemyAutoSchema:
         """
         Create a new Marshmallow SQL Alchemy schema instance.
         TODO Remove the need for a new schema instance every time. Create it once and for all
@@ -377,11 +377,12 @@ class CRUDModel:
         :return: The newly created schema instance.
         """
 
-        class Schema(ModelSchema):
+        class Schema(SQLAlchemyAutoSchema):
             class Meta:
                 model = cls
                 ordered = True
                 unknown = EXCLUDE
+                load_instance = True
 
         return Schema(session=cls._session)
 
@@ -406,9 +407,9 @@ class CRUDModel:
     @classmethod
     def _get_required_query_fields(cls) -> List[str]:
         return [
-            marshmallow_field.name
-            for marshmallow_field in cls.schema().fields.values()
-            if marshmallow_field.metadata.get("required_on_query", False)
+            name
+            for name, column in cls.__dict__.items()
+            if isinstance(column, PropComparator) and column.info.get("layabase", {}).get("required_on_query", False)
         ]
 
     @classmethod

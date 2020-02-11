@@ -16,7 +16,7 @@ def controller():
         mandatory = sqlalchemy.Column(
             sqlalchemy.Integer,
             nullable=False,
-            info={"marshmallow": {"required_on_query": True}},
+            info={"layabase": {"required_on_query": True}},
         )
 
     controller = layabase.CRUDController(TestTable)

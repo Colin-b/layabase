@@ -17,16 +17,16 @@ def controller():
         id = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
         int_value = sqlalchemy.Column(
-            sqlalchemy.Integer, info={"marshmallow": {"allow_comparison_signs": True}}
+            sqlalchemy.Integer, info={"layabase": {"allow_comparison_signs": True}}
         )
         float_value = sqlalchemy.Column(
-            sqlalchemy.Float, info={"marshmallow": {"allow_comparison_signs": True}}
+            sqlalchemy.Float, info={"layabase": {"allow_comparison_signs": True}}
         )
         date_value = sqlalchemy.Column(
-            sqlalchemy.Date, info={"marshmallow": {"allow_comparison_signs": True}}
+            sqlalchemy.Date, info={"layabase": {"allow_comparison_signs": True}}
         )
         datetime_value = sqlalchemy.Column(
-            sqlalchemy.DateTime, info={"marshmallow": {"allow_comparison_signs": True}}
+            sqlalchemy.DateTime, info={"layabase": {"allow_comparison_signs": True}}
         )
 
     controller = layabase.CRUDController(TestTable)

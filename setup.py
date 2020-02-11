@@ -24,7 +24,7 @@ extra_requirements = {
     "sqlalchemy": [
         "marshmallow==3.*",
         "SQLAlchemy==1.*",
-        "marshmallow_sqlalchemy==0.21.*",
+        "marshmallow_sqlalchemy==0.22.*",
     ],
 }
 
