@@ -17,10 +17,11 @@ def _add_query_field(
 ):
     parser.add_argument(
         name,
-        required=column.info.get("marshmallow", {}).get("required_on_query", False),
+        required=column.info.get("layabase", {}).get("required_on_query", False),
         type=_get_parser_type(column),
         action="append",
         location="args",
+        choices=_get_choices(column),
     )
 
 
@@ -29,7 +30,7 @@ def _get_parser_type(column: sqlalchemy.Column) -> callable:
     Return a function taking a single parameter (the value) and converting to the required field type.
     """
     column_type = column.type
-    allow_comparison_signs = column.info.get("marshmallow", {}).get(
+    allow_comparison_signs = column.info.get("layabase", {}).get(
         "allow_comparison_signs", False
     )
     if isinstance(column_type, sqlalchemy.String) or isinstance(

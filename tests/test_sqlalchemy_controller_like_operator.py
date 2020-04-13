@@ -12,7 +12,7 @@ def controller():
         key = sqlalchemy.Column(
             sqlalchemy.String,
             primary_key=True,
-            info={"marshmallow": {"interpret_star_character": True}},
+            info={"layabase": {"interpret_star_character": True}},
         )
 
     controller = layabase.CRUDController(TestTable)

@@ -2,10 +2,10 @@
 
 <p align="center">
 <a href="https://pypi.org/project/layabase/"><img alt="pypi version" src="https://img.shields.io/pypi/v/layabase"></a>
-<a href="https://travis-ci.org/Colin-b/layabase"><img alt="Build status" src="https://api.travis-ci.org/Colin-b/layabase.svg?branch=develop"></a>
+<a href="https://travis-ci.org/Colin-b/layabase"><img alt="Build status" src="https://api.travis-ci.org/Colin-b/layabase.svg?branch=master"></a>
 <a href="https://travis-ci.org/Colin-b/layabase"><img alt="Coverage" src="https://img.shields.io/badge/coverage-100%25-brightgreen"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-<a href="https://travis-ci.org/Colin-b/layabase"><img alt="Number of tests" src="https://img.shields.io/badge/tests-702 passed-blue"></a>
+<a href="https://travis-ci.org/Colin-b/layabase"><img alt="Number of tests" src="https://img.shields.io/badge/tests-725 passed-blue"></a>
 <a href="https://pypi.org/project/layabase/"><img alt="Number of downloads" src="https://img.shields.io/pypi/dm/layabase"></a>
 </p>
 
@@ -247,21 +247,21 @@ To create a representation of a table you will need to create a [Mixin](https://
 
 ### Table
 
-You can add extra information to a column thanks to the info parameter.
+You can add extra information to a column thanks to the `layabase` key within `info` parameter.
 
 If the field should be required on queries: 
 ```python
-info={'marshmallow': {"required_on_query": True}}
+info={'layabase': {"required_on_query": True}}
 ```
 
 If `*` character in queries values should be interpreted as any characters: 
 ```python
-info={'marshmallow': {"interpret_star_character": True}}
+info={'layabase': {"interpret_star_character": True}}
 ```
 
 If the field can be queried with comparison signs such as >, <, >=, <=: 
 ```python
-info={'marshmallow': {"allow_comparison_signs": True}}
+info={'layabase': {"allow_comparison_signs": True}}
 ```
 
 When querying, provide a single value of a list of values.
