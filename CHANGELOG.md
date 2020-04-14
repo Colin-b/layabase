@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.1] - 2020-04-14
+### Fixed
+- [Mongo] Fix adding field to parser adding only one level of multilevel DictColumn .
+
 ## [4.0.0] - 2020-02-11
 ### Changed
 - Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) to version 0.22.*
