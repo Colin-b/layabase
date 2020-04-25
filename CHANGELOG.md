@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [4.0.0] - 2020-04-26
+## [4.0.0] - 2020-04-25
 ### Changed
 - Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) to version 0.22.*
 - model schema now returns a SQLAlchemyAutoSchema instance instead of the deprecated ModelSchema.
