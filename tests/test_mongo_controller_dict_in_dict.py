@@ -82,6 +82,20 @@ def test_get_with_dot_notation_multi_level_is_valid(controller):
     ] == controller.get({"dict_field.first_key.inner_key1": EnumTest.Value1})
 
 
+def test_get_and_delete_parsers_contains_multi_level_dot_notation_fields(controller):
+    assert {
+        "key",
+        "dict_field.first_key.inner_key1",
+        "dict_field.first_key.inner_key2",
+        "dict_field.second_key",
+    }.issubset({arg.name for arg in controller.query_delete_parser.args})
+
+    assert {
+        "dict_field.first_key.inner_key1",
+        "dict_field.first_key.inner_key2",
+    }.issubset({arg.name for arg in controller.query_get_parser.args})
+
+
 @pytest.fixture
 def app(controller):
     application = flask.Flask(__name__)
