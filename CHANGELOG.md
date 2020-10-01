@@ -5,11 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-## [4.0.0] - 2020-04-25
 ### Changed
-- Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) to version 0.22.*
-- model schema now returns a SQLAlchemyAutoSchema instance instead of the deprecated ModelSchema.
+- Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) version from `0.21.*` to `0.23.*`.
+- Update [black](https://pypi.org/project/black/) version from `master` to `20.10b0`.
+- model schema now returns a `SQLAlchemyAutoSchema` instance instead of the deprecated `ModelSchema`.
 - `required_on_query` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
 - `allow_comparison_signs` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
 - `interpret_star_character` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
