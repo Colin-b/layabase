@@ -24,7 +24,7 @@ def _add_query_field(
         # Describe every dict column field as dot notation
         for inner_field in field._default_description_model().__dict__.values():
             if isinstance(inner_field, Column):
-                _add_query_field(parser, inner_field, f"{field.name}.")
+                _add_query_field(parser, inner_field, f"{prefix}{field.name}.")
     elif isinstance(field, ListColumn):
         # Note that List of dict or list of list might be wrongly parsed
         parser.add_argument(

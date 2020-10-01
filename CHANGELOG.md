@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [4.0.0] - 2020-02-11
+## [4.0.0] - 2020-04-25
 ### Changed
 - Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) to version 0.22.*
 - model schema now returns a SQLAlchemyAutoSchema instance instead of the deprecated ModelSchema.
@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `allow_comparison_signs` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
 - `interpret_star_character` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
 - Iterate over SQLAlchemy fields to find the one required on queries instead of creating a Marshmallow schema.
+
+### Fixed
+- [Mongo] Fix adding field to parser adding only one level of multilevel DictColumn.
 
 ## [3.5.1] - 2020-01-30
 ### Fixed
