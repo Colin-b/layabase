@@ -6,7 +6,7 @@ from layabase.testing import mock_mongo_audit_datetime
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -21,7 +21,7 @@ def controller():
 
 
 def test_versioned_int_primary_key_is_reset_after_delete(
-    controller, mock_mongo_audit_datetime
+    controller: layabase.CRUDController, mock_mongo_audit_datetime
 ):
     assert controller.post({"other": "test1"}) == {
         "key": 1,

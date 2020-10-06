@@ -78,3 +78,4 @@ def test_get_with_dot_notation_multi_level_is_valid(controller):
             "key": "my_key",
         }
     ] == controller.get({"dict_field.first_key.inner_key1": EnumTest.Value1})
+

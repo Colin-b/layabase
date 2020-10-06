@@ -2,15 +2,12 @@ from threading import Thread
 
 import pytest
 import sqlalchemy
-import flask
-import flask_restplus
-from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 import layabase
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestTable:
         __tablename__ = "test"
 
@@ -23,67 +20,22 @@ def controller():
     return controller
 
 
-@pytest.fixture
-def app(controller: layabase.CRUDController):
-    application = flask.Flask(__name__)
-    application.testing = True
-    api = flask_restplus.Api(application)
-    namespace = api.namespace("Test", path="/")
-
-    controller.namespace(namespace)
-
-    @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
-        def get(self):
-            return []
-
-        @namespace.expect(controller.json_post_model)
-        def post(self):
-            return []
-
-        @namespace.expect(controller.json_put_model)
-        def put(self):
-            return []
-
-        @namespace.expect(controller.query_delete_parser)
-        def delete(self):
-            return []
-
-    @namespace.route("/test/description")
-    class TestDescriptionResource(flask_restplus.Resource):
-        @namespace.marshal_with(controller.get_model_description_response_model)
-        def get(self):
-            return {}
-
-    @namespace.route("/test_parsers")
-    class TestParsersResource(flask_restplus.Resource):
-        def get(self):
-            return controller.query_get_parser.parse_args()
-
-        def delete(self):
-            return controller.query_delete_parser.parse_args()
-
-    return application
-
-
 def test_get_without_providing_a_dictionary(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get("")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == ""
 
 
 def test_get_one_without_providing_a_dictionary(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get_one("")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == ""
 
 
 def test_get_last_without_providing_a_dictionary(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get_last("")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == ""
@@ -92,21 +44,21 @@ def test_get_last_without_providing_a_dictionary(controller: layabase.CRUDContro
 def test_get_history_without_providing_a_dictionary(
     controller: layabase.CRUDController,
 ):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get_history("")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == ""
 
 
 def test_delete_without_providing_a_dictionary(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.delete("")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == ""
 
 
 def test_rollback_without_providing_a_dictionary(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.rollback_to("")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == ""
@@ -121,21 +73,21 @@ def test_get_one_without_data_returns_empty_dict(controller: layabase.CRUDContro
 
 
 def test_post_with_nothing_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
 
 
 def test_post_list_with_nothing_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
 
 
 def test_post_many_with_empty_dict_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many({})
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
@@ -176,7 +128,10 @@ def test_dbapierror_when_inserting_many(
                 {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
             ]
         )
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
+    )
 
 
 def test_exception_when_inserting_many(
@@ -209,7 +164,10 @@ def test_dbapierror_when_inserting_one(
     monkeypatch.setattr(controller._model._session, "add", raise_dbapi_error)
     with pytest.raises(Exception) as exception_info:
         controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
+    )
 
 
 def test_exception_when_inserting_one(controller: layabase.CRUDController, monkeypatch):
@@ -247,7 +205,10 @@ def test_dbapierror_when_updating_many_retrieval(
                 {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
             ]
         )
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
+    )
 
 
 def test_dbapierror_when_updating_many(
@@ -275,7 +236,10 @@ def test_dbapierror_when_updating_many(
                 {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
             ]
         )
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
+    )
 
 
 def test_exception_when_updating_many(controller: layabase.CRUDController, monkeypatch):
@@ -318,7 +282,10 @@ def test_dbapierror_when_updating_one(controller: layabase.CRUDController, monke
     monkeypatch.setattr(controller._model._session, "add", raise_dbapi_error)
     with pytest.raises(Exception) as exception_info:
         controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
+    )
 
 
 def test_exception_when_updating_one(controller: layabase.CRUDController, monkeypatch):
@@ -349,37 +316,37 @@ def test_exception_when_deleting(controller: layabase.CRUDController, monkeypatc
 
 
 def test_post_with_empty_dict_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({})
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
 
 
-def test_post_without_providing_a_dictionary(client, controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+def test_post_without_providing_a_dictionary(controller):
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post("fail")
-    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
-    assert exception_info.value.received_data == "fail"
+    assert exception_info.value.errors == {"_schema": ["Invalid input type."]}
+    assert exception_info.value.received_data == None
 
 
 def test_post_many_with_something_else_than_list_is_invalid(
     controller: layabase.CRUDController,
 ):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many("fail")
-    assert exception_info.value.errors == {"_schema": ["Invalid input type."]}
+    assert exception_info.value.errors == {"": ["Must be a list of dictionaries."]}
     assert exception_info.value.received_data == "fail"
 
 
-def test_put_without_providing_a_dictionary(client, controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+def test_put_without_providing_a_dictionary(controller):
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put("fail")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == "fail"
 
 
-def test_put_many_without_providing_a_list(client, controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+def test_put_many_without_providing_a_list(controller):
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many("fail")
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == "f"
@@ -388,21 +355,21 @@ def test_put_many_without_providing_a_list(client, controller):
 def test_post_many_with_something_else_than_list_of_dict_is_invalid(
     controller: layabase.CRUDController,
 ):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(["fail"])
     assert exception_info.value.errors == {0: {"_schema": ["Invalid input type."]}}
-    assert exception_info.value.received_data == ["fail"]
+    assert exception_info.value.received_data == [None]
 
 
-def test_put_many_without_providing_a_list_of_dictionaries(client, controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+def test_put_many_without_providing_a_list_of_dictionaries(controller):
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many(["fail"])
     assert exception_info.value.errors == {"": ["Must be a dictionary."]}
     assert exception_info.value.received_data == "fail"
 
 
 def test_post_many_with_empty_list_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many([])
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
@@ -413,14 +380,14 @@ def test_get_audit_when_not_audited(controller: layabase.CRUDController):
 
 
 def test_put_with_nothing_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put(None)
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
 
 
 def test_put_with_empty_dict_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({})
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
@@ -432,7 +399,7 @@ def test_delete_without_nothing_do_not_fail(controller: layabase.CRUDController)
 
 
 def test_post_without_mandatory_field_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "my_key"})
     assert exception_info.value.errors == {
         "mandatory": ["Missing data for required field."]
@@ -444,7 +411,7 @@ def test_post_without_mandatory_field_is_invalid(controller: layabase.CRUDContro
 def test_post_many_without_mandatory_field_is_invalid(
     controller: layabase.CRUDController,
 ):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(
             [
                 {"key": "my_key"},
@@ -462,7 +429,7 @@ def test_post_many_without_mandatory_field_is_invalid(
 
 
 def test_post_without_key_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"mandatory": 1})
     assert exception_info.value.errors == {"key": ["Missing data for required field."]}
     assert exception_info.value.received_data == {"mandatory": 1}
@@ -470,7 +437,7 @@ def test_post_without_key_is_invalid(controller: layabase.CRUDController):
 
 
 def test_post_many_without_key_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(
             [
                 {"mandatory": 1},
@@ -488,7 +455,7 @@ def test_post_many_without_key_is_invalid(controller: layabase.CRUDController):
 
 
 def test_post_with_wrong_type_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": 256, "mandatory": 1})
     assert exception_info.value.errors == {"key": ["Not a valid string."]}
     assert exception_info.value.received_data == {"key": 256, "mandatory": 1}
@@ -496,7 +463,7 @@ def test_post_with_wrong_type_is_invalid(controller: layabase.CRUDController):
 
 
 def test_post_many_with_wrong_type_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(
             [
                 {"key": 256, "mandatory": 1},
@@ -513,7 +480,7 @@ def test_post_many_with_wrong_type_is_invalid(controller: layabase.CRUDControlle
 
 def test_put_with_wrong_type_is_invalid(controller: layabase.CRUDController):
     controller.post({"key": "value1", "mandatory": 1})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "value1", "mandatory": "invalid value"})
     assert exception_info.value.errors == {"mandatory": ["Not a valid integer."]}
     assert exception_info.value.received_data == {
@@ -562,7 +529,7 @@ def test_put_many_with_invalid_value(controller: layabase.CRUDController):
     controller.post_many(
         [{"key": "my_key", "mandatory": 1}, {"key": "my_key2", "mandatory": 2}]
     )
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many(
             [
                 {"key": "my_key", "mandatory": "not integer"},
@@ -577,17 +544,17 @@ def test_put_many_with_invalid_value(controller: layabase.CRUDController):
 
 
 def test_put_many_without_previous_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ModelCouldNotBeFound) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many(
             [{"key": "my_key", "mandatory": 2}, {"key": "my_key2", "mandatory": 3}]
         )
-    assert exception_info.value.requested_data == {"key": "my_key", "mandatory": 2}
+    assert exception_info.value.received_data == {"key": "my_key", "mandatory": 2}
 
 
 def test_put_unexisting_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ModelCouldNotBeFound) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "my_key", "mandatory": 1, "optional": "my_value"})
-    assert exception_info.value.requested_data == {
+    assert exception_info.value.received_data == {
         "key": "my_key",
         "mandatory": 1,
         "optional": "my_value",
@@ -595,7 +562,7 @@ def test_put_unexisting_is_invalid(controller: layabase.CRUDController):
 
 
 def test_put_many_with_empty_list_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many([])
     assert exception_info.value.errors == {"": ["No data provided."]}
     assert exception_info.value.received_data == {}
@@ -636,7 +603,7 @@ def test_get_one_with_an_empty_list_is_valid(controller: layabase.CRUDController
 def test_get_one_with_a_list_of_values_is_invalid(controller: layabase.CRUDController):
     controller.post({"key": "test", "mandatory": 1})
     controller.post({"key": "test2", "mandatory": 2})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get_one({"key": ["test2", "test"]})
     assert exception_info.value.errors == {"key": ["Only one value must be queried."]}
     assert exception_info.value.received_data == {"key": ["test2", "test"]}
@@ -666,15 +633,18 @@ def test_post_many_with_optional_is_valid(controller: layabase.CRUDController):
 
 
 def test_post_with_unknown_field_is_valid(controller: layabase.CRUDController):
-    assert controller.post(
-        {
-            "key": "my_key",
-            "mandatory": 1,
-            "optional": "my_value",
-            # This field do not exists in schema
-            "unknown": "my_value",
-        }
-    ) == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
+    assert (
+        controller.post(
+            {
+                "key": "my_key",
+                "mandatory": 1,
+                "optional": "my_value",
+                # This field do not exists in schema
+                "unknown": "my_value",
+            }
+        )
+        == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
+    )
     assert controller.get_one({}) == {
         "key": "my_key",
         "mandatory": 1,
@@ -993,267 +963,6 @@ def test_delete_without_filter_is_removing_everything(
     assert controller.get({}) == []
 
 
-def test_query_get_parser(client):
-    response = client.get(
-        "/test_parsers?key=12&mandatory=123&optional=1234&limit=1&order_by=key&offset=0"
-    )
-    assert response.json == {
-        "key": ["12"],
-        "mandatory": [123],
-        "optional": ["1234"],
-        "limit": 1,
-        "order_by": ["key"],
-        "offset": 0,
-    }
-
-
-def test_query_delete_parser(client):
-    response = client.delete("/test_parsers?key=12&mandatory=123&optional=1234")
-    assert response.json == {"key": ["12"], "mandatory": [123], "optional": ["1234"]}
-
-
-def test_open_api_definition(client):
-    response = client.get("/swagger.json")
-    assert response.json == {
-        "swagger": "2.0",
-        "basePath": "/",
-        "paths": {
-            "/test": {
-                "post": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "post_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_PostRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_GetResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "limit",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
-                            "exclusiveMinimum": True,
-                        },
-                        {
-                            "name": "offset",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
-                        },
-                        {
-                            "name": "order_by",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "X-Fields",
-                            "in": "header",
-                            "type": "string",
-                            "format": "mask",
-                            "description": "An optional fields mask",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
-            },
-            "/test/description": {
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_GetDescriptionResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_description_resource",
-                    "parameters": [
-                        {
-                            "name": "X-Fields",
-                            "in": "header",
-                            "type": "string",
-                            "format": "mask",
-                            "description": "An optional fields mask",
-                        }
-                    ],
-                    "tags": ["Test"],
-                }
-            },
-            "/test_parsers": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "tags": ["Test"],
-                },
-                "get": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "get_test_parsers_resource",
-                    "tags": ["Test"],
-                },
-            },
-        },
-        "info": {"title": "API", "version": "1.0"},
-        "produces": ["application/json"],
-        "consumes": ["application/json"],
-        "tags": [{"name": "Test"}],
-        "definitions": {
-            "TestTable_PostRequestModel": {
-                "required": ["key", "mandatory"],
-                "properties": {
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample_value",
-                    },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample_value",
-                    },
-                },
-                "type": "object",
-            },
-            "TestTable_PutRequestModel": {
-                "required": ["key", "mandatory"],
-                "properties": {
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample_value",
-                    },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample_value",
-                    },
-                },
-                "type": "object",
-            },
-            "TestTable_GetResponseModel": {
-                "required": ["key", "mandatory"],
-                "properties": {
-                    "key": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample_value",
-                    },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample_value",
-                    },
-                },
-                "type": "object",
-            },
-            "TestTable_GetDescriptionResponseModel": {
-                "required": ["key", "mandatory", "table"],
-                "properties": {
-                    "table": {
-                        "type": "string",
-                        "description": "Table name",
-                        "example": "table",
-                    },
-                    "key": {"type": "string", "example": "column"},
-                    "mandatory": {"type": "string", "example": "column"},
-                    "optional": {"type": "string", "example": "column"},
-                },
-                "type": "object",
-            },
-        },
-        "responses": {
-            "ParseError": {"description": "When a mask can't be parsed"},
-            "MaskError": {"description": "When any error occurs on mask"},
-        },
-    }
-
-
 def test_get_with_order_by_desc_is_retrieving_elements_ordered_by_descending_mode(
     controller,
 ):
@@ -1320,7 +1029,7 @@ def test_get_without_filter_is_failing_if_more_than_one_item_exists(
 ):
     controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     controller.post({"key": "my_key2", "mandatory": 2, "optional": "my_value2"})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get_one({})
     assert exception_info.value.errors == {
         "": ["More than one result: Consider another filtering."]

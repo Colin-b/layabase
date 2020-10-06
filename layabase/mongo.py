@@ -1231,7 +1231,10 @@ def link(controller: CRUDController, base: pymongo.database.Database):
         from layabase._audit_mongo import _create_from
 
         ControllerModel.audit_model = _create_from(
-            mixin=controller.table_or_collection, model=ControllerModel, base=base
+            mixin=controller.table_or_collection,
+            model=ControllerModel,
+            base=base,
+            retrieve_user=controller.retrieve_user,
         )
 
     controller._model_description_dictionary = ControllerModel.description_dictionary()

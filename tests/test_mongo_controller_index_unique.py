@@ -1,8 +1,4 @@
-import datetime
-import re
-
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -28,7 +24,7 @@ def test_put_many_without_primary_key_and_unique_index_update(
         [{"id": "test1", "id2": "test1"}, {"id": "test1", "id2": "test2"}]
     ) == [{"id": "test1", "id2": "test1"}, {"id": "test1", "id2": "test2"}]
     # It should never be declared without a PK in this case but as there is no PK, the first document is updated.
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many([{"id2": "test2"}])
     assert exception_info.value.errors == {"": ["One document already exists."]}
     assert exception_info.value.received_data == [{"id": None, "id2": "test2"}]

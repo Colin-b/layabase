@@ -5,16 +5,19 @@ from typing import List, Dict, Type, Iterable
 import operator
 
 from marshmallow import ValidationError, EXCLUDE
-from marshmallow_sqlalchemy import ModelSchema
-from layaberr import ValidationFailed, ModelCouldNotBeFound
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from sqlalchemy import create_engine, inspect, Column, text, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, exc
+from sqlalchemy.orm import sessionmaker, exc, PropComparator
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.engine.base import Engine
 
-from layabase._exceptions import MultiSchemaNotSupported
+from layabase._exceptions import (
+    MultiSchemaNotSupported,
+    ValidationFailed,
+    DatabaseError,
+)
 from layabase import ComparisonSigns, CRUDController
 
 
@@ -90,10 +93,10 @@ class CRUDModel:
         for column_name, value in filters.items():
             if value is not None:
                 column: Column = getattr(cls, column_name)
-                allow_like = column.info.get("marshmallow", {}).get(
+                allow_like = column.info.get("layabase", {}).get(
                     "interpret_star_character", False
                 )
-                allow_comparison_signs = column.info.get("marshmallow", {}).get(
+                allow_comparison_signs = column.info.get("layabase", {}).get(
                     "allow_comparison_signs", False
                 )
                 equality_values = []
@@ -136,21 +139,20 @@ class CRUDModel:
             result = query.all()
             cls._session.close()
             return result
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
 
     @classmethod
     def customize_query(cls, query: Query) -> Query:
         return query  # No custom behavior by default
 
     @classmethod
-    def _handle_connection_failure(cls):
+    def _handle_connection_failure(cls, exception: exc.sa_exc.DBAPIError):
         """
         :raises Exception: Explaining that the database could not be reached.
         """
-        logger.exception("Database could not be reached.")
         cls._session.close()  # Force connection close to properly re-establish it on next request
-        raise Exception("Database could not be reached.")
+        raise DatabaseError(exception) from exception
 
     @classmethod
     def get(cls, **filters) -> dict:
@@ -179,8 +181,8 @@ class CRUDModel:
             raise ValidationFailed(
                 filters, message="More than one result: Consider another filtering."
             )
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
 
     @classmethod
     def get_last(cls, **filters) -> dict:
@@ -199,10 +201,14 @@ class CRUDModel:
         """
         if not rows:
             raise ValidationFailed({}, message="No data provided.")
+        if not isinstance(rows, list):
+            raise ValidationFailed(rows, message="Must be a list of dictionaries.")
+        # TODO Check if it can be done by SQLAlchemy already
+        rows = [cls._remove_auto_incremented_fields(row) for row in rows]
         try:
             models = cls.schema().load(rows, many=True, session=cls._session)
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
         except ValidationError as e:
             raise ValidationFailed(rows, e.messages)
         try:
@@ -212,9 +218,9 @@ class CRUDModel:
                     cls.audit_model.audit_add(row)
             cls._session.commit()
             return _models_field_values(models)
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
@@ -229,11 +235,12 @@ class CRUDModel:
         """
         if not row:
             raise ValidationFailed({}, message="No data provided.")
+
+        row = cls._remove_auto_incremented_fields(row)
         try:
             model = cls.schema().load(row, session=cls._session)
-        except exc.sa_exc.DBAPIError:
-            logger.exception("Database could not be reached.")
-            raise Exception("Database could not be reached.")
+        except exc.sa_exc.DBAPIError as e:
+            raise DatabaseError(e) from e
         except ValidationError as e:
             raise ValidationFailed(row, e.messages)
         try:
@@ -242,12 +249,22 @@ class CRUDModel:
                 cls.audit_model.audit_add(row)
             cls._session.commit()
             return _model_field_values(model)
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
+
+    @classmethod
+    def _remove_auto_incremented_fields(cls, row: dict) -> dict:
+        if isinstance(row, dict):
+            auto_incremented_fields = cls._get_auto_incremented_fields()
+            return {
+                name: value
+                for name, value in row.items()
+                if name not in auto_incremented_fields
+            }
 
     @classmethod
     def update_all(cls, rows: List[dict]) -> (List[dict], List[dict]):
@@ -268,10 +285,12 @@ class CRUDModel:
                 raise ValidationFailed(row, message="Must be a dictionary.")
             try:
                 previous_model = cls.schema().get_instance(row)
-            except exc.sa_exc.DBAPIError:
-                cls._handle_connection_failure()
+            except exc.sa_exc.DBAPIError as e:
+                cls._handle_connection_failure(e)
             if not previous_model:
-                raise ModelCouldNotBeFound(row)
+                raise ValidationFailed(
+                    row, message="The row to update could not be found."
+                )
             previous_row = _model_field_values(previous_model)
             try:
                 new_model = cls.schema().load(
@@ -292,9 +311,9 @@ class CRUDModel:
                     cls.audit_model.audit_update(new_row)
             cls._session.commit()
             return previous_rows, new_rows
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
@@ -314,10 +333,10 @@ class CRUDModel:
             raise ValidationFailed(row, message="Must be a dictionary.")
         try:
             previous_model = cls.schema().get_instance(row)
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
         if not previous_model:
-            raise ModelCouldNotBeFound(row)
+            raise ValidationFailed(row, message="The row to update could not be found.")
         previous_row = _model_field_values(previous_model)
         try:
             new_model = cls.schema().load(
@@ -332,9 +351,9 @@ class CRUDModel:
                 cls.audit_model.audit_update(new_row)
             cls._session.commit()
             return previous_row, new_row
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
@@ -361,15 +380,15 @@ class CRUDModel:
             nb_removed = query.delete(synchronize_session="fetch")
             cls._session.commit()
             return nb_removed
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
 
     @classmethod
-    def schema(cls) -> ModelSchema:
+    def schema(cls) -> SQLAlchemyAutoSchema:
         """
         Create a new Marshmallow SQL Alchemy schema instance.
         TODO Remove the need for a new schema instance every time. Create it once and for all
@@ -377,11 +396,12 @@ class CRUDModel:
         :return: The newly created schema instance.
         """
 
-        class Schema(ModelSchema):
+        class Schema(SQLAlchemyAutoSchema):
             class Meta:
                 model = cls
                 ordered = True
                 unknown = EXCLUDE
+                load_instance = True
 
         return Schema(session=cls._session)
 
@@ -392,6 +412,15 @@ class CRUDModel:
             marshmallow_field.name
             for marshmallow_field in cls.schema().fields.values()
             if marshmallow_field.required
+        ]
+
+    @classmethod
+    def _get_auto_incremented_fields(cls) -> List[str]:
+        mapper = inspect(cls)
+        return [
+            column.name
+            for column in mapper.columns.values()
+            if column.autoincrement is True
         ]
 
     @classmethod
@@ -406,9 +435,10 @@ class CRUDModel:
     @classmethod
     def _get_required_query_fields(cls) -> List[str]:
         return [
-            marshmallow_field.name
-            for marshmallow_field in cls.schema().fields.values()
-            if marshmallow_field.metadata.get("required_on_query", False)
+            name
+            for name, column in cls.__dict__.items()
+            if isinstance(column, PropComparator)
+            and column.info.get("layabase", {}).get("required_on_query", False)
         ]
 
     @classmethod
@@ -438,10 +468,7 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
 
     controller._model = model
 
-    if not _supports_offset(base.metadata.bind.url.drivername):
-        controller.query_get_parser.remove_argument("offset")
-        controller.query_get_audit_parser.remove_argument("offset")
-        controller.query_get_history_parser.remove_argument("offset")
+    controller.supports_offset = _supports_offset(base.metadata.bind.url.drivername)
 
     if controller.audit:
         from layabase._audit_sqlalchemy import _create_from, _to_audit_column
@@ -458,7 +485,12 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
 
         model.audit_model = type(
             f"{controller.table_or_collection.__name__}_SQLAlchemyAuditModel",
-            (_create_from(model), table_copy, CRUDModel, base),
+            (
+                _create_from(model, controller.retrieve_user),
+                table_copy,
+                CRUDModel,
+                base,
+            ),
             {"__tablename__": f"audit_{controller.table_or_collection.__tablename__}"},
         )
 

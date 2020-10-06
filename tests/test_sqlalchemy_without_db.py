@@ -27,19 +27,28 @@ def test_get_all_when_db_down(
 ):
     with pytest.raises(Exception) as exception_info:
         controller.get({})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == """A error occurred while querying database: (sqlite3.OperationalError) no such table: test\n[SQL: SELECT test."key" AS test_key \nFROM test]\n(Background on this error at: http://sqlalche.me/e/13/e3q8)"""
+    )
 
 
 def test_get_when_db_down(disconnected_database, controller: layabase.CRUDController):
     with pytest.raises(Exception) as exception_info:
         controller.get_one({})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == """A error occurred while querying database: (sqlite3.OperationalError) no such table: test\n[SQL: SELECT test."key" AS test_key \nFROM test]\n(Background on this error at: http://sqlalche.me/e/13/e3q8)"""
+    )
 
 
 def test_add_when_db_down(disconnected_database, controller: layabase.CRUDController):
     with pytest.raises(Exception) as exception_info:
         controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == """A error occurred while querying database: (sqlite3.OperationalError) no such table: test\n[SQL: SELECT test."key" AS test_key \nFROM test \nWHERE test."key" = ?\n LIMIT ? OFFSET ?]\n[parameters: ('my_key1', 1, 0)]\n(Background on this error at: http://sqlalche.me/e/13/e3q8)"""
+    )
 
 
 def test_post_many_when_db_down(
@@ -52,7 +61,10 @@ def test_post_many_when_db_down(
                 {"key": "my_key2", "mandatory": 1, "optional": "my_value1"},
             ]
         )
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == """A error occurred while querying database: (sqlite3.OperationalError) no such table: test\n[SQL: SELECT test."key" AS test_key \nFROM test \nWHERE test."key" = ?\n LIMIT ? OFFSET ?]\n[parameters: ('my_key1', 1, 0)]\n(Background on this error at: http://sqlalche.me/e/13/e3q8)"""
+    )
 
 
 def test_update_when_db_down(
@@ -60,7 +72,10 @@ def test_update_when_db_down(
 ):
     with pytest.raises(Exception) as exception_info:
         controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == """A error occurred while querying database: (sqlite3.OperationalError) no such table: test\n[SQL: SELECT test."key" AS test_key \nFROM test \nWHERE test."key" = ?\n LIMIT ? OFFSET ?]\n[parameters: ('my_key1', 1, 0)]\n(Background on this error at: http://sqlalche.me/e/13/e3q8)"""
+    )
 
 
 def test_remove_when_db_down(
@@ -68,7 +83,10 @@ def test_remove_when_db_down(
 ):
     with pytest.raises(Exception) as exception_info:
         controller.delete({})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == """A error occurred while querying database: (sqlite3.OperationalError) no such table: test\n[SQL: SELECT test."key" AS test_key \nFROM test]\n(Background on this error at: http://sqlalche.me/e/13/e3q8)"""
+    )
 
 
 def test_health_details_failure(

@@ -2,23 +2,7 @@ import enum
 import logging
 from typing import List, Union, Iterable
 
-from layaberr import ValidationFailed
-import flask_restplus
-
-from layabase._exceptions import ControllerModelNotSet
-from layabase._api import (
-    add_get_query_fields,
-    add_delete_query_fields,
-    add_history_query_fields,
-    add_rollback_query_fields,
-    add_get_audit_query_fields,
-    get_response_fields,
-    get_history_response_fields,
-    get_audit_response_fields,
-    get_description_response_fields,
-    post_request_fields,
-    put_request_fields,
-)
+from layabase._exceptions import ControllerModelNotSet, ValidationFailed
 
 logger = logging.getLogger(__name__)
 
@@ -83,23 +67,6 @@ def check(base) -> (str, dict):
     return _check(base)
 
 
-def _ignore_read_only_fields(model_properties: dict, model_as_dict: dict):
-    if model_as_dict:
-        if not isinstance(model_as_dict, dict):
-            raise ValidationFailed(model_as_dict, message="Must be a dictionary.")
-        read_only_fields = [
-            field_name
-            for field_name, field_properties in model_properties.items()
-            if field_properties.get("readOnly")
-        ]
-        return {
-            field_name: field_value
-            for field_name, field_value in model_as_dict.items()
-            if field_name not in read_only_fields
-        }
-    return model_as_dict
-
-
 class CRUDController:
     """
     Class providing methods to interact with a Table or a Mongo Collection.
@@ -116,6 +83,7 @@ class CRUDController:
         :param skip_unknown_fields: False to use strict field name check. Ignore unknown fields by default. (Mongo only)
         :param skip_update_indexes: True to never update indexes. Warning, this might lead to invalid indexes on the underlying table or collection. (Mongo only)
         :param skip_log_for_unknown_fields: List of unknown field names that are to be expected.
+        :param retrieve_user: Callable returning the user to store in case of audit.
         """
         if not table_or_collection:
             raise Exception("Table or Collection must be provided.")
@@ -127,75 +95,25 @@ class CRUDController:
         self.skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
         self.skip_update_indexes = kwargs.pop("skip_update_indexes", False)
         self.skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
-
-        # CRUD request parsers
-        self.query_get_parser = flask_restplus.reqparse.RequestParser()
-        add_get_query_fields(table_or_collection, self.query_get_parser)
-
-        self.query_delete_parser = flask_restplus.reqparse.RequestParser()
-        add_delete_query_fields(table_or_collection, self.query_delete_parser)
-
-        self.query_rollback_parser = flask_restplus.reqparse.RequestParser()
-        self.query_get_history_parser = flask_restplus.reqparse.RequestParser()
-        if self.history:
-            add_rollback_query_fields(table_or_collection, self.query_rollback_parser)
-            add_history_query_fields(table_or_collection, self.query_get_history_parser)
-
-        self.query_get_audit_parser = flask_restplus.reqparse.RequestParser()
-        if self.audit:
-            add_get_audit_query_fields(
-                table_or_collection, self.history, self.query_get_audit_parser
-            )
+        self.supports_offset = True
+        # By default, audit user will be blank
+        self.retrieve_user = kwargs.pop("retrieve_user", lambda: "")
 
         # Generated from table_or_collection, appropriate class depending on what was requested on controller
         self._model = None
 
-        # CRUD model definition (instead of request parsers)
-        self.json_post_model = None
-        self.json_put_model = None
-
-        # CRUD response marshallers
-        self.get_response_model = None
-        self.get_history_response_model = None
-        self.get_audit_response_model = None
-        self.get_model_description_response_model = None
-
         # The response that is always sent for the Model Description
         self._model_description_dictionary = None
 
-    def namespace(self, namespace: flask_restplus.Namespace):
-        """
-        Create Flask RestPlus models that can be used to marshall results (and document service).
+    @property
+    def flask_restx(self):
+        from layabase._flask_restx import ParsersAndModels
 
-        :param namespace: Flask RestPlus API.
-        """
-        self.json_post_model = namespace.model(
-            f"{self.table_or_collection.__name__}_PostRequestModel",
-            post_request_fields(self.table_or_collection, namespace),
-        )
-        self.json_put_model = namespace.model(
-            f"{self.table_or_collection.__name__}_PutRequestModel",
-            put_request_fields(self.table_or_collection, namespace),
-        )
-        self.get_response_model = namespace.model(
-            f"{self.table_or_collection.__name__}_GetResponseModel",
-            get_response_fields(self.table_or_collection, namespace),
-        )
-        self.get_history_response_model = namespace.model(
-            f"{self.table_or_collection.__name__}_GetHistoryResponseModel",
-            get_history_response_fields(self.table_or_collection, namespace),
-        )
-        if self.audit:
-            self.get_audit_response_model = namespace.model(
-                f"{self.table_or_collection.__name__}_GetAuditResponseModel",
-                get_audit_response_fields(
-                    self.table_or_collection, self.history, namespace
-                ),
+        if not hasattr(self, "_flask_restx"):
+            self._flask_restx = ParsersAndModels(
+                self.table_or_collection, self.history, self.audit, self.supports_offset
             )
-        self.get_model_description_response_model = namespace.model(
-            f"{self.table_or_collection.__name__}_GetDescriptionResponseModel",
-            get_description_response_fields(self.table_or_collection),
-        )
+        return self._flask_restx
 
     def get(self, request_arguments: dict) -> List[dict]:
         """
@@ -257,10 +175,6 @@ class CRUDController:
         """
         if not self._model:
             raise ControllerModelNotSet(self)
-        if hasattr(self.json_post_model, "_schema"):
-            new_dict = _ignore_read_only_fields(
-                self.json_post_model._schema.get("properties", {}), new_dict
-            )
         return self._model.add(new_dict)
 
     def post_many(self, new_dicts: List[dict]) -> List[dict]:
@@ -271,17 +185,6 @@ class CRUDController:
         """
         if not self._model:
             raise ControllerModelNotSet(self)
-        if new_dicts and hasattr(self.json_post_model, "_schema"):
-            if not isinstance(new_dicts, list):
-                raise ValidationFailed(
-                    new_dicts, message="Must be a list of dictionaries."
-                )
-            new_dicts = [
-                _ignore_read_only_fields(
-                    self.json_post_model._schema.get("properties", {}), new_dict
-                )
-                for new_dict in new_dicts
-            ]
         return self._model.add_all(new_dicts)
 
     def put(self, updated_dict: dict) -> (dict, dict):

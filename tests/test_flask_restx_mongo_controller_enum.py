@@ -1,64 +1,64 @@
-import logging
-import sys
+import enum
 
 import flask
-import flask_restplus
+import flask_restx
 import pytest
 
 import layabase
 import layabase.mongo
 
-# Use debug logging to ensure that debug logging statements have no impact
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(process)d:%(thread)d - %(filename)s:%(lineno)d - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-    level=logging.DEBUG,
-)
+
+class EnumTest(enum.Enum):
+    Value1 = 1
+    Value2 = 2
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.mongo.Column(str, is_primary_key=True)
-        mandatory = layabase.mongo.Column(int, is_nullable=False)
-        optional = layabase.mongo.Column(str)
+        id = layabase.mongo.Column(int, is_primary_key=True)
+        enum_field = layabase.mongo.Column(
+            EnumTest, allow_none_as_filter=True, store_none=True
+        )
 
-    return layabase.CRUDController(TestCollection)
+    controller = layabase.CRUDController(TestCollection)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test/description")
-    class TestDescriptionResource(flask_restplus.Resource):
-        @namespace.marshal_with(controller.get_model_description_response_model)
+    class TestDescriptionResource(flask_restx.Resource):
+        @namespace.marshal_with(controller.flask_restx.get_model_description_response_model)
         def get(self):
             return {}
 
@@ -99,21 +99,14 @@ def test_open_api_definition(client):
                     "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
+                            "name": "id",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "integer"},
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "optional",
+                            "name": "enum_field",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -142,34 +135,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
                 "put": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "put_test_resource",
@@ -182,6 +147,27 @@ def test_open_api_definition(client):
                                 "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
                     ],
                     "tags": ["Test"],
                 },
@@ -217,48 +203,36 @@ def test_open_api_definition(client):
         "definitions": {
             "TestCollection_PostRequestModel": {
                 "properties": {
-                    "key": {
+                    "id": {"type": "integer", "readOnly": False, "example": 1},
+                    "enum_field": {
                         "type": "string",
                         "readOnly": False,
-                        "example": "sample key",
-                    },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample optional",
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
                     },
                 },
                 "type": "object",
             },
             "TestCollection_PutRequestModel": {
                 "properties": {
-                    "key": {
+                    "id": {"type": "integer", "readOnly": False, "example": 1},
+                    "enum_field": {
                         "type": "string",
                         "readOnly": False,
-                        "example": "sample key",
-                    },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample optional",
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
                     },
                 },
                 "type": "object",
             },
             "TestCollection_GetResponseModel": {
                 "properties": {
-                    "key": {
+                    "id": {"type": "integer", "readOnly": False, "example": 1},
+                    "enum_field": {
                         "type": "string",
                         "readOnly": False,
-                        "example": "sample key",
-                    },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
-                        "readOnly": False,
-                        "example": "sample optional",
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
                     },
                 },
                 "type": "object",
@@ -271,9 +245,8 @@ def test_open_api_definition(client):
                         "description": "Collection name",
                         "example": "collection",
                     },
-                    "key": {"type": "string", "example": "column"},
-                    "mandatory": {"type": "string", "example": "column"},
-                    "optional": {"type": "string", "example": "column"},
+                    "id": {"type": "string", "example": "column"},
+                    "enum_field": {"type": "string", "example": "column"},
                 },
                 "type": "object",
             },

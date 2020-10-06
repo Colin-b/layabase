@@ -3,7 +3,7 @@ import enum
 import datetime
 from typing import Dict
 
-import flask_restplus
+import flask_restx
 import iso8601
 from bson.objectid import ObjectId
 
@@ -18,13 +18,13 @@ def add_all_fields(collection, parser):
 
 
 def _add_query_field(
-    parser: flask_restplus.reqparse.RequestParser, field: Column, prefix=""
+    parser: flask_restx.reqparse.RequestParser, field: Column, prefix=""
 ):
     if isinstance(field, DictColumn):
         # Describe every dict column field as dot notation
         for inner_field in field._default_description_model().__dict__.values():
             if isinstance(inner_field, Column):
-                _add_query_field(parser, inner_field, f"{field.name}.")
+                _add_query_field(parser, inner_field, f"{prefix}{field.name}.")
     elif isinstance(field, ListColumn):
         # Note that List of dict or list of list might be wrongly parsed
         parser.add_argument(
@@ -51,18 +51,18 @@ def _get_parser_type(field: Column) -> callable:
     Return a function taking a single parameter (the value) and converting to the required field type.
     """
     if field.field_type == bool:
-        return flask_restplus.inputs.boolean
+        return flask_restx.inputs.boolean
     if field.field_type == datetime.date:
         return (
             _validate_date
             if field.allow_comparison_signs
-            else flask_restplus.inputs.date_from_iso8601
+            else flask_restx.inputs.date_from_iso8601
         )
     if field.field_type == datetime.datetime:
         return (
             _validate_date_time
             if field.allow_comparison_signs
-            else flask_restplus.inputs.datetime_from_iso8601
+            else flask_restx.inputs.datetime_from_iso8601
         )
     if isinstance(field.field_type, enum.EnumMeta):
         return str
@@ -141,8 +141,8 @@ _validate_date.__schema__ = {"type": "string"}
 
 
 def all_request_fields(
-    collection, namespace: flask_restplus.Namespace
-) -> Dict[str, flask_restplus.fields.Raw]:
+    collection, namespace: flask_restx.Namespace
+) -> Dict[str, flask_restx.fields.Raw]:
     return {
         column.name: request_field(column, namespace)
         for column in collection.__dict__.values()
@@ -151,13 +151,13 @@ def all_request_fields(
 
 
 def request_field(
-    field: Column, namespace: flask_restplus.Namespace
-) -> flask_restplus.fields.Raw:
+    field: Column, namespace: flask_restx.Namespace
+) -> flask_restx.fields.Raw:
     if isinstance(field, DictColumn):
         dict_fields = all_request_fields(field._default_description_model(), namespace)
         if dict_fields:
             # Nested field cannot contains nothing
-            return flask_restplus.fields.Nested(
+            return flask_restx.fields.Nested(
                 namespace.model("_".join(dict_fields), dict_fields),
                 required=field.is_required,
                 example=field.example(),
@@ -168,7 +168,7 @@ def request_field(
                 skip_none=True,
             )
         else:
-            return flask_restplus.fields.Raw(
+            return flask_restx.fields.Raw(
                 required=field.is_required,
                 example=field.example(),
                 description=field.description,
@@ -177,7 +177,7 @@ def request_field(
                 readonly=field.should_auto_increment,
             )
     elif isinstance(field, ListColumn):
-        return flask_restplus.fields.List(
+        return flask_restx.fields.List(
             request_field(field.list_item_column, namespace),
             required=field.is_required,
             example=field.example(),
@@ -189,8 +189,8 @@ def request_field(
             max_items=field.max_length,
         )
     elif field.field_type == list:
-        return flask_restplus.fields.List(
-            flask_restplus.fields.String,
+        return flask_restx.fields.List(
+            flask_restx.fields.String,
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -201,7 +201,7 @@ def request_field(
             max_items=field.max_length,
         )
     elif field.field_type == int:
-        return flask_restplus.fields.Integer(
+        return flask_restx.fields.Integer(
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -212,7 +212,7 @@ def request_field(
             max=field.max_value,
         )
     elif field.field_type == float:
-        return flask_restplus.fields.Float(
+        return flask_restx.fields.Float(
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -223,7 +223,7 @@ def request_field(
             max=field.max_value,
         )
     elif field.field_type == bool:
-        return flask_restplus.fields.Boolean(
+        return flask_restx.fields.Boolean(
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -232,7 +232,7 @@ def request_field(
             readonly=field.should_auto_increment,
         )
     elif field.field_type == datetime.date:
-        return flask_restplus.fields.Date(
+        return flask_restx.fields.Date(
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -241,7 +241,7 @@ def request_field(
             readonly=field.should_auto_increment,
         )
     elif field.field_type == datetime.datetime:
-        return flask_restplus.fields.DateTime(
+        return flask_restx.fields.DateTime(
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -250,7 +250,7 @@ def request_field(
             readonly=field.should_auto_increment,
         )
     elif field.field_type == dict:
-        return flask_restplus.fields.Raw(
+        return flask_restx.fields.Raw(
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -259,7 +259,7 @@ def request_field(
             readonly=field.should_auto_increment,
         )
     else:
-        return flask_restplus.fields.String(
+        return flask_restx.fields.String(
             required=field.is_required,
             example=field.example(),
             description=field.description,
@@ -271,16 +271,16 @@ def request_field(
         )
 
 
-def get_description_response_fields(collection) -> Dict[str, flask_restplus.fields.Raw]:
+def get_description_response_fields(collection) -> Dict[str, flask_restx.fields.Raw]:
     exported_fields = {
-        "collection": flask_restplus.fields.String(
+        "collection": flask_restx.fields.String(
             required=True, example="collection", description="Collection name"
         )
     }
 
     exported_fields.update(
         {
-            column.name: flask_restplus.fields.String(
+            column.name: flask_restx.fields.String(
                 required=column.is_required,
                 example="column",
                 description=column.description,
