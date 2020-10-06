@@ -6,16 +6,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
-- Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) version from `0.21.*` to `0.23.*`.
-- Update [black](https://pypi.org/project/black/) version from `master` to `20.10b0`.
-- model schema now returns a `SQLAlchemyAutoSchema` instance instead of the deprecated `ModelSchema`.
 - `required_on_query` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
 - `allow_comparison_signs` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
 - `interpret_star_character` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
-- Iterate over SQLAlchemy fields to find the one required on queries instead of creating a Marshmallow schema.
+- `controller.query_get_parser` has been replaced by `controller.flask_restx.query_get_parser`.
+- `controller.query_delete_parser` has been replaced by `controller.flask_restx.query_delete_parser`.
+- `controller.query_rollback_parser` has been replaced by `controller.flask_restx.query_rollback_parser`.
+- `controller.query_get_history_parser` has been replaced by `controller.flask_restx.query_get_history_parser`.
+- `controller.query_get_audit_parser` has been replaced by `controller.flask_restx.query_get_audit_parser`.
+- `controller.namespace` has been replaced by `controller.flask_restx.init_models`.
+- `controller.json_post_model` has been replaced by `controller.flask_restx.json_post_model`.
+- `controller.json_put_model` has been replaced by `controller.flask_restx.json_put_model`.
+- `controller.get_response_model` has been replaced by `controller.flask_restx.get_response_model`.
+- `controller.get_history_response_model` has been replaced by `controller.flask_restx.get_history_response_model`.
+- `controller.get_audit_response_model` has been replaced by `controller.flask_restx.get_audit_response_model`.
+- `controller.get_model_description_response_model` has been replaced by `controller.flask_restx.get_model_description_response_model`.
+- [Mongo] Update of document(s) now raise a ValidationFailed instead of a ModelCouldNotBeFound in case the document(s) to update do not exists.
+- [SQLAlchemy] Update of row(s) now raise a ValidationFailed instead of a ModelCouldNotBeFound in case the row(s) to update do not exists.
+- [SQLAlchemy] Model schema now returns a `SQLAlchemyAutoSchema` instance instead of the deprecated `ModelSchema`.
+- [SQLAlchemy] Iterate over SQLAlchemy fields to find the one required on queries instead of creating a Marshmallow schema.
+- Update [layaberr](https://pypi.org/project/layaberr/) version from `2.*` to `3.*`.
+- Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) version from `0.21.*` to `0.23.*`.
+- Update [black](https://pypi.org/project/black/) version from `master` to `20.10b0`.
+- `flask-restx` is now an optional dependency.
+- `layaberr.ValidationFailed` are not sent anymore, `layabase.ValidationFailed` are sent instead.
 
 ### Fixed
 - [Mongo] Fix adding field to parser adding only one level of multilevel DictColumn.
+- [Mongo] Insertion of document(s) via controller is now faster (removing duplicated check for auto incremented fields and useless dict(s) creation).
+- [SQLAlchemy] Insertion of document(s) via model now ensure that auto incremented fields will be skipped. It was only performed when using controller.
+
+### Removed
+- `flask-restplus` is not supported anymore. `flask-restx` is used instead.
+- `layaberr` is not a required dependency anymore.
 
 ## [3.5.1] - 2020-01-30
 ### Fixed

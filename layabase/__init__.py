@@ -6,5 +6,5 @@ from layabase._database import (
     NoRelatedControllers,
     NoDatabaseProvided,
 )
-from layabase._exceptions import ControllerModelNotSet, MultiSchemaNotSupported
+from layabase._exceptions import ControllerModelNotSet, MultiSchemaNotSupported, ValidationFailed
 from layabase.version import __version__

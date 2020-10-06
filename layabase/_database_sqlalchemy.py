@@ -6,7 +6,6 @@ import operator
 
 from marshmallow import ValidationError, EXCLUDE
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from layaberr import ValidationFailed, ModelCouldNotBeFound
 from sqlalchemy import create_engine, inspect, Column, text, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc, PropComparator
@@ -14,7 +13,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.engine.base import Engine
 
-from layabase._exceptions import MultiSchemaNotSupported
+from layabase._exceptions import MultiSchemaNotSupported, ValidationFailed
 from layabase import ComparisonSigns, CRUDController
 
 
@@ -199,6 +198,15 @@ class CRUDModel:
         """
         if not rows:
             raise ValidationFailed({}, message="No data provided.")
+        if not isinstance(rows, list):
+            raise ValidationFailed(
+                rows, message="Must be a list of dictionaries."
+            )
+        # TODO Check if it can be done by SQLAlchemy already
+        rows = [
+            cls._remove_auto_incremented_fields(row)
+            for row in rows
+        ]
         try:
             models = cls.schema().load(rows, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
@@ -229,6 +237,8 @@ class CRUDModel:
         """
         if not row:
             raise ValidationFailed({}, message="No data provided.")
+
+        row = cls._remove_auto_incremented_fields(row)
         try:
             model = cls.schema().load(row, session=cls._session)
         except exc.sa_exc.DBAPIError:
@@ -248,6 +258,16 @@ class CRUDModel:
         except Exception:
             cls._session.rollback()
             raise
+
+    @classmethod
+    def _remove_auto_incremented_fields(cls, row: dict) -> dict:
+        if isinstance(row, dict):
+            auto_incremented_fields = cls._get_auto_incremented_fields()
+            return {
+                name: value
+                for name, value in row.items()
+                if name not in auto_incremented_fields
+            }
 
     @classmethod
     def update_all(cls, rows: List[dict]) -> (List[dict], List[dict]):
@@ -271,7 +291,7 @@ class CRUDModel:
             except exc.sa_exc.DBAPIError:
                 cls._handle_connection_failure()
             if not previous_model:
-                raise ModelCouldNotBeFound(row)
+                raise ValidationFailed(row, message="The row to update could not be found.")
             previous_row = _model_field_values(previous_model)
             try:
                 new_model = cls.schema().load(
@@ -317,7 +337,7 @@ class CRUDModel:
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
         if not previous_model:
-            raise ModelCouldNotBeFound(row)
+            raise ValidationFailed(row, message="The row to update could not be found.")
         previous_row = _model_field_values(previous_model)
         try:
             new_model = cls.schema().load(
@@ -393,6 +413,14 @@ class CRUDModel:
             marshmallow_field.name
             for marshmallow_field in cls.schema().fields.values()
             if marshmallow_field.required
+        ]
+
+    @classmethod
+    def _get_auto_incremented_fields(cls) -> List[str]:
+        return [
+            marshmallow_field.name
+            for marshmallow_field in cls.schema().fields.values()
+            if marshmallow_field.autoincrement is True
         ]
 
     @classmethod
