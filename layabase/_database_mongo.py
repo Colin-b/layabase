@@ -427,7 +427,7 @@ class _CRUDModel:
             raise ValidationFailed([], message="No data provided.")
 
         if not isinstance(documents, list):
-            raise ValidationFailed(documents, message="Must be a list.")
+            raise ValidationFailed(documents, message="Must be a list of dictionaries.")
 
         new_documents = copy.deepcopy(documents)
 
