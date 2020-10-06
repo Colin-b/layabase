@@ -33,6 +33,3 @@ class ValidationFailed(Exception):
         """
         self.received_data = received_data
         self.errors = errors if errors else {"": [message]}
-
-    def __str__(self):
-        return f"Errors: {self.errors}\nReceived: {self.received_data}"
