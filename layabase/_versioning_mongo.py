@@ -2,10 +2,10 @@ import logging
 from typing import List, Dict
 
 import pymongo
-from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase._database_mongo import _CRUDModel
 from layabase.mongo import Column, IndexType
+from layabase._exceptions import ValidationFailed
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class VersionedCRUDModel(_CRUDModel):
             document_keys, projection={"_id": False}
         )
         if not previous_document:
-            raise ModelCouldNotBeFound(document_keys)
+            raise ValidationFailed(document_keys, message="The document to update could not be found.")
 
         revision = cls._increment(*REVISION_COUNTER)
 
@@ -104,7 +104,7 @@ class VersionedCRUDModel(_CRUDModel):
                 document_keys, projection={"_id": False}
             )
             if not previous_document:
-                raise ModelCouldNotBeFound(document_keys)
+                raise ValidationFailed(document_keys, message="The document to update could not be found.")
 
             # Set previous version as expired (insert previous as expired)
             cls.__collection__.insert_one(

@@ -8,8 +8,9 @@ with open(os.path.join(this_dir, "README.md"), "r") as f:
 
 extra_requirements = {
     "testing": [
-        # Used to run test cases
-        "pytest-flask==0.15.*",
+        # Used to manage testing of flask-restx
+        "pytest-flask==1.*",
+        "flask-restx==0.2.*",
         # Used to manage testing of Mongo
         "mongomock==3.*",
         # Used to check coverage
@@ -63,10 +64,7 @@ setup(
     ],
     keywords=["mongo", "sqla", "db", "flask"],
     packages=find_packages(exclude=["tests*"]),
-    install_requires=[
-        # Used to handle errors
-        "layaberr==2.*"
-    ],
+    install_requires=[],
     extras_require=extra_requirements,
     python_requires=">=3.6",
     project_urls={

@@ -1,9 +1,6 @@
 import enum
 
-import flask
-import flask_restplus
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -15,7 +12,7 @@ class EnumTest(enum.Enum):
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -33,29 +30,7 @@ def controller():
     return controller
 
 
-@pytest.fixture
-def app(controller):
-    application = flask.Flask(__name__)
-    application.testing = True
-    api = flask_restplus.Api(application)
-    namespace = api.namespace("Test", path="/")
-
-    controller.namespace(namespace)
-
-    @namespace.route("/test_parsers")
-    class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        def get(self):
-            return controller.query_get_parser.parse_args()
-
-        @namespace.expect(controller.query_delete_parser)
-        def delete(self):
-            return controller.query_delete_parser.parse_args()
-
-    return application
-
-
-def test_post_dict_is_valid(controller):
+def test_post_dict_is_valid(controller: layabase.CRUDController):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
@@ -64,7 +39,7 @@ def test_post_dict_is_valid(controller):
     )
 
 
-def test_get_with_dot_notation_is_valid(controller):
+def test_get_with_dot_notation_is_valid(controller: layabase.CRUDController):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
@@ -76,7 +51,7 @@ def test_get_with_dot_notation_is_valid(controller):
     ] == controller.get({"dict_col.first_key": EnumTest.Value1})
 
 
-def test_get_with_dot_notation_as_list_is_valid(controller):
+def test_get_with_dot_notation_as_list_is_valid(controller: layabase.CRUDController):
     controller.post(
         {"key": "my_key", "dict_col": {"first_key": EnumTest.Value1, "second_key": 3}}
     )
@@ -85,7 +60,7 @@ def test_get_with_dot_notation_as_list_is_valid(controller):
     ] == controller.get({"dict_col.first_key": [EnumTest.Value1]})
 
 
-def test_get_with_multiple_results_dot_notation_as_list_is_valid(controller):
+def test_get_with_multiple_results_dot_notation_as_list_is_valid(controller: layabase.CRUDController):
     controller.post_many(
         [
             {
@@ -104,7 +79,7 @@ def test_get_with_multiple_results_dot_notation_as_list_is_valid(controller):
     ] == controller.get({"dict_col.first_key": [EnumTest.Value1, EnumTest.Value2]})
 
 
-def test_update_with_dot_notation_is_valid(controller):
+def test_update_with_dot_notation_is_valid(controller: layabase.CRUDController):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
@@ -117,14 +92,14 @@ def test_update_with_dot_notation_is_valid(controller):
     ) == controller.put({"key": "my_key", "dict_col.second_key": 4})
 
 
-def test_update_with_dot_notation_invalid_value_is_invalid(controller):
+def test_update_with_dot_notation_invalid_value_is_invalid(controller: layabase.CRUDController):
     assert {
         "dict_col": {"first_key": "Value1", "second_key": 3},
         "key": "my_key",
     } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "my_key", "dict_col.second_key": "invalid integer"})
     assert {"dict_col.second_key": ["Not a valid int."]} == exception_info.value.errors
     assert {
@@ -140,7 +115,7 @@ def test_delete_with_dot_notation_invalid_value_is_invalid(controller):
     } == controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.delete({"dict_col.second_key": "invalid integer"})
     assert {"dict_col.second_key": ["Not a valid int."]} == exception_info.value.errors
     assert {
@@ -169,7 +144,7 @@ def test_delete_with_dot_notation_enum_value_is_valid(controller):
 
 
 def test_post_with_dot_notation_invalid_value_is_invalid(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post(
             {
                 "key": "my_key",
@@ -255,7 +230,7 @@ def test_put_without_primary_key_is_invalid(controller):
     controller.post(
         {"key": "my_key", "dict_col": {"first_key": "Value1", "second_key": 3}}
     )
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"dict_col": {"first_key": "Value2", "second_key": 4}})
     assert {"key": ["Missing data for required field."]} == exception_info.value.errors
     assert {
@@ -286,7 +261,7 @@ def test_put_dict_with_dot_notation_is_valid(controller):
 
 
 def test_post_dict_is_invalid(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "my_key", "dict_col": {"first_key": "Value1"}})
     assert {
         "dict_col.second_key": ["Missing data for required field."]
@@ -295,27 +270,3 @@ def test_post_dict_is_invalid(controller):
         "key": "my_key",
         "dict_col": {"first_key": "Value1"},
     } == exception_info.value.received_data
-
-
-def test_query_get_parser_with_dict(client):
-    response = client.get(
-        "/test_parsers?dict_col.first_key=2&dict_col.second_key=3&key=4&limit=1&offset=0"
-    )
-    assert response.json == {
-        "dict_col.first_key": ["2"],
-        "dict_col.second_key": [3],
-        "key": ["4"],
-        "limit": 1,
-        "offset": 0,
-    }
-
-
-def test_query_delete_parser_with_dict(client):
-    response = client.delete(
-        "/test_parsers?dict_col.first_key=2&dict_col.second_key=3&key=4"
-    )
-    assert response.json == {
-        "dict_col.first_key": ["2"],
-        "dict_col.second_key": [3],
-        "key": ["4"],
-    }

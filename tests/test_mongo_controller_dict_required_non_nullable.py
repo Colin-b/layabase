@@ -1,7 +1,6 @@
 import enum
 
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -35,7 +34,7 @@ def controller():
 def test_post_without_providing_required_non_nullable_dict_column_is_invalid(
     controller,
 ):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "first"})
     assert {
         "dict_field": ["Missing data for required field."]
@@ -69,7 +68,7 @@ def test_put_with_null_provided_required_non_nullable_dict_column_is_invalid(
     controller.post(
         {"key": "first", "dict_field": {"first_key": "Value1", "second_key": 0}}
     )
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "first", "dict_field": None})
     assert {
         "dict_field": ["Missing data for required field."]

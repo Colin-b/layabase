@@ -2,7 +2,6 @@ import enum
 from typing import List, Dict
 
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -14,7 +13,7 @@ class EnumTest(enum.Enum):
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -32,11 +31,11 @@ def controller():
     return controller
 
 
-def test_rollback_validation_custom(controller):
+def test_rollback_validation_custom(controller: layabase.CRUDController):
     controller.post({"key": "my_key", "enum_fld": EnumTest.Value1})
     controller.put({"key": "my_key", "enum_fld": EnumTest.Value2})
     controller.delete({"key": "my_key"})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.rollback_to({"revision": 1})
     assert exception_info.value.errors == {"key": ["Rollback forbidden"]}
     assert exception_info.value.received_data == {"revision": 1}

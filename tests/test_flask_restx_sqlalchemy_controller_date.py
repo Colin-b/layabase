@@ -1,5 +1,7 @@
+import collections.abc
+
 import flask
-import flask_restplus
+import flask_restx
 import pytest
 import sqlalchemy
 
@@ -7,12 +9,13 @@ import layabase
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        float_field = sqlalchemy.Column(sqlalchemy.Float)
+        date_str = sqlalchemy.Column(sqlalchemy.Date)
+        datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
 
     controller = layabase.CRUDController(TestTable)
     layabase.load("sqlite:///:memory:", [controller])
@@ -20,42 +23,50 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
-    class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
+    class TestParsersResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
         def get(self):
-            return controller.query_get_parser.parse_args()
+            return {
+                field: [str(value) for value in values]
+                if isinstance(values, collections.abc.Iterable)
+                else values
+                for field, values in controller.flask_restx.query_get_parser.parse_args().items()
+            }
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
-            return controller.query_delete_parser.parse_args()
+            return {
+                field: [str(value) for value in values]
+                for field, values in controller.flask_restx.query_delete_parser.parse_args().items()
+            }
 
     return application
 
@@ -109,10 +120,19 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "float_field",
+                            "name": "date_str",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -137,10 +157,19 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "float_field",
+                            "name": "date_str",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -187,10 +216,19 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "float_field",
+                            "name": "date_str",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -208,10 +246,19 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "float_field",
+                            "name": "date_str",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -252,10 +299,17 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "float_field": {
-                        "type": "number",
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
                         "readOnly": False,
-                        "example": 1.4,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
                     },
                 },
                 "type": "object",
@@ -268,10 +322,17 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "float_field": {
-                        "type": "number",
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
                         "readOnly": False,
-                        "example": 1.4,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
                     },
                 },
                 "type": "object",
@@ -284,10 +345,17 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "float_field": {
-                        "type": "number",
+                    "date_str": {
+                        "type": "string",
+                        "format": "date",
                         "readOnly": False,
-                        "example": 1.4,
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
                     },
                 },
                 "type": "object",
@@ -302,10 +370,11 @@ def test_open_api_definition(client):
 
 def test_query_get_parser(client):
     response = client.get(
-        "/test_parsers?key=12&float_field=123.4&limit=1&order_by=key&offset=0"
+        "/test_parsers?key=12&date_str=2017-05-15&datetime_str=2016-09-23T23:59:59&limit=1&order_by=key&offset=0"
     )
     assert response.json == {
-        "float_field": [123.4],
+        "date_str": ["2017-05-15"],
+        "datetime_str": ["2016-09-23 23:59:59"],
         "key": ["12"],
         "limit": 1,
         "offset": 0,
@@ -314,5 +383,11 @@ def test_query_get_parser(client):
 
 
 def test_query_delete_parser(client):
-    response = client.delete("/test_parsers?key=12&float_field=123.4")
-    assert response.json == {"float_field": [123.4], "key": ["12"]}
+    response = client.delete(
+        "/test_parsers?key=12&date_str=2017-05-15&datetime_str=2016-09-23T23:59:59&"
+    )
+    assert response.json == {
+        "date_str": ["2017-05-15"],
+        "datetime_str": ["2016-09-23 23:59:59"],
+        "key": ["12"],
+    }

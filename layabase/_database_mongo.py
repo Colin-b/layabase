@@ -8,10 +8,10 @@ from typing import List, Dict, Union, Type, Iterable
 import pymongo
 import pymongo.errors
 import pymongo.database
-from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 from layabase import CRUDController
 from layabase.mongo import Column, DictColumn, IndexType, link
+from layabase._exceptions import ValidationFailed
 
 logger = logging.getLogger(__name__)
 
@@ -427,7 +427,7 @@ class _CRUDModel:
             raise ValidationFailed([], message="No data provided.")
 
         if not isinstance(documents, list):
-            raise ValidationFailed(documents, message="Must be a list.")
+            raise ValidationFailed(documents, message="Must be a list of dictionaries.")
 
         new_documents = copy.deepcopy(documents)
 
@@ -834,7 +834,7 @@ class _CRUDModel:
         document_keys = cls._to_primary_keys_model(document)
         previous_document = cls.__collection__.find_one(document_keys)
         if not previous_document:
-            raise ModelCouldNotBeFound(document_keys)
+            raise ValidationFailed(document_keys, message="The document to update could not be found.")
 
         new_document = cls.__collection__.find_one_and_update(
             document_keys,
@@ -853,7 +853,7 @@ class _CRUDModel:
             document_keys = cls._to_primary_keys_model(document)
             previous_document = cls.__collection__.find_one(document_keys)
             if not previous_document:
-                raise ModelCouldNotBeFound(document_keys)
+                raise ValidationFailed(document_keys, message="The document to update could not be found.")
 
             new_document = cls.__collection__.find_one_and_update(
                 document_keys,

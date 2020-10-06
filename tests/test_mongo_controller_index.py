@@ -1,7 +1,6 @@
 import datetime
 
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -26,7 +25,7 @@ def test_post_twice_with_unique_index_is_invalid(controller):
     assert {"non_unique_key": "2017-01-01", "unique_key": "test"} == controller.post(
         {"unique_key": "test", "non_unique_key": "2017-01-01"}
     )
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"unique_key": "test", "non_unique_key": "2017-01-02"})
     assert {"": ["This document already exists."]} == exception_info.value.errors
     assert {
@@ -47,7 +46,7 @@ def test_get_all_without_primary_key_is_valid(controller):
 def test_get_one_and_multiple_results_is_invalid(controller):
     controller.post({"unique_key": "test", "non_unique_key": "2017-01-01"})
     controller.post({"unique_key": "test2", "non_unique_key": "2017-01-01"})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get_one({})
     assert {
         "": ["More than one result: Consider another filtering."]
@@ -111,7 +110,7 @@ def test_delete_with_partial_matching_list_is_valid(controller):
 
 
 def test_non_iso8601_date_failure(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"unique_key": "test", "non_unique_key": "12/06/2017"})
     assert {"non_unique_key": ["Not a valid date."]} == exception_info.value.errors
     assert {

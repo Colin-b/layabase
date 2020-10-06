@@ -1,5 +1,4 @@
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -25,7 +24,7 @@ def controller():
 
 def test_put_without_primary_and_incremented_field(controller):
     controller.post({"prim_def": 1})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"prim_def": 1})
     assert exception_info.value.errors == {
         "prim_inc": ["Missing data for required field."]

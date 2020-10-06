@@ -1,49 +1,61 @@
+import enum
+
 import flask
-import flask_restplus
+import flask_restx
 import pytest
-import sqlalchemy
 
 import layabase
+import layabase.mongo
+
+
+class EnumTest(enum.Enum):
+    Value1 = 1
+    Value2 = 2
 
 
 @pytest.fixture
-def controller():
-    class TestTable:
-        __tablename__ = "test"
+def controller() -> layabase.CRUDController:
+    class TestCollection:
+        __collection_name__ = "test"
 
-        key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)
+        key = layabase.mongo.Column(
+            int, is_primary_key=True, should_auto_increment=True
+        )
+        enum_field = layabase.mongo.Column(
+            EnumTest, is_nullable=False, description="Test Documentation"
+        )
+        optional_with_default = layabase.mongo.Column(str, default_value="Test value")
 
-    controller = layabase.CRUDController(TestTable)
-    layabase.load("sqlite:///:memory:", [controller])
+    controller = layabase.CRUDController(TestCollection)
+    layabase.load("mongomock", [controller])
     return controller
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
@@ -66,7 +78,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestTable_PostRequestModel"
+                                "$ref": "#/definitions/TestCollection_PostRequestModel"
                             },
                         }
                     ],
@@ -81,7 +93,7 @@ def test_open_api_definition(client):
                             "required": True,
                             "in": "body",
                             "schema": {
-                                "$ref": "#/definitions/TestTable_PutRequestModel"
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
                             },
                         }
                     ],
@@ -95,14 +107,21 @@ def test_open_api_definition(client):
                             "name": "key",
                             "in": "query",
                             "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_field",
+                            "in": "query",
+                            "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "decimal_field",
+                            "name": "optional_with_default",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -113,7 +132,7 @@ def test_open_api_definition(client):
                         "200": {
                             "description": "Success",
                             "schema": {
-                                "$ref": "#/definitions/TestTable_GetResponseModel"
+                                "$ref": "#/definitions/TestCollection_GetResponseModel"
                             },
                         }
                     },
@@ -123,14 +142,21 @@ def test_open_api_definition(client):
                             "name": "key",
                             "in": "query",
                             "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "enum_field",
+                            "in": "query",
+                            "type": "array",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "decimal_field",
+                            "name": "optional_with_default",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -145,13 +171,6 @@ def test_open_api_definition(client):
                             "in": "query",
                             "type": "integer",
                             "minimum": 0,
-                        },
-                        {
-                            "name": "order_by",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
                         },
                         {
                             "name": "X-Fields",
@@ -170,50 +189,59 @@ def test_open_api_definition(client):
         "consumes": ["application/json"],
         "tags": [{"name": "Test"}],
         "definitions": {
-            "TestTable_PostRequestModel": {
-                "required": ["key"],
+            "TestCollection_PostRequestModel": {
                 "properties": {
-                    "key": {
+                    "enum_field": {
+                        "type": "string",
+                        "description": "Test Documentation",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
+                    "optional_with_default": {
                         "type": "string",
                         "readOnly": False,
-                        "example": "sample_value",
-                    },
-                    "decimal_field": {
-                        "type": "number",
-                        "readOnly": False,
-                        "example": 1.4,
+                        "default": "Test value",
+                        "example": "Test value",
                     },
                 },
                 "type": "object",
             },
-            "TestTable_PutRequestModel": {
-                "required": ["key"],
+            "TestCollection_PutRequestModel": {
                 "properties": {
-                    "key": {
+                    "enum_field": {
+                        "type": "string",
+                        "description": "Test Documentation",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
+                    "optional_with_default": {
                         "type": "string",
                         "readOnly": False,
-                        "example": "sample_value",
-                    },
-                    "decimal_field": {
-                        "type": "number",
-                        "readOnly": False,
-                        "example": 1.4,
+                        "default": "Test value",
+                        "example": "Test value",
                     },
                 },
                 "type": "object",
             },
-            "TestTable_GetResponseModel": {
-                "required": ["key"],
+            "TestCollection_GetResponseModel": {
                 "properties": {
-                    "key": {
+                    "enum_field": {
+                        "type": "string",
+                        "description": "Test Documentation",
+                        "readOnly": False,
+                        "example": "Value1",
+                        "enum": ["Value1", "Value2"],
+                    },
+                    "key": {"type": "integer", "readOnly": True, "example": 1},
+                    "optional_with_default": {
                         "type": "string",
                         "readOnly": False,
-                        "example": "sample_value",
-                    },
-                    "decimal_field": {
-                        "type": "number",
-                        "readOnly": False,
-                        "example": 1.4,
+                        "default": "Test value",
+                        "example": "Test value",
                     },
                 },
                 "type": "object",

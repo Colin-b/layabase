@@ -6,7 +6,6 @@ import operator
 
 from marshmallow import ValidationError, EXCLUDE
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from layaberr import ValidationFailed, ModelCouldNotBeFound
 from sqlalchemy import create_engine, inspect, Column, text, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, exc, PropComparator
@@ -14,7 +13,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.engine.base import Engine
 
-from layabase._exceptions import MultiSchemaNotSupported
+from layabase._exceptions import MultiSchemaNotSupported, ValidationFailed
 from layabase import ComparisonSigns, CRUDController
 
 
@@ -199,6 +198,10 @@ class CRUDModel:
         """
         if not rows:
             raise ValidationFailed({}, message="No data provided.")
+        if not isinstance(rows, list):
+            raise ValidationFailed(rows, message="Must be a list of dictionaries.")
+        # TODO Check if it can be done by SQLAlchemy already
+        rows = [cls._remove_auto_incremented_fields(row) for row in rows]
         try:
             models = cls.schema().load(rows, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
@@ -229,6 +232,8 @@ class CRUDModel:
         """
         if not row:
             raise ValidationFailed({}, message="No data provided.")
+
+        row = cls._remove_auto_incremented_fields(row)
         try:
             model = cls.schema().load(row, session=cls._session)
         except exc.sa_exc.DBAPIError:
@@ -248,6 +253,16 @@ class CRUDModel:
         except Exception:
             cls._session.rollback()
             raise
+
+    @classmethod
+    def _remove_auto_incremented_fields(cls, row: dict) -> dict:
+        if isinstance(row, dict):
+            auto_incremented_fields = cls._get_auto_incremented_fields()
+            return {
+                name: value
+                for name, value in row.items()
+                if name not in auto_incremented_fields
+            }
 
     @classmethod
     def update_all(cls, rows: List[dict]) -> (List[dict], List[dict]):
@@ -271,7 +286,9 @@ class CRUDModel:
             except exc.sa_exc.DBAPIError:
                 cls._handle_connection_failure()
             if not previous_model:
-                raise ModelCouldNotBeFound(row)
+                raise ValidationFailed(
+                    row, message="The row to update could not be found."
+                )
             previous_row = _model_field_values(previous_model)
             try:
                 new_model = cls.schema().load(
@@ -317,7 +334,7 @@ class CRUDModel:
         except exc.sa_exc.DBAPIError:
             cls._handle_connection_failure()
         if not previous_model:
-            raise ModelCouldNotBeFound(row)
+            raise ValidationFailed(row, message="The row to update could not be found.")
         previous_row = _model_field_values(previous_model)
         try:
             new_model = cls.schema().load(
@@ -396,6 +413,15 @@ class CRUDModel:
         ]
 
     @classmethod
+    def _get_auto_incremented_fields(cls) -> List[str]:
+        mapper = inspect(cls)
+        return [
+            column.name
+            for column in mapper.columns.values()
+            if column.autoincrement is True
+        ]
+
+    @classmethod
     def _check_required_query_fields(cls, filters):
         for required_field in cls._get_required_query_fields():
             if required_field not in filters:
@@ -409,7 +435,8 @@ class CRUDModel:
         return [
             name
             for name, column in cls.__dict__.items()
-            if isinstance(column, PropComparator) and column.info.get("layabase", {}).get("required_on_query", False)
+            if isinstance(column, PropComparator)
+            and column.info.get("layabase", {}).get("required_on_query", False)
         ]
 
     @classmethod
@@ -439,10 +466,7 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
 
     controller._model = model
 
-    if not _supports_offset(base.metadata.bind.url.drivername):
-        controller.query_get_parser.remove_argument("offset")
-        controller.query_get_audit_parser.remove_argument("offset")
-        controller.query_get_history_parser.remove_argument("offset")
+    controller.supports_offset = _supports_offset(base.metadata.bind.url.drivername)
 
     if controller.audit:
         from layabase._audit_sqlalchemy import _create_from, _to_audit_column
@@ -459,7 +483,12 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
 
         model.audit_model = type(
             f"{controller.table_or_collection.__name__}_SQLAlchemyAuditModel",
-            (_create_from(model), table_copy, CRUDModel, base),
+            (
+                _create_from(model, controller.retrieve_user),
+                table_copy,
+                CRUDModel,
+                base,
+            ),
             {"__tablename__": f"audit_{controller.table_or_collection.__tablename__}"},
         )
 

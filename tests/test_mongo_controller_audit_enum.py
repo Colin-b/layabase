@@ -13,7 +13,7 @@ class EnumTest(enum.Enum):
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -25,7 +25,7 @@ def controller():
     return controller
 
 
-def test_post_with_enum_is_valid(controller, mock_mongo_audit_datetime):
+def test_post_with_enum_is_valid(controller: layabase.CRUDController, mock_mongo_audit_datetime):
     assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",
@@ -42,7 +42,7 @@ def test_post_with_enum_is_valid(controller, mock_mongo_audit_datetime):
     ]
 
 
-def test_put_with_enum_is_valid(controller, mock_mongo_audit_datetime):
+def test_put_with_enum_is_valid(controller: layabase.CRUDController, mock_mongo_audit_datetime):
     assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",
@@ -71,7 +71,7 @@ def test_put_with_enum_is_valid(controller, mock_mongo_audit_datetime):
     ]
 
 
-def test_delete_with_enum_is_valid(controller, mock_mongo_audit_datetime):
+def test_delete_with_enum_is_valid(controller: layabase.CRUDController, mock_mongo_audit_datetime):
     assert controller.post({"key": "my_key", "enum_fld": EnumTest.Value1}) == {
         "enum_fld": "Value1",
         "key": "my_key",

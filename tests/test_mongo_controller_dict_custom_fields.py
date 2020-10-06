@@ -1,5 +1,4 @@
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -23,7 +22,7 @@ def test_post_failure_in_get_fields():
     layabase.load("mongomock", [controller])
 
     should_fail = True
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "my_key", "dict_col": {}})
     assert exception_info.value.errors == {"dict_col": ["Original failure reason"]}
     assert exception_info.value.received_data == {"dict_col": {}, "key": "my_key"}
@@ -48,7 +47,7 @@ def test_put_failure_in_get_fields():
 
     controller.post({"key": "my_key", "dict_col": {}})
     should_fail = True
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "my_key", "dict_col": {}})
     assert exception_info.value.errors == {"dict_col": ["Original failure reason"]}
     assert exception_info.value.received_data == {"dict_col": {}, "key": "my_key"}
@@ -73,7 +72,7 @@ def test_get_failure_in_get_fields():
 
     controller.post({"key": "my_key", "dict_col": {}})
     should_fail = True
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.get({"key": "my_key", "dict_col": {}})
     assert exception_info.value.errors == {"dict_col": ["Original failure reason"]}
     assert exception_info.value.received_data == {"dict_col": {}, "key": "my_key"}
@@ -100,7 +99,7 @@ def test_with_index_fields():
     layabase.load("mongomock", [controller])
 
     controller.post({"key": "my_key1", "dict_col": {"field2": "test"}})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "my_key2", "dict_col": {"field2": "test"}})
     assert exception_info.value.errors == {"": ["This document already exists."]}
     assert exception_info.value.received_data == {
@@ -130,7 +129,7 @@ def test_with_get_index_fields():
     layabase.load("mongomock", [controller])
 
     controller.post({"key": "my_key1", "dict_col": {"field2": "test"}})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "my_key2", "dict_col": {"field2": "test"}})
     assert exception_info.value.errors == {"": ["This document already exists."]}
     assert exception_info.value.received_data == {

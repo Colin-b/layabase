@@ -1,5 +1,5 @@
 from typing import Dict
-import flask_restplus
+import flask_restx
 
 
 def is_mongo_collection(table_or_collection) -> bool:
@@ -8,7 +8,7 @@ def is_mongo_collection(table_or_collection) -> bool:
 
 
 def add_all_query_fields(
-    table_or_collection, is_mongo: bool, parser: flask_restplus.reqparse.RequestParser
+    table_or_collection, is_mongo: bool, parser: flask_restx.reqparse.RequestParser
 ):
     if is_mongo:
         import layabase._api_mongo
@@ -21,18 +21,19 @@ def add_all_query_fields(
 
 
 def add_get_query_fields(
-    table_or_collection, parser: flask_restplus.reqparse.RequestParser
+    table_or_collection, parser: flask_restx.reqparse.RequestParser, supports_offset: bool
 ):
     is_mongo = is_mongo_collection(table_or_collection)
     add_all_query_fields(table_or_collection, is_mongo, parser)
-    parser.add_argument("limit", type=flask_restplus.inputs.positive, location="args")
-    parser.add_argument("offset", type=flask_restplus.inputs.natural, location="args")
+    parser.add_argument("limit", type=flask_restx.inputs.positive, location="args")
+    if supports_offset:
+        parser.add_argument("offset", type=flask_restx.inputs.natural, location="args")
     if not is_mongo:
         parser.add_argument("order_by", type=str, action="append", location="args")
 
 
 def add_get_audit_query_fields(
-    table_or_collection, history: bool, parser: flask_restplus.reqparse.RequestParser
+    table_or_collection, history: bool, parser: flask_restx.reqparse.RequestParser, supports_offset: bool
 ):
     is_mongo = is_mongo_collection(table_or_collection)
 
@@ -53,7 +54,7 @@ def add_get_audit_query_fields(
     parser.add_argument(
         "audit_date_utc",
         required=False,
-        type=flask_restplus.inputs.datetime_from_iso8601,
+        type=flask_restx.inputs.datetime_from_iso8601,
         action="append",
         location="args",
     )
@@ -64,14 +65,15 @@ def add_get_audit_query_fields(
         "revision", required=False, type=int, action="append", location="args"
     )
 
-    parser.add_argument("limit", type=flask_restplus.inputs.positive, location="args")
-    parser.add_argument("offset", type=flask_restplus.inputs.natural, location="args")
+    parser.add_argument("limit", type=flask_restx.inputs.positive, location="args")
+    if supports_offset:
+        parser.add_argument("offset", type=flask_restx.inputs.natural, location="args")
     if not is_mongo:
         parser.add_argument("order_by", type=str, action="append", location="args")
 
 
 def add_delete_query_fields(
-    table_or_collection, parser: flask_restplus.reqparse.RequestParser
+    table_or_collection, parser: flask_restx.reqparse.RequestParser
 ):
     add_all_query_fields(
         table_or_collection, is_mongo_collection(table_or_collection), parser
@@ -79,16 +81,16 @@ def add_delete_query_fields(
 
 
 def add_rollback_query_fields(
-    table_or_collection, parser: flask_restplus.reqparse.RequestParser
+    table_or_collection, parser: flask_restx.reqparse.RequestParser
 ):
     add_all_query_fields(
         table_or_collection, is_mongo_collection(table_or_collection), parser
     )
-    parser.add_argument("revision", type=flask_restplus.inputs.positive, required=True)
+    parser.add_argument("revision", type=flask_restx.inputs.positive, required=True)
 
 
 def add_history_query_fields(
-    table_or_collection, parser: flask_restplus.reqparse.RequestParser
+    table_or_collection, parser: flask_restx.reqparse.RequestParser, supports_offset: bool
 ):
     parser.add_argument(
         "valid_since_revision",
@@ -109,13 +111,14 @@ def add_history_query_fields(
         table_or_collection, is_mongo_collection(table_or_collection), parser
     )
 
-    parser.add_argument("limit", type=flask_restplus.inputs.positive)
-    parser.add_argument("offset", type=flask_restplus.inputs.natural)
+    parser.add_argument("limit", type=flask_restx.inputs.positive)
+    if supports_offset:
+        parser.add_argument("offset", type=flask_restx.inputs.natural)
 
 
 def all_request_fields(
-    table_or_collection, is_mongo: bool, namespace: flask_restplus.Namespace
-) -> Dict[str, flask_restplus.fields.Raw]:
+    table_or_collection, is_mongo: bool, namespace: flask_restx.Namespace
+) -> Dict[str, flask_restx.fields.Raw]:
     if is_mongo:
         import layabase._api_mongo
 
@@ -127,23 +130,23 @@ def all_request_fields(
 
 
 def get_response_fields(
-    table_or_collection, namespace: flask_restplus.Namespace
-) -> Dict[str, flask_restplus.fields.Raw]:
+    table_or_collection, namespace: flask_restx.Namespace
+) -> Dict[str, flask_restx.fields.Raw]:
     return all_request_fields(
         table_or_collection, is_mongo_collection(table_or_collection), namespace
     )
 
 
 def get_history_response_fields(
-    table_or_collection, namespace: flask_restplus.Namespace
-) -> Dict[str, flask_restplus.fields.Raw]:
+    table_or_collection, namespace: flask_restx.Namespace
+) -> Dict[str, flask_restx.fields.Raw]:
     fields = {
-        "valid_since_revision": flask_restplus.fields.Integer(
+        "valid_since_revision": flask_restx.fields.Integer(
             example=1,
             description="Record is valid since this revision (included).",
             readonly=False,
         ),
-        "valid_until_revision": flask_restplus.fields.Integer(
+        "valid_until_revision": flask_restx.fields.Integer(
             example=1,
             description="Record is valid until this revision (excluded).",
             readonly=False,
@@ -158,35 +161,35 @@ def get_history_response_fields(
 
 
 def get_audit_response_fields(
-    table_or_collection, history: bool, namespace: flask_restplus.Namespace
-) -> Dict[str, flask_restplus.fields.Raw]:
+    table_or_collection, history: bool, namespace: flask_restx.Namespace
+) -> Dict[str, flask_restx.fields.Raw]:
     is_mongo = is_mongo_collection(table_or_collection)
     if not history:
         fields = all_request_fields(table_or_collection, is_mongo, namespace)
     else:
         fields = {}
 
-    fields["audit_action"] = flask_restplus.fields.String(
+    fields["audit_action"] = flask_restx.fields.String(
         example="Insert" if is_mongo else "I",
         enum=("Insert", "Update", "Delete", "Rollback")
         if is_mongo
         else ("I", "U", "D"),
         readonly=False,
     )
-    fields["audit_date_utc"] = flask_restplus.fields.DateTime(
+    fields["audit_date_utc"] = flask_restx.fields.DateTime(
         example="2017-09-24T15:36:09", readonly=False
     )
-    fields["audit_user"] = flask_restplus.fields.String(
+    fields["audit_user"] = flask_restx.fields.String(
         example="sample audit_user", readonly=False
     )
-    fields["revision"] = flask_restplus.fields.Integer(example=1, readonly=True)
+    fields["revision"] = flask_restx.fields.Integer(example=1, readonly=True)
 
     return fields
 
 
 def get_description_response_fields(
     table_or_collection,
-) -> Dict[str, flask_restplus.fields.Raw]:
+) -> Dict[str, flask_restx.fields.Raw]:
     if is_mongo_collection(table_or_collection):
         import layabase._api_mongo
 
@@ -200,16 +203,16 @@ def get_description_response_fields(
 
 
 def post_request_fields(
-    table_or_collection, namespace: flask_restplus.Namespace
-) -> Dict[str, flask_restplus.fields.Raw]:
+    table_or_collection, namespace: flask_restx.Namespace
+) -> Dict[str, flask_restx.fields.Raw]:
     return all_request_fields(
         table_or_collection, is_mongo_collection(table_or_collection), namespace
     )
 
 
 def put_request_fields(
-    table_or_collection, namespace: flask_restplus.Namespace
-) -> Dict[str, flask_restplus.fields.Raw]:
+    table_or_collection, namespace: flask_restx.Namespace
+) -> Dict[str, flask_restx.fields.Raw]:
     return all_request_fields(
         table_or_collection, is_mongo_collection(table_or_collection), namespace
     )

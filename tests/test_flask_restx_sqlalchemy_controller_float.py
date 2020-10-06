@@ -1,5 +1,5 @@
 import flask
-import flask_restplus
+import flask_restx
 import pytest
 import sqlalchemy
 
@@ -7,12 +7,12 @@ import layabase
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        bool_field = sqlalchemy.Column(sqlalchemy.Boolean)
+        float_field = sqlalchemy.Column(sqlalchemy.Float)
 
     controller = layabase.CRUDController(TestTable)
     layabase.load("sqlite:///:memory:", [controller])
@@ -20,42 +20,42 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
     @namespace.route("/test_parsers")
-    class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
+    class TestParsersResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
         def get(self):
-            return controller.query_get_parser.parse_args()
+            return controller.flask_restx.query_get_parser.parse_args()
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
-            return controller.query_delete_parser.parse_args()
+            return controller.flask_restx.query_delete_parser.parse_args()
 
     return application
 
@@ -109,10 +109,10 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "bool_field",
+                            "name": "float_field",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "boolean"},
+                            "items": {"type": "number"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -137,10 +137,10 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "bool_field",
+                            "name": "float_field",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "boolean"},
+                            "items": {"type": "number"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -187,10 +187,10 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "bool_field",
+                            "name": "float_field",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "boolean"},
+                            "items": {"type": "number"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -208,10 +208,10 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "bool_field",
+                            "name": "float_field",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "boolean"},
+                            "items": {"type": "number"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -252,10 +252,10 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "bool_field": {
-                        "type": "boolean",
+                    "float_field": {
+                        "type": "number",
                         "readOnly": False,
-                        "example": True,
+                        "example": 1.4,
                     },
                 },
                 "type": "object",
@@ -268,10 +268,10 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "bool_field": {
-                        "type": "boolean",
+                    "float_field": {
+                        "type": "number",
                         "readOnly": False,
-                        "example": True,
+                        "example": 1.4,
                     },
                 },
                 "type": "object",
@@ -284,10 +284,10 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "bool_field": {
-                        "type": "boolean",
+                    "float_field": {
+                        "type": "number",
                         "readOnly": False,
-                        "example": True,
+                        "example": 1.4,
                     },
                 },
                 "type": "object",
@@ -302,10 +302,10 @@ def test_open_api_definition(client):
 
 def test_query_get_parser(client):
     response = client.get(
-        "/test_parsers?key=12&bool_field=true&limit=1&order_by=key&offset=0"
+        "/test_parsers?key=12&float_field=123.4&limit=1&order_by=key&offset=0"
     )
     assert response.json == {
-        "bool_field": [True],
+        "float_field": [123.4],
         "key": ["12"],
         "limit": 1,
         "offset": 0,
@@ -314,5 +314,5 @@ def test_query_get_parser(client):
 
 
 def test_query_delete_parser(client):
-    response = client.delete("/test_parsers?key=12&bool_field=true")
-    assert response.json == {"bool_field": [True], "key": ["12"]}
+    response = client.delete("/test_parsers?key=12&float_field=123.4")
+    assert response.json == {"float_field": [123.4], "key": ["12"]}

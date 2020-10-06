@@ -1,7 +1,6 @@
 import datetime
 
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -24,7 +23,7 @@ def controller():
 
 
 def test_post_many_with_same_unique_index_is_invalid(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(
             [
                 {"unique_key": "test", "non_unique_key": "2017-01-01", "_id": "1" * 24},
