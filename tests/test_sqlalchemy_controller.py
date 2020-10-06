@@ -130,7 +130,7 @@ def test_dbapierror_when_inserting_many(
         )
     assert (
         str(exception_info.value)
-        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
     )
 
 
@@ -166,7 +166,7 @@ def test_dbapierror_when_inserting_one(
         controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert (
         str(exception_info.value)
-        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
     )
 
 
@@ -207,7 +207,7 @@ def test_dbapierror_when_updating_many_retrieval(
         )
     assert (
         str(exception_info.value)
-        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
     )
 
 
@@ -238,7 +238,7 @@ def test_dbapierror_when_updating_many(
         )
     assert (
         str(exception_info.value)
-        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
     )
 
 
@@ -284,7 +284,7 @@ def test_dbapierror_when_updating_one(controller: layabase.CRUDController, monke
         controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
     assert (
         str(exception_info.value)
-        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/13/dbapi)"
     )
 
 
