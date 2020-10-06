@@ -3,7 +3,6 @@ import enum
 import flask
 import flask_restplus
 import pytest
-from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 import layabase
 import layabase.mongo
@@ -159,7 +158,7 @@ def test_post_without_providing_required_nullable_dict_column_is_valid(
 
 def test_put_many_without_previous(controller: layabase.CRUDController):
     controller.post({"key": "first"})
-    with pytest.raises(ModelCouldNotBeFound) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many([{"key": "unknown"}])
     assert exception_info.value.requested_data == {
         "key": "unknown",
@@ -169,7 +168,7 @@ def test_put_many_without_previous(controller: layabase.CRUDController):
 
 def test_rollback_invalid_query(controller: layabase.CRUDController):
     controller.post({"key": "first"})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.rollback_to({"revision": 0, "dict_field.second_key": "invalid"})
     assert exception_info.value.errors == {
         "dict_field.second_key": ["Not a valid int."]
@@ -484,7 +483,7 @@ def test_versioned_many(controller: layabase.CRUDController):
 
 
 def test_rollback_without_revision_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.rollback_to({"key": "unknown"})
     assert exception_info.value.errors == {
         "revision": ["Missing data for required field."]
@@ -493,7 +492,7 @@ def test_rollback_without_revision_is_invalid(controller: layabase.CRUDControlle
 
 
 def test_rollback_with_non_int_revision_is_invalid(controller: layabase.CRUDController):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.rollback_to({"revision": "invalid revision"})
     assert exception_info.value.errors == {"revision": ["Not a valid int."]}
     assert exception_info.value.received_data == {"revision": "invalid revision"}

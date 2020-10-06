@@ -1,5 +1,5 @@
 import flask
-import flask_restplus
+import flask_restx
 import pytest
 
 import layabase
@@ -7,14 +7,19 @@ import layabase.mongo
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
-        float_key = layabase.mongo.Column(float, is_primary_key=True)
-        float_with_default = layabase.mongo.Column(float, default_value=34)
-        dict_field = layabase.mongo.Column(dict, is_required=True)
-        list_field = layabase.mongo.Column(list, is_required=True)
+        key = layabase.mongo.Column(is_primary_key=True, min_length=3, max_length=4)
+        list_field = layabase.mongo.Column(
+            list, min_length=2, max_length=3, example=["my", "test"]
+        )
+        dict_field = layabase.mongo.Column(
+            dict, min_length=2, max_length=3, example={"my": 1, "test": 2}
+        )
+        int_field = layabase.mongo.Column(int, min_value=100, max_value=999)
+        float_field = layabase.mongo.Column(float, min_value=1.25, max_value=1.75)
 
     controller = layabase.CRUDController(TestCollection)
     layabase.load("mongomock", [controller])
@@ -22,30 +27,30 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
@@ -94,24 +99,9 @@ def test_open_api_definition(client):
                     "operationId": "delete_test_resource",
                     "parameters": [
                         {
-                            "name": "float_key",
+                            "name": "key",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_with_default",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "dict_field",
-                            "in": "query",
-                            "type": "array",
-                            "required": True,
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
@@ -119,8 +109,28 @@ def test_open_api_definition(client):
                             "name": "list_field",
                             "in": "query",
                             "type": "array",
-                            "required": True,
                             "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -138,24 +148,9 @@ def test_open_api_definition(client):
                     "operationId": "get_test_resource",
                     "parameters": [
                         {
-                            "name": "float_key",
+                            "name": "key",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_with_default",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "dict_field",
-                            "in": "query",
-                            "type": "array",
-                            "required": True,
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
@@ -163,8 +158,28 @@ def test_open_api_definition(client):
                             "name": "list_field",
                             "in": "query",
                             "type": "array",
-                            "required": True,
                             "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "dict_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "int_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "float_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "number"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -198,81 +213,117 @@ def test_open_api_definition(client):
         "tags": [{"name": "Test"}],
         "definitions": {
             "TestCollection_PostRequestModel": {
-                "required": ["dict_field", "list_field"],
                 "properties": {
                     "dict_field": {
                         "type": "object",
                         "readOnly": False,
-                        "example": {
-                            "1st dict_field key": "1st dict_field sample",
-                            "2nd dict_field key": "2nd dict_field sample",
-                        },
+                        "example": {"my": 1, "test": 2},
                     },
-                    "float_key": {"type": "number", "readOnly": False, "example": 1.4},
-                    "float_with_default": {
+                    "float_field": {
                         "type": "number",
                         "readOnly": False,
-                        "default": 34,
-                        "example": 34,
+                        "example": 1.4,
+                        "minimum": 1.25,
+                        "maximum": 1.75,
+                    },
+                    "int_field": {
+                        "type": "integer",
+                        "readOnly": False,
+                        "example": 100,
+                        "minimum": 100,
+                        "maximum": 999,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "XXX",
+                        "minLength": 3,
+                        "maxLength": 4,
                     },
                     "list_field": {
                         "type": "array",
                         "readOnly": False,
-                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "example": ["my", "test"],
+                        "minItems": 2,
+                        "maxItems": 3,
                         "items": {"type": "string"},
                     },
                 },
                 "type": "object",
             },
             "TestCollection_PutRequestModel": {
-                "required": ["dict_field", "list_field"],
                 "properties": {
                     "dict_field": {
                         "type": "object",
                         "readOnly": False,
-                        "example": {
-                            "1st dict_field key": "1st dict_field sample",
-                            "2nd dict_field key": "2nd dict_field sample",
-                        },
+                        "example": {"my": 1, "test": 2},
                     },
-                    "float_key": {"type": "number", "readOnly": False, "example": 1.4},
-                    "float_with_default": {
+                    "float_field": {
                         "type": "number",
                         "readOnly": False,
-                        "default": 34,
-                        "example": 34,
+                        "example": 1.4,
+                        "minimum": 1.25,
+                        "maximum": 1.75,
+                    },
+                    "int_field": {
+                        "type": "integer",
+                        "readOnly": False,
+                        "example": 100,
+                        "minimum": 100,
+                        "maximum": 999,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "XXX",
+                        "minLength": 3,
+                        "maxLength": 4,
                     },
                     "list_field": {
                         "type": "array",
                         "readOnly": False,
-                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "example": ["my", "test"],
+                        "minItems": 2,
+                        "maxItems": 3,
                         "items": {"type": "string"},
                     },
                 },
                 "type": "object",
             },
             "TestCollection_GetResponseModel": {
-                "required": ["dict_field", "list_field"],
                 "properties": {
                     "dict_field": {
                         "type": "object",
                         "readOnly": False,
-                        "example": {
-                            "1st dict_field key": "1st dict_field sample",
-                            "2nd dict_field key": "2nd dict_field sample",
-                        },
+                        "example": {"my": 1, "test": 2},
                     },
-                    "float_key": {"type": "number", "readOnly": False, "example": 1.4},
-                    "float_with_default": {
+                    "float_field": {
                         "type": "number",
                         "readOnly": False,
-                        "default": 34,
-                        "example": 34,
+                        "example": 1.4,
+                        "minimum": 1.25,
+                        "maximum": 1.75,
+                    },
+                    "int_field": {
+                        "type": "integer",
+                        "readOnly": False,
+                        "example": 100,
+                        "minimum": 100,
+                        "maximum": 999,
+                    },
+                    "key": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "XXX",
+                        "minLength": 3,
+                        "maxLength": 4,
                     },
                     "list_field": {
                         "type": "array",
                         "readOnly": False,
-                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "example": ["my", "test"],
+                        "minItems": 2,
+                        "maxItems": 3,
                         "items": {"type": "string"},
                     },
                 },
@@ -284,76 +335,3 @@ def test_open_api_definition(client):
             "MaskError": {"description": "When any error occurs on mask"},
         },
     }
-
-
-def test_post_float_as_int(controller):
-    assert controller.post(
-        {
-            "dict_field": {"any_key": 5},
-            "float_key": 1,
-            "list_field": [22, "33", 44.55, True],
-        }
-    ) == {
-        "dict_field": {"any_key": 5},
-        "float_key": 1,
-        "float_with_default": 34,
-        "list_field": [22, "33", 44.55, True],
-    }
-
-
-def test_get_float_as_int(controller):
-    controller.post(
-        {
-            "dict_field": {"any_key": 5},
-            "float_key": 1,
-            "list_field": [22, "33", 44.55, True],
-        }
-    )
-    assert controller.get_one({"float_key": 1}) == {
-        "dict_field": {"any_key": 5},
-        "float_key": 1,
-        "float_with_default": 34,
-        "list_field": [22, "33", 44.55, True],
-    }
-
-
-def test_put_float_as_int(controller):
-    controller.post(
-        {
-            "dict_field": {"any_key": 5},
-            "float_key": 1,
-            "list_field": [22, "33", 44.55, True],
-        }
-    )
-    assert controller.put(
-        {"dict_field.any_key": 6, "float_key": 1, "float_with_default": 35}
-    ) == (
-        {
-            "dict_field": {"any_key": 5},
-            "float_key": 1,
-            "float_with_default": 34,
-            "list_field": [22, "33", 44.55, True],
-        },
-        {
-            "dict_field": {"any_key": 6},
-            "float_key": 1,
-            "float_with_default": 35,
-            "list_field": [22, "33", 44.55, True],
-        },
-    )
-
-
-def test_get_with_required_field_as_none_is_invalid(controller):
-    controller.post(
-        {
-            "dict_field": {"any_key": 5},
-            "float_key": 1,
-            "list_field": [22, "33", 44.55, True],
-        }
-    )
-    with pytest.raises(layabase.ValidationFailed) as exception_info:
-        controller.get({"dict_field": None})
-    assert exception_info.value.errors == {
-        "dict_field": ["Missing data for required field."]
-    }
-    assert exception_info.value.received_data == {"dict_field": None}

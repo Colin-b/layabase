@@ -1,5 +1,4 @@
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -20,7 +19,7 @@ def controller():
 
 
 def test_post_with_unknown_field_is_invalid(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post(
             {
                 "key": "my_key",
