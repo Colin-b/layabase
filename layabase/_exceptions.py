@@ -33,3 +33,10 @@ class ValidationFailed(Exception):
         """
         self.received_data = received_data
         self.errors = errors if errors else {"": [message]}
+
+
+class DatabaseError(Exception):
+    def __init__(self, original_exception: Exception):
+        Exception.__init__(
+            self, f"A error occurred while querying database: {str(original_exception)}"
+        )

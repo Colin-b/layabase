@@ -13,7 +13,11 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.engine.base import Engine
 
-from layabase._exceptions import MultiSchemaNotSupported, ValidationFailed
+from layabase._exceptions import (
+    MultiSchemaNotSupported,
+    ValidationFailed,
+    DatabaseError,
+)
 from layabase import ComparisonSigns, CRUDController
 
 
@@ -135,21 +139,20 @@ class CRUDModel:
             result = query.all()
             cls._session.close()
             return result
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
 
     @classmethod
     def customize_query(cls, query: Query) -> Query:
         return query  # No custom behavior by default
 
     @classmethod
-    def _handle_connection_failure(cls):
+    def _handle_connection_failure(cls, exception: exc.sa_exc.DBAPIError):
         """
         :raises Exception: Explaining that the database could not be reached.
         """
-        logger.exception("Database could not be reached.")
         cls._session.close()  # Force connection close to properly re-establish it on next request
-        raise Exception("Database could not be reached.")
+        raise DatabaseError(exception) from exception
 
     @classmethod
     def get(cls, **filters) -> dict:
@@ -178,8 +181,8 @@ class CRUDModel:
             raise ValidationFailed(
                 filters, message="More than one result: Consider another filtering."
             )
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
 
     @classmethod
     def get_last(cls, **filters) -> dict:
@@ -204,8 +207,8 @@ class CRUDModel:
         rows = [cls._remove_auto_incremented_fields(row) for row in rows]
         try:
             models = cls.schema().load(rows, many=True, session=cls._session)
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
         except ValidationError as e:
             raise ValidationFailed(rows, e.messages)
         try:
@@ -215,9 +218,9 @@ class CRUDModel:
                     cls.audit_model.audit_add(row)
             cls._session.commit()
             return _models_field_values(models)
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
@@ -236,9 +239,8 @@ class CRUDModel:
         row = cls._remove_auto_incremented_fields(row)
         try:
             model = cls.schema().load(row, session=cls._session)
-        except exc.sa_exc.DBAPIError:
-            logger.exception("Database could not be reached.")
-            raise Exception("Database could not be reached.")
+        except exc.sa_exc.DBAPIError as e:
+            raise DatabaseError(e) from e
         except ValidationError as e:
             raise ValidationFailed(row, e.messages)
         try:
@@ -247,9 +249,9 @@ class CRUDModel:
                 cls.audit_model.audit_add(row)
             cls._session.commit()
             return _model_field_values(model)
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
@@ -283,8 +285,8 @@ class CRUDModel:
                 raise ValidationFailed(row, message="Must be a dictionary.")
             try:
                 previous_model = cls.schema().get_instance(row)
-            except exc.sa_exc.DBAPIError:
-                cls._handle_connection_failure()
+            except exc.sa_exc.DBAPIError as e:
+                cls._handle_connection_failure(e)
             if not previous_model:
                 raise ValidationFailed(
                     row, message="The row to update could not be found."
@@ -309,9 +311,9 @@ class CRUDModel:
                     cls.audit_model.audit_update(new_row)
             cls._session.commit()
             return previous_rows, new_rows
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
@@ -331,8 +333,8 @@ class CRUDModel:
             raise ValidationFailed(row, message="Must be a dictionary.")
         try:
             previous_model = cls.schema().get_instance(row)
-        except exc.sa_exc.DBAPIError:
-            cls._handle_connection_failure()
+        except exc.sa_exc.DBAPIError as e:
+            cls._handle_connection_failure(e)
         if not previous_model:
             raise ValidationFailed(row, message="The row to update could not be found.")
         previous_row = _model_field_values(previous_model)
@@ -349,9 +351,9 @@ class CRUDModel:
                 cls.audit_model.audit_update(new_row)
             cls._session.commit()
             return previous_row, new_row
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise
@@ -378,9 +380,9 @@ class CRUDModel:
             nb_removed = query.delete(synchronize_session="fetch")
             cls._session.commit()
             return nb_removed
-        except exc.sa_exc.DBAPIError:
+        except exc.sa_exc.DBAPIError as e:
             cls._session.rollback()
-            cls._handle_connection_failure()
+            cls._handle_connection_failure(e)
         except Exception:
             cls._session.rollback()
             raise

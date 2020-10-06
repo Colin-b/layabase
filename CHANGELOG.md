@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Mongo] Fix adding field to parser adding only one level of multilevel DictColumn.
 - [Mongo] Insertion of document(s) via controller is now faster (removing duplicated check for auto incremented fields and useless dict(s) creation).
 - [SQLAlchemy] Insertion of document(s) via model now ensure that auto incremented fields will be skipped. It was only performed when using controller.
+- [SQLAlchemy] Stop considering every DBAPIError as "Database could not be reached.". Return the original error message instead.
 
 ### Removed
 - `flask-restplus` is not supported anymore. `flask-restx` is used instead.

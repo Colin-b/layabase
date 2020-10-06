@@ -128,7 +128,10 @@ def test_dbapierror_when_inserting_many(
                 {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
             ]
         )
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+    )
 
 
 def test_exception_when_inserting_many(
@@ -161,7 +164,10 @@ def test_dbapierror_when_inserting_one(
     monkeypatch.setattr(controller._model._session, "add", raise_dbapi_error)
     with pytest.raises(Exception) as exception_info:
         controller.post({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+    )
 
 
 def test_exception_when_inserting_one(controller: layabase.CRUDController, monkeypatch):
@@ -199,7 +205,10 @@ def test_dbapierror_when_updating_many_retrieval(
                 {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
             ]
         )
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+    )
 
 
 def test_dbapierror_when_updating_many(
@@ -227,7 +236,10 @@ def test_dbapierror_when_updating_many(
                 {"key": "my_key2", "mandatory": 2, "optional": "my_value2"},
             ]
         )
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+    )
 
 
 def test_exception_when_updating_many(controller: layabase.CRUDController, monkeypatch):
@@ -270,7 +282,10 @@ def test_dbapierror_when_updating_one(controller: layabase.CRUDController, monke
     monkeypatch.setattr(controller._model._session, "add", raise_dbapi_error)
     with pytest.raises(Exception) as exception_info:
         controller.put({"key": "my_key1", "mandatory": 1, "optional": "my_value1"})
-    assert str(exception_info.value) == "Database could not be reached."
+    assert (
+        str(exception_info.value)
+        == "A error occurred while querying database: (builtins.str) orig test\n[SQL: SELECT * FROM test]\n(Background on this error at: http://sqlalche.me/e/dbapi)"
+    )
 
 
 def test_exception_when_updating_one(controller: layabase.CRUDController, monkeypatch):
@@ -310,7 +325,7 @@ def test_post_with_empty_dict_is_invalid(controller: layabase.CRUDController):
 def test_post_without_providing_a_dictionary(controller):
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post("fail")
-    assert exception_info.value.errors == {'_schema': ['Invalid input type.']}
+    assert exception_info.value.errors == {"_schema": ["Invalid input type."]}
     assert exception_info.value.received_data == None
 
 
@@ -319,7 +334,7 @@ def test_post_many_with_something_else_than_list_is_invalid(
 ):
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many("fail")
-    assert exception_info.value.errors == {'': ['Must be a list of dictionaries.']}
+    assert exception_info.value.errors == {"": ["Must be a list of dictionaries."]}
     assert exception_info.value.received_data == "fail"
 
 
@@ -618,15 +633,18 @@ def test_post_many_with_optional_is_valid(controller: layabase.CRUDController):
 
 
 def test_post_with_unknown_field_is_valid(controller: layabase.CRUDController):
-    assert controller.post(
-        {
-            "key": "my_key",
-            "mandatory": 1,
-            "optional": "my_value",
-            # This field do not exists in schema
-            "unknown": "my_value",
-        }
-    ) == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
+    assert (
+        controller.post(
+            {
+                "key": "my_key",
+                "mandatory": 1,
+                "optional": "my_value",
+                # This field do not exists in schema
+                "unknown": "my_value",
+            }
+        )
+        == {"mandatory": 1, "key": "my_key", "optional": "my_value"}
+    )
     assert controller.get_one({}) == {
         "key": "my_key",
         "mandatory": 1,
