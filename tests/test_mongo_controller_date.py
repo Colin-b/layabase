@@ -195,7 +195,7 @@ def test_post_datetime_for_a_date_is_valid(controller: layabase.CRUDController):
     ) == {
         "key": "my_key1",
         "date_str": "2017-05-01",
-        "datetime_str": "2017-05-30T01:05:45+00:00",
+        "datetime_str": "2017-05-30T01:05:45",
     }
 
 

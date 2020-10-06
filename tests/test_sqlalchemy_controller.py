@@ -310,8 +310,8 @@ def test_post_with_empty_dict_is_invalid(controller: layabase.CRUDController):
 def test_post_without_providing_a_dictionary(controller):
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post("fail")
-    assert exception_info.value.errors == {"": ["Must be a dictionary."]}
-    assert exception_info.value.received_data == "fail"
+    assert exception_info.value.errors == {'_schema': ['Invalid input type.']}
+    assert exception_info.value.received_data == None
 
 
 def test_post_many_with_something_else_than_list_is_invalid(
@@ -319,7 +319,7 @@ def test_post_many_with_something_else_than_list_is_invalid(
 ):
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many("fail")
-    assert exception_info.value.errors == {"_schema": ["Invalid input type."]}
+    assert exception_info.value.errors == {'': ['Must be a list of dictionaries.']}
     assert exception_info.value.received_data == "fail"
 
 
@@ -343,7 +343,7 @@ def test_post_many_with_something_else_than_list_of_dict_is_invalid(
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(["fail"])
     assert exception_info.value.errors == {0: {"_schema": ["Invalid input type."]}}
-    assert exception_info.value.received_data == ["fail"]
+    assert exception_info.value.received_data == [None]
 
 
 def test_put_many_without_providing_a_list_of_dictionaries(controller):
@@ -533,13 +533,13 @@ def test_put_many_without_previous_is_invalid(controller: layabase.CRUDControlle
         controller.put_many(
             [{"key": "my_key", "mandatory": 2}, {"key": "my_key2", "mandatory": 3}]
         )
-    assert exception_info.value.requested_data == {"key": "my_key", "mandatory": 2}
+    assert exception_info.value.received_data == {"key": "my_key", "mandatory": 2}
 
 
 def test_put_unexisting_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "my_key", "mandatory": 1, "optional": "my_value"})
-    assert exception_info.value.requested_data == {
+    assert exception_info.value.received_data == {
         "key": "my_key",
         "mandatory": 1,
         "optional": "my_value",

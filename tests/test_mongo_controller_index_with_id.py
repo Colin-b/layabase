@@ -34,7 +34,7 @@ def test_post_many_with_same_unique_index_is_invalid(controller):
         "": [
             "{'writeErrors': [{'index': 1, 'code': 11000, 'errmsg': 'E11000 "
             "Duplicate Key Error', 'op': {'unique_key': 'test', 'non_unique_key': "
-            "datetime.datetime(2017, 1, 1, 0, 0, tzinfo=datetime.timezone.utc), '_id': "
+            "datetime.datetime(2017, 1, 1, 0, 0), '_id': "
             "ObjectId('222222222222222222222222')}}], 'nInserted': 1}"
         ]
     }

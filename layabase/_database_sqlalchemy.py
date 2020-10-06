@@ -417,10 +417,11 @@ class CRUDModel:
 
     @classmethod
     def _get_auto_incremented_fields(cls) -> List[str]:
+        mapper = inspect(cls)
         return [
-            marshmallow_field.name
-            for marshmallow_field in cls.schema().fields.values()
-            if marshmallow_field.autoincrement is True
+            column.name
+            for column in mapper.columns.values()
+            if column.autoincrement is True
         ]
 
     @classmethod
