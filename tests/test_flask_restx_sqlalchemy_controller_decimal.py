@@ -1,5 +1,5 @@
 import flask
-import flask_restplus
+import flask_restx
 import pytest
 import sqlalchemy
 
@@ -7,12 +7,12 @@ import layabase
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        float_field = sqlalchemy.Column(sqlalchemy.Float)
+        decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)
 
     controller = layabase.CRUDController(TestTable)
     layabase.load("sqlite:///:memory:", [controller])
@@ -20,42 +20,32 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
-
-    @namespace.route("/test_parsers")
-    class TestParsersResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        def get(self):
-            return controller.query_get_parser.parse_args()
-
-        @namespace.expect(controller.query_delete_parser)
-        def delete(self):
-            return controller.query_delete_parser.parse_args()
 
     return application
 
@@ -109,7 +99,7 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "float_field",
+                            "name": "decimal_field",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "number"},
@@ -137,7 +127,7 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "float_field",
+                            "name": "decimal_field",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "number"},
@@ -173,71 +163,7 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-            },
-            "/test_parsers": {
-                "delete": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
-                "get": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "get_test_parsers_resource",
-                    "parameters": [
-                        {
-                            "name": "key",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "float_field",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "limit",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
-                            "exclusiveMinimum": True,
-                        },
-                        {
-                            "name": "offset",
-                            "in": "query",
-                            "type": "integer",
-                            "minimum": 0,
-                        },
-                        {
-                            "name": "order_by",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "collectionFormat": "multi",
-                        },
-                    ],
-                    "tags": ["Test"],
-                },
-            },
+            }
         },
         "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
@@ -252,7 +178,7 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "float_field": {
+                    "decimal_field": {
                         "type": "number",
                         "readOnly": False,
                         "example": 1.4,
@@ -268,7 +194,7 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "float_field": {
+                    "decimal_field": {
                         "type": "number",
                         "readOnly": False,
                         "example": 1.4,
@@ -284,7 +210,7 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "float_field": {
+                    "decimal_field": {
                         "type": "number",
                         "readOnly": False,
                         "example": 1.4,
@@ -298,21 +224,3 @@ def test_open_api_definition(client):
             "MaskError": {"description": "When any error occurs on mask"},
         },
     }
-
-
-def test_query_get_parser(client):
-    response = client.get(
-        "/test_parsers?key=12&float_field=123.4&limit=1&order_by=key&offset=0"
-    )
-    assert response.json == {
-        "float_field": [123.4],
-        "key": ["12"],
-        "limit": 1,
-        "offset": 0,
-        "order_by": ["key"],
-    }
-
-
-def test_query_delete_parser(client):
-    response = client.delete("/test_parsers?key=12&float_field=123.4")
-    assert response.json == {"float_field": [123.4], "key": ["12"]}

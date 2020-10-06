@@ -1,64 +1,72 @@
+import collections.abc
+
+import flask
+import flask_restx
 import pytest
 import sqlalchemy
-import flask
-import flask_restplus
 
 import layabase
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-        optional = sqlalchemy.Column(sqlalchemy.String)
+        date_str = sqlalchemy.Column(sqlalchemy.Date)
+        datetime_str = sqlalchemy.Column(sqlalchemy.DateTime)
 
-    return layabase.CRUDController(TestTable)
+    controller = layabase.CRUDController(TestTable)
+    layabase.load("sqlite:///:memory:", [controller])
+    return controller
 
 
 @pytest.fixture
 def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
-    @namespace.route("/test/description")
-    class TestDescriptionResource(flask_restplus.Resource):
-        @namespace.marshal_with(controller.get_model_description_response_model)
-        def get(self):
-            return {}
-
     @namespace.route("/test_parsers")
-    class TestParsersResource(flask_restplus.Resource):
+    class TestParsersResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
         def get(self):
-            return controller.query_get_parser.parse_args()
+            return {
+                field: [str(value) for value in values]
+                if isinstance(values, collections.abc.Iterable)
+                else values
+                for field, values in controller.flask_restx.query_get_parser.parse_args().items()
+            }
 
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
-            return controller.query_delete_parser.parse_args()
+            return {
+                field: [str(value) for value in values]
+                for field, values in controller.flask_restx.query_delete_parser.parse_args().items()
+            }
 
     return application
 
@@ -112,16 +120,18 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "mandatory",
+                            "name": "date_str",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "integer"},
+                            "format": "date",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "optional",
+                            "name": "datetime_str",
                             "in": "query",
                             "type": "array",
+                            "format": "date-time",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
@@ -147,16 +157,18 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "mandatory",
+                            "name": "date_str",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "integer"},
+                            "format": "date",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "optional",
+                            "name": "datetime_str",
                             "in": "query",
                             "type": "array",
+                            "format": "date-time",
                             "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
@@ -191,38 +203,85 @@ def test_open_api_definition(client):
                     "tags": ["Test"],
                 },
             },
-            "/test/description": {
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestTable_GetDescriptionResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_description_resource",
-                    "parameters": [
-                        {
-                            "name": "X-Fields",
-                            "in": "header",
-                            "type": "string",
-                            "format": "mask",
-                            "description": "An optional fields mask",
-                        }
-                    ],
-                    "tags": ["Test"],
-                }
-            },
             "/test_parsers": {
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "date_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
                     "tags": ["Test"],
                 },
                 "get": {
                     "responses": {"200": {"description": "Success"}},
                     "operationId": "get_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "date_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "datetime_str",
+                            "in": "query",
+                            "type": "array",
+                            "format": "date-time",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                        {
+                            "name": "order_by",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
                     "tags": ["Test"],
                 },
             },
@@ -233,67 +292,71 @@ def test_open_api_definition(client):
         "tags": [{"name": "Test"}],
         "definitions": {
             "TestTable_PostRequestModel": {
-                "required": ["key", "mandatory"],
+                "required": ["key"],
                 "properties": {
                     "key": {
                         "type": "string",
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
+                    "date_str": {
                         "type": "string",
+                        "format": "date",
                         "readOnly": False,
-                        "example": "sample_value",
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
                     },
                 },
                 "type": "object",
             },
             "TestTable_PutRequestModel": {
-                "required": ["key", "mandatory"],
+                "required": ["key"],
                 "properties": {
                     "key": {
                         "type": "string",
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
+                    "date_str": {
                         "type": "string",
+                        "format": "date",
                         "readOnly": False,
-                        "example": "sample_value",
+                        "example": "2017-09-24",
+                    },
+                    "datetime_str": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
                     },
                 },
                 "type": "object",
             },
             "TestTable_GetResponseModel": {
-                "required": ["key", "mandatory"],
+                "required": ["key"],
                 "properties": {
                     "key": {
                         "type": "string",
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
+                    "date_str": {
                         "type": "string",
+                        "format": "date",
                         "readOnly": False,
-                        "example": "sample_value",
+                        "example": "2017-09-24",
                     },
-                },
-                "type": "object",
-            },
-            "TestTable_GetDescriptionResponseModel": {
-                "required": ["key", "mandatory", "table"],
-                "properties": {
-                    "table": {
+                    "datetime_str": {
                         "type": "string",
-                        "description": "Table name",
-                        "example": "table",
+                        "format": "date-time",
+                        "readOnly": False,
+                        "example": "2017-09-24T15:36:09",
                     },
-                    "key": {"type": "string", "example": "column"},
-                    "mandatory": {"type": "string", "example": "column"},
-                    "optional": {"type": "string", "example": "column"},
                 },
                 "type": "object",
             },
@@ -302,4 +365,29 @@ def test_open_api_definition(client):
             "ParseError": {"description": "When a mask can't be parsed"},
             "MaskError": {"description": "When any error occurs on mask"},
         },
+    }
+
+
+def test_query_get_parser(client):
+    response = client.get(
+        "/test_parsers?key=12&date_str=2017-05-15&datetime_str=2016-09-23T23:59:59&limit=1&order_by=key&offset=0"
+    )
+    assert response.json == {
+        "date_str": ["2017-05-15"],
+        "datetime_str": ["2016-09-23 23:59:59"],
+        "key": ["12"],
+        "limit": 1,
+        "offset": 0,
+        "order_by": ["key"],
+    }
+
+
+def test_query_delete_parser(client):
+    response = client.delete(
+        "/test_parsers?key=12&date_str=2017-05-15&datetime_str=2016-09-23T23:59:59&"
+    )
+    assert response.json == {
+        "date_str": ["2017-05-15"],
+        "datetime_str": ["2016-09-23 23:59:59"],
+        "key": ["12"],
     }

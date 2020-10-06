@@ -1,18 +1,20 @@
-import flask
-import flask_restplus
 import pytest
 import sqlalchemy
+import flask
+import flask_restx
 
 import layabase
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestTable:
         __tablename__ = "test"
+        __table_args__ = {u"schema": "schema_name"}
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        decimal_field = sqlalchemy.Column(sqlalchemy.DECIMAL)
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        optional = sqlalchemy.Column(sqlalchemy.String)
 
     controller = layabase.CRUDController(TestTable)
     layabase.load("sqlite:///:memory:", [controller])
@@ -20,32 +22,38 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
+
+    @namespace.route("/test/description")
+    class TestDescriptionResource(flask_restx.Resource):
+        @namespace.marshal_with(controller.flask_restx.get_model_description_response_model)
+        def get(self):
+            return {}
 
     return application
 
@@ -99,10 +107,17 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "decimal_field",
+                            "name": "mandatory",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -127,10 +142,17 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "decimal_field",
+                            "name": "mandatory",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "number"},
+                            "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -163,7 +185,30 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-            }
+            },
+            "/test/description": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_GetDescriptionResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_description_resource",
+                    "parameters": [
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        }
+                    ],
+                    "tags": ["Test"],
+                }
+            },
         },
         "info": {"title": "API", "version": "1.0"},
         "produces": ["application/json"],
@@ -171,50 +216,72 @@ def test_open_api_definition(client):
         "tags": [{"name": "Test"}],
         "definitions": {
             "TestTable_PostRequestModel": {
-                "required": ["key"],
+                "required": ["key", "mandatory"],
                 "properties": {
                     "key": {
                         "type": "string",
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "decimal_field": {
-                        "type": "number",
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
                         "readOnly": False,
-                        "example": 1.4,
+                        "example": "sample_value",
                     },
                 },
                 "type": "object",
             },
             "TestTable_PutRequestModel": {
-                "required": ["key"],
+                "required": ["key", "mandatory"],
                 "properties": {
                     "key": {
                         "type": "string",
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "decimal_field": {
-                        "type": "number",
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
                         "readOnly": False,
-                        "example": 1.4,
+                        "example": "sample_value",
                     },
                 },
                 "type": "object",
             },
             "TestTable_GetResponseModel": {
-                "required": ["key"],
+                "required": ["key", "mandatory"],
                 "properties": {
                     "key": {
                         "type": "string",
                         "readOnly": False,
                         "example": "sample_value",
                     },
-                    "decimal_field": {
-                        "type": "number",
+                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
                         "readOnly": False,
-                        "example": 1.4,
+                        "example": "sample_value",
                     },
+                },
+                "type": "object",
+            },
+            "TestTable_GetDescriptionResponseModel": {
+                "required": ["key", "mandatory", "schema", "table"],
+                "properties": {
+                    "table": {
+                        "type": "string",
+                        "description": "Table name",
+                        "example": "table",
+                    },
+                    "schema": {
+                        "type": "string",
+                        "description": "Table schema",
+                        "example": "schema",
+                    },
+                    "key": {"type": "string", "example": "column"},
+                    "mandatory": {"type": "string", "example": "column"},
+                    "optional": {"type": "string", "example": "column"},
                 },
                 "type": "object",
             },
