@@ -16,7 +16,7 @@ class EnumTest(enum.Enum):
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -28,7 +28,7 @@ def controller():
 
 
 @pytest.fixture
-def controller_versioned():
+def controller_versioned() -> layabase.CRUDController:
     class TestCollectionVersioned:
         __collection_name__ = "test_versioned"
 
@@ -39,12 +39,12 @@ def controller_versioned():
 
 
 @pytest.fixture
-def controllers(controller, controller_versioned):
+def controllers(controller: layabase.CRUDController, controller_versioned: layabase.CRUDController):
     return layabase.load("mongomock", [controller, controller_versioned])
 
 
 @pytest.fixture
-def app(controllers, controller_versioned):
+def app(controllers, controller_versioned: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)

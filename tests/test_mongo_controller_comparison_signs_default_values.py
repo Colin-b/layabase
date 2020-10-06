@@ -1,5 +1,3 @@
-import datetime
-
 import pytest
 
 import layabase
@@ -7,7 +5,7 @@ import layabase.mongo
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -20,7 +18,7 @@ def controller():
     return controller
 
 
-def test_get_with_interval_and_default_and_equality(controller):
+def test_get_with_interval_and_default_and_equality(controller: layabase.CRUDController):
     controller.post_many(
         [
             {"int_value": -10},
@@ -43,7 +41,7 @@ def test_get_with_interval_and_default_and_equality(controller):
     ) == [{"int_value": 0}, {"int_value": 3}, {"int_value": 5}]
 
 
-def test_get_with_default_and_equality(controller):
+def test_get_with_default_and_equality(controller: layabase.CRUDController):
     controller.post_many(
         [
             {"int_value": -10},

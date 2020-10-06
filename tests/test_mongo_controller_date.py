@@ -10,7 +10,7 @@ import layabase.mongo
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -24,7 +24,7 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
@@ -54,7 +54,7 @@ def app(controller):
     return application
 
 
-def test_put_is_updating_date(controller):
+def test_put_is_updating_date(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",
@@ -89,7 +89,7 @@ def test_put_is_updating_date(controller):
     ]
 
 
-def test_get_date_is_handled_for_valid_date(controller):
+def test_get_date_is_handled_for_valid_date(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",
@@ -107,7 +107,7 @@ def test_get_date_is_handled_for_valid_date(controller):
     ]
 
 
-def test_post_invalid_date_is_invalid(controller):
+def test_post_invalid_date_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post(
             {
@@ -124,21 +124,21 @@ def test_post_invalid_date_is_invalid(controller):
     }
 
 
-def test_get_invalid_date_is_invalid(controller):
+def test_get_invalid_date_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.get({"date_str": "this is not a date"})
     assert exception_info.value.errors == {"date_str": ["Not a valid date."]}
     assert exception_info.value.received_data == {"date_str": "this is not a date"}
 
 
-def test_delete_invalid_date_is_invalid(controller):
+def test_delete_invalid_date_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.delete({"date_str": "this is not a date"})
     assert exception_info.value.errors == {"date_str": ["Not a valid date."]}
     assert exception_info.value.received_data == {"date_str": "this is not a date"}
 
 
-def test_get_with_unknown_fields_is_valid(controller):
+def test_get_with_unknown_fields_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",
@@ -155,7 +155,7 @@ def test_get_with_unknown_fields_is_valid(controller):
     ]
 
 
-def test_put_with_unknown_fields_is_valid(controller):
+def test_put_with_unknown_fields_is_valid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",
@@ -187,7 +187,7 @@ def test_put_with_unknown_fields_is_valid(controller):
     assert controller.get({"date_str": "2018-12-30"}) == []
 
 
-def test_put_unexisting_is_invalid(controller):
+def test_put_unexisting_is_invalid(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",
@@ -200,7 +200,7 @@ def test_put_unexisting_is_invalid(controller):
     assert exception_info.value.requested_data == {"key": "my_key2"}
 
 
-def test_post_invalid_datetime_is_invalid(controller):
+def test_post_invalid_datetime_is_invalid(controller: layabase.CRUDController):
     with pytest.raises(ValidationFailed) as exception_info:
         controller.post(
             {
@@ -217,7 +217,7 @@ def test_post_invalid_datetime_is_invalid(controller):
     }
 
 
-def test_post_datetime_for_a_date_is_valid(controller):
+def test_post_datetime_for_a_date_is_valid(controller: layabase.CRUDController):
     assert controller.post(
         {
             "key": "my_key1",
@@ -233,7 +233,7 @@ def test_post_datetime_for_a_date_is_valid(controller):
     }
 
 
-def test_get_date_is_handled_for_unused_date(controller):
+def test_get_date_is_handled_for_unused_date(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",
@@ -245,7 +245,7 @@ def test_get_date_is_handled_for_unused_date(controller):
     assert controller.get({"date_str": d}) == []
 
 
-def test_get_date_is_handled_for_valid_datetime(controller):
+def test_get_date_is_handled_for_valid_datetime(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",
@@ -263,7 +263,7 @@ def test_get_date_is_handled_for_valid_datetime(controller):
     ]
 
 
-def test_get_date_is_handled_for_unused_datetime(controller):
+def test_get_date_is_handled_for_unused_datetime(controller: layabase.CRUDController):
     controller.post(
         {
             "key": "my_key1",

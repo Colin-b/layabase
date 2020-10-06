@@ -3,7 +3,6 @@ import enum
 import flask
 import flask_restplus
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -15,7 +14,7 @@ class EnumTest(enum.Enum):
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -33,7 +32,7 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
@@ -63,7 +62,7 @@ def app(controller):
     return application
 
 
-def test_post_with_specified_incremented_field_is_ignored_and_valid(client, controller):
+def test_post_with_specified_incremented_field_is_ignored_and_valid(client, controller: layabase.CRUDController):
     assert controller.post({"key": "my_key", "enum_field": "Value1"}) == {
         "optional_with_default": "Test value",
         "key": 1,
@@ -71,7 +70,7 @@ def test_post_with_specified_incremented_field_is_ignored_and_valid(client, cont
     }
 
 
-def test_post_with_enum_is_valid(client, controller):
+def test_post_with_enum_is_valid(client, controller: layabase.CRUDController):
     assert controller.post({"key": "my_key", "enum_field": EnumTest.Value1}) == {
         "optional_with_default": "Test value",
         "key": 1,
@@ -79,8 +78,8 @@ def test_post_with_enum_is_valid(client, controller):
     }
 
 
-def test_post_with_invalid_enum_choice_is_invalid(client, controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+def test_post_with_invalid_enum_choice_is_invalid(client, controller: layabase.CRUDController):
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "my_key", "enum_field": "InvalidValue"})
     assert exception_info.value.errors == {
         "enum_field": ["Value \"InvalidValue\" is not within ['Value1', 'Value2']."]
@@ -89,7 +88,7 @@ def test_post_with_invalid_enum_choice_is_invalid(client, controller):
 
 
 def test_post_many_with_specified_incremented_field_is_ignored_and_valid(
-    client, controller
+    client, controller: layabase.CRUDController
 ):
     assert controller.post_many(
         [

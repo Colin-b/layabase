@@ -1,14 +1,13 @@
 import flask
 import flask_restplus
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
@@ -31,7 +30,7 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
     api = flask_restplus.Api(application)
@@ -43,9 +42,9 @@ def app(controller):
 
 
 def test_post_with_choices_field_with_a_value_not_in_choices_list_is_invalid(
-    client, controller
+    client, controller: layabase.CRUDController
 ):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post(
             {
                 "key": 1,
