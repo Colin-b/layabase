@@ -199,14 +199,9 @@ class CRUDModel:
         if not rows:
             raise ValidationFailed({}, message="No data provided.")
         if not isinstance(rows, list):
-            raise ValidationFailed(
-                rows, message="Must be a list of dictionaries."
-            )
+            raise ValidationFailed(rows, message="Must be a list of dictionaries.")
         # TODO Check if it can be done by SQLAlchemy already
-        rows = [
-            cls._remove_auto_incremented_fields(row)
-            for row in rows
-        ]
+        rows = [cls._remove_auto_incremented_fields(row) for row in rows]
         try:
             models = cls.schema().load(rows, many=True, session=cls._session)
         except exc.sa_exc.DBAPIError:
@@ -291,7 +286,9 @@ class CRUDModel:
             except exc.sa_exc.DBAPIError:
                 cls._handle_connection_failure()
             if not previous_model:
-                raise ValidationFailed(row, message="The row to update could not be found.")
+                raise ValidationFailed(
+                    row, message="The row to update could not be found."
+                )
             previous_row = _model_field_values(previous_model)
             try:
                 new_model = cls.schema().load(
@@ -438,7 +435,8 @@ class CRUDModel:
         return [
             name
             for name, column in cls.__dict__.items()
-            if isinstance(column, PropComparator) and column.info.get("layabase", {}).get("required_on_query", False)
+            if isinstance(column, PropComparator)
+            and column.info.get("layabase", {}).get("required_on_query", False)
         ]
 
     @classmethod
@@ -485,7 +483,12 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
 
         model.audit_model = type(
             f"{controller.table_or_collection.__name__}_SQLAlchemyAuditModel",
-            (_create_from(model), table_copy, CRUDModel, base),
+            (
+                _create_from(model, controller.retrieve_user),
+                table_copy,
+                CRUDModel,
+                base,
+            ),
             {"__tablename__": f"audit_{controller.table_or_collection.__tablename__}"},
         )
 

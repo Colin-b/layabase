@@ -83,6 +83,7 @@ class CRUDController:
         :param skip_unknown_fields: False to use strict field name check. Ignore unknown fields by default. (Mongo only)
         :param skip_update_indexes: True to never update indexes. Warning, this might lead to invalid indexes on the underlying table or collection. (Mongo only)
         :param skip_log_for_unknown_fields: List of unknown field names that are to be expected.
+        :param retrieve_user: Callable returning the user to store in case of audit.
         """
         if not table_or_collection:
             raise Exception("Table or Collection must be provided.")
@@ -95,6 +96,8 @@ class CRUDController:
         self.skip_update_indexes = kwargs.pop("skip_update_indexes", False)
         self.skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
         self.supports_offset = True
+        # By default, audit user will be blank
+        self.retrieve_user = kwargs.pop("retrieve_user", lambda: "")
 
         # Generated from table_or_collection, appropriate class depending on what was requested on controller
         self._model = None
@@ -107,7 +110,9 @@ class CRUDController:
         from layabase._flask_restx import ParsersAndModels
 
         if not hasattr(self, "_flask_restx"):
-            self._flask_restx = ParsersAndModels(self.table_or_collection, self.history, self.audit, self.supports_offset)
+            self._flask_restx = ParsersAndModels(
+                self.table_or_collection, self.history, self.audit, self.supports_offset
+            )
         return self._flask_restx
 
     def get(self, request_arguments: dict) -> List[dict]:

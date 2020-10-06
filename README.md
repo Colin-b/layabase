@@ -22,7 +22,7 @@ database modules ([SQLAlchemy](https://docs.sqlalchemy.org) and [PyMongo](https:
 Features:
 
 - Audit
-  - Automatic audit support (if [`layabauth`](https://pypi.org/project/layabauth/) python module is used, user will be logged as well)
+  - Automatic audit support
 - Rollback
   - Automatic rollback support (when history is activated)
 - History

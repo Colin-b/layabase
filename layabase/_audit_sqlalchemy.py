@@ -4,8 +4,6 @@ import copy
 
 from sqlalchemy import Column, DateTime, Enum, String, Integer
 
-from layabase._audit import current_user_name
-
 
 @enum.unique
 class Action(enum.Enum):
@@ -18,7 +16,7 @@ def _to_audit_column(column):
     """
     Remove primary keys from mixin as revision is the unique primary key
     Remove auto increment from mixin as value is already auto incremented by model
-    
+
     :param column: SQLAlchemy column or any other attribute of the original Mixin.
     """
     if hasattr(column, "primary_key") and column.primary_key:
@@ -31,7 +29,7 @@ def _to_audit_column(column):
     return column
 
 
-def _create_from(model):
+def _create_from(model, retrieve_user: callable):
     """
 
     :param model: CRUDModel of the table that should be audited.
@@ -79,7 +77,7 @@ def _create_from(model):
 
         @classmethod
         def _audit_action(cls, action: Action, row: dict):
-            row["audit_user"] = current_user_name()
+            row["audit_user"] = retrieve_user()
             row["audit_date_utc"] = datetime.datetime.utcnow().isoformat()
             row["audit_action"] = action.value
             # Let any error be handled by the caller (main model), same for commit

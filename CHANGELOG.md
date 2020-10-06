@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update [black](https://pypi.org/project/black/) version from `master` to `20.8b1`.
 - `flask-restx` is now an optional dependency.
 - `layaberr.ValidationFailed` are not sent anymore, `layabase.ValidationFailed` are sent instead.
+- Audit user is not retrieved from `flask.g.user.name` anymore. You have to provide a function to retrieve the user in `retrieve_user` `layabase.CRUDController` init parameter.
 
 ### Fixed
 - [Mongo] Fix adding field to parser adding only one level of multilevel DictColumn.

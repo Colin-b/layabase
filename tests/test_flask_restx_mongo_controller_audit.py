@@ -16,7 +16,9 @@ def controller() -> layabase.CRUDController:
         mandatory = layabase.mongo.Column(int, is_nullable=False)
         optional = layabase.mongo.Column(str)
 
-    controller = layabase.CRUDController(TestCollection, audit=True)
+    controller = layabase.CRUDController(
+        TestCollection, audit=True, retrieve_user=lambda: flask.g.current_user_name
+    )
     layabase.load("mongomock?ssl=True", [controller], replicaSet="globaldb")
     return controller
 
@@ -39,20 +41,12 @@ def app(controller: layabase.CRUDController):
 
         @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
-            # Simulate the fact that layabauth is used
-            class User:
-                name = "test user"
-
-            flask.g.current_user = User
+            flask.g.current_user_name = "test user"
             return controller.post({"key": "audit_test", "mandatory": 1})
 
         @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
-            # Simulate the fact that flask is not available
-            def raise_import_error():
-                raise ImportError()
-
-            flask.has_request_context = raise_import_error
+            flask.g.current_user_name = ""
             return controller.put({"key": "audit_test", "mandatory": 2})
 
         @namespace.expect(controller.flask_restx.query_delete_parser)

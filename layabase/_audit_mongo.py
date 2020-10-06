@@ -6,7 +6,6 @@ from typing import Type
 
 from layabase._database_mongo import _CRUDModel
 from layabase.mongo import Column
-from layabase._audit import current_user_name
 from layabase._versioning_mongo import VersionedCRUDModel
 
 logger = logging.getLogger(__name__)
@@ -20,15 +19,15 @@ class Action(enum.IntEnum):
     Rollback = 4
 
 
-def _create_from(mixin, model: Type[_CRUDModel], base):
+def _create_from(mixin, model: Type[_CRUDModel], base, retrieve_user: callable):
     return (
-        _versioning_audit(mixin, base)
+        _versioning_audit(mixin, base, retrieve_user)
         if issubclass(model, VersionedCRUDModel)
-        else _common_audit(mixin, model, base)
+        else _common_audit(mixin, model, base, retrieve_user)
     )
 
 
-def _common_audit(mixin, model, base):
+def _common_audit(mixin, model, base, retrieve_user: callable):
     class AuditModel(mixin, _CRUDModel, base=base, skip_name_check=True):
         """
         Class providing Audit fields for a MONGODB model.
@@ -70,7 +69,7 @@ def _common_audit(mixin, model, base):
             document[cls.revision.name] = cls._increment(
                 "revision", model.__collection_name__
             )
-            document[cls.audit_user.name] = current_user_name()
+            document[cls.audit_user.name] = retrieve_user()
             document[cls.audit_date_utc.name] = datetime.datetime.utcnow()
             document[cls.audit_action.name] = action.value
             cls.__collection__.insert_one(document)
@@ -78,7 +77,7 @@ def _common_audit(mixin, model, base):
     return AuditModel
 
 
-def _versioning_audit(mixin, base):
+def _versioning_audit(mixin, base, retrieve_user: callable):
     class AuditModel(_CRUDModel, base=base, skip_name_check=True):
         """
         Class providing the audit for all versioned MONGODB models.
@@ -120,7 +119,7 @@ def _versioning_audit(mixin, base):
                 {
                     cls.table_name.name: mixin.__collection_name__,
                     cls.revision.name: revision,
-                    cls.audit_user.name: current_user_name(),
+                    cls.audit_user.name: retrieve_user(),
                     cls.audit_date_utc.name: datetime.datetime.utcnow(),
                     cls.audit_action.name: action.value,
                 }
