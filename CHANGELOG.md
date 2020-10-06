@@ -25,9 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [SQLAlchemy] Update of row(s) now raise a ValidationFailed instead of a ModelCouldNotBeFound in case the row(s) to update do not exists.
 - [SQLAlchemy] Model schema now returns a `SQLAlchemyAutoSchema` instance instead of the deprecated `ModelSchema`.
 - [SQLAlchemy] Iterate over SQLAlchemy fields to find the one required on queries instead of creating a Marshmallow schema.
-- Update [layaberr](https://pypi.org/project/layaberr/) version from `2.*` to `3.*`.
 - Update [marshmallow_sqlalchemy](https://marshmallow-sqlalchemy.readthedocs.io/en/latest/changelog.html) version from `0.21.*` to `0.23.*`.
-- Update [black](https://pypi.org/project/black/) version from `master` to `20.10b0`.
+- Update [black](https://pypi.org/project/black/) version from `master` to `20.8b1`.
 - `flask-restx` is now an optional dependency.
 - `layaberr.ValidationFailed` are not sent anymore, `layabase.ValidationFailed` are sent instead.
 
@@ -38,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - `flask-restplus` is not supported anymore. `flask-restx` is used instead.
-- `layaberr` is not a required dependency anymore.
+- `layaberr` is not a dependency anymore.
 
 ## [3.5.1] - 2020-01-30
 ### Fixed
