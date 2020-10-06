@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [4.0.0.dev0] - 2020-10-06
 ### Changed
 - `required_on_query` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
 - `allow_comparison_signs` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
@@ -52,8 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release.
 
-[Unreleased]: https://github.com/Colin-b/layabase/compare/v4.0.0...HEAD
-[4.0.0]: https://github.com/Colin-b/layabase/compare/v3.5.1...v4.0.0
+[Unreleased]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev0...HEAD
+[4.0.0.dev0]: https://github.com/Colin-b/layabase/compare/v3.5.1...v4.0.0.dev0
 [3.5.1]: https://github.com/Colin-b/layabase/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/Colin-b/layabase/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/Colin-b/layabase/releases/tag/v3.4.0
