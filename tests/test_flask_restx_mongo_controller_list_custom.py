@@ -1,66 +1,61 @@
-import logging
-import sys
-
 import flask
-import flask_restplus
+import flask_restx
 import pytest
 
 import layabase
 import layabase.mongo
 
-# Use debug logging to ensure that debug logging statements have no impact
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(process)d:%(thread)d - %(filename)s:%(lineno)d - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-    level=logging.DEBUG,
-)
-
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestCollection:
         __collection_name__ = "test"
 
-        key = layabase.mongo.Column(str, is_primary_key=True)
-        mandatory = layabase.mongo.Column(int, is_nullable=False)
-        optional = layabase.mongo.Column(str)
+        key = layabase.mongo.Column(is_primary_key=True)
+        list_field = layabase.mongo.Column(list)
 
-    return layabase.CRUDController(TestCollection)
+    controller = layabase.CRUDController(TestCollection)
+    layabase.load("mongomock", [controller])
+    return controller
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
-    @namespace.route("/test/description")
-    class TestDescriptionResource(flask_restplus.Resource):
-        @namespace.marshal_with(controller.get_model_description_response_model)
+    @namespace.route("/test_parsers")
+    class TestParsersResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
         def get(self):
-            return {}
+            return controller.flask_restx.query_get_parser.parse_args()
+
+        @namespace.expect(controller.flask_restx.query_delete_parser)
+        def delete(self):
+            return controller.flask_restx.query_delete_parser.parse_args()
 
     return application
 
@@ -87,6 +82,42 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
+                "put": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "put_test_resource",
+                    "parameters": [
+                        {
+                            "name": "payload",
+                            "required": True,
+                            "in": "body",
+                            "schema": {
+                                "$ref": "#/definitions/TestCollection_PutRequestModel"
+                            },
+                        }
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
                 "get": {
                     "responses": {
                         "200": {
@@ -106,14 +137,7 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "mandatory",
-                            "in": "query",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "collectionFormat": "multi",
-                        },
-                        {
-                            "name": "optional",
+                            "name": "list_field",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -142,9 +166,11 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "delete": {
+            },
+            "/test_parsers": {
+                "get": {
                     "responses": {"200": {"description": "Success"}},
-                    "operationId": "delete_test_resource",
+                    "operationId": "get_test_parsers_resource",
                     "parameters": [
                         {
                             "name": "key",
@@ -154,14 +180,41 @@ def test_open_api_definition(client):
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "mandatory",
+                            "name": "list_field",
                             "in": "query",
                             "type": "array",
-                            "items": {"type": "integer"},
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
-                            "name": "optional",
+                            "name": "limit",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": True,
+                        },
+                        {
+                            "name": "offset",
+                            "in": "query",
+                            "type": "integer",
+                            "minimum": 0,
+                        },
+                    ],
+                    "tags": ["Test"],
+                },
+                "delete": {
+                    "responses": {"200": {"description": "Success"}},
+                    "operationId": "delete_test_parsers_resource",
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "list_field",
                             "in": "query",
                             "type": "array",
                             "items": {"type": "string"},
@@ -170,44 +223,6 @@ def test_open_api_definition(client):
                     ],
                     "tags": ["Test"],
                 },
-                "put": {
-                    "responses": {"200": {"description": "Success"}},
-                    "operationId": "put_test_resource",
-                    "parameters": [
-                        {
-                            "name": "payload",
-                            "required": True,
-                            "in": "body",
-                            "schema": {
-                                "$ref": "#/definitions/TestCollection_PutRequestModel"
-                            },
-                        }
-                    ],
-                    "tags": ["Test"],
-                },
-            },
-            "/test/description": {
-                "get": {
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "schema": {
-                                "$ref": "#/definitions/TestCollection_GetDescriptionResponseModel"
-                            },
-                        }
-                    },
-                    "operationId": "get_test_description_resource",
-                    "parameters": [
-                        {
-                            "name": "X-Fields",
-                            "in": "header",
-                            "type": "string",
-                            "format": "mask",
-                            "description": "An optional fields mask",
-                        }
-                    ],
-                    "tags": ["Test"],
-                }
             },
         },
         "info": {"title": "API", "version": "1.0"},
@@ -222,11 +237,11 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample key",
                     },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
+                    "list_field": {
+                        "type": "array",
                         "readOnly": False,
-                        "example": "sample optional",
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
                     },
                 },
                 "type": "object",
@@ -238,11 +253,11 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample key",
                     },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
+                    "list_field": {
+                        "type": "array",
                         "readOnly": False,
-                        "example": "sample optional",
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
                     },
                 },
                 "type": "object",
@@ -254,26 +269,12 @@ def test_open_api_definition(client):
                         "readOnly": False,
                         "example": "sample key",
                     },
-                    "mandatory": {"type": "integer", "readOnly": False, "example": 1},
-                    "optional": {
-                        "type": "string",
+                    "list_field": {
+                        "type": "array",
                         "readOnly": False,
-                        "example": "sample optional",
+                        "example": ["1st list_field sample", "2nd list_field sample"],
+                        "items": {"type": "string"},
                     },
-                },
-                "type": "object",
-            },
-            "TestCollection_GetDescriptionResponseModel": {
-                "required": ["collection"],
-                "properties": {
-                    "collection": {
-                        "type": "string",
-                        "description": "Collection name",
-                        "example": "collection",
-                    },
-                    "key": {"type": "string", "example": "column"},
-                    "mandatory": {"type": "string", "example": "column"},
-                    "optional": {"type": "string", "example": "column"},
                 },
                 "type": "object",
             },
@@ -283,3 +284,18 @@ def test_open_api_definition(client):
             "MaskError": {"description": "When any error occurs on mask"},
         },
     }
+
+
+def test_query_get_parser_with_list(client):
+    response = client.get("/test_parsers?key=test&list_field=[1,2]&limit=1&offset=0")
+    assert response.json == {
+        "key": ["test"],
+        "limit": 1,
+        "list_field": [[1, 2]],
+        "offset": 0,
+    }
+
+
+def test_query_delete_parser_with_list(client):
+    response = client.delete("/test_parsers?key=test&list_field=[1,2]")
+    assert response.json == {"key": ["test"], "list_field": [[1, 2]]}
