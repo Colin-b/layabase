@@ -10,6 +10,7 @@ extra_requirements = {
     "testing": [
         # Used to manage testing of flask-restx
         "pytest-flask==1.*",
+        "flask-restx==0.2.*",
         # Used to manage testing of Mongo
         "mongomock==3.*",
         # Used to check coverage
