@@ -1,10 +1,7 @@
-from threading import Thread
-
 import pytest
 import sqlalchemy
 import flask
 import flask_restplus
-from layaberr import ValidationFailed, ModelCouldNotBeFound
 
 import layabase
 

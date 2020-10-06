@@ -2,7 +2,6 @@ import pytest
 import sqlalchemy
 import flask
 import flask_restplus
-from layaberr import ValidationFailed
 
 import layabase
 
@@ -213,7 +212,7 @@ def test_post_controller_with_valid_value_for_field(controller):
 
 
 def test_post_controller_with_invalid_value_for_field(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post({"key": "0", "test_field": "chose_invalid"})
     assert exception_info.value.received_data == {
         "key": "0",
@@ -234,7 +233,7 @@ def test_postmany_controller_with_valid_values_for_field(controller):
 
 
 def test_postmany_controller_with_valid_value_and_invalid_value_for_field(controller):
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post_many(
             [
                 {"key": "0", "test_field": "chose1"},
@@ -265,7 +264,7 @@ def test_put_controller_with_valid_value_for_field(controller):
 
 def test_put_controller_with_invalid_value_for_field(controller):
     controller.post({"key": "0", "test_field": "chose1"})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "0", "test_field": "chose_invalid"})
     assert exception_info.value.received_data == {
         "key": "0",

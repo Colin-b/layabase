@@ -1,22 +1,19 @@
 import pytest
 import sqlalchemy
 import flask
-import flask_restplus
+import flask_restx
 
 import layabase
 
 
 @pytest.fixture
-def controller():
+def controller() -> layabase.CRUDController:
     class TestTable:
         __tablename__ = "test"
 
         key = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        mandatory = sqlalchemy.Column(
-            sqlalchemy.Integer,
-            nullable=False,
-            info={"layabase": {"required_on_query": True}},
-        )
+        mandatory = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+        optional = sqlalchemy.Column(sqlalchemy.String)
 
     controller = layabase.CRUDController(TestTable)
     layabase.load("sqlite:///:memory:", [controller])
@@ -24,115 +21,67 @@ def controller():
 
 
 @pytest.fixture
-def app(controller):
+def app(controller: layabase.CRUDController):
     application = flask.Flask(__name__)
     application.testing = True
-    api = flask_restplus.Api(application)
+    api = flask_restx.Api(application)
     namespace = api.namespace("Test", path="/")
 
-    controller.namespace(namespace)
+    controller.flask_restx.init_models(namespace)
 
     @namespace.route("/test")
-    class TestResource(flask_restplus.Resource):
-        @namespace.expect(controller.query_get_parser)
-        @namespace.marshal_with(controller.get_response_model)
+    class TestResource(flask_restx.Resource):
+        @namespace.expect(controller.flask_restx.query_get_parser)
+        @namespace.marshal_with(controller.flask_restx.get_response_model)
         def get(self):
             return []
 
-        @namespace.expect(controller.json_post_model)
+        @namespace.expect(controller.flask_restx.json_post_model)
         def post(self):
             return []
 
-        @namespace.expect(controller.json_put_model)
+        @namespace.expect(controller.flask_restx.json_put_model)
         def put(self):
             return []
 
-        @namespace.expect(controller.query_delete_parser)
+        @namespace.expect(controller.flask_restx.query_delete_parser)
         def delete(self):
             return []
 
-    @namespace.route("/test_parsers")
-    class TestParsersResource(flask_restplus.Resource):
+    @namespace.route("/test/description")
+    class TestDescriptionResource(flask_restx.Resource):
+        @namespace.marshal_with(controller.flask_restx.get_model_description_response_model)
         def get(self):
-            return controller.query_get_parser.parse_args()
+            return {}
+
+    @namespace.route("/test_parsers")
+    class TestParsersResource(flask_restx.Resource):
+        def get(self):
+            return controller.flask_restx.query_get_parser.parse_args()
 
         def delete(self):
-            return controller.query_delete_parser.parse_args()
+            return controller.flask_restx.query_delete_parser.parse_args()
 
     return application
 
 
-def test_query_get_parser_without_required_field(client):
-    response = client.get("/test_parsers")
-    assert response.status_code == 400
+def test_query_get_parser(client):
+    response = client.get(
+        "/test_parsers?key=12&mandatory=123&optional=1234&limit=1&order_by=key&offset=0"
+    )
     assert response.json == {
-        "errors": {"mandatory": "Missing required parameter in the query string"},
-        "message": "Input payload validation failed",
+        "key": ["12"],
+        "mandatory": [123],
+        "optional": ["1234"],
+        "limit": 1,
+        "order_by": ["key"],
+        "offset": 0,
     }
 
 
-def test_get_without_required_field(controller):
-    with pytest.raises(layabase.ValidationFailed) as exception_info:
-        controller.get({})
-    assert exception_info.value.received_data == {}
-    assert exception_info.value.errors == {
-        "mandatory": ["Missing data for required field."]
-    }
-
-
-def test_get_with_required_field(controller):
-    assert controller.get({"mandatory": 1}) == []
-
-
-def test_get_one_without_required_field(controller):
-    with pytest.raises(layabase.ValidationFailed) as exception_info:
-        controller.get_one({})
-    assert exception_info.value.received_data == {}
-    assert exception_info.value.errors == {
-        "mandatory": ["Missing data for required field."]
-    }
-
-
-def test_get_one_with_required_field(controller):
-    assert controller.get_one({"mandatory": 1}) == {}
-
-
-def test_delete_without_required_field(controller):
-    with pytest.raises(layabase.ValidationFailed) as exception_info:
-        controller.delete({})
-    assert exception_info.value.received_data == {}
-    assert exception_info.value.errors == {
-        "mandatory": ["Missing data for required field."]
-    }
-
-
-def test_delete_with_required_field(controller):
-    assert controller.delete({"mandatory": 1}) == 0
-
-
-def test_query_get_parser_with_required_field(client):
-    response = client.get("/test_parsers?mandatory=1")
-    assert response.json == {
-        "key": None,
-        "limit": None,
-        "mandatory": [1],
-        "offset": None,
-        "order_by": None,
-    }
-
-
-def test_query_delete_parser_without_required_field(client):
-    response = client.delete("/test_parsers")
-    assert response.status_code == 400
-    assert response.json == {
-        "errors": {"mandatory": "Missing required parameter in the query string"},
-        "message": "Input payload validation failed",
-    }
-
-
-def test_query_delete_parser_with_required_field(client):
-    response = client.delete("/test_parsers?mandatory=1")
-    assert response.json == {"key": None, "mandatory": [1]}
+def test_query_delete_parser(client):
+    response = client.delete("/test_parsers?key=12&mandatory=123&optional=1234")
+    assert response.json == {"key": ["12"], "mandatory": [123], "optional": ["1234"]}
 
 
 def test_open_api_definition(client):
@@ -187,8 +136,14 @@ def test_open_api_definition(client):
                             "name": "mandatory",
                             "in": "query",
                             "type": "array",
-                            "required": True,
                             "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                     ],
@@ -216,8 +171,14 @@ def test_open_api_definition(client):
                             "name": "mandatory",
                             "in": "query",
                             "type": "array",
-                            "required": True,
                             "items": {"type": "integer"},
+                            "collectionFormat": "multi",
+                        },
+                        {
+                            "name": "optional",
+                            "in": "query",
+                            "type": "array",
+                            "items": {"type": "string"},
                             "collectionFormat": "multi",
                         },
                         {
@@ -251,6 +212,29 @@ def test_open_api_definition(client):
                     "tags": ["Test"],
                 },
             },
+            "/test/description": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "schema": {
+                                "$ref": "#/definitions/TestTable_GetDescriptionResponseModel"
+                            },
+                        }
+                    },
+                    "operationId": "get_test_description_resource",
+                    "parameters": [
+                        {
+                            "name": "X-Fields",
+                            "in": "header",
+                            "type": "string",
+                            "format": "mask",
+                            "description": "An optional fields mask",
+                        }
+                    ],
+                    "tags": ["Test"],
+                }
+            },
             "/test_parsers": {
                 "delete": {
                     "responses": {"200": {"description": "Success"}},
@@ -278,6 +262,11 @@ def test_open_api_definition(client):
                         "example": "sample_value",
                     },
                     "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },
@@ -290,6 +279,11 @@ def test_open_api_definition(client):
                         "example": "sample_value",
                     },
                     "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
                 },
                 "type": "object",
             },
@@ -302,6 +296,25 @@ def test_open_api_definition(client):
                         "example": "sample_value",
                     },
                     "mandatory": {"type": "integer", "readOnly": False, "example": 1},
+                    "optional": {
+                        "type": "string",
+                        "readOnly": False,
+                        "example": "sample_value",
+                    },
+                },
+                "type": "object",
+            },
+            "TestTable_GetDescriptionResponseModel": {
+                "required": ["key", "mandatory", "table"],
+                "properties": {
+                    "table": {
+                        "type": "string",
+                        "description": "Table name",
+                        "example": "table",
+                    },
+                    "key": {"type": "string", "example": "column"},
+                    "mandatory": {"type": "string", "example": "column"},
+                    "optional": {"type": "string", "example": "column"},
                 },
                 "type": "object",
             },
