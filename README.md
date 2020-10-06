@@ -2,10 +2,10 @@
 
 <p align="center">
 <a href="https://pypi.org/project/layabase/"><img alt="pypi version" src="https://img.shields.io/pypi/v/layabase"></a>
-<a href="https://travis-ci.org/Colin-b/layabase"><img alt="Build status" src="https://api.travis-ci.org/Colin-b/layabase.svg?branch=master"></a>
-<a href="https://travis-ci.org/Colin-b/layabase"><img alt="Coverage" src="https://img.shields.io/badge/coverage-100%25-brightgreen"></a>
+<a href="https://travis-ci.com/Colin-b/layabase"><img alt="Build status" src="https://api.travis-ci.com/Colin-b/layabase.svg?branch=master"></a>
+<a href="https://travis-ci.com/Colin-b/layabase"><img alt="Coverage" src="https://img.shields.io/badge/coverage-100%25-brightgreen"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-<a href="https://travis-ci.org/Colin-b/layabase"><img alt="Number of tests" src="https://img.shields.io/badge/tests-725 passed-blue"></a>
+<a href="https://travis-ci.com/Colin-b/layabase"><img alt="Number of tests" src="https://img.shields.io/badge/tests-725 passed-blue"></a>
 <a href="https://pypi.org/project/layabase/"><img alt="Number of downloads" src="https://img.shields.io/pypi/dm/layabase"></a>
 </p>
 
@@ -16,7 +16,6 @@ database modules ([SQLAlchemy](https://docs.sqlalchemy.org) and [PyMongo](https:
 
   * [Features](#features)
   * [How to use](#usage)
-  * [Technical documentation](#technical)
 
 ## Features
 
@@ -410,43 +409,12 @@ class MyCollection:
 
 ## How to install
 1. [python 3.6+](https://www.python.org/downloads/) must be installed
-2. Use pip to install module:
+2. Use `pip` to install module:
 ```sh
 python -m pip install layabase
 ```
 
-Note that depending on what you want to connect to, you will have to use a different module name than layabase:
+Note that depending on what you want to connect to, you will have to use a different module name than `layabase`:
 * Mongo database: layabase[mongo]
 * Mongo in-memory database: layabase mongomock
 * Other database: layabase[sqlalchemy]
-
-## Technical
-
- * [Requirements](#developer-requirements)
- * [Usage](#developer-usage)
-
-## Developer-Requirements
-
-The module requires the following to run:
-
-  * [python 3.6+](https://www.python.org/downloads/)
-
-## Developer-Usage
-
-## Installation
-
-Dependencies can be installed via `setup.py`:
-
-```sh
-python -m pip install .
-```
-
-### Testing
-
-Test specific dependencies can be installed via `setup.py` `testing` optional:
-
-```sh
-python -m pip install .[testing]
-```
-
-Then you can launch tests using [pytest](http://doc.pytest.org/en/latest/).
