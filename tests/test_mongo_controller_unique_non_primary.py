@@ -1,7 +1,6 @@
 import enum
 
 import pytest
-from layaberr import ValidationFailed
 
 import layabase
 import layabase.mongo
@@ -122,7 +121,7 @@ def test_versioning_handles_unique_non_primary(
     controllers, controller_versioned_unique
 ):
     controller_versioned_unique.post({"unique": 1})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller_versioned_unique.post({"unique": 1})
     assert exception_info.value.errors == {"": ["This document already exists."]}
     assert exception_info.value.received_data == {
@@ -136,7 +135,7 @@ def test_versioning_handles_unique_non_primary(
 def test_insert_to_non_unique_after_update(controllers, controller_versioned_unique):
     controller_versioned_unique.post({"unique": 1})
     controller_versioned_unique.put({"key": 1, "unique": 2})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller_versioned_unique.post({"unique": 2})
     assert exception_info.value.errors == {"": ["This document already exists."]}
     assert exception_info.value.received_data == {
@@ -150,7 +149,7 @@ def test_insert_to_non_unique_after_update(controllers, controller_versioned_uni
 def test_update_to_non_unique_versioned(controllers, controller_versioned_unique):
     controller_versioned_unique.post({"unique": 1})
     controller_versioned_unique.post({"unique": 2})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller_versioned_unique.put({"key": 1, "unique": 2})
     assert exception_info.value.errors == {"": ["This document already exists."]}
     assert exception_info.value.received_data == {
@@ -164,7 +163,7 @@ def test_update_to_non_unique_versioned(controllers, controller_versioned_unique
 def test_update_to_non_unique(controllers, controller_unique):
     controller_unique.post({"unique": 1})
     controller_unique.post({"unique": 2})
-    with pytest.raises(ValidationFailed) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller_unique.put({"unique": 2, "key": 1})
     assert exception_info.value.errors == {"": ["This document already exists."]}
     assert exception_info.value.received_data == {"key": 1, "unique": 2}

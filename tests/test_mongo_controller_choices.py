@@ -1,5 +1,3 @@
-import flask
-import flask_restplus
 import pytest
 
 import layabase
@@ -29,20 +27,8 @@ def controller() -> layabase.CRUDController:
     return controller
 
 
-@pytest.fixture
-def app(controller: layabase.CRUDController):
-    application = flask.Flask(__name__)
-    application.testing = True
-    api = flask_restplus.Api(application)
-    namespace = api.namespace("Test", path="/")
-
-    controller.namespace(namespace)
-
-    return application
-
-
 def test_post_with_choices_field_with_a_value_not_in_choices_list_is_invalid(
-    client, controller: layabase.CRUDController
+    controller: layabase.CRUDController
 ):
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.post(
