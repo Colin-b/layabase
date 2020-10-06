@@ -163,7 +163,7 @@ def test_put_unexisting_is_invalid(controller: layabase.CRUDController):
     )
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put({"key": "my_key2"})
-    assert exception_info.value.requested_data == {"key": "my_key2"}
+    assert exception_info.value.received_data == {"key": "my_key2"}
 
 
 def test_post_invalid_datetime_is_invalid(controller: layabase.CRUDController):

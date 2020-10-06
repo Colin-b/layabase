@@ -467,10 +467,7 @@ def _create_model(controller: CRUDController, base) -> Type[CRUDModel]:
 
     controller._model = model
 
-    if not _supports_offset(base.metadata.bind.url.drivername):
-        controller.query_get_parser.remove_argument("offset")
-        controller.query_get_audit_parser.remove_argument("offset")
-        controller.query_get_history_parser.remove_argument("offset")
+    controller.supports_offset = _supports_offset(base.metadata.bind.url.drivername)
 
     if controller.audit:
         from layabase._audit_sqlalchemy import _create_from, _to_audit_column

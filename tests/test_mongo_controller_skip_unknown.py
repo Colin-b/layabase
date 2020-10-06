@@ -30,6 +30,6 @@ def test_unknown_field_failure_put_many(controller: layabase.CRUDController):
 def test_put_many_unexisting(controller: layabase.CRUDController):
     controller.post({"key": "my_key1"})
     controller.post({"key": "my_key2"})
-    with pytest.raises(layabase.ModelCouldNotBeFound) as exception_info:
+    with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many([{"key": "my_key3"}])
-    assert exception_info.value.requested_data == {"key": "my_key3"}
+    assert exception_info.value.received_data == {"key": "my_key3"}

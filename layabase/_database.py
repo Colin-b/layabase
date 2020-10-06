@@ -94,6 +94,7 @@ class CRUDController:
         self.skip_unknown_fields = kwargs.pop("skip_unknown_fields", True)
         self.skip_update_indexes = kwargs.pop("skip_update_indexes", False)
         self.skip_log_for_unknown_fields = kwargs.pop("skip_log_for_unknown_fields", [])
+        self.supports_offset = True
 
         # Generated from table_or_collection, appropriate class depending on what was requested on controller
         self._model = None
@@ -106,7 +107,7 @@ class CRUDController:
         from layabase._flask_restx import ParsersAndModels
 
         if not hasattr(self, "_flask_restx"):
-            self._flask_restx = ParsersAndModels(self.table_or_collection, self.history, self.audit)
+            self._flask_restx = ParsersAndModels(self.table_or_collection, self.history, self.audit, self.supports_offset)
         return self._flask_restx
 
     def get(self, request_arguments: dict) -> List[dict]:

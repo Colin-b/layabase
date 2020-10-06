@@ -312,3 +312,15 @@ def test_open_api_definition(client):
             "MaskError": {"description": "When any error occurs on mask"},
         },
     }
+
+
+def test_get_and_delete_parsers_contains_multi_level_dot_notation_fields(controller):
+    assert {
+        "dict_field.first_key.inner_key1",
+        "dict_field.first_key.inner_key2",
+    }.issubset({arg.name for arg in controller.flask_restx.query_delete_parser.args})
+
+    assert {
+        "dict_field.first_key.inner_key1",
+        "dict_field.first_key.inner_key2",
+    }.issubset({arg.name for arg in controller.flask_restx.query_get_parser.args})

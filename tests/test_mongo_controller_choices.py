@@ -45,6 +45,7 @@ def test_post_with_choices_field_with_a_value_not_in_choices_list_is_invalid(
         "str_choices_field": ["Value \"four\" is not within ['one', 'two', 'three']."],
     }
     assert exception_info.value.received_data == {
+        "key": 1,
         "int_choices_field": 4,
         "str_choices_field": "four",
         "float_choices_field": 2.5,

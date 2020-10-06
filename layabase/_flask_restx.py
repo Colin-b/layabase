@@ -5,13 +5,13 @@ from layabase._api import add_get_query_fields, add_delete_query_fields, add_rol
 
 
 class ParsersAndModels:
-    def __init__(self, table_or_collection, history: bool, audit: bool):
+    def __init__(self, table_or_collection, history: bool, audit: bool, supports_offset: bool):
         self.table_or_collection = table_or_collection
         self.history = history
         self.audit = audit
 
         self.query_get_parser = flask_restx.reqparse.RequestParser()
-        add_get_query_fields(table_or_collection, self.query_get_parser)
+        add_get_query_fields(table_or_collection, self.query_get_parser, supports_offset)
 
         self.query_delete_parser = flask_restx.reqparse.RequestParser()
         add_delete_query_fields(table_or_collection, self.query_delete_parser)
@@ -20,12 +20,12 @@ class ParsersAndModels:
         self.query_get_history_parser = flask_restx.reqparse.RequestParser()
         if history:
             add_rollback_query_fields(table_or_collection, self.query_rollback_parser)
-            add_history_query_fields(table_or_collection, self.query_get_history_parser)
+            add_history_query_fields(table_or_collection, self.query_get_history_parser, supports_offset)
 
         self.query_get_audit_parser = flask_restx.reqparse.RequestParser()
         if audit:
             add_get_audit_query_fields(
-                table_or_collection, history, self.query_get_audit_parser
+                table_or_collection, history, self.query_get_audit_parser, supports_offset
             )
 
         # CRUD model definition (instead of request parsers)

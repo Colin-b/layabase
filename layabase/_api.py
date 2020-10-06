@@ -21,18 +21,19 @@ def add_all_query_fields(
 
 
 def add_get_query_fields(
-    table_or_collection, parser: flask_restx.reqparse.RequestParser
+    table_or_collection, parser: flask_restx.reqparse.RequestParser, supports_offset: bool
 ):
     is_mongo = is_mongo_collection(table_or_collection)
     add_all_query_fields(table_or_collection, is_mongo, parser)
     parser.add_argument("limit", type=flask_restx.inputs.positive, location="args")
-    parser.add_argument("offset", type=flask_restx.inputs.natural, location="args")
+    if supports_offset:
+        parser.add_argument("offset", type=flask_restx.inputs.natural, location="args")
     if not is_mongo:
         parser.add_argument("order_by", type=str, action="append", location="args")
 
 
 def add_get_audit_query_fields(
-    table_or_collection, history: bool, parser: flask_restx.reqparse.RequestParser
+    table_or_collection, history: bool, parser: flask_restx.reqparse.RequestParser, supports_offset: bool
 ):
     is_mongo = is_mongo_collection(table_or_collection)
 
@@ -65,7 +66,8 @@ def add_get_audit_query_fields(
     )
 
     parser.add_argument("limit", type=flask_restx.inputs.positive, location="args")
-    parser.add_argument("offset", type=flask_restx.inputs.natural, location="args")
+    if supports_offset:
+        parser.add_argument("offset", type=flask_restx.inputs.natural, location="args")
     if not is_mongo:
         parser.add_argument("order_by", type=str, action="append", location="args")
 
@@ -88,7 +90,7 @@ def add_rollback_query_fields(
 
 
 def add_history_query_fields(
-    table_or_collection, parser: flask_restx.reqparse.RequestParser
+    table_or_collection, parser: flask_restx.reqparse.RequestParser, supports_offset: bool
 ):
     parser.add_argument(
         "valid_since_revision",
@@ -110,7 +112,8 @@ def add_history_query_fields(
     )
 
     parser.add_argument("limit", type=flask_restx.inputs.positive)
-    parser.add_argument("offset", type=flask_restx.inputs.natural)
+    if supports_offset:
+        parser.add_argument("offset", type=flask_restx.inputs.natural)
 
 
 def all_request_fields(

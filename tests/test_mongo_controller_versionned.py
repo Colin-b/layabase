@@ -114,7 +114,7 @@ def test_put_many_without_previous(controller: layabase.CRUDController):
     controller.post({"key": "first"})
     with pytest.raises(layabase.ValidationFailed) as exception_info:
         controller.put_many([{"key": "unknown"}])
-    assert exception_info.value.requested_data == {
+    assert exception_info.value.received_data == {
         "key": "unknown",
         "valid_until_revision": -1,
     }
