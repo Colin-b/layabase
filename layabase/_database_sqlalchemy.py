@@ -622,7 +622,9 @@ def _check(base) -> (str, dict):
     :return: A tuple with a string providing the status (pass, warn, fail), and the checks.
     """
     try:
-        if base.metadata.bind.dialect.do_ping(base.metadata.bind.connect().connection):
+        with base.metadata.bind.connect() as connection:
+            ping_result = base.metadata.bind.dialect.do_ping(connection.connection)
+        if ping_result:
             return (
                 "pass",
                 {
