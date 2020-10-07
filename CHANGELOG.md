@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0.dev1] - 2020-10-07
+### Fixed
+- [SQLAlchemy] Ensure connection created for health check is returned to the pool right after.
+
 ## [4.0.0.dev0] - 2020-10-06
 ### Changed
 - `required_on_query` should be set within `layabase` key inside info (was linked to `marshmallow` key previously).
@@ -55,7 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release.
 
-[Unreleased]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev0...HEAD
+[Unreleased]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev1...HEAD
+[4.0.0.dev1]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev0...v4.0.0.dev1
 [4.0.0.dev0]: https://github.com/Colin-b/layabase/compare/v3.5.1...v4.0.0.dev0
 [3.5.1]: https://github.com/Colin-b/layabase/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/Colin-b/layabase/compare/v3.4.0...v3.5.0
