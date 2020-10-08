@@ -512,8 +512,12 @@ def _load(
     :return SQLAlchemy base.
     """
     database_connection_url = _clean_database_url(database_connection_url)
-    logger.info(f"Connecting to {database_connection_url}...")
-    logger.debug("Creating engine...")
+    logger.info(
+        {
+            "source": "layabase",
+            "details": {"event": f"Connecting to {database_connection_url}..."},
+        }
+    )
     base_parameters = kwargs.pop("base_parameters", None) or {}
     if _in_memory(database_connection_url):
         engine = create_engine(
@@ -525,9 +529,10 @@ def _load(
         kwargs.setdefault("pool_recycle", 60)
         engine = create_engine(database_connection_url, **kwargs)
     _prepare_engine(engine)
-    logger.debug("Creating base...")
     base = declarative_base(bind=engine, **base_parameters)
-    logger.debug("Creating models...")
+    logger.debug(
+        {"source": "layabase", "details": {"event": "Creating SQLAlchemy models..."}}
+    )
     model_classes = [_create_model(controller, base) for controller in controllers]
     if _can_retrieve_metadata(database_connection_url):
         all_view_names = _get_view_names(engine, base.metadata.schema)
@@ -538,7 +543,6 @@ def _load(
             for table_name, table_or_view in all_tables_and_views.items()
             if table_name not in all_view_names
         }
-        logger.debug("Creating tables...")
         if _in_memory(database_connection_url) and hasattr(base.metadata, "_schemas"):
             if len(base.metadata._schemas) > 1:
                 raise MultiSchemaNotSupported()
@@ -548,9 +552,13 @@ def _load(
                 )
         base.metadata.create_all(bind=engine)
         base.metadata.tables = all_tables_and_views
-    logger.debug("Creating session...")
     session = sessionmaker(bind=engine)()
-    logger.info(f"Connected to {database_connection_url}.")
+    logger.info(
+        {
+            "source": "layabase",
+            "details": {"event": f"Connected to {database_connection_url}."},
+        }
+    )
     for model_class in model_classes:
         model_class._post_init(session)
     return base
