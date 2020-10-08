@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0.dev2] - 2020-10-08
+### Changed
+- [SQLAlchemy] Log as dictionary.
+
 ## [4.0.0.dev1] - 2020-10-07
 ### Fixed
 - [SQLAlchemy] Ensure connection created for health check is returned to the pool right after.
@@ -59,7 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release.
 
-[Unreleased]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev1...HEAD
+[Unreleased]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev2...HEAD
+[4.0.0.dev2]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev1...v4.0.0.dev2
 [4.0.0.dev1]: https://github.com/Colin-b/layabase/compare/v4.0.0.dev0...v4.0.0.dev1
 [4.0.0.dev0]: https://github.com/Colin-b/layabase/compare/v3.5.1...v4.0.0.dev0
 [3.5.1]: https://github.com/Colin-b/layabase/compare/v3.5.0...v3.5.1
